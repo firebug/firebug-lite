@@ -1,18 +1,17 @@
 /**
  * firebug lite <http://www.getfirebug.com/lite.html>
- * v1.0
- * 04.11.2008, 8:25 PM ~ 
- * v1.0a
- * 03.27.2008, 5:44 AM ~ 04.01.2008, 21:32 PM
- * Azer Koçulu <http://azer.kodfabrik.com>
+ * 07.20.2008, 4:04 PM
+ * 04.11.2008, 8:25 PM
+ * 03.27.2008, 5:44 AM, 04.01.2008, 21:32 PM
+ * Developer: Azer Koçulu <http://azer.kodfabrik.com>
  */
-
 var firebug = {
-	env:{ "cache":{}, "ctmp":[], "dIndex":"console", "init":false, "ml":false, "objCn":[] },
+	version:[1.2,2008072018],
+	el:{}, env:{ "cache":{}, "ctmp":[], "dIndex":"console", "init":false, "ml":false, "objCn":[] },
 	init:function(){
-		firebug.el = {}; // elements
-		firebug.el.content = {};
 		with(firebug){
+			if(env.init)
+				return;
 			
 			document.documentElement.childNodes[0].appendChild(
 				new pi.element("link").attribute.set("rel","stylesheet").attribute.set("href","http://firebuglite.appspot.com/firebug-lite.css").environment.getElement()
@@ -21,7 +20,8 @@ var firebug = {
 			/* 
 			 * main interface
 			 */
-			el.main = new pi.element("DIV").attribute.set("id","Firebug").environment.addStyle({ "width":pi.util.GetWindowSize().width+"px" }).insert(document.body);
+			el.content = {};
+			el.main = new pi.element("DIV").attribute.set("id","Firebug").environment.addStyle({ "width":pi.util.GetViewport().width+"px" }).insert(document.body);
 			el.header = new pi.element("DIV").attribute.addClass("Header").insert(el.main);
 			el.left = {};
 			el.left.container = new pi.element("DIV").attribute.addClass("Left").insert(el.main);
@@ -213,13 +213,16 @@ var firebug = {
 					buttons[i].attribute.set("href","#");
 			}
 			//
+		
+			pi.util.AddEvent(window,"resize",d.refreshSize);
+			pi.util.AddEvent(document,"mousemove",listen.mouse)("keydown",listen.keyboard);
 			
 			env.init = true;
 			
 			for(var i=0; i<env.ctmp.length; i++)
 			{
 				d.console.log.apply(window,env.ctmp[i]);
-			}
+			};
 		}	
 	},
 	win:{
@@ -227,6 +230,9 @@ var firebug = {
 			with(firebug){
 				el.main.update("");
 				el.main.remove();
+				pi.util.RemoveEvent(window,"resize",firebug.d.refreshSize);
+				pi.util.RemoveEvent(document,"mousemove",firebug.listen.mouse)("keydown",firebug.listen.keyboard);
+				env.init = false;
 			}
 		},
 		minimize:function(){
@@ -543,7 +549,7 @@ var firebug = {
 				}
 			},
 			inspect:function(_element){
-				var el = _element, map = [], parent = _element;
+				var map = [], parent = _element;
 				while(parent){
 					map.push(parent);
 					if(parent==document.body)break;
@@ -671,18 +677,11 @@ var firebug = {
 			enabled:false,
 			el:null,
 			inspect:function(_element,_bgInspector){
-				var el = _element, top = el.offsetTop, left = el.offsetLeft, parent = _element.offsetParent;
-				while(Boolean(parent)&&parent!=document.firstChild){
-					top += parent.offsetTop;
-					left += parent.offsetLeft;
-					parent = parent.offsetParent;
-					if(parent==document.body)break;
-				};
-				
+				var pos = pi.util.Element.getPosition(_element);
 				with(firebug){
 					el[_bgInspector?"bgInspector":"borderInspector"].environment.addStyle({ 
 						"width":_element.offsetWidth+"px", "height":_element.offsetHeight+"px",
-						"top":top-(_bgInspector?0:2)+"px", "left":left-(_bgInspector?0:2)+"px",
+						"top":pos.offsetTop-(_bgInspector?0:2)+"px", "left":pos.offsetLeft-(_bgInspector?0:2)+"px",
 						"display":"block"
 					});
 
@@ -818,7 +817,7 @@ var firebug = {
 						var response = item[1].responseText;
 						if(Boolean(item[1])==false)continue;
 						el.left.xhr.nameContent.child.add(new pi.element("span").update(item[0]));
-						try { 
+						try {
 							el.left.xhr.statusContent.child.add(new pi.element("span").update(item[1].status));
 						} catch(e){ el.left.xhr.statusContent.child.add(new pi.element("span").update("&nbsp;")); }
 						el.left.xhr.readystateContent.child.add(new pi.element("span").update(item[1].readyState));
@@ -888,9 +887,13 @@ var firebug = {
 		},
 		refreshSize:function(){
 			with(firebug){
-				el.main.environment.addStyle({ "width":pi.util.GetWindowSize().width+"px"});
+				if(!env.init)
+					return;
+				
+				var dim = pi.util.GetViewport();
+				el.main.environment.addStyle({ "width":dim.width+"px"});
 				if(pi.env.ie6)
-					el.main.environment.addStyle({ "top":pi.util.GetWindowSize().height-el.main.environment.getSize().offsetHeight+"px" });
+					el.main.environment.addStyle({ "top":dim.height-el.main.environment.getSize().offsetHeight+"px" });
 			}
 		}
 	},
@@ -912,6 +915,7 @@ var firebug = {
 				}
 				if([13,38,40].indexOf(_event.keyCode)==-1)
 					return;
+					
 				d.console.historyIndex+=_event.keyCode!=40?0:d.console.historyIndex==d.console.history.length?0:1;
 				d.console.historyIndex-=_event.keyCode!=38?0:d.console.historyIndex==0?0:1;
 				el.left.console.input.update(
@@ -955,8 +959,9 @@ var firebug = {
 					target!=el.borderInspector.environment.getElement()&&
 					target!=el.main.environment.getElement()&&
 					target.offsetParent!=el.main.environment.getElement()
-				)
-				d.inspector.inspect(target);
+				){
+					d.inspector.inspect(target);
+				}
 			}
 		},
 		runMultiline:function(){
@@ -994,7 +999,4 @@ var firebug = {
 };
 
 window.console = firebug.d.console;
-pi.util.AddEvent(window,"resize",firebug.d.refreshSize);
-pi.util.AddEvent(document,"mousemove",firebug.listen.mouse);
-pi.util.AddEvent(document,"keydown",firebug.listen.keyboard);
 pi.util.DOMContentLoaded.push(firebug.init);

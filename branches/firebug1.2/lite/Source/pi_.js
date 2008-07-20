@@ -2,14 +2,15 @@
 	
 	/*
 	 * pi.js
-	 * 1.1
-	 * Azer Koçulu <http://azer.kodfabrik.com>
+	 * 1.0
+	 * Azer Koculu <http://azer.kodfabrik.com>
 	 * http://pi-js.googlecode.com
 	 */
 	
 	_scope.pi = Object(3.14159265358979323846);
-	var pi  = _scope.pi; pi.version = [1.1,2008072018];
-
+	var pi  = _scope.pi;
+	pi.version = 1.0;
+	
 	pi.env = {
 		ie: /MSIE/i.test(navigator.userAgent),
 		ie6: /MSIE 6/i.test(navigator.userAgent),
@@ -33,16 +34,21 @@
 			return pi.util.AddEvent.curry(this,_element);
 		},
 		RemoveEvent: function(_element,_eventName,_fn,_useCapture){
-			_element[pi.env.ie.toggle("detachEvent","removeEventListener")](pi.env.ie.toggle("on","")+_eventName,_fn,_useCapture||false);
-			return pi.util.RemoveEvent.curry(this,_element);
+			return _element[pi.env.ie.toggle("detachEvent","removeEventListener")](pi.env.ie.toggle("on","")+_eventName,_fn,_useCapture||false);
+		},
+		GetWindowSize:function(){
+			return {
+				height:Math.max(document.documentElement.clientHeight,document.body.clientHeight),
+				width:Math.max(document.documentElement.clientWidth,document.body.clientWidth)
+			}
 		},
 		Include:function(_url,_callback){
 			var script = new pi.element("script").attribute.set("src",_url), callback = _callback||new Function, done = false, head = pi.get.byTag("head")[0];
-			script.element[pi.env.ie?"onreadystatechange":"onload"] = function(){
-				if(!done && (!pi.env.ie || this.readyState == "complete")){
+			script.environment.getElement().onload = script.environment.getElement().onreadystatechange = function(){
+				if(!done && (!this.readyState || this.readyState == "loaded" || this.readyState == "complete")){
 					callback.call(this);
 					done = true;
-					head.removeChild(script.element);
+					head.removeChild(script.environment.getElement());
 				}
 			};
 			script.insert(head);
@@ -90,7 +96,7 @@
 				return this._parent_;
 			},
 			getPosition:function(_element){
-				var parent = _element,offsetLeft = document.body.offsetLeft, offsetTop = document.body.offsetTop, view = pi.util.Element.getView(_element);
+				var parent = _element,offsetLeft = 0, offsetTop = 0, view = pi.util.Element.getView(_element);
 				while(parent&&parent!=document.body&&parent!=document.firstChild){
 					offsetLeft +=parseInt(parent.offsetLeft);
 					offsetTop += parseInt(parent.offsetTop);
@@ -113,8 +119,6 @@
 				var view = pi.util.Element.getView(_element);
 				return {
 					"height":view["height"],
-					"clientHeight":_element.clientHeight,
-					"clientWidth":_element.clientWidth,
 					"offsetHeight":_element.offsetHeight,
 					"offsetWidth":_element.offsetWidth,
 					"width":view["width"]
@@ -183,12 +187,6 @@
 				_object[key] = value;
 			};
 			return _object;
-		},
-		GetViewport:function(){
-			return {
-				height:document.documentElement.clientHeight||document.body.clientHeight,
-				width:document.documentElement.clientWidth||document.body.clientWidth
-			}
 		}
 	};
 	
@@ -210,6 +208,7 @@
 					var _p = pi.util.CloneObject(_private);
 					if(!skipClonning){
 						for(var key in this){
+							
 							if(pi.util.IsArray( this[ key ] ) ){
 								this[key] = Array.prototype.clone.apply( this[key] );
 							} else
@@ -296,15 +295,126 @@
 		};
 	};
 	
+	pi.comet = new pi.base;
+	pi.comet.constructor = function(){
+		this.environment.setName("PIComet");
+		this.environment.setMethod(pi.env.ie?3:pi.env.opera?2:1);
+		this.environment.setTunnel(
+			this.environment.getMethod()==3?new ActiveXObject("htmlfile"):
+			this.environment.getMethod()==2?document.createElement("event-source"):
+			new pi.xhr
+		);
+	};
+	pi.comet.body = {
+		"checkFrameState":function(){
+			if(this.environment.getTunnel().getElementById(this.environment.getName() + 'FrameBody').readyState=="loading"){
+				setTimeout(this.checkFrameState.curry(this),500);
+			} else {
+				this.environment.getTunnel().parentWindow.PIComet.event.disconnect();
+	    		this.environment.getTunnel().getElementById(this.environment.getName() + 'FrameBody').parentNode.removeChild(
+					this.environment.getTunnel().getElementById(this.environment.getName() + 'FrameBody')
+				);
+	    		this.environment._setTunnel(null);
+			}
+		},
+		"abort":function(){
+			switch(this.environment.getMethod()){
+				case 1:
+					this.environment.getTunnel().abort();
+					break;
+				case 2:
+					document.body.removeChild(this.environment.getTunnel());
+					break;
+				case 3:
+					this.environment.getTunnel().body.innerHTML="<iframe src='about:blank'></iframe>";
+			}
+		},
+		"send":function(){
+			switch(this.environment.getMethod()){
+				case 1:
+					this.environment.getTunnel().send();
+					break;
+				case 2:
+					document.body.appendChild(this.environment.getTunnel());
+					this.environment.getTunnel().addEventListener(this.environment.getName(),this.event.change,false);
+					break;
+				case 3:
+					this.environment.getTunnel().open();
+					this.environment.getTunnel().write("<html><body></body></html>");
+					this.environment.getTunnel().close();
+					this.environment.getTunnel().parentWindow.PIComet = this;
+					this.environment.getTunnel().body.innerHTML="<iframe id='{0}' src='{1}'></iframe>".format(this.environment.getName() + 'FrameBody',this.environment.getUrl());
+					setTimeout(this.checkFrameState.curry(this), 500);
+			}
+		}
+	};
+	pi.comet.body.environment = {
+		"_byteOffset":0, "_name":"", "_tunnel":null, "_method":"", "_url":"",
+		"setTunnel":function(_value){
+			if(this.getMethod()==1){
+				_value.environment.addData("PICometMethod","1");
+				_value.environment.addCallback({ "readyState":[3] },this._parent_.event.change);
+				_value.environment.addCallback({ "readyState":[4] },this._parent_.event.disconnect);
+				_value.environment.setCache(false);
+			}
+			
+			_value._cometApi_ = this._parent_;
+			this._setTunnel(_value);
+		},
+		"setUrl":function(_value){
+			if(this.getMethod()>1){
+				_value = "{0}{1}PICometMethod={2}&PICometName={3}".format(_value,_value.search("\\?")>-1?"&":"?",this.getMethod(),this.getName(),Math.round(Math.random()*1000));
+				if(this.getMethod()==2)
+					this.getTunnel().setAttribute("src",_value);
+			} else
+				this.getTunnel().environment.setUrl(_value);
+			this._setUrl(_value);
+		}
+	};
+	pi.comet.body.event = {
+		"change":function(){
+			if (this._cometApi_.environment.getMethod() == 2) {
+				this._cometApi_.event.push(arguments[0].data);
+			}
+			else {
+				var buffer = this.environment.getApi().responseText;
+				var newdata = buffer.substring(this._cometApi_.environment.getByteOffset());
+				while (true) {
+					var start = newdata.indexOf("<comet>", end), end = newdata.indexOf("</comet>", start);
+					if (end < 0 || start < 0) 
+						break;
+					this._cometApi_.event.push(newdata.substring(start + 7, end));
+				};
+				this._cometApi_.environment.setByteOffset(newdata.length + this._cometApi_.environment.getByteOffset());
+			}
+		},
+		"disconnect":new Function,
+		"push":new Function
+	};
+	pi.comet = pi.comet.build();
+	
+	/*
+	 * pi.comet.get
+	 */
+	
+	pi.comet.get = function(_url,_listener){
+		var api = new pi.comet();
+		api.environment.setName("PIComet"+(Math.round(Math.random()*100)));
+		api.environment.setUrl(_url);
+		api.event.push = _listener;
+		api.send();
+		return api;
+	};
+	
 	pi.element = pi.base.extend({
 		"$Constructor":function(_val){
 			this.environment.setElement(
-				typeof _val=="string"||!_val?
+				typeof _val=="string"?
 					document.createElement(_val||"DIV"):
 					_val
 			);
-			this.element = this.environment.getElement();
-			this.element.pi = this;
+		
+			this.environment.getElement().pi = this;
 			return this;
 		},
 		"clean":function(){
@@ -346,7 +456,7 @@
 				return this;
 		},
 		"attribute":{
-			"getAll":function(){
+			"getAll":function(_name){
 				return this._parent_.environment.getElement().attributes;
 			},
 			"clear":function(_name){
@@ -624,7 +734,7 @@
 				index = index>=_s.length?Math.abs(index-_s.length):index;
 			source[index] = _v;
 		});
-	};
+	}
 
 	Boolean.prototype.toggle = function(){
 		return this==true?arguments[0]:arguments[1];
