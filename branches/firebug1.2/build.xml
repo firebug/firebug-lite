@@ -37,7 +37,6 @@
         <tstamp/>
         <property name="build_dir" location="./dist/lite/${VERSION}" />
         <property name="dist_dir" location="${build_dir}/dist" />
-        <property name="FIREBUG-XPI" value="firebug-${VERSION}J${RELEASE}.xpi"/>
     </target>
 
 
@@ -49,6 +48,11 @@
                 <include name="firebug-lite-compressed.js"/>
                 <include name="Source/firebug-lite.js"/>
                 <include name="Source/pi.js"/>
+                 <include name="firebug-lite.css"/>
+                 <include name="firebug.gif"/>
+                 <include name="spacer.gif"/>
+                 <include name="tree_close.gif"/>
+                 <include name="tree.open.gif"/>
             </fileset>
            </copy>
     </target>
