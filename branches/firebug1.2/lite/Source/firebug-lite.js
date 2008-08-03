@@ -1,27 +1,26 @@
 /**
  * firebug lite <http://www.getfirebug.com/lite.html>
- * 07.20.2008, 4:04 PM
- * 04.11.2008, 8:25 PM
- * 03.27.2008, 5:44 AM, 04.01.2008, 21:32 PM
  * Developer: Azer Koçulu <http://azer.kodfabrik.com>
  */
 var firebug = {
-	version:[1.2,2008072018],
-	el:{}, env:{ "cache":{}, "ctmp":[], "dIndex":"console", "init":false, "ml":false, "objCn":[] },
-	init:function(){
+	version:[1.2,2008072918],
+	el:{}, env:{ "cache":{}, "ctmp":[], "dIndex":"console", "height":295, "init":false, "minimized":false, "ml":false, "objCn":[] },
+	init:function(_css){
 		with(firebug){
 			if(env.init)
 				return;
 			
 			document.documentElement.childNodes[0].appendChild(
-				new pi.element("link").attribute.set("rel","stylesheet").attribute.set("href","http://firebuglite.appspot.com/firebug-lite.css").environment.getElement()
+				new pi.element("link").attribute.set("rel","stylesheet").attribute.set("href",firebug.env.css||"http://firebuglite.appspot.com/firebug-lite.css").environment.getElement()
 			);
 
 			/* 
 			 * main interface
 			 */
 			el.content = {};
-			el.main = new pi.element("DIV").attribute.set("id","Firebug").environment.addStyle({ "width":pi.util.GetViewport().width+"px" }).insert(document.body);
+			el.main = new pi.element("DIV").attribute.set("id","Firebug").environment.addStyle({ "display":"none", "width":pi.util.GetViewport().width+"px" }).insert(document.body);
+			el.resizer = new pi.element("DIV").attribute.addClass("Resizer").event.addListener("mousedown",win.resizer.start).insert(el.main);
+			
 			el.header = new pi.element("DIV").attribute.addClass("Header").insert(el.main);
 			el.left = {};
 			el.left.container = new pi.element("DIV").attribute.addClass("Left").insert(el.main);
@@ -83,6 +82,7 @@ var firebug = {
 			el.right.console.container = new pi.element("DIV").attribute.addClass("Console Container").insert(el.right.container);
 			el.right.console.mlButton = new pi.element("A").attribute.addClass("MLButton CloseML").event.addListener("click",d.console.toggleML).insert(el.right.console.container);
 			el.right.console.input = new pi.element("TEXTAREA").attribute.addClass("Input").insert(el.right.console.container);
+			el.right.console.input.event.addListener("keydown",firebug.tab.curry(window,el.right.console.input.element));
 			el.right.console.run = new pi.element("A").attribute.addClass("Button").event.addListener("click",listen.runMultiline).update("Run").insert(el.right.console.container);
 			
 			el.right.console.clear = new pi.element("A").attribute.addClass("Button").event.addListener("click",d.clean.curry(window,el.right.console.input)).update("Clear").insert(el.right.console.container);
@@ -128,6 +128,7 @@ var firebug = {
 	
 			el.right.css.mlButton = new pi.element("A").attribute.addClass("MLButton CloseML").event.addListener("click",d.console.toggleML).insert(el.right.css.container);
 			el.right.css.input = new pi.element("TEXTAREA").attribute.addClass("Input").insert(el.right.css.container);
+			el.right.css.input.event.addListener("keydown",firebug.tab.curry(window,el.right.css.input.element));
 			el.right.css.run = new pi.element("A").attribute.addClass("Button").event.addListener("click",listen.runCSS).update("Run").insert(el.right.css.container);
 			el.right.css.clear = new pi.element("A").attribute.addClass("Button").event.addListener("click",d.clean.curry(window,el.right.css.input)).update("Clear").insert(el.right.css.container);
 			
@@ -196,9 +197,24 @@ var firebug = {
 			el.button.xhr.textbox = new pi.element("INPUT").event.addListener("keydown",listen.xhrTextbox).insert(el.button.xhr.container);
 			el.button.xhr.watch = new pi.element("A").attribute.addClass("Button").event.addListener("click",listen.addXhrObject).update("Watch").insert(el.button.xhr.container);
 			
+			pi.util.AddEvent(window,"resize",win.refreshSize);
+			pi.util.AddEvent(document,"mousemove",listen.mouse)("mousemove",win.resizer.resize)("mouseup",win.resizer.stop)("keydown",listen.keyboard);
+			
+			env.init = true;
+			
+			for(var i=0; i<env.ctmp.length; i++){
+				d.console.log.apply(window,env.ctmp[i]);
+			};
+			
+			if(env.height)
+				win.setHeight(env.height);
+			el.main.environment.addStyle({ "display":"block" });
+			
+			
 			// fix ie6 a:hover bug
 			if(pi.env.ie6)
 			{
+				window.onscroll = win.setVerticalPosition.curry(window,null);
 				var buttons = [
 					el.button.inspect,
 					el.button.close,
@@ -211,52 +227,134 @@ var firebug = {
 				];
 				for(var i=0; i<buttons.length; i++)
 					buttons[i].attribute.set("href","#");
+				win.refreshSize();
+				
 			}
 			//
-		
-			pi.util.AddEvent(window,"resize",d.refreshSize);
-			pi.util.AddEvent(document,"mousemove",listen.mouse)("keydown",listen.keyboard);
-			
-			env.init = true;
-			
-			for(var i=0; i<env.ctmp.length; i++)
-			{
-				d.console.log.apply(window,env.ctmp[i]);
-			};
 		}	
 	},
-	win:{
-		close:function(){
-			with(firebug){
-				el.main.update("");
-				el.main.remove();
-				pi.util.RemoveEvent(window,"resize",firebug.d.refreshSize);
-				pi.util.RemoveEvent(document,"mousemove",firebug.listen.mouse)("keydown",firebug.listen.keyboard);
-				env.init = false;
-			}
-		},
-		minimize:function(){
-			with(firebug){
-				el.main.environment.addStyle({ "height":"35px" });
-				el.button.maximize.environment.addStyle({ "display":"block" });
-				el.button.minimize.environment.addStyle({ "display":"none" });
-				d.refreshSize();
-			}
-		},
-		maximize:function(){
-			with(firebug){
-				el.main.environment.addStyle({ "height":"295px" });
-				el.button.minimize.environment.addStyle({ "display":"block" });
-				el.button.maximize.environment.addStyle({ "display":"none" });
-				d.refreshSize();
-			}
-		}
+	inspect:function(){
+		return firebug.d.html.inspect.apply(window,arguments);
 	},
 	watchXHR:function(){
 		with(firebug){
 			d.xhr.addObject.apply(window,arguments);
 			if(env.dIndex!="xhr"){
 				d.navigate("xhr");
+			}
+		}
+	},
+	win:{
+		close:function(){
+			with(firebug){
+				el.main.update("");
+				el.main.remove();
+				pi.util.RemoveEvent(window,"resize",win.refreshSize);
+				pi.util.RemoveEvent(document,"mousemove",listen.mouse)("keydown",firebug.listen.keyboard);
+				env.init = false;
+			}
+		},
+		minimize:function(){
+			with(firebug){
+				env.minimized=true;
+				el.main.environment.addStyle({ "height":"35px" });
+				el.button.maximize.environment.addStyle({ "display":"block" });
+				el.button.minimize.environment.addStyle({ "display":"none" });
+				win.refreshSize();
+			}
+		},
+		maximize:function(){
+			with(firebug){
+				env.minimized=false;
+				el.button.minimize.environment.addStyle({ "display":"block" });
+				el.button.maximize.environment.addStyle({ "display":"none" });
+				win.setHeight(env.height);
+			}
+		},
+		resizer:{
+			y:[], enabled:false,
+			start:function(_event){
+				with(firebug){
+					if(env.minimized)return;
+					win.resizer.y=[el.main.element.offsetHeight,_event.clientY];
+					if(pi.env.ie6){
+						win.resizer.y[3]=parseInt(el.main.environment.getPosition().top);
+					}
+					win.resizer.enabled=true;
+				}
+			},
+			resize:function(_event){
+				with(firebug){
+					if(!win.resizer.enabled)return;
+					win.resizer.y[2]=(win.resizer.y[0]+(win.resizer.y[1]-_event.clientY));
+					el.main.environment.addStyle({ "height":win.resizer.y[2]+"px" });
+					if(pi.env.ie6){
+						el.main.environment.addStyle({ "top":win.resizer.y[3]-(win.resizer.y[1]-_event.clientY)+"px" });
+					}
+				}
+			},
+			stop:function(_event){
+				with(firebug){
+					if(win.resizer.enabled){
+						win.resizer.enabled=false;
+						win.setHeight(win.resizer.y[2]-35);
+					}
+				}
+			}
+		},
+		setHeight:function(_height){
+			with(firebug){
+				env.height=_height;
+				
+				el.left.container.environment.addStyle({ "height":_height+"px" });
+				el.right.container.environment.addStyle({ "height":_height+"px" });
+				el.main.environment.addStyle({ "height":_height+38+"px" });
+				
+				win.refreshSize();
+				
+				// console
+				el.left.console.monitor.element.parentNode.style.height=_height-47+"px";
+				el.left.console.mlButton.environment.addStyle({ "top":_height+19+"px" });
+				el.right.console.mlButton.environment.addStyle({ "top":_height+19+"px" });
+				el.right.console.input.environment.addStyle({ "height":_height-29+"px" });
+				
+				// html
+				
+				el.left.html.container.environment.addStyle({"height":_height-23+"px"});
+				el.right.html.content.environment.addStyle({"height":_height-23+"px"});
+				
+				// css
+				el.left.css.container.environment.addStyle({"height":_height-33+"px"});
+				el.right.css.input.environment.addStyle({ "height":_height-55+"px" });
+				
+				// script
+				el.left.scripts.container.environment.addStyle({"height":_height-23+"px"});
+				
+				// dom
+				el.left.dom.container.environment.addStyle({"height":_height-31+"px"});
+				
+				// xhr
+				el.left.xhr.container.environment.addStyle({"height":_height-32+"px"});
+				
+				// string
+				el.left.str.container.environment.addStyle({"height":_height-32+"px"});
+			}
+		},
+		refreshSize:function(){
+			with(firebug){
+				if(!env.init)
+					return;
+					
+				var dim = pi.util.GetViewport();
+				el.main.environment.addStyle({ "width":dim.width+"px"});
+				if(pi.env.ie6)
+					win.setVerticalPosition(dim);
+			}
+		},
+		setVerticalPosition:function(_dim,_event){
+			with(firebug){
+				var dim = _dim||pi.util.GetViewport();
+				el.main.environment.addStyle({ "top":dim.height-el.main.environment.getSize().offsetHeight+Math.max(document.documentElement.scrollTop,document.body.scrollTop)+"px" });
 			}
 		}
 	},
@@ -336,7 +434,7 @@ var firebug = {
 			},
 			scroll:function(){
 				with(firebug){
-					el.left.console.monitor.environment.getElement().parentNode.scrollTop = Math.abs(el.left.console.monitor.environment.getSize().offsetHeight-200);
+					el.left.console.monitor.environment.getElement().parentNode.scrollTop = Math.abs(el.left.console.monitor.environment.getSize().offsetHeight-(el.left.console.monitor.element.parentNode.offsetHeight-11));
 				}
 			},
 			toggleML:function(){
@@ -346,7 +444,7 @@ var firebug = {
 					d.navigateRightColumn("console",open);
 					el[open?"left":"right"].console.mlButton.environment.addStyle({ display:"none" });
 					el[!open?"left":"right"].console.mlButton.environment.addStyle({ display:"block" });
-					el.left.console.monitor.environment.addStyle({ "height":(open?233:210)+"px" });
+					//el.left.console.monitor.environment.addStyle({ "height":(open?233:210)+"px" });
 					el.left.console.mlButton.attribute[(open?"add":"remove")+"Class"]("CloseML");
 				}
 			}
@@ -492,7 +590,7 @@ var firebug = {
 						return result+"</span>";
 					}
 					
-					var result = "<span class='Blue'>&#60;"+_value.nodeName.toLowerCase()+"";
+					var result = "<span class='Blue"+ ( !_link?"'":" ObjectLink' onmouseover='this.className=this.className.replace(\"ObjectLink\",\"ObjectLinkHover\")' onmouseout='this.className=this.className.replace(\"ObjectLinkHover\",\"ObjectLink\")' onclick='firebug.d.html.inspect(firebug.env.objCn[" +( env.objCn.push( _value ) -1 )+"])'" ) + "'>&#60;"+_value.nodeName.toLowerCase()+"";
 					if(_value.attributes)
 					for(var i=0; i<_value.attributes.length; i++){
 						var item = _value.attributes[i];
@@ -557,7 +655,10 @@ var firebug = {
 				}
 				map = map.reverse();
 				with(firebug){
-					d.inspector.toggle();
+					if(env.dIndex!="html"){
+						firebug.d.navigate("html");
+					}
+					d.inspector.toggle(false);
 					var parentLayer = el.left.html.container.child.get()[1].childNodes[1].pi;
 					for(var t=0; map[t];){
 						if(t==map.length-1){
@@ -582,7 +683,6 @@ var firebug = {
 					el.right.html.nav[_index].attribute.addClass("Selected");
 					d.html.nIndex = _index;
 					d.html.openProperties();
-					
 				}
 			},
 			openHtmlTree:function(_element,_parent,_returnParentElementByElement,_event){
@@ -650,7 +750,6 @@ var firebug = {
 			},
 			openProperties:function(){
 				with(firebug){
-			
 					var index = d.html.nIndex;
 					var node = d.html.current[0];
 					d.clean(el.right.html.content);
@@ -690,9 +789,10 @@ var firebug = {
 					}
 				};
 			},
-			toggle:function(){
+			toggle:function(_absoluteValue){
 				with (firebug) {
-					d.inspector.enabled = !d.inspector.enabled;
+					if(_absoluteValue==d.inspector.enabled)return;
+					d.inspector.enabled = _absoluteValue!=undefined?_absoluteValue:d.inspector.enabled;
 					el.button.inspect.attribute[(d.inspector.enabled ? "add" : "remove") + "Class"]("Enabled");
 					if(d.inspector.enabled==false){
 						el.borderInspector.environment.addStyle({ "display":"none" });
@@ -884,21 +984,45 @@ var firebug = {
 				}
 				
 			}
-		},
-		refreshSize:function(){
-			with(firebug){
-				if(!env.init)
-					return;
-				
-				var dim = pi.util.GetViewport();
-				el.main.environment.addStyle({ "width":dim.width+"px"});
-				if(pi.env.ie6)
-					el.main.environment.addStyle({ "top":dim.height-el.main.environment.getSize().offsetHeight+"px" });
-			}
 		}
 	},
 	getDomain:function(_url){
 		return _url.match(/http:\/\/(www.)?([\.\w]+)/)[2];
+	},
+	cancelEvent:function(_event){
+		if(_event.stopPropagation)
+			_event.stopPropagation();
+		if(_event.preventDefault)
+			_event.preventDefault();
+	},
+	getSelection:function(_el){
+		if(pi.env.ie){
+			var range = document.selection.createRange(),stored = range.duplicate();
+			stored.moveToElementText(_el);
+			stored.setEndPoint('EndToEnd', range);
+			_el.selectionStart = stored.text.length - range.text.length;
+			_el.selectionEnd = _el.selectionStart + range.text.length;
+		}
+		return {
+			start:_el.selectionStart,
+			length:_el.selectionEnd-_el.selectionStart
+		}
+	},
+	tab:function(el,_event){
+		if(_event.keyCode==9){
+			if(el.setSelectionRange){
+				var position = firebug.getSelection(el);
+				el.value = el.value.substring(0,position.start) + String.fromCharCode(9) + el.value.substring(position.start+position.length,el.value.length);
+				el.setSelectionRange(position.start+1,position.start+1);
+			} else if(document.selection) {	
+				var range = document.selection.createRange(), isCollapsed = range.text == '';
+				range.text = String.fromCharCode(9);
+				range.moveStart('character', -1);
+			}
+			firebug.cancelEvent(_event);
+			if(pi.env.ie)
+				setTimeout(el.focus,100);
+		};
 	},
 	listen: {
 		addXhrObject:function(){
@@ -999,4 +1123,4 @@ var firebug = {
 };
 
 window.console = firebug.d.console;
-pi.util.DOMContentLoaded.push(firebug.init);
+pi.util.Init.push(firebug.init);

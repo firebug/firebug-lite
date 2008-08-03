@@ -9,6 +9,7 @@
 /* */
 
 #Firebug { position:fixed !important; position:absolute; z-index:99999999; left:0; bottom:0; width:100%; height:295px; background:#fff; overflow:hidden; }
+#Firebug .Resizer { position:absolute; top:0; width:100%; height:5px; background:transparent; *background:url(spacer.gif); cursor:n-resize; -moz-user-select:none; }
 #Firebug .Header { height:38px; background:#ccc url(firebug.gif) 0 -85px; }
 #Firebug .Left, #Firebug > .Right { background:#fff; height:257px; overflow:hidden; }
 #Firebug .Left { float:left; width:100%; }
@@ -19,7 +20,7 @@
  * buttonset
  */
 
-#Firebug .ButtonContainer { padding:8px 0 5px 10px; *margin-top:-3px; }
+#Firebug .ButtonContainer { padding:8px 0 5px 10px; *margin-top:-3px; _margin-top:0; }
 #Firebug .ButtonContainer .Button { cursor:pointer; font:12px "MS Sans Serif", Geneva, sans-serif; color:#000; margin-right:5px; padding:4px 4px 4px 4px; border:1px solid transparent !important; border-color:#ccc; text-decoration:none; }
 #Firebug .ButtonContainer .Button:hover {  border:1px outset #aaa !important; }
 #Firebug .ButtonContainer .Button:active { border-style:inset !important; background-color:#ccc; }

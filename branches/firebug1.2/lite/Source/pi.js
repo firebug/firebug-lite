@@ -3,12 +3,12 @@
 	/*
 	 * pi.js
 	 * 1.1
-	 * Azer Koçulu <http://azer.kodfabrik.com>
+	 * Azer KoÃ§ulu <http://azer.kodfabrik.com>
 	 * http://pi-js.googlecode.com
 	 */
 	
 	_scope.pi = Object(3.14159265358979323846);
-	var pi  = _scope.pi; pi.version = [1.1,2008072018];
+	var pi  = _scope.pi; pi.version = [1.1,2008072918];
 
 	pi.env = {
 		ie: /MSIE/i.test(navigator.userAgent),
@@ -27,7 +27,7 @@
 		IsHash:function(_object){
 			return _object && typeof _object=="object"&&(_object==window||_object instanceof Object)&&!_object.nodeName&&!pi.util.IsArray(_object)
 		},
-		DOMContentLoaded:[],
+		Init:[],
 		AddEvent: function(_element,_eventName,_fn,_useCapture){
 			_element[pi.env.ie.toggle("attachEvent","addEventListener")](pi.env.ie.toggle("on","")+_eventName,_fn,_useCapture||false);
 			return pi.util.AddEvent.curry(this,_element);
@@ -98,6 +98,8 @@
 				};
 				return {
 					"bottom":view["bottom"],
+					"clientLeft":_element.clientLeft,
+					"clientTop":_element.clientTop,
 					"left":view["left"],
 					"marginTop":view["marginTop"],
 					"marginLeft":view["marginLeft"],
@@ -106,7 +108,7 @@
 					"position":view["position"],
 					"right":view["right"],
 					"top":view["top"],
-					"z-index":view["zIndex"]
+					"zIndex":view["zIndex"]
 				};
 			},
 			getSize:function(_element){
@@ -127,7 +129,9 @@
 						pi.util.Element.setOpacity(_element,_style[key]);
 						continue;
 					}
-					_element.style[key] = _style[key];
+					try {
+						_element.style[key] = _style[key];
+					}catch(e){}					
 				}
 			},
 			getStyle:function(_element,_property){
@@ -143,6 +147,14 @@
 					return pi.util.Element.getOpacity(_element,view);
 				return typeof _property=="string"?view[_property]:view;
 			}
+		},
+		Random:function(_min,_max){
+			while(true){
+				var val = Math.round(Math.random()*(_max||0xfffffffffffffffff));
+				if(!_min||val>=_min)
+					break;
+			}
+			return val;
 		},
 		CloneObject:function(_object,_fn){
 			var tmp = {};
@@ -231,7 +243,7 @@
 				};
 			this.movePrivateMembers(this.body,_private);
 			if(this.constructor){
-				fn["$Constructor"] = this.constructor;
+				fn["$Init"] = this.constructor;
 			}
 			fn.prototype = this.body;
 			return fn;
@@ -275,9 +287,9 @@
 	
 	Function.prototype.extend = function(_prototype,_skipClonning){
 		var object = new pi.base, superClass = this;
-		if(_prototype["$Constructor"]){
-			object.constructor = _prototype["$Constructor"];
-			delete _prototype["$Constructor"];
+		if(_prototype["$Init"]){
+			object.constructor = _prototype["$Init"];
+			delete _prototype["$Init"];
 		};
 	
 		object.body = superClass==pi.base?_prototype:pi.util.MergeObjects(_prototype,superClass.prototype,2);
@@ -297,7 +309,7 @@
 	};
 	
 	pi.element = pi.base.extend({
-		"$Constructor":function(_val){
+		"$Init":function(_val){
 			this.environment.setElement(
 				typeof _val=="string"||!_val?
 					document.createElement(_val||"DIV"):
@@ -317,12 +329,12 @@
 			return this.environment.getElement().cloneNode(_deep);
 		},
 		"insert":function(_element){
+			if(!_element)throw Error("pi.element.insert(_element): invalid _element input.");
 			_element = _element.environment?_element.environment.getElement():_element;
 			_element.appendChild(this.environment.getElement());
 			return this;
 		},
-		"insertAfter":function(_referenceElement){
-			_referenceElement = _referenceElement.environment?_referenceElement.environment.getElement():_referenceElement;
+		"insertAfter":function(_referenceElement){			_referenceElement = _referenceElement.environment?_referenceElement.environment.getElement():_referenceElement;
 			_referenceElement.nextSibling?this.insertBefore(_referenceElement.nextSibling):this.insert(_referenceElement.parentNode);
 			return this;
 		},
@@ -534,12 +546,11 @@
 	};
 	pi.xhr.body.event = {
 		"readystatechange":function(){
-			var readyState = this.environment.getApi().readyState;
-			var callback=this.environment.getCallback();
-
+			var readyState = this.environment.getApi().readyState, callback=this.environment.getCallback();
 			for (var i = 0; i < callback.length; i++) {
-				if(callback[i].options.readyState.indexOf(readyState)>-1)
-					 callback[i].fn.apply(this);
+				if(callback[i].options.readyState.indexOf(readyState)>-1){
+					callback[i].fn.apply(this);
+				}
 			}
 		}
 	};
@@ -692,8 +703,8 @@
 		pi.env.ie?window:document,
 		pi.env.ie?"load":"DOMContentLoaded",
 		function(){
-			for(var i=0; i<pi.util.DOMContentLoaded.length; i++){
-				pi.util.DOMContentLoaded[ i ]();
+			for(var i=0; i<pi.util.Init.length; i++){
+				pi.util.Init[ i ]();
 			}
 		}
 	);
