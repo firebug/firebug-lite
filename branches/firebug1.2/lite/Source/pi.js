@@ -3,12 +3,12 @@
 	/*
 	 * pi.js
 	 * 1.1
-	 * Azer KoÃ§ulu <http://azer.kodfabrik.com>
-	 * http://pi-js.googlecode.com
+	 * Azer Koçulu <http://azer.kodfabrik.com>
+	 * http://pi.kodfabrik.com
 	 */
 	
 	_scope.pi = Object(3.14159265358979323846);
-	var pi  = _scope.pi; pi.version = [1.1,2008072918];
+	var pi  = _scope.pi; pi.version = [1.1,2008081313];
 
 	pi.env = {
 		ie: /MSIE/i.test(navigator.userAgent),
@@ -21,20 +21,97 @@
 	};
 	
 	pi.util = {
+		Array:{
+			clone:function(_array,_undeep){
+				var tmp = [];
+				Array.prototype.push.apply(tmp,_array);
+				pi.util.Array.forEach(tmp,function(_item,_index,_source){
+					if(_item instanceof Array&&!_undeep)
+						_source[_index] = pi.util.Array.clone(_source[_index]);
+				});
+				return tmp;
+			},
+			count:function(_array,_value){
+				var count = 0;
+				pi.util.Array.forEach(_array,function(){
+					count+=Number(arguments[0]==_value);
+				});
+				return count;
+			},
+			getLatest:function(_array){
+				return _array[_array.length-1];
+			},
+			indexOf:function(_array,_value){
+				if(_array.indexOf)
+					return _array.indexOf(_value);
+				var index = -1;
+				for(var i=0, len=_array.length; i<len; i++){
+					if(_array[i]==_value){
+						index = i;
+						break;
+					}
+				}
+				return index;
+			},
+			forEach:function(_array,_function){
+				if(_array.forEach)
+					return _array.forEach(_function);
+				for(var i=0,len=_array.length; i<len; i++)
+					_function.apply(_array,[_array[i],i,_array]);	
+			},
+			remove:function(_array,_index){
+				var result = _array.slice(0,_index);
+				_array = Array.prototype.push.apply(result,_array.slice(_index+1));
+				return result;
+			},
+			rotate:function(_array,_value){
+				var source = _array;
+				pi.util.Array.forEach( pi.util.Array.clone(_array,true), function(_v,_i,_s){
+					var index = _i+_value;
+						index = index<0?_s.length+index:index;
+						index = index>=_s.length?Math.abs(index-_s.length):index;
+					source[index] = _v;
+				});
+				return source;
+			}
+		},
+		Curry:function(_fn,_scope){
+			var fn = _fn, scope = _scope||window, args = Array.prototype.slice.call(arguments,2);
+			return function(){ 
+				return fn.apply(scope,args.concat( Array.prototype.slice.call(arguments,0) )); 
+			};
+		},
 		IsArray:function(_object){
-			return _object && _object != window && ( _object instanceof Array || ( typeof _object.length == "number" && typeof _object.item =="function" ) )
+			if(window.NodeList&&window.NamedNodeMap){
+				if(_object instanceof Array||_object instanceof NodeList||_object instanceof NamedNodeMap||(window.HTMLCollection&&_object instanceof HTMLCollection))
+					return true;
+			};
+			if(!_object||_object==window||typeof _object=="function"||typeof _object=="string"||typeof _object.length!="number"){
+				return false
+			}
+			var len = _object.length;
+			if(len>0&&_object[0]!=undefined&&_object[len-1]!=undefined){
+				return true;
+			} else {
+				for(var key in _object){
+					if(key!="item"&&key!="length"&&key!="setNamedItemNS"&&key!="setNamedItem"&&key!="getNamedItem"&&key!="removeNamedItem"&&key!="getNamedItemNS"&&key!="removeNamedItemNS"&&key!="tags"){
+						return false;
+					}
+				}
+				return true
+			}
 		},
 		IsHash:function(_object){
 			return _object && typeof _object=="object"&&(_object==window||_object instanceof Object)&&!_object.nodeName&&!pi.util.IsArray(_object)
 		},
 		Init:[],
 		AddEvent: function(_element,_eventName,_fn,_useCapture){
-			_element[pi.env.ie.toggle("attachEvent","addEventListener")](pi.env.ie.toggle("on","")+_eventName,_fn,_useCapture||false);
-			return pi.util.AddEvent.curry(this,_element);
+			_element[pi.env.ie?"attachEvent":"addEventListener"]((pi.env.ie?"on":"")+_eventName,_fn,_useCapture||false);
+			return pi.util.Curry(pi.util.AddEvent,this,_element);
 		},
 		RemoveEvent: function(_element,_eventName,_fn,_useCapture){
-			_element[pi.env.ie.toggle("detachEvent","removeEventListener")](pi.env.ie.toggle("on","")+_eventName,_fn,_useCapture||false);
-			return pi.util.RemoveEvent.curry(this,_element);
+			_element[pi.env.ie?"detachEvent":"removeEventListener"]((pi.env.ie?"on":"")+_eventName,_fn,_useCapture||false);
+			return pi.util.Curry(pi.util.RemoveEvent,this,_element);
 		},
 		Include:function(_url,_callback){
 			var script = new pi.element("script").attribute.set("src",_url), callback = _callback||new Function, done = false, head = pi.get.byTag("head")[0];
@@ -53,20 +130,22 @@
 					pi.util.Element.setClass(_element, pi.util.Element.getClass(_element) + " " + _class );
 			},
 			getClass:function(_element){
-				return _element.getAttribute(pi.env.ie.toggle("className","class"))||"";
+				return _element.getAttribute(pi.env.ie?"className":"class")||"";
 			},
 			hasClass:function(_element,_class){
-				return pi.util.Element.getClass(_element).split(" ").indexOf(_class)>-1;
+				return pi.util.Array.indexOf(pi.util.Element.getClass(_element).split(" "),_class)>-1;
 			},
 			removeClass:function(_element,_class){
-				if( pi.util.Element.hasClass(_element,_class) )
+				if( pi.util.Element.hasClass(_element,_class) ){
+					var names = pi.util.Element.getClass(_element,_class).split(" ");
 					pi.util.Element.setClass(
 						_element, 
-						pi.util.Element.getClass(_element,_class).split(" ").removeValue(_class).join(" ")
+						pi.util.Array.remove(names,pi.util.Array.indexOf(names,_class)).join(" ")
 					);
+				}
 			},
 			setClass:function(_element,_value){
-				_element.setAttribute( pi.env.ie.toggle("className","class"), _value );
+				_element.setAttribute(pi.env.ie?"className":"class", _value );
 			},
 			toggleClass:function(){
 				if(pi.util.Element.hasClass.apply(this,arguments))
@@ -124,7 +203,7 @@
 			},
 			addStyle:function(_element,_style){
 				for(var key in _style){
-					key = key=="float"?pi.env.ie.toggle("styleFloat","cssFloat"):key;
+					key = key=="float"?pi.env.ie?"styleFloat":"cssFloat":key;
 					if (key == "opacity" && pi.env.ie) {
 						pi.util.Element.setOpacity(_element,_style[key]);
 						continue;
@@ -135,66 +214,103 @@
 				}
 			},
 			getStyle:function(_element,_property){
-				_property = _property=="float"?pi.env.ie.toggle("styleFloat","cssFloat"):_property;
+				_property = _property=="float"?pi.env.ie?"styleFloat":"cssFloat":_property;
 				if(_property=="opacity"&&pi.env.ie)
 					return pi.util.Element.getOpacity(_element.style);
 				return typeof _property=="string"?_element.style[_property]:_element.style;
 			},
 			getView:function(_element,_property){
 				var view = document.defaultView?document.defaultView.getComputedStyle(_element,null):_element.currentStyle;
-				_property = _property=="float"?pi.env.ie.toggle("styleFloat","cssFloat"):_property;
+				_property = _property=="float"?pi.env.ie?"styleFloat":"cssFloat":_property;
 				if(_property=="opacity"&&pi.env.ie)
 					return pi.util.Element.getOpacity(_element,view);
 				return typeof _property=="string"?view[_property]:view;
 			}
 		},
-		Random:function(_min,_max){
-			while(true){
-				var val = Math.round(Math.random()*(_max||0xfffffffffffffffff));
-				if(!_min||val>=_min)
-					break;
-			}
-			return val;
-		},
-		CloneObject:function(_object,_fn){
-			var tmp = {};
-			for(var key in _object)
-			{
-				if( pi.util.IsArray( _object[key] ) ){
-					tmp[key] = Array.prototype.clone.apply( _object[key] );
-				} else
-					if( pi.util.IsHash( _object[key] ) ){
-						tmp[ key ] = pi.util.CloneObject(_object[key]);
-						if(_fn)_fn.call(tmp,key,_object);
+		Hash: {
+			clone:function(_hash,_undeep){
+				var tmp = {};
+				for(var key in _hash){
+					if( !_undeep&&pi.util.IsArray( _hash[key] ) ){
+						tmp[key] = pi.util.Array.clone( _hash[key] );
+					} else if( !_undeep&&pi.util.IsHash( _hash[key] ) ){
+						tmp[ key ] = pi.util.Hash.clone(_hash[key]);
 					} else
-						tmp[key] = _object[key];
-			}
-			return tmp;
-		},
-		MergeObjects:function(_object,_source){
-			for(var key in _source){
-				var value = _source[key];
-				if (pi.util.IsArray(_source[key])) {
-					if(pi.util.IsArray( _object[key] )){
-						Array.prototype.push.apply( _source[key], _object[key] )
-					}
-					else
-						value = _source[key].clone();
+						tmp[key] = _hash[key];
 				}
-				else 
-					if (pi.util.IsHash(_source[key])) {
-						if (pi.util.IsHash(_object[key])) {
-							value = pi.util.MergeObjects(_object[key], _source[key]);
-						} else {
-							value = pi.util.CloneObject( _source[key] );
+				return tmp;
+			},
+			merge:function(_hash,_source,_undeep){
+				for(var key in _source){
+					var value = _source[key];
+					if (!_undeep&&pi.util.IsArray(_source[key])) {
+						if(pi.util.IsArray( _hash[key] )){
+							Array.prototype.push.apply( _source[key], _hash[key] )
 						}
-					} else 
-						if( _object[key] )
-							value = _object[ key ];
-							
-				_object[key] = value;
-			};
-			return _object;
+						else
+							value = pi.util.Array.clone(_source[key]);
+					}
+					else if (!_undeep&&pi.util.IsHash(_source[key])) {
+						if (pi.util.IsHash(_hash[key])) {
+							value = pi.util.Hash.merge(_hash[key], _source[key]);
+						} else {
+							value = pi.util.Hash.clone( _source[key] );
+						}
+					} else if( _hash[key] )
+						value = _hash[ key ];
+					_hash[key] = value;
+				};
+				return _hash;
+			}
+		},
+		Number:{
+			range:function(_from,_to){
+				for(var i=arguments.length>1?_from:0, array=[], len=(arguments.length>1?_to:arguments[0]); i<len; i++)
+					array.push(i);
+				return array;
+			},
+			base:function(_number,_system){
+				var remain = _number%_system;
+				if(_number==remain)return String.fromCharCode(_number+(_number>9?87:48));
+				return ((_number-remain)/_system).base(_system)+String.fromCharCode(remain+(remain>9?87:48));
+			},
+			decimal:function(_number,_system){
+				var result = 0, digit = String(_number).split("");
+				for(var i=0,len=digit.length; i<len; i++){
+					digit[i]=parseInt((digit[i].charCodeAt(0)>58)?digit[i].charCodeAt(0)-87:digit[i]);
+					result += digit[i]*(Math.pow(_system,digit.length-1-i));
+				}
+				return result;
+			},
+			random:function(_min,_max){
+				while(true){
+					var val = Math.round(Math.random()*(_max||0xfffffffffffffffff));
+					if(!_min||val>=_min)
+						break;
+				}
+				return val;
+			}
+		},
+		String:{
+			format:function(_str){
+				var values = Array.prototype.slice.call(arguments,1);
+				return _str.replace(/\{(\d)\}/g,function(){
+					return values[arguments[1]];
+				})
+			},
+			leftpad:function(_str,_len,_ch){
+				var ch = Boolean(_ch)==false?" ":_ch;
+				while(_str.length<_len)
+					_str=ch+_str;
+				return _str;
+			},
+			unicode:function(_str){
+				var str="", obj = _str.split("");
+				var i=obj.length;
+				while(i--)
+					str="\\u{0}{1}".format(pi.util.String.leftpad(String(pi.util.Number.base(obj[i].charCodeAt(0),16)),4,"0"),str);
+				return str;
+			}
 		},
 		GetViewport:function(){
 			return {
@@ -214,19 +330,19 @@
 	
 	pi.base = function(){
 		this.body = {};
-		this.constructor = null;
+		this.init = null;
 		
 		this.build = function(_skipClonning){
 			var base = this, skipClonning = _skipClonning||false, _private = {},
 				fn = function(){
-					var _p = pi.util.CloneObject(_private);
+					var _p = pi.util.Hash.clone(_private);
 					if(!skipClonning){
 						for(var key in this){
 							if(pi.util.IsArray( this[ key ] ) ){
-								this[key] = Array.prototype.clone.apply( this[key] );
+								this[key] = pi.util.Array.clone( this[key] );
 							} else
 								if( pi.util.IsHash(this[key]) ){
-									this[key] = pi.util.CloneObject( 
+									this[key] = pi.util.Hash.clone( 
 										this[ key ],
 										function(_key,_object){
 											this[ _key ]._parent_ = this;
@@ -237,27 +353,28 @@
 						}
 					};
 					base.createAccessors( _p, this );
-					if(base.constructor)
-						return base.constructor.apply(this,arguments);
+					if(base.init)
+						return base.init.apply(this,arguments);
 					return this;
 				};
 			this.movePrivateMembers(this.body,_private);
-			if(this.constructor){
-				fn["$Init"] = this.constructor;
-			}
+			if(this.init){
+				fn["$Init"] = this.init;
+			};
 			fn.prototype = this.body;
 			return fn;
 		};
 		
 		this.createAccessors = function(_p, _branch){
 			var getter = function(_property){ return this[_property]; },
-				setter = function(_property,_value){ this[_property] = _value; return _branch._parent_||_branch; };
+			setter = function(_property,_value){ this[_property] = _value; return _branch._parent_||_branch; };
 	
 			for (var name in _p) {
 				var isPrivate = name.substring(0, 1) == "_", title = name.substring(1, 2).toUpperCase() + name.substring(2);
+				
 				if (isPrivate) {
-					_branch[(_branch["get" + title]?"_":"")+"get" + title] = getter.curry(_p,name);
-					_branch[(_branch["set" + title]?"_":"")+"set" + title] = setter.curry(_p,name);
+					_branch[(_branch["get" + title]?"_":"")+"get" + title] = pi.util.Curry(getter,_p,name);
+					_branch[(_branch["set" + title]?"_":"")+"set" + title] = pi.util.Curry(setter,_p,name);
 				}
 				else 
 					if (pi.util.IsHash(_p[name])){
@@ -285,40 +402,17 @@
 		};
 	};
 	
-	Function.prototype.extend = function(_prototype,_skipClonning){
-		var object = new pi.base, superClass = this;
-		if(_prototype["$Init"]){
-			object.constructor = _prototype["$Init"];
-			delete _prototype["$Init"];
-		};
-	
-		object.body = superClass==pi.base?_prototype:pi.util.MergeObjects(_prototype,superClass.prototype,2);
-		object.constructor=object.constructor||function(){
-			if(superClass!=pi.base)
-				superClass.apply(this,arguments);
-		};
-		
-		return object.build(_skipClonning);
+	pi.element = new pi.base;
+	pi.element.init = function(_val){
+		this.environment.setElement(
+			typeof _val=="string"||!_val?
+				document.createElement(_val||"DIV"):
+				_val
+		);
+		return this;
 	};
 	
-	Function.prototype.curry = function(_scope){
-		var fn = this, scope = _scope||window, args = Array.prototype.slice.call(arguments,1);
-		return function(){ 
-			return fn.apply(scope,args.concat( Array.prototype.slice.call(arguments,0) )); 
-		};
-	};
-	
-	pi.element = pi.base.extend({
-		"$Init":function(_val){
-			this.environment.setElement(
-				typeof _val=="string"||!_val?
-					document.createElement(_val||"DIV"):
-					_val
-			);
-			this.element = this.environment.getElement();
-			this.element.pi = this;
-			return this;
-		},
+	pi.element.body = {
 		"clean":function(){
 			var childs = this.child.get();
 			while(childs.length){
@@ -329,7 +423,6 @@
 			return this.environment.getElement().cloneNode(_deep);
 		},
 		"insert":function(_element){
-			if(!_element)throw Error("pi.element.insert(_element): invalid _element input.");
 			_element = _element.environment?_element.environment.getElement():_element;
 			_element.appendChild(this.environment.getElement());
 			return this;
@@ -347,12 +440,12 @@
 			return pi.xpath(_expression,_resultType||"ORDERED_NODE_SNAPSHOT_TYPE",this.environment.getElement(),_namespaceResolver,_result);
 		},
 		"remove":function(){
-			this.environment.getParent().removeChild(
-				this.environment.getElement()
-			);
+			if (this.environment.getParent()) {
+				this.environment.getParent().removeChild(this.environment.getElement());
+			}
 		},
 		"update":function(_value){
-				["TEXTAREA","INPUT"].indexOf(this.environment.getName())>-1?
+				pi.util.Array.indexOf(["TEXTAREA","INPUT"],this.environment.getName())>-1?
 				(this.environment.getElement().value = _value):
 				(this.environment.getElement().innerHTML = _value);
 				return this;
@@ -380,7 +473,7 @@
 				return this._parent_;
 			},
 			"addClass":function(_classes){
-				for (var i = 0; i < arguments.length; i++) {
+				for(var i=0,len=arguments.length; i<len; i++){
 					pi.util.Element.addClass(this._parent_.environment.getElement(),arguments[i]);
 				};
 				return this._parent_;
@@ -433,17 +526,17 @@
 				);
 				return this._parent_;
 			},
-			"query":function(_tag,_attributeName,_attributeValue){
-				return this._parent_.query(
-					"{0}{1}".format( (_tag?"{0}".format(_tag):"/*"), _attributeName||_attributeValue?"[contains(concat(' ', @{0}, ' '),' {1} ')]".format(_attributeName||"",_attributeValue||""):"" )
-				);
-			},
 			"remove":function(_element){
 				this._parent_.environment.getElement().removeChild(_element.environment?_element.environment.getElement():_element);
 			}
 		},
 		"environment":{
 			"_element":null,
+			"setElement":function(_value){
+				this._parent_.element = _value;
+				this._parent_.element.pi = this._parent_;
+				this._setElement(_value);
+			},
 			"getParent":function(){
 				return this.getElement().parentNode;
 			},
@@ -480,11 +573,11 @@
 				return this._parent_;
 			}
 		}
-	});
+	};
+	pi.element = pi.element.build();
 	
 	pi.xhr = new pi.base;
-	pi.xhr.constructor = function(){
-		var api;
+	pi.xhr.init = function(_url){
 		if(!window.XMLHttpRequest){
 			var names = ["Msxml2.XMLHTTP.6.0","Msxml2.XMLHTTP.3.0","Msxml2.XMLHTTP","Microsoft.XMLHTTP"];
 			for (var i = 0; i < names.length; i++) {
@@ -496,21 +589,25 @@
 		}
 		else
 			this.environment.setApi(new XMLHttpRequest());
-		this.environment.getApi().onreadystatechange=this.event.readystatechange.curry(this);
+		this.environment.getApi().onreadystatechange=pi.util.Curry(this.event.readystatechange,this);
+		
+		this.environment.setUrl(_url);
+		
 		return this;
 	};
 	pi.xhr.body = {
 		"abort":function(){
 			this.environment.getApi().abort();
+			return this;
 		},
 		"send":function(){
 			var url = this.environment.getUrl(), data = this.environment.getData(),dataUrl = ""; 
 
 			for (var key in data)
-				dataUrl += "{0}={1}&".format(key, data[key]);
+				dataUrl += pi.util.String.format("{0}={1}&",key, data[key]);
 			
 			if (this.environment.getType()=="GET")
-				url += (url.search("\\?")==-1?"?":"&")+"{0}".format(dataUrl);
+				url += (url.search("\\?")==-1?"?":"&")+pi.util.String.format("{0}",dataUrl);
 			
 			this.environment.getApi().open(this.environment.getType(),url,this.environment.getAsync());
 			
@@ -518,37 +615,44 @@
 				this.environment.getApi().setRequestHeader(key,this.environment.getHeader()[key]);
 
 			this.environment.getApi().send(this.environment.getType()=="GET"?"":dataUrl);
+			return this;
 		}
 	};
 	pi.xhr.body.environment = {
-		"_async":true, "_api":null, "_cache":true, "_callback":[], "_channel":null, "_data":{}, "_header":{}, "_mimeType":null, "_multipart":false, "_type":"GET", "_timeout":0, "_url":"",
-		"addCallback": function(_options,_fn){
-			this.getCallback().push({ "fn":_fn, "options":_options  });
+		"_async":true, "_api":null, "_cache":true, "_callback":[], "_data":{}, "_header":{}, "_type":"GET", "_url":"",
+		"addCallback": function(_readyState,_fn){
+			this.getCallback().push({ "fn":_fn, "readyState":_readyState  });
+			return this._parent_;
 		},
 		"addHeader": function(_key,_value){
 			this.getHeader()[_key] = _value;
+			return this._parent_;
 		},
 		"addData": function(_key,_value){
 			this.getData()[_key] = _value;
+			return this._parent_;
 		},
-		"changeCache":function(_value){
-			if(_value==false){
-				this.addData("forceCache",Math.round(Math.random()*10000));
-			}
-			this.setCache(_value);
+		"setCache":function(_value){
+			delete this.getData()["forceCache"];
+			if(!_value){
+				this.addData("forceCache",Number(new Date));
+			};
+			this._setCache(_value);
+			return this._parent_;
 		},
-		"changeType": function(_value){
+		"setType": function(_value){
 			if(_value=="POST"){
 				this.addHeader("Content-Type","application/x-www-form-urlencoded");
-			}
-			this.setType(_value);
+			};
+			this._setType(_value);
+			return this._parent_;
 		}
 	};
 	pi.xhr.body.event = {
 		"readystatechange":function(){
 			var readyState = this.environment.getApi().readyState, callback=this.environment.getCallback();
-			for (var i = 0; i < callback.length; i++) {
-				if(callback[i].options.readyState.indexOf(readyState)>-1){
+			for (var i = 0, len=callback.length; i < len; i++) {
+				if(pi.util.Array.indexOf(callback[i].readyState,readyState)>-1){
 					callback[i].fn.apply(this);
 				}
 			}
@@ -569,141 +673,13 @@
 	};
 	
 	/*
-	 * pi.xpath
+	 * registering onload event for init functions
 	 */
-	
-	pi.xpath = function(_expression,_resultType,_contextNode,_namespaceResolver,_result){
-		var contextNode = _contextNode||document, 
-		expression = _expression||"",
-		namespaceResolver = _namespaceResolver||null, 
-		result=_result||null,
-		resultType=_resultType||"ANY_TYPE";
-		return document.evaluate(expression, contextNode, namespaceResolver, XPathResult[resultType], result);
-	};
-	
-	Array.prototype.clone = function(_skipchild){
-		var tmp = [];
-		Array.prototype.push.apply(tmp,this);
-		tmp.forEach(function(item,index,object){
-			if(item instanceof Array&&_skipchild==undefined)
-	    		object[index] = object[index].clone();
-		});
-	    return tmp;
-	};
-	Array.prototype.count = function(_value){
-		var count = 0;
-		this.forEach(function(){
-			count+=Number(arguments[0]==_value);
-		});
-		return count;
-	};
-	
-	Array.prototype.forEach = Array.prototype.forEach||function(_function){
-		for(var i=0; i<this.length; i++)
-			_function.apply(this,[this[i],i,this]);
-	};
-	
-	Array.prototype.getLastItem = function(){
-		return this[this.length-1];
-	};
-	
-	Array.prototype.indexOf = Array.prototype.indexOf||function(_value){
-		var index = -1;
-		for(var i=0; i<this.length; i++)
-			if(this[i]==_value){
-				index = i;
-				break;
-			}
-		return index;
-	};
-	
-	Array.prototype.remove = function(_index){
-		var array = this.slice(0,_index);
-		Array.prototype.push.apply(array,this.slice(_index+1));
-		return array;
-	};
-	
-	Array.prototype.removeValue = function(_value){
-		return this.remove(this.indexOf(_value));
-	};
-	
-	Array.prototype.rotate = function(_value){
-		var source = this;
-		this.clone(true).forEach(function(_v,_i,_s){
-			var index = _i+_value;
-				index = index<0?_s.length+index:index;
-				index = index>=_s.length?Math.abs(index-_s.length):index;
-			source[index] = _v;
-		});
-	};
-
-	Boolean.prototype.toggle = function(){
-		return this==true?arguments[0]:arguments[1];
-	};
-
-	Number.prototype.base = function(_system){
-		var remain = this%_system;
-		if(this==remain)return String.fromCharCode(this+(this>9?87:48));
-		return ((this-remain)/_system).base(_system)+String.fromCharCode(remain+(remain>9?87:48));
-	};
-	Number.prototype.decimal = function(_system){
-		var result = 0, digit = String(this).split("");
-		for(var i=0; i<digit.length; i++)
-		{
-			digit[i]=parseInt((digit[i].charCodeAt(0)>58)?digit[i].charCodeAt(0)-87:digit[i]);
-			result += digit[i]*(Math.pow(_system,digit.length-1-i));
-		}
-		return result;
-	};
-	Number.prototype.range = function(_pattern){
-		for(
-			var value = String(this), isFloat = /\./i.test(value), 
-			i = isFloat.toggle(parseInt(value.split(".")[0]),0), 
-			end = parseInt(value.split(".")[isFloat.toggle(1,0)]), 
-			array = []; i<end; i++
-		){
-			array.push(
-				Boolean(_pattern)==false?i:(typeof _pattern=="function"?_pattern(i):_pattern[i])
-			);
-		}
-		return array;
-	};
-
-	String.prototype.escape = function(){
-		return escape(this);
-	};
-
-	String.prototype.format = function(){
-		var values = arguments;
-		return this.replace(/\{(\d)\}/g,function(){
-			return values[arguments[1]];
-		})
-	};
-	
-	String.prototype.leftpad = function(_len,_ch){
-		var str=this;
-		var ch = Boolean(_ch)==false?" ":_ch;
-		while(str.length<_len)
-			str=ch+str;
-		return str;
-	};
-	
-	String.prototype.toggle = function(_value,_other){
-		return this==_value?_value:_other;
-	};
-	
-	String.prototype.unicode = function(){
-		var str="", obj = this.split("");
-		for(var i=obj.length-1; i>=0; i--)
-			str="\\u{0}{1}".format(String(obj[i].charCodeAt(0).base(16)).leftpad(4,"0"),str);
-		return str;
-	};
-	
 	pi.util.AddEvent(
 		pi.env.ie?window:document,
 		pi.env.ie?"load":"DOMContentLoaded",
 		function(){
-			for(var i=0; i<pi.util.Init.length; i++){
+			for(var i=0,len=pi.util.Init.length; i<len; i++){
 				pi.util.Init[ i ]();
 			}
 		}

@@ -89,21 +89,27 @@
  * html
  */
 
-#Firebug .Left .HTML { display:none; height:250px; overflow:scroll; padding-right:10px; }
-#Firebug .Left .HTML .Block { padding:0 0 0 10px; }
-#Firebug .Left .HTML .Block .Link { display:block; font:11px Verdana, Geneva, Arial, Helvetica, sans-serif; color:#333;  padding:2px 2px 2px 12px; cursor:pointer; }
-#Firebug .Left .HTML .Block .ParentLink { background:#fff url(tree_open.gif) no-repeat 2px center; font-weight:bold; color:#111; text-decoration:none; }
-#Firebug .Left .HTML .Block .ParentLink:hover { text-decoration:underline; }
-#Firebug .Left .HTML .Block .Open { background-image:url(tree_close.gif) }
-#Firebug .Left .HTML .Block .Selected { background-color:#86abd9; }
+#Firebug .Left .HTML { display:none; height:250px; overflow:scroll; padding:0 10px 2px 10px; }
+#Firebug .Left .HTML .Block {  padding:0 0 0 0px; font:11px Verdana, Geneva, Arial, Helvetica, sans-serif;  }
+#Firebug .Left .HTML .Block .Spacer { cursor:default; padding:2px 2px 2px 15px; }
+#Firebug .Left .HTML .Block .Link { display:block; color:#333; padding:2px 2px 2px 0; }
+#Firebug .Left .HTML .Block .Link .Content { padding:2px 2px 2px 2px; }
+#Firebug .Left .HTML .Block .Link .TagName { cursor:pointer; }
+#Firebug .Left .HTML .Block .Parent { font-weight:bold; color:#111; text-decoration:none; }
+#Firebug .Left .HTML .Block .Parent .Spacer { background:#fff center no-repeat; }
+#Firebug .Left .HTML .Block .Parent .Spacer { background-image:url(tree_open.gif); }
+#Firebug .Left .HTML .Block .Open .Spacer { background-image:url(tree_close.gif) }
+#Firebug .Left .HTML .Block .Selected { background-color:#4473c4; }
 #Firebug .Left .HTML .Block .Selected * { color:#fff; }
 #Firebug .Left .HTML .Block .SubContainer {  padding-left:20px; }
+#Firebug .Left .HTML .Unvisible { opacity:0.5; filter:Alpha(Opacity=50); }
 
 #Firebug .Right .HTML { display:none; }
 #Firebug .Right .HTML .Content { overflow:scroll; height:235px; font:11px Verdana, Geneva, Arial, Helvetica, sans-serif; }
 #Firebug .Right .HTML .Content .CSSItem { padding:5px; color:#333; height:6px }
 #Firebug .Right .HTML .Content .CSSProperty { width:45%; float:left; overflow:hidden; }
 #Firebug .Right .HTML .Content .CSSValue { width:55%; float:left; white-space:nowrap; overflow:visible !important;  overflow:hidden;  }
+#Firebug .Right .HTML .Content .CSSValue input { font:11px ArArial, Helvetica, sans-serif; color:#333; 3px 0 0 -3px; }
 #Firebug .Right .HTML .Content .CSSItem center { color:rgb(0,150,0); padding:0 0 3px 0; font:bold 12px Arial, Helvetica, sans-serif; }
 #Firebug .ButtonContainer .HTML { display:none; }
 
