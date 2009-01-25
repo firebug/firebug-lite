@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>A Pure JavaScript Firebug "Pseudo-Port" Testing</title>
+<script type="text/javascript" src="firebug.min.js"></script>
+<style type="text/css">
+body {
+  margin: 0;
+  font-size: 16px;
+  font-family: Lucida Grande, sans-serif;
+}
+h1 {
+  color: #123;
+  font-weight: bold;
+}
+h2 {
+  color: #456;
+  font-weight: bold;
+  font-size: 18px;
+  margin-top: 0;
+}
+#main {
+  padding: 1px 20px 10px 20px;
+}
+li { 
+  font-family: Monaco, monospace;
+}
+#source {
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #def;
+}
+#source a:hover {
+  color: #5a0;
+}
+.note {
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #456;
+  color: #fff;
+  font-family: Lucida Grande, sans-serif;
+}
+.note a, .note a:visited {
+  color: #fff;
+}
+.note a:hover {
+  color: #ff0;
+}
+#ui {
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #efd;
+}
+</style>
+</head>
+<body>
+  <div id="main">
+    <h1>A Pure JavaScript Firebug "Pseudo-Port" Testing</h1>
+    <div id="source">
+      <h2>Source files</h2>
+      <ul>
+        <li><a href="../build/firebug.full.js">Uncompressed source</a></li>
+        <li><a href="../build/firebug.min.js">Compressed source</a></li>
+        <li><a href="../build/firebug.zip">Full version</a></li>
+      </ul>
+    </div>
+    <div class="note">
+      This demo is a proof of concept of a pure JavaScript Firebug port.
+      Read the <a href="../docs/FirebugLite.pdf">documentation</a> for more details about this approach. 
+    </div>
+    <div id="ui">
+      <h2>User interface files</h2>
+      <ul>
+        <li><a href="../skin/classic/firebug.html">HTML</a></li>
+        <li><a href="../skin/classic/firebug.css">CSS</a></li>
+        <li><a href="../skin/classic/sprite.png">Sprite</a></li>
+      </ul>
+    </div>
+    <div class="note">
+      For bookmarlet lovers, here's the
+      <a href="javascript:(function(){var s=document.createElement(%22script%22);s.src=%22http://pedrosimonetti.googlepages.com/firebug.min.js%22;document.documentElement.firstChild.appendChild(s);})();">link</a>.
+    </div>
+  </div>
+
+</body>
+</html>

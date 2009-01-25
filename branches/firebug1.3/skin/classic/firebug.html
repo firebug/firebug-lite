@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title></title>
+<link href="firebug.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<table id="table" cellpadding="0" cellspacing="0" border="0">
+  <tbody>
+    <tr>
+      <td id="header" colspan="2">
+	      <div id="mainButtons">
+	        <a id="detach" href="javascript:FB.detach()">&nbsp;</a>
+	        <a id="close" href="javascript:FB.close()">&nbsp;</a>
+	      </div>
+	      <div id="hSplitter">&nbsp;</div>
+		      <div id="titlebar">
+		      <div id="titlebarIcon">
+		        <a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a>
+		      </div>
+		      <div id="titlebarButtons">
+		        <span><a href="javascript:void(0)">Inspect</a></span>
+		        <span><a href="javascript:FB.clear()">Clear</a></span>
+		      </div>
+	      </div>
+	      <div id="toolbar">
+		      <div id="toolbarL" class="toolbarPanel">
+		        <a id="tc" class="tab selectedTab" href="javascript:FB.showTab(0)"><span class="tabL"></span><span class="tabText">Console</span><span class="tabR"></span></a>
+		        <a id="th" class="tab" href="javascript:FB.showTab(1)"><span class="tabL"></span><span class="tabText">HTML</span><span class="tabR"></span></a>
+		        <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">CSS</span><span class="tabR"></span></a>
+		        <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Script</span><span class="tabR"></span></a>
+		        <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a>
+		      </div>
+		      <div id="toolbarRFrame" class="hide">
+			      <div id="toolbarR" class="toolbarPanel">
+              <a class="tab selectedTab" href="javascript:void(0);"><span class="tabL"></span><span class="tabText">Style</span><span class="tabR"></span></a>
+              <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Layout</span><span class="tabR"></span></a>
+              <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a>
+			      </div>
+		      </div>
+	      </div>
+      </td>
+    </tr>
+    <tr id="body">
+      <td id="bodyL">
+	      <div id="panelL" class="FitHeight">
+		      <div id="consoleL">
+		      </div>
+          <div id="HTMLL">
+          </div>
+	      </div>
+      </td>
+      <td id="bodyR" class="hide">
+	      <div id="vSplitter" class="vSplitter">&nbsp;</div>
+	      <div id="consoleR" class="FitHeight">
+	      </div>
+      </td>
+    </tr>
+    <tr id="bottom">
+      <td id="command" colspan="2">
+	      <div id="commandFrame">
+		      <div id="commandIcon">&gt;&gt;&gt;</div>
+		      <input id="commandLine" name="commandLine" type="text" />
+	      </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>
