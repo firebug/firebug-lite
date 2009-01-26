@@ -1,7 +1,7 @@
 (function(){
 
-var bookmarletMode = true;
-var bookmarletURL = "http://pedrosimonetti.googlepages.com/";
+var bookmarletMode = false;
+var bookmarletURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/";
 
 var publishedURL = "";
 var baseURL = "";
@@ -15,7 +15,6 @@ var modules =
     'firebug.js',
     
     'firebug/object/reps.js',
-    'firebug/object/selector.js',
     'firebug/console.js',
     'firebug/commandLine.js',
 
@@ -23,15 +22,6 @@ var modules =
     'firebug/chrome/frame.js',
     'firebug/chrome/popup.js',
     'firebug/chrome/injected.js',
-    
-    'firebug/object/inspector.js',
-    'firebug/object/html.js',
-    
-    /*
-    'firebug/script/tokens.js',
-    'firebug/script/parse.js',
-    'firebug/script/json2.js',    
-    'firebug/script/debugger.js',/**/
     
     'firebug/boot.js'
 ];
