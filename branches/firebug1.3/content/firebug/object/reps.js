@@ -1,7 +1,7 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-extend(FBL, {
+append(FBL, {
 
     appendText: function(object, html)
     {

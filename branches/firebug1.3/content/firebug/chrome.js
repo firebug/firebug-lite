@@ -108,7 +108,7 @@ document.evaluate("/html/body/div/ul/li[2]", document, null, XPathResult.ANY_TYP
 // ************************************************************************************************
 // Chrome API
 
-extend(ChromeAPI,
+append(ChromeAPI,
 {
     close: function()
     {

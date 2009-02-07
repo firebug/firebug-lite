@@ -15,9 +15,9 @@ FBL.Firebug =
 // ************************************************************************************************
 // APIs
 
-FBL.ConsoleAPI = inherit(FBL.Firebug);
+FBL.ConsoleAPI = extend(FBL.Firebug);
  
-FBL.ChromeAPI = inherit(FBL.Firebug); 
+FBL.ChromeAPI = extend(FBL.Firebug); 
 
 
 // ************************************************************************************************
@@ -35,7 +35,7 @@ FBL.skinURL = null;
 // ************************************************************************************************
 // Internal functions
 
-extend(FBL,  
+append(FBL,  
 {
     onReady: function()
     {

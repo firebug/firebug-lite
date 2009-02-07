@@ -45,131 +45,26 @@ this.waitForInit = function()
 // ************************************************************************************************
 // Basics
 
-this.bind = function()
-{
-   var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
-   return function() { return fn.apply(object, arrayInsert(cloneArray(args), 0, arguments)); }
-};
-
-this.bindFixed = function()
-{
-    var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
-    return function() { return fn.apply(object, args); }
-};
-
 this.extend = function(l, r)
 {
-    var obj = l.prototype || l;
-    for (var n in r)
-        obj[n] = r[n];
-        
-    return obj;
-};
-
-this.inherit = function(l, r)
-{
-    if (!r)
-    {
-        r = l;
-        var newOb = {};
-    } 
-    if (l.prototype)
-        var newOb = new l;
-    else
-    {
-        var newOb = {};
-        for (var n in l)
-            newOb[n] = l[n];
-    }
-        
+	r = r || {};
+    var newOb = {};
+    for (var n in l)
+        newOb[n] = l[n];
     for (var n in r)
         newOb[n] = r[n];
+
     return newOb;
 };
 
-this.newClass = function()
-{
-    var newConstructor = function(){};
-    newConstructor.extend = classExtend;
-    
-    return newConstructor;
-}
 
-var classExtend = function(r)
+this.append = function(l, r)
 {
     for (var n in r)
-        this.prototype[n] = r[n];
+        l[n] = r[n];
         
-    return this;
+    return l;
 };
-
-this.keys = function(map)  // At least sometimes the keys will be on user-level window objects
-{
-    var keys = [];
-    try
-    {
-        for (var name in map)  // enumeration is safe
-            keys.push(name);   // name is string, safe
-    }
-    catch (exc)
-    {
-        // Sometimes we get exceptions trying to iterate properties
-    }
-
-    return keys;  // return is safe
-};
-
-this.createStyleSheet = function(doc, url)
-{
-    var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
-    style.setAttribute("charset","utf-8");
-    style.firebugIgnore = true;
-    style.setAttribute("type", "text/css");
-    style.innerHTML = this.getResource(url);
-    return style;
-}
-
-this.addStyleSheet = function(doc, style)
-{
-    var heads = doc.getElementsByTagName("head");
-    if (heads.length)
-        heads[0].appendChild(style);
-    else
-        doc.documentElement.appendChild(style);
-};
-
-this.addScript = function(doc, id, src)
-{
-    var element = doc.createElementNS("http://www.w3.org/1999/xhtml", "script");
-    element.setAttribute("type", "text/javascript");
-    element.setAttribute("id", id);
-    element.firebugIgnore = true;
-    element.setAttribute("style", "display:none");
-    element.innerHTML = src;
-    if (doc.documentElement)
-        doc.documentElement.appendChild(element);
-    else
-    {
-        // See issue 1079, the svg test case gives this error
-        //if (FBTrace.DBG_ERRORS)
-        //    FBTrace.dumpProperties("lib.addScript doc has no documentElement:", doc);
-    }
-};
-
-function cloneArray(array, fn)
-{
-   var newArray = [];
-
-   if (fn)
-       for (var i = 0; i < array.length; ++i)
-           newArray.push(fn(array[i]));
-   else
-       for (var i = 0; i < array.length; ++i)
-           newArray.push(array[i]);
-
-   return newArray;
-}
-
 
 
 // ************************************************************************************************

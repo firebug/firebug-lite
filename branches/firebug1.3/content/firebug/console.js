@@ -5,7 +5,7 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Console
 
-extend(ConsoleAPI,
+append(ConsoleAPI,
 {
     log: function()
     {
@@ -215,7 +215,7 @@ var clPrefix = ">>> ";
 // ************************************************************************************************
 // Console Module
 
-var Console = Firebug.Console = inherit(ConsoleAPI,
+var Console = Firebug.Console = extend(ConsoleAPI,
 {
 
     logID: "(_____FIREBUG_LOG_____)",

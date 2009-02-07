@@ -1,3 +1,156 @@
+/*
+
+CHECK!!!!:
+
+IE - get element position (very fast). To use in BoxModel
+getBoundingClientRect
+
+QUESTIONS:
+
+  - Svn directory structure (beta)
+  - should I put these files in the SVN:
+    - compress.bat
+    - .psd (photoshop) file used to create the sprite file
+    
+  - The "build" folder doesn't exists in Firebug. 
+  - Files organized in folders.
+  - How to proceed when the console global variable is already defined?
+  
+
+
+
+  - Loading process
+    full:
+		- js with embedded HTML and CSS codes
+		- sprite image
+
+
+  
+HARD QUESTIONS
+  
+  - append versus extend
+  - Document Caching
+  
+
+TO THINK:
+
+  - how to auto-load FirebugLite + Extension in a single bookmarlet?
+
+  
+TODO: Define a pattern to fix the scope problem inside event handlers
+
+
+
+
+
+Partial Solved
+TODO: problem with the new Firebug for FF3, it seems that it doesn't allow 
+      appending the console namespace anymore.
+      
+TODO: CommandLineAPI --> $, $$, dir, dirxml...
+
+
+UI:
+TODO: Draw frame outside the screen to avoid flickering
+
+TODO: Better handling of switching tab contexts (selectedTab, rightPanelVisible)
+
+TODO: problem when resizing with the vSplitter, when it reaches the side of
+      the screen. Problem with negative pixel numbers.
+
+TODO: vSplitter is bigger than the frame in firefox. Problem with mouse scroll.
+
+
+Events:
+
+TODO: apply the onGlobalKeyDown handler to the Chrome Frame
+
+TODO: handle disble mouse wheel in IE
+
+TODO: handle disble text selection in IE
+
+TODO: opera problem with the TAB key in commandLine
+
+
+FIXED: isScrolledToBottom is not working in Firefox, it seems that this is 
+      happening because the scrollable panel is some pixels higher than
+      it should be.
+
+FIXED: better handling of scope of commandLine.eval(), if you type "this" it will
+      refer to the CommandLine module, and it should refer to "window" instead
+
+
+<script language="JavaScript1.2">
+
+function disabletext(e){
+return false
+}
+
+function reEnable(){
+return true
+}
+
+//if the browser is IE4+
+document.onselectstart=new Function ("return false")
+
+//if the browser is NS6
+if (window.sidebar){
+document.onmousedown=disabletext
+document.onclick=reEnable
+}
+</script>
+
+
+
+
+*/
+
+/*
+
+
+
+function getXPath(node, path) {
+  path = path || [];
+  if(node.parentNode) {
+    path = getXPath(node.parentNode, path);
+  }
+
+  if(node.previousSibling) {
+    var count = 1;
+    var sibling = node.previousSibling
+    do {
+      if(sibling.nodeType == 1 && sibling.nodeName == node.nodeName) {count++;}
+      sibling = sibling.previousSibling;
+    } while(sibling);
+    if(count == 1) {count = null;}
+  } else if(node.nextSibling) {
+    var sibling = node.nextSibling;
+    do {
+      if(sibling.nodeType == 1 && sibling.nodeName == node.nodeName) {
+        var count = 1;
+        sibling = null;
+      } else {
+        var count = null;
+        sibling = sibling.previousSibling;
+      }
+    } while(sibling);
+  }
+
+  if(node.nodeType == 1) {
+    path.push(node.nodeName.toLowerCase() + (node.id ? "[@id='"+node.id+"']" : count > 0 ? "["+count+"]" : ''));
+  }
+  return path;
+};
+
+
+// Getting result
+document.evaluate("/html/body/div/ul/li[2]", document, null, XPathResult.ANY_TYPE, null ).iterateNext()
+
+
+
+
+*/
+
 (function(){
 
 var bookmarletMode = false;

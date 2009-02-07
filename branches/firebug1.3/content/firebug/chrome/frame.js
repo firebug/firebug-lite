@@ -6,7 +6,7 @@ var Chrome = Firebug.Chrome;
 //----------------------------------------------------------------------------
 // Frame Chrome
 //----------------------------------------------------------------------------
-Firebug.Chrome.Frame = inherit(Firebug.Chrome,
+Firebug.Chrome.Frame = extend(Firebug.Chrome,
 {
     element: null,
     viewport: null,
