@@ -1,1 +1,0 @@
-FBL.initialize();
