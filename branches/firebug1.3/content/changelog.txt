@@ -1,0 +1,82 @@
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+DONE: Inspect function implemented.
+
+DONE: onInspecting highlight element in HTML Tree behaviour implemented.
+      When inspecting, the elements are being highlighted, and the scroll
+      is being changed to make the element visible in the tree.
+
+
+
+-------------------------------------------------------------------------------
+Core
+-------------------------------------------------------------------------------
+FIXED: Problem with scope in event handlers. All functions that need to access
+       the "shared scope" must be assigned to a local variable.
+        
+        var onClick = function onClick(e)
+        {
+        ...
+
+FIXED: Revised "extend" and "append" functions
+
+FIXED: problem with the new Firebug for FF3, it seems that it doesn't allow 
+      extending the console namespace anymore.
+            
+FIXED: CommandLineAPI --> $, $$, dir, dirxml...
+
+FIXED: Fixed bug in getLocation function, the relative path calculation wasn't 
+       working in all cases. 
+
+FIXED: Fixed bug in commandLine. Commands that doesn't return a value (if, for,
+       while) wasn't being properly executed.
+
+
+-------------------------------------------------------------------------------
+Events
+-------------------------------------------------------------------------------
+FIXED: Opera problem with the TAB key in commandLine
+
+FIXED: Better handling of the F12 key press, which wasn't being properly
+       attached to the Chrome Frame window.
+
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+FIXED: Problem with multiple iframes and the resizing of the Chrome, that
+       tries to add events on them.
+
+FIXED: Fixed problem in IE when resizing the Chrome, when the relative position
+       of the mouse wasnt being computed in all frames of the document, 
+       resulting in strange flickerings when resizing it.
+
+FIXED: Fixed problem in Opera when resizing the Chrome.
+
+FIXED: Problem when resizing with the fbVSplitter, when it reaches the side of
+       the screen. Problem with negative pixel numbers.
+
+FIXED: fbVSplitter is bigger than the frame in firefox. Problem with mouse scroll.
+
+FIXED: isScrolledToBottom is not working in Firefox, it seems that this is 
+      happening because the scrollable panel is some pixels higher than
+      it should be.
+
+
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+FIXED: Selected element in HTML tree isn't being highlighted (boxmodel)
+
+FIXED: BoxModel functions entirely revised. Now the position, size, padding
+       and margin are being computed correctly, in all units: pt, px, em, ex
+       and % (need to test more deeply the percentage values).
+
+
+-------------------------------------------------------------------------------
+commandLine
+-------------------------------------------------------------------------------
+FIXED: better handling of scope of commandLine.eval(), if you type "this" it will
+      refer to the CommandLine module, and it should refer to "window" instead
+
