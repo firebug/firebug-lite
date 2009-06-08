@@ -1,6 +1,10 @@
 /************************************************************************************************/
-#fbMiniErrors {
-    background: url(errorIcon.gif) no-repeat !important;
+#fbToolbarSearch {
+    background-image: url(search.gif) !important;
+}
+/************************************************************************************************/
+.fbErrors {
+    background-image: url(errorIcon.gif) !important;
 }
 /************************************************************************************************/
 .logRow-info {

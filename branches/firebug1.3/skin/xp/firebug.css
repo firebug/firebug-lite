@@ -60,6 +60,12 @@ body {
     font-size: 11px;
 }
 
+#fbLeftToolbarErrors {
+    float: left;
+    margin: 7px 0px 0 5px;
+    font-size: 11px;
+}
+
 .fbErrors {
     padding-left: 20px;
     height: 14px;
@@ -109,6 +115,7 @@ body {
     background: url(sprite.png) #f1f2ee 0 0;
     height: 27px;
     font-size: 11px;
+    overflow: hidden;    
 }
 
 #fbPanelBarBox {
@@ -179,8 +186,9 @@ body {
 
 #fbStatusBarBox {
     float: left;
-    padding: 8px 0 0;
+    padding: 5px 0 0;
     position: absolute;
+    line-height: 19px;
 }
 
 .fbToolbarSeparator{
@@ -189,7 +197,7 @@ body {
     border-color: transparent #fff transparent #777;
     _border-color: #eee #fff #eee #777;
     height: 7px;
-    margin: 2px 6px 0 0;
+    margin: 5px 6px 0 0;
     float: left;
 }
 
@@ -197,6 +205,7 @@ body {
     color: #808080;
     cursor: default;
     padding: 0 4px 0 0;
+    zzline-height: 18px;
 }
 
 .fbStatusBar span a {
@@ -213,11 +222,12 @@ body {
 
 #mainButtons {
     position: absolute;
+    /*display: none;/**/
     right: 0;
     top: 5px;
     z-index: 11;
     background: url(sprite.png) #f1f2ee 0 -5px;
-    width: 255px;    
+    width: 265px;    
     _width: 275px;
 }
 
