@@ -226,11 +226,22 @@ Firebug.registerModule(Firebug.Console);
 // ************************************************************************************************
 // Console Panel
 
-var ConsolePanel = function ConsolePanel(){};
+function ConsolePanel(){};
 
 ConsolePanel.prototype = extend(Firebug.Panel,
 {
+    name: "Console",
+    title: "Console",
+    
+    options: {
+        hasCommandLine: true,
+        hasToolButtons: true,
+        isPreRendered: true
+    },
+    
     initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+        
         fbConsole = $("fbConsole");
         fbPanel1 =  $("fbPanel1");       
     },
@@ -243,6 +254,7 @@ ConsolePanel.prototype = extend(Firebug.Panel,
     
 });
 
+Firebug.registerPanel(ConsolePanel);
 
 // ********************************************************************************************
 

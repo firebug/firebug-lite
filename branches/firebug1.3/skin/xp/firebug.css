@@ -1,3 +1,11 @@
+.fbToolbarButtons {
+    display: none;
+}
+
+#fbStatusBarBox {
+    display: none;
+}
+
 /************************************************************************************************
  Error Popup
 *************************************************************************************************/
@@ -18,7 +26,6 @@
     height: 18px;
     width: 75px;
     _width: 74px;
-    zbackground: url(sprite.png) #f1f2ee 0 -1px;
     border-left: 1px solid #aca899;
 }
 
@@ -79,7 +86,6 @@ body {
     height: 25px;
     width: 99px;
     _width: 98px;
-    zbackground: url(sprite.png) #f1f2ee 0 -1px;
     border-left: 1px solid #aca899;
 }
 
@@ -804,9 +810,3 @@ div.objectBox-element {
 .FirebugPopup #fbHSplitter {
     display: none !important;
 }
-
-
-#fbCommandLine {
-    position: absolute !important;
-}
-

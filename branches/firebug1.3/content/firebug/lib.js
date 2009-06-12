@@ -339,6 +339,16 @@ this.$ = function(id, doc)
     }
 };
 
+this.$$ = function(selector, doc)
+{
+    if (doc)
+        return FBL.Firebug.Selector(selector, doc);
+    else
+    {
+        return FBL.Firebug.Selector(selector, FBL.Firebug.chrome.document)
+    }
+};
+
 // ************************************************************************************************
 // Event
 

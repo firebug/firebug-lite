@@ -184,11 +184,29 @@ var ChromeBase = extend(Firebug.Controller, {
         
         //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
+        commandLineVisible = true;
+        sidePanelVisible = false;
+        sidePanelWidth = 300;
+        
+        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        if (!isIE6)
+        {
+            /*
+            var links = $$("a[href=js:]");
+            for (var i=0, link; link=links[i]; i++)
+                link.href = "!";
+                /**/
+        }
+        
+        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
         commandLine = new Firebug.CommandLine(fbCommandLine);
         
         
         // initialize all panels here...
+        
+        var p = new Firebug.panelTypes[0]();
+        p.initialize();
         
         
         flush();
@@ -236,6 +254,12 @@ var ChromeBase = extend(Firebug.Controller, {
         
         topHeight = null;
         topPartialHeight = null;
+        
+        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        commandLineVisible = null;
+        sidePanelVisible = null;
+        sidePanelWidth = 300;
         
         //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -287,7 +311,13 @@ var ChromeBase = extend(Firebug.Controller, {
             fbPanelBar2BoxStyle.width = Math.max(sideWidth, 0) + "px";
             fbVSplitterStyle.right = Math.max(sideWidth - 6, 0) + "px";
         }
-    }    
+    },
+    
+    layout: function(options)
+    {
+        changeCommandLineVisibility(options.hasCommandLine);
+        changeSidePanelVisibility(options.hasSidePanel);
+    }
     
 });
 
@@ -319,6 +349,7 @@ var ChromeFrameBase = extend(ChromeContext, {
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
         
+        /*        
         toggleCommandLine();
         toggleRightPanel();
         /**/
@@ -452,22 +483,33 @@ var sidePanelWidth = 300;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 0;
+var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 25;
+
 
 //************************************************************************************************
 // UI helpers
 
-var toggleCommandLine = function toggleCommandLine()
+var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
-    commandLineVisible = !commandLineVisible;
-    fbBottom.className = commandLineVisible ? "" : "hide";
+    var last = commandLineVisible;
+    commandLineVisible = typeof visibility == "boolean" ? visibility : !commandLineVisible;
+    
+    if (commandLineVisible != last)
+    {
+        fbBottom.className = commandLineVisible ? "" : "hide";
+    }
 };
 
-function toggleRightPanel()
+var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 {
-    sidePanelVisible = !sidePanelVisible;
-    fbPanelBox2.className = sidePanelVisible ? "" : "hide"; 
-    fbPanelBar2Box.className = sidePanelVisible ? "" : "hide";
+    var last = sidePanelVisible;
+    sidePanelVisible = typeof visibility == "boolean" ? visibility : !sidePanelVisible;
+    
+    if (sidePanelVisible != last)
+    {
+        fbPanelBox2.className = sidePanelVisible ? "" : "hide"; 
+        fbPanelBar2Box.className = sidePanelVisible ? "" : "hide";
+    }
 };
 
 

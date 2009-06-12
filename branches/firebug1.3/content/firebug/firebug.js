@@ -252,7 +252,7 @@ Firebug.Panel =
         hasToolButtons: false,
         
         // Pre-rendered panels are those included in the skin file (firebug.html)
-        isPreRendered: true,
+        isPreRendered: false,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // To be used by external extensions
@@ -289,7 +289,7 @@ Firebug.Panel =
 
     initialize: function(context, doc)
     {
-        var options = this.options;
+        var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
         
         if (options.isPreRendered)
@@ -303,12 +303,17 @@ Firebug.Panel =
             
             if (options.hasStatusBar)
             {
+                this.statusBarBox = $("fbStatusBarBox");
+                this.statusBarBox.style.display = "inline";
+                
                 this.statusBarNode = $(panelId + "StatusBar");
+                this.statusBarNode.style.display = "inline";
             }
             
             if (options.hasToolButtons)
             {
                 this.toolButtonsNode = $(panelId + "Buttons");
+                this.toolButtonsNode.style.display = "inline";
             }
             
         }
@@ -316,6 +321,8 @@ Firebug.Panel =
         {
             //create Panel
         }
+        
+        Firebug.chrome.layout(options);
         
         /*
         this.context = context;
