@@ -1,10 +1,18 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-FBL.version = "FirebugLite-1.3.0a";
-
 // ************************************************************************************************
 // Globals
+
+FBL.version = "FirebugLite-1.3.0a";
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+FBL.cacheID = "___FBL_";
+FBL.documentCache = {};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Internals
 
 var modules = [];
 var panelTypes = [];
@@ -14,11 +22,6 @@ var panelTypeMap = {};
 
 // ************************************************************************************************
 // Firebug
-
-FBL.cacheID = "___FBL_";
-FBL.documentCache = {};
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 FBL.Firebug =  
 {
@@ -471,16 +474,7 @@ Firebug.Panel =
 // ************************************************************************************************
 // PanelBar
 
-Firebug.PanelBar = function(panelBarNode, chrome)
-{
-    this.panelTypes = [];
-    this.panelTypeMap = {};
-    
-    this.panelBarNode = panelBarNode;    
-    this.chrome = chrome;
-};
-
-Firebug.PanelBar.prototype = 
+Firebug.PanelBar = 
 {
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -493,45 +487,39 @@ Firebug.PanelBar.prototype =
     context: null,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    destroy: function()
+    
+    initialize: function()
+    {
+        this.panels = [];
+        this.panelMap = {};
+        
+        //this.panelBarNode = panelBarNode;    
+        //this.chrome = chrome;    
+    },
+    
+    shutdown: function()
     {
     
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    showTabs: function()
-    {
-        
-    },
-    
-    hideTabs: function()
-    {
-        
-    },
-    
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    addTab: function(title, parentPanel)
-    {
-        var panel = Firebug.panelTypeMap[title];
-        
-        
-        
-        //isInternal
-    
-        /*
-        var panelTypes = [];
-        var panelTypeMap = {};
-        /**/
 
+    addPanel: function(panelName, parentPanel)
+    {
+        var PanelType = panelTypeMap[panelName];
+        var panel = new PanelType();
+        panel.initialize();
+        
+        this.panels.push(panel);
+        this.panelMap[panelName] = panel;
     },
     
-    removeTab: function()
+    removePanel: function(panelName)
     {
         
     },
     
-    selectPanel: function()
+    selectPanel: function(panelName)
     {
         
     },

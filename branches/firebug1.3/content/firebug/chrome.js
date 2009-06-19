@@ -1,6 +1,7 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+
 // ************************************************************************************************
 // Chrome Window Options
 
@@ -126,16 +127,18 @@ var getChromeTemplate = function()
 FBL.FirebugChrome = function(chrome)
 {
     var Base = chrome.type == "frame" ? ChromeFrameBase : ChromePopupBase; 
-    append(this, chrome);
-    append(this, Base);
+    
+    append(this, chrome); // inherit chrome window properties
+    append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
     
     return this;
 };
 
 // ************************************************************************************************
 // ChromeBase
-    
-var ChromeBase = extend(Firebug.Controller, {
+
+var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
+var ChromeBase = extend(ChromeBase, {
     
     destroy: function()
     {
@@ -144,7 +147,7 @@ var ChromeBase = extend(Firebug.Controller, {
     
     initialize: function()
     {
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
         
         fbTop = $("fbTop");
@@ -176,48 +179,52 @@ var ChromeBase = extend(Firebug.Controller, {
       
         fbCommandLine = $("fbCommandLine");
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
         
         topHeight = fbTop.offsetHeight;
         topPartialHeight = fbToolbar.offsetHeight;
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         commandLineVisible = true;
         sidePanelVisible = false;
         sidePanelWidth = 300;
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (!isIE6)
-        {
-            /*
-            var links = $$("a[href=js:]");
-            for (var i=0, link; link=links[i]; i++)
-                link.href = "!";
-                /**/
-        }
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // initialize inherited classes
+        Firebug.Controller.initialize.call(this);
+        Firebug.PanelBar.initialize.call(this);
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
         commandLine = new Firebug.CommandLine(fbCommandLine);
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // initialize all panels
+        var panels = Firebug.panelTypes;
+        for (var i=0, p; p=panels[i]; i++)
+        {
+            if (!p.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
         
-        // initialize all panels here...
+        // Select the first registered panel
+        this.selectPanel(panels[0].prototype.name);
         
-        var p = new Firebug.panelTypes[0]();
-        p.initialize();
-        
-        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         flush();
         
         if (!isSafari)
             this.draw();
+        
     },
     
     shutdown: function()
     {
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Remove the interface elements cache
         
         fbTop = null;
@@ -249,19 +256,24 @@ var ChromeBase = extend(Firebug.Controller, {
   
         fbCommandLine = null;
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
         
         topHeight = null;
         topPartialHeight = null;
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         commandLineVisible = null;
         sidePanelVisible = null;
         sidePanelWidth = 300;
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // shutdown inherited classes
+        Firebug.Controller.shutdown.call(this);
+        Firebug.PanelBar.shutdown.call(this);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
         // destroy the instance of the CommandLine class
         commandLine.destroy();
@@ -275,7 +287,7 @@ var ChromeBase = extend(Firebug.Controller, {
     {
         var size = Firebug.chrome.getWindowSize();
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Height related drawings
         var chromeHeight = size.height;
         var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
@@ -297,7 +309,7 @@ var ChromeBase = extend(Firebug.Controller, {
             fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
         }
         
-        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Width related drawings
         var chromeWidth = size.width /* window borders */;
         var sideWidth = sidePanelVisible ? sidePanelWidth : 0;
@@ -331,7 +343,6 @@ var ChromeFrameBase = extend(ChromeContext, {
     initialize: function()
     {
         ChromeBase.initialize.call(this)
-        Firebug.Controller.initialize.call(this);
         
         this.addController(
                 [Firebug.browser.window, "resize", this.draw],
@@ -415,7 +426,6 @@ var ChromePopupBase = extend(ChromeContext, {
     initialize: function()
     {
         ChromeBase.initialize.call(this)
-        Firebug.Controller.initialize.call(this);
         
         this.addController(
                 [Firebug.browser.window, "resize", this.draw],
