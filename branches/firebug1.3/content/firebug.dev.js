@@ -12,7 +12,7 @@ window.FBDev =
         // Application Core
         "firebug/lib.js",
         "firebug/firebug.js",
-        //"firebug/domplate.js", // not used yet
+        "firebug/domplate.js", // not used yet
         "firebug/reps.js",
         "firebug/console.js",
         "firebug/context.js",
@@ -26,6 +26,9 @@ window.FBDev =
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Panels
         "firebug/html.js",
+        
+        //"firebug/fbtrace.js",
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Bootstrap
         "firebug/boot.js"

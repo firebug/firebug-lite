@@ -46,7 +46,7 @@
             
             <!-- Console Panel Toolbar Buttons -->
             <span id="fbConsoleButtons" class="fbToolbarButtons">
-              <span><a href="javascript:void(0)">Clear</a></span>
+              <a href="javascript:void(0)">Clear</a>
             </span>
             
             <!-- HTML Panel Toolbar Buttons -->
@@ -83,19 +83,53 @@
         
           <!-- Main PanelBar -->
           <div id="fbPanelBar1" class="fbPanelBar">
-            <a id="tc" class="tab selectedTab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Console</span><span class="tabR"></span></a>
-            <a id="th" class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">HTML</span><span class="tabR"></span></a>
-            <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">CSS</span><span class="tabR"></span></a>
-            <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Script</span><span class="tabR"></span></a>
-            <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a>
+            <a id="fbConsoleTab" class="fbTab" href="javascript:void(0)">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">Console</span>
+                <span class="fbTabR"></span>
+            </a>
+            <a id="fbHTMLTab" class="fbTab" href="javascript:void(0)">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">HTML</span>
+                <span class="fbTabR"></span>
+            </a>
+            <a class="fbTab" href="javascript:void(0)">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">CSS</span>
+                <span class="fbTabR"></span>
+            </a>
+            <a class="fbTab" href="javascript:void(0)">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">Script</span>
+                <span class="fbTabR"></span>
+            </a>
+            <a class="fbTab" href="javascript:void(0)">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">DOM</span>
+                <span class="fbTabR"></span>
+            </a>
           </div>
           
           <!-- Side PanelBars -->
           <div id="fbPanelBar2Box" class="hide">
             <div id="fbPanelBar2" class="fbPanelBar">
-              <a class="tab selectedTab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Style</span><span class="tabR"></span></a>
-              <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Layout</span><span class="tabR"></span></a>
-              <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a>
+            
+              <a class="fbTab fbSelectedTab" href="javascript:void(0)">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">Style</span>
+                <span class="fbTabR"></span>
+              </a>
+              <a class="fbTab" href="javascript:void(0)">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">Layout</span>
+                <span class="fbTabR"></span>
+              </a>
+              <a class="fbTab" href="javascript:void(0)">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">DOM</span>
+                <span class="fbTabR"></span>
+              </a>
+              
             </div>
           </div>
           
@@ -110,8 +144,8 @@
       <!-- Panels  -->
       <td id="fbPanelBox1">
         <div id="fbPanel1" class="fbFitHeight">
-          <div id="fbConsole"></div>
-          <div id="fbHTML"></div>
+          <div id="fbConsole" class="fbPanel"></div>
+          <div id="fbHTML" class="fbPanel"></div>
         </div>
       </td>
       
@@ -125,9 +159,9 @@
         <div id="fbPanel2" class="fbFitHeight">
         
           <!-- HTML Side Panels -->
-          <div id="fbHTML_Style"></div>
-          <div id="fbHTML_Layout"></div>
-          <div id="fbHTML_DOM"></div>
+          <div id="fbHTML_Style" class="fbPanel"></div>
+          <div id="fbHTML_Layout" class="fbPanel"></div>
+          <div id="fbHTML_DOM" class="fbPanel"></div>
           
         </div>
       </td>

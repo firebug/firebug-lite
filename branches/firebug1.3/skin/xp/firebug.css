@@ -206,11 +206,6 @@ body {
     padding: 4px 2px 0 5px;
 }
 
-#fbToolbarButtons span {
-    margin: 0;
-    padding: 0;
-}
-
 #fbToolbarButtons a {
     text-decoration: none;
     display: block;
@@ -304,8 +299,11 @@ body {
 
 /* body 
 *************************************************************************************************/
+.fbPanel {
+    display: none;
+}
 
-#fbPanelBox1,#fbPanelBox2 {
+#fbPanelBox1, #fbPanelBox2 {
     max-height: inherit;
     height: 100%;
     font-size: 11px;
@@ -320,6 +318,7 @@ body {
     background: #fff;
 }
 
+/* TODO: REVISE IN IE6 */
 * html #fbPanel1 {
     position: absolute;
 }
@@ -435,9 +434,9 @@ div.fbFitHeight {
 
 /* fbPanelBarBox tabs 
 *************************************************************************************************/
-.tab {
+.fbTab {
     text-decoration: none;
-    display: block;
+    display: none;
     float: left;
     width: auto;
     float: left;
@@ -454,37 +453,37 @@ div.fbFitHeight {
     float: left;
 }
 
-.fbPanelBar .tabL,.fbPanelBar .tabR {
+.fbPanelBar .fbTabL,.fbPanelBar .fbTabR {
     height: 22px;
     width: 8px;
 }
 
-.fbPanelBar .tabText {
+.fbPanelBar .fbTabText {
     padding: 4px 1px 0;
 }
 
-.tab:hover {
+.fbTab:hover {
     background: url(sprite.png) 0 -73px;
 }
 
-.tab:hover .tabL {
+.fbTab:hover .fbTabL {
     background: url(sprite.png) -16px -96px;
 }
 
-.tab:hover .tabR {
+.fbTab:hover .fbTabR {
     background: url(sprite.png) -24px -96px;
 }
 
-.selectedTab {
+.fbSelectedTab {
     background: url(sprite.png) #f1f2ee 0 -50px !important;
     color: #000;
 }
 
-.selectedTab .tabL {
+.fbSelectedTab .fbTabL {
     background: url(sprite.png) 0 -96px !important;
 }
 
-.selectedTab .tabR {
+.fbSelectedTab .fbTabR {
     background: url(sprite.png) -8px -96px !important;
 }
 

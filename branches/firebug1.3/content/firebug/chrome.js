@@ -215,6 +215,20 @@ var ChromeBase = extend(ChromeBase, {
         this.selectPanel(panels[0].prototype.name);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Remove the "javascript:void(0)" href attributes used to make the hover effect in IE6
+        if (!isIE6)
+        {
+           var as = $$("a");
+           for (var i=0, a; a=as[i]; i++)
+           {
+               if (a.href == "javascript:void(0)")
+               {
+                   a.removeAttribute("href");
+               }
+           }
+        }
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         flush();
         
         if (!isSafari)

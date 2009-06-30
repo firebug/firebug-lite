@@ -184,7 +184,7 @@ this.application.location = {
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?\.js)(#.+)?$/;
+    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var head = document.getElementsByTagName("head")[0];
@@ -348,6 +348,31 @@ this.$$ = function(selector, doc)
         return FBL.Firebug.Selector(selector, FBL.Firebug.chrome.document)
     }
 };
+
+this.createElement = function(tagName, options)
+{
+    options = options || {};
+    var doc = options.document || FBL.Firebug.chrome.document;
+    
+    var element = doc.createElement(tagName);
+    
+    if (options.id)
+    {
+        element.id = options.id;
+    }
+    
+    if (options.className)
+    {
+        element.className = options.className;
+    }
+    
+    if (options.content)
+    {
+        element.innerHTML = options.content;
+    }
+    
+    return element;
+}
 
 // ************************************************************************************************
 // Event

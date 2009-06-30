@@ -175,13 +175,13 @@ Firebug.Console = extend(ConsoleModule,
 
     initialize: function(){
         fbConsole = $("fbConsole");
-        fbPanel1 =  $("fbPanel1");       
+        fbPanel1 =  $("fbPanel1");
     },
     
     shutdown: function()
     {
         fbConsole = null;
-        fbPanel1 =  null;     
+        fbPanel1 =  null;
     },
     
     returnDir: function(object)
@@ -243,13 +243,13 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         
         fbConsole = $("fbConsole");
-        fbPanel1 =  $("fbPanel1");       
+        fbPanel1 =  $("fbPanel1");  
     },
     
     shutdown: function()
     {
         fbConsole = null;
-        fbPanel1 =  null;     
+        fbPanel1 =  null;
     }
     
 });

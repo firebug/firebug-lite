@@ -20,7 +20,9 @@ this.ns = function(fn)
 this.initialize = function()
 {
     //if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize BEGIN "+namespaces.length+" namespaces\n");
-
+    
+    initializeApplication();
+    
     for (var i = 0; i < namespaces.length; i += 2)
     {
         var fn = namespaces[i];
@@ -28,26 +30,236 @@ this.initialize = function()
         fn.apply(ns);
     }
     
-    this.waitForInit();
+    waitForInit();
 
     //if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize END "+namespaces.length+" namespaces\n");
 };
 
-this.waitForInit = function()
+var waitForInit = function waitForInit()
 {
-    if (document.body && FBL && FBL.Firebug)
-      FBL.Firebug.initialize();
+    if (document.body)
+    {
+        if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
+        {
+            if (FBL.isIE6)
+                fixIE6BackgroundImageCache();
+            
+            // initialize the chrome application
+            FBL.Firebug.initialize();
+            
+            // Destroy the main application
+            window.FirebugApplication.destroy();
+            
+            if (FBL.isIE)
+                window.FirebugApplication = null;
+            else
+                delete window.FirebugApplication;
+        }
+        else
+        {
+            createApplication();
+        }
+    }
     else
-        setTimeout(FBL.waitForInit, 200);
-}
+        setTimeout(waitForInit, 50);
+};
 
+// ************************************************************************************************
+// Application
+
+this.application = {
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // Application preferences
+    isBookmarletMode: false, //TODO!!
+    isPersistentMode: false, //TODO!!
+    skin: "xp",
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // Application States
+    isDevelopmentMode: false,
+    isChromeContext: false, // TODO: change to isChromeContext
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // Application References
+    global: null,
+    chrome: null  
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var initializeApplication = function initializeApplication()
+{
+    // isPersistentMode, isChromeContext
+    if (FBL.application.isPersistentMode && typeof window.FirebugApplication == "object")
+    {
+        FBL.application = window.FirebugApplication;
+        FBL.application.isChromeContext = true;
+    }
+    // Global application
+    else
+    {
+        // TODO: get preferences here...
+        FBL.application.global = window;
+        FBL.application.destroy = destroyApplication;
+    }
+};
+
+var createApplication = function createApplication()
+{
+    findLocation();
+    
+    var options = FBL.extend({}, WindowDefaultOptions);
+    
+    FBL.createChrome(FBL.application.global, options, onChromeLoad);
+};
+
+var destroyApplication = function destroyApplication()
+{
+    setTimeout(function()
+    {
+        FBL = null;
+    }, 100);
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Chrome loading
+
+var onChromeLoad = function onChromeLoad(chrome)
+{
+    FBL.application.chrome = chrome;
+    
+    if (FBL.application.isPersistentMode)
+    {
+        chrome.window.FirebugApplication = FBL.application;
+    
+        if (FBL.application.isDevelopmentMode)
+        {
+            FBDev.loadChromeApplication(chrome);
+        }
+        else
+        {
+            var doc = chrome.document;
+            var script = doc.createElement("script");
+            script.src = application.location.app;
+            doc.getElementsByTagName("head")[0].appendChild(script);
+        }
+    }
+    else
+        // initialize the chrome application
+        setTimeout(function(){
+            FBL.Firebug.initialize();
+        },100);
+};
+
+
+// ************************************************************************************************
+// Application Chromes
+
+var WindowDefaultOptions = 
+{
+    type: "frame"
+};
+
+var FrameDefaultOptions = 
+{
+    id: "FirebugChrome",
+    height: 250
+};
+
+var PopupDefaultOptions = 
+{
+    id: "FirebugChromePopup",
+    height: 250
+};
+
+// ************************************************************************************************
+// Library location
+
+this.application.location = {
+    source: null,
+    base: null,
+    skin: null,
+    app: null
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var findLocation =  function findLocation() 
+{
+    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
+    var rePath = /^(.*\/)/;
+    var reProtocol = /^\w+:\/\//;
+    var head = document.getElementsByTagName("head")[0];
+    var path = null;
+    
+    for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
+    {
+        var file = null;
+        
+        if ( ci.nodeName.toLowerCase() == "script" && 
+             (file = reFirebugFile.exec(ci.src)) )
+        {
+            var fileName = file[1];
+            var fileOptions = file[2];
+            
+            
+            if (reProtocol.test(ci.src)) {
+                // absolute path
+                path = rePath.exec(ci.src)[1];
+              
+            }
+            else
+            {
+                // relative path
+                var r = rePath.exec(ci.src);
+                var src = r ? r[1] : ci.src;
+                var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
+                var lastFolder = /^(.*\/)[^\/]+\/$/;
+                path = rePath.exec(location.href)[1];
+                
+                if (rel)
+                {
+                    var j = rel[1].length/3;
+                    var p;
+                    while (j-- > 0)
+                        path = lastFolder.exec(path)[1];
+
+                    path += rel[2];
+                }
+            }
+            
+            break;
+        }
+    }
+    
+    var m = path && path.match(/([^\/]+)\/$/) || null;
+    
+    if (path && m)
+    {
+        var loc = FBL.application.location; 
+        loc.source = path;
+        loc.base = path.substr(0, path.length - m[1].length - 1);
+        loc.skin = loc.base + "skin/" + FBL.application.skin + "/firebug.html";
+        loc.app = path + fileName;
+        
+        if (fileName == "firebug.dev.js")
+            FBL.application.isDevelopmentMode = true;
+
+        if (fileOptions)
+        {
+            // TODO:
+        }        
+    }
+    else
+    {
+        throw new Error("Firebug Error: Library path not found");
+    }
+};
 
 // ************************************************************************************************
 // Basics
 
 this.extend = function(l, r)
 {
-	r = r || {};
+    r = r || {};
     var newOb = {};
     for (var n in l)
         newOb[n] = l[n];
@@ -71,14 +283,14 @@ this.append = function(l, r)
 // Browser detection
 
 var userAgent = navigator.userAgent;
+
 this.isFirefox = userAgent.indexOf("Firefox") != -1;
 this.isIE      = userAgent.indexOf("MSIE") != -1;
-this.isIE6     = /msie 6/i.test(navigator.appVersion);
 this.isOpera   = userAgent.indexOf("Opera") != -1;
 this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
-this.isIEStantandMode = document.all && document.compatMode == "CSS1Compat";
-this.isIEQuiksMode = document.all && document.compatMode == "BackCompat";
-
+this.isIE6     = /msie 6/i.test(navigator.appVersion);
+this.isIEQuiksMode = document.all ? document.compatMode == "BackCompat" : false;
+this.isIEStantandMode = document.all ? document.compatMode == "CSS1Compat" : false;
 
 // ************************************************************************************************
 // Util
@@ -111,7 +323,7 @@ this.emptyFn = function(){};
 
 
 
-//************************************************************************************************
+// ************************************************************************************************
 // DOM
 
 this.$ = function(id, doc)
@@ -119,16 +331,48 @@ this.$ = function(id, doc)
     if (doc)
         return doc.getElementById(id);
     else
-        return document.getElementById(id);
+    {
+        if (FBL.application.isPersistentMode)
+            return document.getElementById(id);
+        else
+            return FBL.application.chrome.document.getElementById(id);
+    }
 };
 
-this.$U = function(id)
+this.$$ = function(selector, doc)
 {
-    if (FBL.Firebug.Chrome.document)
-        return FBL.Firebug.Chrome.document.getElementById(id);
+    if (doc)
+        return FBL.Firebug.Selector(selector, doc);
     else
-        return undefined
+    {
+        return FBL.Firebug.Selector(selector, FBL.Firebug.chrome.document)
+    }
 };
+
+this.createElement = function(tagName, options)
+{
+    options = options || {};
+    var doc = options.document || FBL.Firebug.chrome.document;
+    
+    var element = doc.createElement(tagName);
+    
+    if (options.id)
+    {
+        element.id = options.id;
+    }
+    
+    if (options.className)
+    {
+        element.className = options.className;
+    }
+    
+    if (options.content)
+    {
+        element.innerHTML = options.content;
+    }
+    
+    return element;
+}
 
 // ************************************************************************************************
 // Event
@@ -154,16 +398,57 @@ this.removeEvent = function(object, name, handler)
         object.removeEventListener(name, handler, false);
 };
 
+this.addGlobalEvent = function(name, handler)
+{
+    var doc = FBL.Firebug.browser.document;
+    var frames = FBL.Firebug.browser.window.frames;
+    
+    FBL.addEvent(doc, name, handler);
+  
+    for (var i = 0, frame; frame = frames[i]; i++)
+    {
+        try
+        {
+            FBL.addEvent(frame.document, name, handler);
+        }
+        catch(E)
+        {
+            // Avoid acess denied
+        }
+    }
+};
+
+this.removeGlobalEvent = function(name, handler)
+{
+    var doc = FBL.Firebug.browser.document;
+    var frames = FBL.Firebug.browser.window.frames;
+    
+    FBL.removeEvent(doc, name, handler);
+  
+    for (var i = 0, frame; frame = frames[i]; i++)
+    {
+        try
+        {
+            FBL.removeEvent(frame.document, name, handler);
+        }
+        catch(E)
+        {
+            // Avoid acess denied
+        }
+    }
+};
+
+
 this.cancelEvent = function(e, preventDefault)
 {
     if (!e) return;
     
     if (preventDefault)
     {
-				if (e.preventDefault)
-    				e.preventDefault();
-				else
-		    		e.returnValue = false;
+                if (e.preventDefault)
+                    e.preventDefault();
+                else
+                    e.returnValue = false;
     }
     
     if (document.all)
@@ -173,8 +458,31 @@ this.cancelEvent = function(e, preventDefault)
                 
 };
 
+this.dispatch = function(listeners, name, args)
+{
+    //if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch "+name+" to "+listeners.length+" listeners\n"); /*@explore*/
+    //                                                                                                       /*@explore*/
+    try {
+        for (var i = 0; i < listeners.length; ++i)
+        {
+            var listener = listeners[i];
+            if ( listener.hasOwnProperty(name) )
+                listener[name].apply(listener, args);
+        }
+    }
+    catch (exc)
+    {
+        /*
+        if (FBTrace.DBG_ERRORS)
+        {
+            FBTrace.dumpProperties(" Exception in lib.dispatch "+ name, exc);
+            //FBTrace.dumpProperties(" Exception in lib.dispatch listener", listener);
+        }
+        /**/
+    }
+};
 
-//************************************************************************************************
+// ************************************************************************************************
 // class Names
 
 this.hasClass = function(object, name) {
@@ -200,7 +508,7 @@ this.toggleClass = function(object, name) {
 }
 
 
-//************************************************************************************************
+// ************************************************************************************************
 // Opera Tab Fix
 
 function onOperaTabBlur(e)
@@ -231,7 +539,7 @@ this.fixOperaTabKey = function(el)
 // Ajax
 
 this.Ajax =
-  {
+{
   
     requests: [],
     transport: null,
@@ -454,7 +762,7 @@ this.eraseCookie = function(name)
 
 // ************************************************************************************************
 // http://www.mister-pixel.com/#Content__state=is_that_simple
-this.fixIE6BackgroundImageCache = function(doc)
+var fixIE6BackgroundImageCache = function(doc)
 {
     doc = doc || document;
     try {
@@ -463,147 +771,1724 @@ this.fixIE6BackgroundImageCache = function(doc)
 };
 
 
+
 // ************************************************************************************************
 }).apply(FBL);
 
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-FBL.version = "1.3.0a";
+// ************************************************************************************************
+// Globals
+
+FBL.version = "FirebugLite-1.3.0a";
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+FBL.cacheID = "___FBL_";
+FBL.documentCache = {};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Internals
+
+var modules = [];
+var panelTypes = [];
+
+var panelTypeMap = {};
 
 
 // ************************************************************************************************
 // Firebug
 
-FBL.Firebug = 
+FBL.Firebug =  
 {
-    firebuglite: FBL.version
-};
-
-// ************************************************************************************************
-// APIs
-
-FBL.ConsoleAPI = extend(FBL.Firebug);
- 
-FBL.ChromeAPI = extend(FBL.Firebug); 
-
-
-// ************************************************************************************************
-// Internal variables
-
-FBL.cacheID = "___FBL_";
-FBL.alternateNS = "console2";
-FBL.consoleNS = "console";
-FBL.documentCache = {};
-FBL.sourceURL = null;
-FBL.baseURL = null;
-FBL.skinURL = null;
-
-
-// ************************************************************************************************
-// Internal functions
-
-append(FBL.Firebug,  
-{
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    modules: modules,
+    panelTypes: panelTypes,
+    
+    cache: {},
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Initialization
+    
     initialize: function()
     {
-        this.cacheDocument();
-        this.findLocation();
-        this.registerPublicNamespaces();
+        Firebug.browser = new Context(application.global);
+        Firebug.context = Firebug.browser;
         
-        var module;
-        for(var name in Firebug)
-        {
-            module = Firebug[name];
-            if(typeof module.initialize == "function")
-                module.initialize();
-        }
+        Firebug.chrome = new FirebugChrome(application.chrome);
+        Firebug.chrome.initialize();
         
-        if (isIE6)
-            fixIE6BackgroundImageCache();
+        Firebug.cacheDocument();
+        
+        dispatch(modules, "initialize", []);
     },
   
+    shutdown: function()
+    {
+        documentCache = {};
+        
+        dispatch(modules, "shutdown", []);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Registration
+
+    registerModule: function()
+    {
+        modules.push.apply(modules, arguments);
+
+        //for (var i = 0; i < arguments.length; ++i)
+        //    TabWatcher.addListener(arguments[i]);
+        
+        //                                                                                          /*@explore*/
+        //if (FBTrace.DBG_INITIALIZE) FBTrace.dumpProperties("registerModule", arguments);          /*@explore*/
+    },
+
+    registerPanel: function()
+    {
+        panelTypes.push.apply(panelTypes, arguments);
+
+        for (var i = 0; i < arguments.length; ++i)
+            panelTypeMap[arguments[i].prototype.name] = arguments[i];
+        
+        //                                                                                          /*@explore*/
+        //if (FBTrace.DBG_INITIALIZE)                                                               /*@explore*/
+        //    for (var i = 0; i < arguments.length; ++i)                                            /*@explore*/
+        //        FBTrace.sysout("registerPanel "+arguments[i].prototype.name+"\n");                /*@explore*/
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Other methods
+    
     cacheDocument: function()
     {
-        var els = document.getElementsByTagName("*");
+        var els = Firebug.browser.document.getElementsByTagName("*");
         for (var i=0, l=els.length, el; i<l; i++)
         {
             el = els[i];
             el[cacheID] = i;
             documentCache[i] = el;
         }
+    }
+};
+
+// ************************************************************************************************
+// Controller
+
+Firebug.Controller = {
+        
+    _controllers: null,
+        
+    initialize: function(node)
+    {
+        this._controllers = [];
+        this.node = this.node || node;
     },
     
-    findLocation: function() 
+    shutdown: function()
     {
-        var reFirebugFile = /(firebug(\.\w+)?\.js|devmode\.js)$/;
-        var rePath = /^(.*\/)/;
-        var reProtocol = /^\w+:\/\//;
-        var head = document.documentElement.firstChild;
-        var path = null;
-        
-        for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
+        this.removeControllers();
+    },
+    
+    /**
+     * 
+     */
+    addController: function()
+    {
+        for (var i=0, arg; arg=arguments[i]; i++)
         {
-            if ( ci.nodeName == "SCRIPT" && 
-                 reFirebugFile.test(ci.src) )
+            // If the first argument is a string, make a selector query 
+            // within the controller node context
+            if (typeof arg[0] == "string")
             {
-              
-                if (reProtocol.test(ci.src)) {
-                    // absolute path
-                    path = rePath.exec(ci.src)[1];
-                  
-                }
-                else
-                {
-                    // relative path
-                    var r = rePath.exec(ci.src);
-                    var src = r ? r[1] : ci.src;
-                    var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
-                    var lastFolder = /^(.*\/)[^\/]+\/$/;
-                    path = rePath.exec(location.href)[1];
-                    
-                    if (rel)
-                    {
-                        var j = rel[1].length/3;
-                        var p;
-                        while (j-- > 0)
-                            path = lastFolder.exec(path)[1];
-  
-                        path += rel[2];
-                    }
-                }
-                
-                break;
+                arg[0] = $$(arg[0], this.node);
+            }
+            
+            // bind the handler to the proper context
+            var handler = arg[2];
+            arg[2] = bind(this, handler);
+            // save the original handler as an extra-argument, so we can
+            // look for it later, when removing a particular controller            
+            arg[3] = handler;
+            
+            this._controllers.push(arg);
+            addEvent.apply(this, arg);
+        }
+    },
+    
+    removeController: function()
+    {
+        for (var i=0, arg; arg=arguments[i]; i++)
+        {
+            for (var j=0, c; c=this._controllers[j]; j++)
+            {
+                if (arg[0] == c[0] && arg[1] == c[1] && arg[2] == c[3])
+                    removeEvent.apply(this, c);
             }
         }
-        
-        var m = path.match(/([^\/]+)\/$/);
-        
-        if (path && m)
+    },
+    
+    removeControllers: function()
+    {
+        for (var i=0, c; c=this._controllers[i]; i++)
         {
-            sourceURL = path;
-            baseURL = path.substr(0, path.length - m[1].length - 1);
-            skinURL = baseURL + "skin/classic/";
+            removeEvent.apply(this, c);
+        }
+    }
+};
+
+
+// ************************************************************************************************
+// Module
+
+Firebug.Module =
+{
+    /**
+     * Called when the window is opened.
+     */
+    initialize: function()
+    {
+    },
+  
+    /**
+     * Called when the window is closed.
+     */
+    shutdown: function()
+    {
+    },
+  
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  
+    /**
+     * Called when a new context is created but before the page is loaded.
+     */
+    initContext: function(context)
+    {
+    },
+  
+    /**
+     * Called after a context is detached to a separate window;
+     */
+    reattachContext: function(browser, context)
+    {
+    },
+  
+    /**
+     * Called when a context is destroyed. Module may store info on persistedState for reloaded pages.
+     */
+    destroyContext: function(context, persistedState)
+    {
+    },
+  
+    // Called when a FF tab is create or activated (user changes FF tab)
+    // Called after context is created or with context == null (to abort?)
+    showContext: function(browser, context)
+    {
+    },
+  
+    /**
+     * Called after a context's page gets DOMContentLoaded
+     */
+    loadedContext: function(context)
+    {
+    },
+  
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  
+    showPanel: function(browser, panel)
+    {
+    },
+  
+    showSidePanel: function(browser, panel)
+    {
+    },
+  
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  
+    updateOption: function(name, value)
+    {
+    },
+  
+    getObjectByURL: function(context, url)
+    {
+    }
+};
+
+// ************************************************************************************************
+// Panel
+
+Firebug.Panel =
+{
+    name: "HelloWorld",
+    title: "Hello World!",
+    parentPanel: null,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    options: {
+        hasCommandLine: false,
+        hasSidePanel: false,
+        hasStatusBar: false,
+        hasToolButtons: false,
+        
+        // Pre-rendered panels are those included in the skin file (firebug.html)
+        isPreRendered: false,
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // To be used by external extensions
+        panelHTML: "",
+        panelCSS: "",
+        
+        toolButtonsHTML: ""
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    tabNode: null,
+    panelNode: null,
+    sidePanelNode: null,
+    statusBarNode: null,
+    toolButtonsNode: null,
+
+    panelBarNode: null,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    panelBar: null,
+    
+    commandLine: null,
+    
+    toolButtons: null,
+    statusBar: null,
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    searchable: false,
+    editable: true,
+    order: 2147483647,
+    statusSeparator: "<",
+
+    initialize: function(context, doc)
+    {
+        var options = this.options = extend(Firebug.Panel.options, this.options);
+        var panelId = "fb" + this.name;
+        
+        if (options.isPreRendered)
+        {
+            this.panelNode = $(panelId);
+            
+            this.tabNode = $(panelId + "Tab");
+            this.tabNode.style.display = "block";
+            
+            if (options.hasSidePanel)
+            {
+                //this.sidePanelNode = $(panelId + "StatusBar");
+            }
+            
+            if (options.hasStatusBar)
+            {
+                this.statusBarBox = $("fbStatusBarBox");
+                this.statusBarNode = $(panelId + "StatusBar");
+            }
+            
+            if (options.hasToolButtons)
+            {
+                this.toolButtonsNode = $(panelId + "Buttons");
+            }
+            
         }
         else
         {
-            throw "Firebug error: Library path not found";
+            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            // Create Panel
+            var panelNode = this.panelNode = createElement("div", {
+                id: panelId,
+                className: "fbPanel",
+                content: "woo hoo!"
+            });
+
+            $("fbPanel1").appendChild(panelNode);
+            
+            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            // Create Panel Tab
+            var tabContent = '<span class="fbTabL"></span><span class="fbTabText">' +
+                    this.name + '</span><span class="fbTabR"></span>';            
+            
+            var tabNode = this.tabNode = createElement("a", {
+                id: panelId + "Tab",
+                className: "fbTab",
+                content: tabContent
+            });
+            
+            if (isIE6)
+            {
+                tabNode.href = "javascript:void(0)";
+            }
+            
+            $("fbPanelBar1").appendChild(tabNode);
+            this.tabNode.style.display = "block";
+            
+            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            // create Panel SideBar
+            
+        }
+        
+        /*
+        this.context = context;
+        this.document = doc;
+
+        this.panelNode = doc.createElement("div");
+        this.panelNode.ownerPanel = this;
+
+        setClass(this.panelNode, "panelNode panelNode-"+this.name+" contextUID="+context.uid);
+        doc.body.appendChild(this.panelNode);
+
+        if (FBTrace.DBG_INITIALIZE)
+            FBTrace.sysout("firebug.initialize panelNode for "+this.name+"\n");
+
+        this.initializeNode(this.panelNode);
+        /**/
+    },
+
+    destroy: function(state) // Panel may store info on state
+    {
+        if (FBTrace.DBG_INITIALIZE)
+            FBTrace.sysout("firebug.destroy panelNode for "+this.name+"\n");
+
+        if (this.panelNode)
+            delete this.panelNode.ownerPanel;
+
+        this.destroyNode();
+    },
+
+    detach: function(oldChrome, newChrome)
+    {
+        this.lastScrollTop = this.panelNode.scrollTop;
+    },
+
+    reattach: function(doc)
+    {
+        this.document = doc;
+
+        if (this.panelNode)
+        {
+            this.panelNode = doc.adoptNode(this.panelNode, true);
+            this.panelNode.ownerPanel = this;
+            doc.body.appendChild(this.panelNode);
+            this.panelNode.scrollTop = this.lastScrollTop;
+            delete this.lastScrollTop;
+        }
+    },
+
+    show: function(state)
+    {
+        var options = this.options;
+        
+        this.panelNode.style.display = "block";
+        
+        if (options.hasSidePanel)
+        {
+            //this.sidePanelNode = $(panelId + "StatusBar");
+        }
+        
+        if (options.hasStatusBar)
+        {
+            this.statusBarBox.style.display = "inline";
+            this.statusBarNode.style.display = "inline";
+        }
+        
+        if (options.hasToolButtons)
+        {
+            this.toolButtonsNode.style.display = "inline";
+        }
+        
+        Firebug.chrome.layout(options);
+    },
+
+    hide: function(state)
+    {
+        var options = this.options;
+        
+        this.panelNode.style.display = "none";
+        
+        if (options.hasSidePanel)
+        {
+            //this.sidePanelNode = $(panelId + "StatusBar");
+        }
+        
+        if (options.hasStatusBar)
+        {
+            this.statusBarBox.style.display = "none";
+            this.statusBarNode.style.display = "none";
+        }
+        
+        if (options.hasToolButtons)
+        {
+            this.toolButtonsNode.style.display = "none";
+        }
+    },
+
+    watchWindow: function(win)
+    {
+    },
+
+    unwatchWindow: function(win)
+    {
+    },
+
+    updateOption: function(name, value)
+    {
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    /**
+     * Toolbar helpers
+     */
+    showToolbarButtons: function(buttonsId, show)
+    {
+        try
+        {
+            if (!this.context.browser) // XXXjjb this is bug. Somehow the panel context is not FirebugContext.
+            {
+              if (FBTrace.DBG_ERRORS)
+                FBTrace.sysout("firebug.Panel showToolbarButtons this.context has no browser, this:", this)
+                return;
+            }
+            var buttons = this.context.browser.chrome.$(buttonsId);
+            if (buttons)
+                collapse(buttons, show ? "false" : "true");
+        }
+        catch (exc)
+        {
+            if (FBTrace.DBG_ERRORS)
+            {
+                FBTrace.dumpProperties("firebug.Panel showToolbarButtons FAILS", exc);
+                if (!this.context.browser)FBTrace.dumpStack("firebug.Panel showToolbarButtons no browser");
+            }
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    /**
+     * Returns a number indicating the view's ability to inspect the object.
+     *
+     * Zero means not supported, and higher numbers indicate specificity.
+     */
+    supportsObject: function(object)
+    {
+        return 0;
+    },
+
+    refresh: function()
+    {
+
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    startInspecting: function()
+    {
+    },
+
+    stopInspecting: function(object, cancelled)
+    {
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    search: function(text)
+    {
+    }
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+};
+
+// ************************************************************************************************
+// PanelBar
+
+Firebug.PanelBar = 
+{
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    selectedPanel: null,
+    
+    panelBarNode: null,
+    context: null,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    initialize: function()
+    {
+        this.panels = [];
+        this.panelMap = {};
+        
+        //this.panelBarNode = panelBarNode;    
+    },
+    
+    shutdown: function()
+    {
+    
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    addPanel: function(panelName, parentPanel)
+    {
+        var PanelType = panelTypeMap[panelName];
+        var panel = new PanelType();
+        panel.initialize();
+        
+        this.panels.push(panel);
+        this.panelMap[panelName] = panel;
+    },
+    
+    removePanel: function(panelName)
+    {
+        
+    },
+    
+    selectPanel: function(panelName)
+    {
+        var selectedPanel = this.selectedPanel;
+        var panel = this.panelMap[panelName];
+        
+        if (panel && selectedPanel != panel)
+        {
+            if (selectedPanel)
+            {
+                removeClass(selectedPanel.tabNode, "fbSelectedTab");
+                selectedPanel.hide();
+            }
+            
+            this.selectedPanel = panel;
+            
+            addClass(panel.tabNode, "fbSelectedTab");
+            panel.show();
         }
     },
     
-    registerPublicNamespaces: function()
+    getSelectedPanel: function()
     {
-        FBL.NS = isFirefox ? FBL.alternateNS : FBL.consoleNS;
-      
-        window[NS] = ConsoleAPI;
-        FBL.loaded = true;
+        return this.selectedPanel;
+    }    
+   
+};
+
+
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
+
+
+/*
+
+From Honza Tutorial
+----------------------------------------------------
+FBL.ns(function() { with (FBL) {
+var panelName = "HelloWorld";
+Firebug.HelloWorldModel = extend(Firebug.Module,
+{
+    showPanel: function(browser, panel) {
+        var isHwPanel = panel && panel.name == panelName;
+        var hwButtons = browser.chrome.$("fbHelloWorldButtons");
+        collapse(hwButtons, !isHwPanel);
+    },
+    onMyButton: function(context) {
+        alert("Hello World!");
     }
-  
 });
+
+function HelloWorldPanel() {}
+HelloWorldPanel.prototype = extend(Firebug.Panel,
+{
+    name: panelName,
+    title: "Hello World!",
+
+    initialize: function() {
+        Firebug.Panel.initialize.apply(this, arguments);
+    }
+});
+
+Firebug.registerModule(Firebug.HelloWorldModel);
+Firebug.registerPanel(HelloWorldPanel);
+
+}});
+----------------------------------------------------
+
+/**/  
+  
+
 
 
 // ************************************************************************************************
 }});
+
+// Problems in IE
+// FIXED - eval return
+// FIXED - addEventListener problem in IE
+// FIXED doc.createRange?
+//
+// class reserved word
+// test all honza examples in IE6 and IE7
+
+
+/* See license.txt for terms of usage */
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+function DomplateTag(tagName)
+{
+    this.tagName = tagName;
+}
+
+function DomplateEmbed()
+{
+}
+
+function DomplateLoop()
+{
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+(function() {
+
+var womb = null;
+
+domplate = function()
+{
+    var lastSubject;
+    for (var i = 0; i < arguments.length; ++i)
+        lastSubject = lastSubject ? copyObject(lastSubject, arguments[i]) : arguments[i];
+
+    for (var name in lastSubject)
+    {
+        var val = lastSubject[name];
+        if (isTag(val))
+            val.tag.subject = lastSubject;
+    }
+
+    return lastSubject;
+};
+
+domplate.context = function(context, fn)
+{
+    var lastContext = domplate.lastContext;
+    domplate.topContext = context;
+    fn.apply(context);
+    domplate.topContext = lastContext;
+};
+
+FBL.TAG = function()
+{
+    var embed = new DomplateEmbed();
+    return embed.merge(arguments);
+};
+
+FBL.FOR = function()
+{
+    var loop = new DomplateLoop();
+    return loop.merge(arguments);
+};
+
+DomplateTag.prototype =
+{
+    merge: function(args, oldTag)
+    {
+        if (oldTag)
+            this.tagName = oldTag.tagName;
+
+        this.context = oldTag ? oldTag.context : null;
+        this.subject = oldTag ? oldTag.subject : null;
+        this.attrs = oldTag ? copyObject(oldTag.attrs) : {};
+        this.classes = oldTag ? copyObject(oldTag.classes) : {};
+        this.props = oldTag ? copyObject(oldTag.props) : null;
+        this.listeners = oldTag ? copyArray(oldTag.listeners) : null;
+        this.children = oldTag ? copyArray(oldTag.children) : [];
+        this.vars = oldTag ? copyArray(oldTag.vars) : [];
+
+        var attrs = args.length ? args[0] : null;
+        var hasAttrs = typeof(attrs) == "object" && !isTag(attrs);
+
+        this.children = [];
+
+        if (domplate.topContext)
+            this.context = domplate.topContext;
+
+        if (args.length)
+            parseChildren(args, hasAttrs ? 1 : 0, this.vars, this.children);
+
+        if (hasAttrs)
+            this.parseAttrs(attrs);
+
+        return creator(this, DomplateTag);
+    },
+
+    parseAttrs: function(args)
+    {
+        for (var name in args)
+        {
+            var val = parseValue(args[name]);
+            readPartNames(val, this.vars);
+
+            if (name.indexOf("on") == 0)
+            {
+                var eventName = name.substr(2);
+                if (!this.listeners)
+                    this.listeners = [];
+                this.listeners.push(eventName, val);
+            }
+            else if (name.indexOf("_") == 0)
+            {
+                var propName = name.substr(1);
+                if (!this.props)
+                    this.props = {};
+                this.props[propName] = val;
+            }
+            else if (name.indexOf("$") == 0)
+            {
+                var className = name.substr(1);
+                if (!this.classes)
+                    this.classes = {};
+                this.classes[className] = val;
+            }
+            else
+            {
+                if (name == "class" && this.attrs.hasOwnProperty(name) )
+                    this.attrs[name] += " " + val;
+                else
+                    this.attrs[name] = val;
+            }
+        }
+    },
+
+    compile: function()
+    {
+        if (this.renderMarkup)
+            return;
+
+        this.compileMarkup();
+        this.compileDOM();
+
+        //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate renderMarkup: ", this.renderMarkup);
+        //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate renderDOM:", this.renderDOM);
+        //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate domArgs:", this.domArgs);
+    },
+
+    compileMarkup: function()
+    {
+        this.markupArgs = [];
+        var topBlock = [], topOuts = [], blocks = [], info = {args: this.markupArgs, argIndex: 0};
+         
+        this.generateMarkup(topBlock, topOuts, blocks, info);
+        this.addCode(topBlock, topOuts, blocks);
+
+        var fnBlock = ['r=(function (__code__, __context__, __in__, __out__'];
+        for (var i = 0; i < info.argIndex; ++i)
+            fnBlock.push(', s', i);
+        fnBlock.push(') {');
+
+        if (this.subject)
+            fnBlock.push('with (this) {');
+        if (this.context)
+            fnBlock.push('with (__context__) {');
+        fnBlock.push('with (__in__) {');
+
+        fnBlock.push.apply(fnBlock, blocks);
+
+        if (this.subject)
+            fnBlock.push('}');
+        if (this.context)
+            fnBlock.push('}');
+
+        fnBlock.push('}})');
+
+        function __link__(tag, code, outputs, args)
+        {
+            if (!tag || !tag.tag)
+                return;
+
+            tag.tag.compile();
+
+            var tagOutputs = [];
+            var markupArgs = [code, tag.tag.context, args, tagOutputs];
+            markupArgs.push.apply(markupArgs, tag.tag.markupArgs);
+            tag.tag.renderMarkup.apply(tag.tag.subject, markupArgs);
+
+            outputs.push(tag);
+            outputs.push(tagOutputs);
+        }
+
+        function __escape__(value)
+        {
+            function replaceChars(ch)
+            {
+                switch (ch)
+                {
+                    case "<":
+                        return "&lt;";
+                    case ">":
+                        return "&gt;";
+                    case "&":
+                        return "&amp;";
+                    case "'":
+                        return "&#39;";
+                    case '"':
+                        return "&quot;";
+                }
+                return "?";
+            };
+            return String(value).replace(/[<>&"']/g, replaceChars);
+        }
+
+        function __loop__(iter, outputs, fn)
+        {
+            var iterOuts = [];
+            outputs.push(iterOuts);
+
+            if (iter instanceof Array)
+                iter = new ArrayIterator(iter);
+
+            try
+            {
+                while (1)
+                {
+                    var value = iter.next();
+                    var itemOuts = [0,0];
+                    iterOuts.push(itemOuts);
+                    fn.apply(this, [value, itemOuts]);
+                }
+            }
+            catch (exc)
+            {
+                if (exc != StopIteration)
+                    throw exc;
+            }
+        }
+
+        var js = fnBlock.join("");
+        var r = null;
+        eval(js)
+        this.renderMarkup = r;
+    },
+
+    getVarNames: function(args)
+    {
+        if (this.vars)
+            args.push.apply(args, this.vars);
+
+        for (var i = 0; i < this.children.length; ++i)
+        {
+            var child = this.children[i];
+            if (isTag(child))
+                child.tag.getVarNames(args);
+            else if (child instanceof Parts)
+            {
+                for (var i = 0; i < child.parts.length; ++i)
+                {
+                    if (child.parts[i] instanceof Variable)
+                    {
+                        var name = child.parts[i].name;
+                        var names = name.split(".");
+                        args.push(names[0]);
+                    }
+                }
+            }
+        }
+    },
+
+    generateMarkup: function(topBlock, topOuts, blocks, info)
+    {
+        topBlock.push(',"<', this.tagName, '"');
+
+        for (var name in this.attrs)
+        {
+            if (name != "class")
+            {
+                var val = this.attrs[name];
+                topBlock.push(', " ', name, '=\\""');
+                addParts(val, ',', topBlock, info, true);
+                topBlock.push(', "\\""');
+            }
+        }
+
+        if (this.listeners)
+        {
+            for (var i = 0; i < this.listeners.length; i += 2)
+                readPartNames(this.listeners[i+1], topOuts);
+        }
+
+        if (this.props)
+        {
+            for (var name in this.props)
+                readPartNames(this.props[name], topOuts);
+        }
+
+        if ( this.attrs.hasOwnProperty("class") || this.classes)
+        {
+            topBlock.push(', " class=\\""');
+            if (this.attrs.hasOwnProperty("class"))
+                addParts(this.attrs["class"], ',', topBlock, info, true);
+              topBlock.push(', " "');
+            for (var name in this.classes)
+            {
+                topBlock.push(', (');
+                addParts(this.classes[name], '', topBlock, info);
+                topBlock.push(' ? "', name, '" + " " : "")');
+            }
+            topBlock.push(', "\\""');
+        }
+        topBlock.push(',">"');
+
+        this.generateChildMarkup(topBlock, topOuts, blocks, info);
+        topBlock.push(',"</', this.tagName, '>"');
+    },
+
+    generateChildMarkup: function(topBlock, topOuts, blocks, info)
+    {
+        for (var i = 0; i < this.children.length; ++i)
+        {
+            var child = this.children[i];
+            if (isTag(child))
+                child.tag.generateMarkup(topBlock, topOuts, blocks, info);
+            else
+                addParts(child, ',', topBlock, info, true);
+        }
+    },
+
+    addCode: function(topBlock, topOuts, blocks)
+    {
+        if (topBlock.length)
+            blocks.push('__code__.push(""', topBlock.join(""), ');');
+        if (topOuts.length)
+            blocks.push('__out__.push(', topOuts.join(","), ');');
+        topBlock.splice(0, topBlock.length);
+        topOuts.splice(0, topOuts.length);
+    },
+
+    addLocals: function(blocks)
+    {
+        var varNames = [];
+        this.getVarNames(varNames);
+
+        var map = {};
+        for (var i = 0; i < varNames.length; ++i)
+        {
+            var name = varNames[i];
+            if ( map.hasOwnProperty(name) )
+                continue;
+
+            map[name] = 1;
+            var names = name.split(".");
+            blocks.push('var ', names[0] + ' = ' + '__in__.' + names[0] + ';');
+        }
+    },
+
+    compileDOM: function()
+    {
+        var path = [];
+        var blocks = [];
+        this.domArgs = [];
+        path.embedIndex = 0;
+        path.loopIndex = 0;
+        path.staticIndex = 0;
+        path.renderIndex = 0;
+        var nodeCount = this.generateDOM(path, blocks, this.domArgs);
+
+        var fnBlock = ['r=(function (root, context, o'];
+
+        for (var i = 0; i < path.staticIndex; ++i)
+            fnBlock.push(', ', 's'+i);
+
+        for (var i = 0; i < path.renderIndex; ++i)
+            fnBlock.push(', ', 'd'+i);
+
+        fnBlock.push(') {');
+        for (var i = 0; i < path.loopIndex; ++i)
+            fnBlock.push('var l', i, ' = 0;');
+        for (var i = 0; i < path.embedIndex; ++i)
+            fnBlock.push('var e', i, ' = 0;');
+
+        if (this.subject)
+            fnBlock.push('with (this) {');
+        if (this.context)
+            fnBlock.push('with (context) {');
+
+        fnBlock.push(blocks.join(""));
+
+        if (this.subject)
+            fnBlock.push('}');
+        if (this.context)
+            fnBlock.push('}');
+
+        fnBlock.push('return ', nodeCount, ';');
+        fnBlock.push('})');
+
+        function __bind__(object, fn)
+        {
+            return function(event) { return fn.apply(object, [event]); }
+        }
+
+        function __link__(node, tag, args)
+        {
+            if (!tag || !tag.tag)
+                return;
+
+            tag.tag.compile();
+
+            var domArgs = [node, tag.tag.context, 0];
+            domArgs.push.apply(domArgs, tag.tag.domArgs);
+            domArgs.push.apply(domArgs, args);
+            //if (FBTrace.DBG_DOM) FBTrace.dumpProperties("domplate__link__ domArgs:", domArgs);
+            return tag.tag.renderDOM.apply(tag.tag.subject, domArgs);
+        }
+
+        var self = this;
+        function __loop__(iter, fn)
+        {
+            var nodeCount = 0;
+            for (var i = 0; i < iter.length; ++i)
+            {
+                iter[i][0] = i;
+                iter[i][1] = nodeCount;
+                nodeCount += fn.apply(this, iter[i]);
+                //if (FBTrace.DBG_DOM) FBTrace.sysout("nodeCount", nodeCount);
+            }
+            return nodeCount;
+        }
+
+        function __path__(parent, offset)
+        {
+            //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate __path__ offset: "+ offset+"\n");
+            var root = parent;
+
+            for (var i = 2; i < arguments.length; ++i)
+            {
+                var index = arguments[i];
+                if (i == 3)
+                    index += offset;
+
+                if (index == -1)
+                    parent = parent.parentNode;
+                else
+                    parent = parent.childNodes[index];
+            }
+
+            //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate: "+arguments[2]+", root: "+ root+", parent: "+ parent+"\n");
+            return parent;
+        }
+
+        var js = fnBlock.join("");
+        //if (FBTrace.DBG_DOM) FBTrace.sysout(js.replace(/(\;|\{)/g, "$1\n"));
+        var r = null;
+        eval(js)
+        this.renderDOM = r;
+    },
+
+    generateDOM: function(path, blocks, args)
+    {
+        if (this.listeners || this.props)
+            this.generateNodePath(path, blocks);
+
+        if (this.listeners)
+        {
+            for (var i = 0; i < this.listeners.length; i += 2)
+            {
+                var val = this.listeners[i+1];
+                var arg = generateArg(val, path, args);
+                //blocks.push('node.addEventListener("', this.listeners[i], '", __bind__(this, ', arg, '), false);');
+                blocks.push('addEvent(node, "', this.listeners[i], '", __bind__(this, ', arg, '), false);');
+            }
+        }
+
+        if (this.props)
+        {
+            for (var name in this.props)
+            {
+                var val = this.props[name];
+                var arg = generateArg(val, path, args);
+                blocks.push('node.', name, ' = ', arg, ';');
+            }
+        }
+
+        this.generateChildDOM(path, blocks, args);
+        return 1;
+    },
+
+    generateNodePath: function(path, blocks)
+    {
+        blocks.push("node = __path__(root, o");
+        for (var i = 0; i < path.length; ++i)
+            blocks.push(",", path[i]);
+        blocks.push(");");
+    },
+
+    generateChildDOM: function(path, blocks, args)
+    {
+        path.push(0);
+        for (var i = 0; i < this.children.length; ++i)
+        {
+            var child = this.children[i];
+            if (isTag(child))
+                path[path.length-1] += '+' + child.tag.generateDOM(path, blocks, args);
+            else
+                path[path.length-1] += '+1';
+        }
+        path.pop();
+    }
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+DomplateEmbed.prototype = copyObject(DomplateTag.prototype,
+{
+    merge: function(args, oldTag)
+    {
+        this.value = oldTag ? oldTag.value : parseValue(args[0]);
+        this.attrs = oldTag ? oldTag.attrs : {};
+        this.vars = oldTag ? copyArray(oldTag.vars) : [];
+
+        var attrs = args[1];
+        for (var name in attrs)
+        {
+            var val = parseValue(attrs[name]);
+            this.attrs[name] = val;
+            readPartNames(val, this.vars);
+        }
+
+        return creator(this, DomplateEmbed);
+    },
+
+    getVarNames: function(names)
+    {
+        if (this.value instanceof Parts)
+            names.push(this.value.parts[0].name);
+
+        if (this.vars)
+            names.push.apply(names, this.vars);
+    },
+
+    generateMarkup: function(topBlock, topOuts, blocks, info)
+    {
+        this.addCode(topBlock, topOuts, blocks);
+
+        blocks.push('__link__(');
+        addParts(this.value, '', blocks, info);
+        blocks.push(', __code__, __out__, {');
+
+        var lastName = null;
+        for (var name in this.attrs)
+        {
+            if (lastName)
+                blocks.push(',');
+            lastName = name;
+
+            var val = this.attrs[name];
+            blocks.push('"', name, '":');
+            addParts(val, '', blocks, info);
+        }
+
+        blocks.push('});');
+        //this.generateChildMarkup(topBlock, topOuts, blocks, info);
+    },
+
+    generateDOM: function(path, blocks, args)
+    {
+        var embedName = 'e'+path.embedIndex++;
+
+        this.generateNodePath(path, blocks);
+
+        var valueName = 'd' + path.renderIndex++;
+        var argsName = 'd' + path.renderIndex++;
+        blocks.push(embedName + ' = __link__(node, ', valueName, ', ', argsName, ');');
+
+        return embedName;
+    }
+});
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+DomplateLoop.prototype = copyObject(DomplateTag.prototype,
+{
+    merge: function(args, oldTag)
+    {
+        this.varName = oldTag ? oldTag.varName : args[0];
+        this.iter = oldTag ? oldTag.iter : parseValue(args[1]);
+        this.vars = [];
+
+        this.children = oldTag ? copyArray(oldTag.children) : [];
+
+        var offset = Math.min(args.length, 2);
+        parseChildren(args, offset, this.vars, this.children);
+
+        return creator(this, DomplateLoop);
+    },
+
+    getVarNames: function(names)
+    {
+        if (this.iter instanceof Parts)
+            names.push(this.iter.parts[0].name);
+
+        DomplateTag.prototype.getVarNames.apply(this, [names]);
+    },
+
+    generateMarkup: function(topBlock, topOuts, blocks, info)
+    {
+        this.addCode(topBlock, topOuts, blocks);
+
+        var iterName;
+        if (this.iter instanceof Parts)
+        {
+            var part = this.iter.parts[0];
+            iterName = part.name;
+
+            if (part.format)
+            {
+                for (var i = 0; i < part.format.length; ++i)
+                    iterName = part.format[i] + "(" + iterName + ")";
+            }
+        }
+        else
+            iterName = this.iter;
+
+        blocks.push('__loop__.apply(this, [', iterName, ', __out__, function(', this.varName, ', __out__) {');
+        this.generateChildMarkup(topBlock, topOuts, blocks, info);
+        this.addCode(topBlock, topOuts, blocks);
+        blocks.push('}]);');
+    },
+
+    generateDOM: function(path, blocks, args)
+    {
+        var iterName = 'd'+path.renderIndex++;
+        var counterName = 'i'+path.loopIndex;
+        var loopName = 'l'+path.loopIndex++;
+
+        if (!path.length)
+            path.push(-1, 0);
+
+        var preIndex = path.renderIndex;
+        path.renderIndex = 0;
+
+        var nodeCount = 0;
+
+        var subBlocks = [];
+        var basePath = path[path.length-1];
+        for (var i = 0; i < this.children.length; ++i)
+        {
+            path[path.length-1] = basePath+'+'+loopName+'+'+nodeCount;
+
+            var child = this.children[i];
+            if (isTag(child))
+                nodeCount += '+' + child.tag.generateDOM(path, subBlocks, args);
+            else
+                nodeCount += '+1';
+        }
+
+        path[path.length-1] = basePath+'+'+loopName;
+
+        blocks.push(loopName,' = __loop__.apply(this, [', iterName, ', function(', counterName,',',loopName);
+        for (var i = 0; i < path.renderIndex; ++i)
+            blocks.push(',d'+i);
+        blocks.push(') {');
+        blocks.push(subBlocks.join(""));
+        blocks.push('return ', nodeCount, ';');
+        blocks.push('}]);');
+
+        path.renderIndex = preIndex;
+
+        return loopName;
+    }
+});
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+function Variable(name, format)
+{
+    this.name = name;
+    this.format = format;
+}
+
+function Parts(parts)
+{
+    this.parts = parts;
+}
+
+// ************************************************************************************************
+
+function parseParts(str)
+{
+    var re = /\$([_A-Za-z][_A-Za-z0-9.|]*)/g;
+    var index = 0;
+    var parts = [];
+
+    var m;
+    while (m = re.exec(str))
+    {
+        var pre = str.substr(index, (re.lastIndex-m[0].length)-index);
+        if (pre)
+            parts.push(pre);
+
+        var expr = m[1].split("|");
+        parts.push(new Variable(expr[0], expr.slice(1)));
+        index = re.lastIndex;
+    }
+
+    if (!index)
+        return str;
+
+    var post = str.substr(index);
+    if (post)
+        parts.push(post);
+
+    return new Parts(parts);
+}
+
+function parseValue(val)
+{
+    return typeof(val) == 'string' ? parseParts(val) : val;
+}
+
+function parseChildren(args, offset, vars, children)
+{
+    for (var i = offset; i < args.length; ++i)
+    {
+        var val = parseValue(args[i]);
+        children.push(val);
+        readPartNames(val, vars);
+    }
+}
+
+function readPartNames(val, vars)
+{
+    if (val instanceof Parts)
+    {
+        for (var i = 0; i < val.parts.length; ++i)
+        {
+            var part = val.parts[i];
+            if (part instanceof Variable)
+                vars.push(part.name);
+        }
+    }
+}
+
+function generateArg(val, path, args)
+{
+    if (val instanceof Parts)
+    {
+        var vals = [];
+        for (var i = 0; i < val.parts.length; ++i)
+        {
+            var part = val.parts[i];
+            if (part instanceof Variable)
+            {
+                var varName = 'd'+path.renderIndex++;
+                if (part.format)
+                {
+                    for (var j = 0; j < part.format.length; ++j)
+                        varName = part.format[j] + '(' + varName + ')';
+                }
+
+                vals.push(varName);
+            }
+            else
+                vals.push('"'+part.replace(/"/g, '\\"')+'"');
+        }
+
+        return vals.join('+');
+    }
+    else
+    {
+        args.push(val);
+        return 's' + path.staticIndex++;
+    }
+}
+
+function addParts(val, delim, block, info, escapeIt)
+{
+    var vals = [];
+    if (val instanceof Parts)
+    {
+        for (var i = 0; i < val.parts.length; ++i)
+        {
+            var part = val.parts[i];
+            if (part instanceof Variable)
+            {
+                var partName = part.name;
+                if (part.format)
+                {
+                    for (var j = 0; j < part.format.length; ++j)
+                        partName = part.format[j] + "(" + partName + ")";
+                }
+
+                if (escapeIt)
+                    vals.push("__escape__(" + partName + ")");
+                else
+                    vals.push(partName);
+            }
+            else
+                vals.push('"'+ part + '"');
+        }
+    }
+    else if (isTag(val))
+    {
+        info.args.push(val);
+        vals.push('s'+info.argIndex++);
+    }
+    else
+        vals.push('"'+ val + '"');
+
+    var parts = vals.join(delim);
+    if (parts)
+        block.push(delim, parts);
+}
+
+function isTag(obj)
+{
+    return (typeof(obj) == "function" || obj instanceof Function) && !!obj.tag;
+}
+
+function creator(tag, cons)
+{
+    var fn = new Function(
+        "var tag = arguments.callee.tag;" +
+        "var cons = arguments.callee.cons;" +
+        "var newTag = new cons();" +
+        "return newTag.merge(arguments, tag);");
+
+    fn.tag = tag;
+    fn.cons = cons;
+    extend(fn, Renderer);
+
+    return fn;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+function copyArray(oldArray)
+{
+    var ary = [];
+    if (oldArray)
+        for (var i = 0; i < oldArray.length; ++i)
+            ary.push(oldArray[i]);
+   return ary;
+}
+
+function copyObject(l, r)
+{
+    var m = {};
+    extend(m, l);
+    extend(m, r);
+    return m;
+}
+
+function extend(l, r)
+{
+    for (var n in r)
+        l[n] = r[n];
+}
+
+function addEvent(object, name, handler)
+{
+    if (document.all)
+        object.attachEvent("on"+name, handler);
+    else
+        object.addEventListener(name, handler, false);
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+function ArrayIterator(array)
+{
+    var index = -1;
+
+    this.next = function()
+    {
+        if (++index >= array.length)
+            throw StopIteration;
+
+        return array[index];
+    };
+}
+
+function StopIteration() {}
+
+FBL.$break = function()
+{
+    throw StopIteration;
+};
+
+// ************************************************************************************************
+
+var Renderer =
+{
+    renderHTML: function(args, outputs, self)
+    {
+        var code = [];
+        var markupArgs = [code, this.tag.context, args, outputs];
+        markupArgs.push.apply(markupArgs, this.tag.markupArgs);
+        this.tag.renderMarkup.apply(self ? self : this.tag.subject, markupArgs);
+        return code.join("");
+    },
+
+    insertRows: function(args, before, self)
+    {
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+
+        var doc = before.ownerDocument;
+        var table = doc.createElement("table");
+        table.innerHTML = html;
+
+        var tbody = table.firstChild;
+        var parent = before.tagName == "TR" ? before.parentNode : before;
+        var after = before.tagName == "TR" ? before.nextSibling : null;
+
+        var firstRow = tbody.firstChild, lastRow;
+        while (tbody.firstChild)
+        {
+            lastRow = tbody.firstChild;
+            if (after)
+                parent.insertBefore(lastRow, after);
+            else
+                parent.appendChild(lastRow);
+        }
+
+        var offset = 0;
+        if (before.tagName == "TR")
+        {
+            var node = firstRow.parentNode.firstChild;
+            for (; node && node != firstRow; node = node.nextSibling)
+                ++offset;
+        }
+
+        var domArgs = [firstRow, this.tag.context, offset];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+
+        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
+        return [firstRow, lastRow];
+    },
+
+    insertAfter: function(args, before, self)
+    {
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+
+        var doc = before.ownerDocument;
+        if (!womb || womb.ownerDocument != doc)
+            womb = doc.createElement("div");
+        
+        womb.innerHTML = html;
+  
+        root = womb.firstChild;
+        while (womb.firstChild)
+            if (before.nextSibling)
+                before.parentNode.insertBefore(womb.firstChild, before.nextSibling);
+            else
+                before.parentNode.appendChild(womb.firstChild);
+        
+        var domArgs = [root, this.tag.context, 0];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+
+        this.tag.renderDOM.apply(self ? self : (this.tag.subject ? this.tag.subject : null),
+            domArgs);
+
+        return root;
+    },
+
+    replace: function(args, parent, self)
+    {
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+
+        var root;
+        if (parent.nodeType == 1)
+        {
+            parent.innerHTML = html;
+            root = parent.firstChild;
+        }
+        else
+        {
+            if (!parent || parent.nodeType != 9)
+                parent = document;
+
+            if (!womb || womb.ownerDocument != parent)
+                womb = parent.createElement("div");
+            womb.innerHTML = html;
+
+            root = womb.firstChild;
+            //womb.removeChild(root);
+        }
+
+        var domArgs = [root, this.tag.context, 0];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
+
+        return root;
+    },
+
+    append: function(args, parent, self)
+    {
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+        //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate.append html: "+html+"\n");
+        
+        if (!womb || womb.ownerDocument != parent.ownerDocument)
+            womb = parent.ownerDocument.createElement("div");
+        womb.innerHTML = html;
+
+        root = womb.firstChild;
+        while (womb.firstChild)
+            parent.appendChild(womb.firstChild);
+
+        var domArgs = [root, this.tag.context, 0];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+        
+        //if (FBTrace.DBG_DOM) FBTrace.dumpProperties("domplate append domArgs:", domArgs);
+        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
+
+        return root;
+    }
+};
+
+// ************************************************************************************************
+
+function defineTags()
+{
+    for (var i = 0; i < arguments.length; ++i)
+    {
+        var tagName = arguments[i];
+        var fn = new Function("var newTag = new DomplateTag('"+tagName+"'); return newTag.merge(arguments);");
+
+        var fnName = tagName.toUpperCase();
+        FBL[fnName] = fn;
+    }
+}
+
+defineTags(
+    "a", "button", "br", "canvas", "col", "colgroup", "div", "fieldset", "form", "h1", "h2", "h3", "hr",
+     "img", "input", "label", "legend", "li", "ol", "optgroup", "option", "p", "pre", "select",
+    "span", "strong", "table", "tbody", "td", "textarea", "tfoot", "th", "thead", "tr", "tt", "ul", "iframe"
+);
+
+})();
+
 
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
@@ -853,813 +2738,14 @@ From firebug
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-/*
- * Sizzle CSS Selector Engine - v0.9
- *  Copyright 2009, John Resig (http://ejohn.org/)
- *  released under the MIT License
- */
-
-var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]+\]|[^[\]]+)+\]|\\.|[^ >+~,(\[]+)+|[>+~])(\s*,\s*)?/g;
-
-var done = 0;
-
-var Sizzle = function(selector, context, results, seed) {
-	var doCache = !results;
-	results = results || [];
-	context = context || document;
-
-	if ( context.nodeType !== 1 && context.nodeType !== 9 )
-		return [];
-	
-	if ( !selector || typeof selector !== "string" ) {
-		return results;
-	}
-
-	var parts = [], m, set, checkSet, check, mode, extra;
-	
-	// Reset the position of the chunker regexp (start from head)
-	chunker.lastIndex = 0;
-	
-	while ( (m = chunker.exec(selector)) !== null ) {
-		parts.push( m[1] );
-		
-		if ( m[2] ) {
-			extra = RegExp.rightContext;
-			break;
-		}
-	}
-
-	if ( parts.length > 1 && Expr.match.POS.exec( selector ) ) {
-		if ( parts.length === 2 && Expr.relative[ parts[0] ] ) {
-			var later = "", match;
-
-			// Position selectors must be done after the filter
-			while ( (match = Expr.match.POS.exec( selector )) ) {
-				later += match[0];
-				selector = selector.replace( Expr.match.POS, "" );
-			}
-
-			set = Sizzle.filter( later, Sizzle( selector, context ) );
-		} else {
-			set = Expr.relative[ parts[0] ] ?
-				[ context ] :
-				Sizzle( parts.shift(), context );
-
-			while ( parts.length ) {
-				var tmpSet = [];
-
-				selector = parts.shift();
-				if ( Expr.relative[ selector ] )
-					selector += parts.shift();
-
-				for ( var i = 0, l = set.length; i < l; i++ ) {
-					Sizzle( selector, set[i], tmpSet );
-				}
-
-				set = tmpSet;
-			}
-		}
-	} else {
-		var ret = seed ?
-			{ expr: parts.pop(), set: makeArray(seed) } :
-			Sizzle.find( parts.pop(), parts.length === 1 && context.parentNode ? context.parentNode : context );
-		set = Sizzle.filter( ret.expr, ret.set );
-
-		if ( parts.length > 0 ) {
-			checkSet = makeArray(set);
-		}
-
-		while ( parts.length ) {
-			var cur = parts.pop(), pop = cur;
-
-			if ( !Expr.relative[ cur ] ) {
-				cur = "";
-			} else {
-				pop = parts.pop();
-			}
-
-			if ( pop == null ) {
-				pop = context;
-			}
-
-			Expr.relative[ cur ]( checkSet, pop );
-		}
-	}
-
-	if ( !checkSet ) {
-		checkSet = set;
-	}
-
-	if ( !checkSet ) {
-		throw "Syntax error, unrecognized expression: " + (cur || selector);
-	}
-
-	if ( checkSet instanceof Array ) {
-		if ( context.nodeType === 1 ) {
-			for ( var i = 0; checkSet[i] != null; i++ ) {
-				if ( checkSet[i] && (checkSet[i] === true || checkSet[i].nodeType === 1 && contains(context, checkSet[i])) ) {
-					results.push( set[i] );
-				}
-			}
-		} else {
-			for ( var i = 0; checkSet[i] != null; i++ ) {
-				if ( checkSet[i] && checkSet[i].nodeType === 1 ) {
-					results.push( set[i] );
-				}
-			}
-		}
-	} else {
-		makeArray( checkSet, results );
-	}
-
-	if ( extra ) {
-		Sizzle( extra, context, results );
-	}
-
-	return results;
-};
-
-Sizzle.matches = function(expr, set){
-	return Sizzle(expr, null, null, set);
-};
-
-Sizzle.find = function(expr, context){
-	var set, match;
-
-	if ( !expr ) {
-		return [];
-	}
-
-	var later = "", match;
-
-	// Pseudo-selectors could contain other selectors (like :not)
-	while ( (match = Expr.match.PSEUDO.exec( expr )) ) {
-		var left = RegExp.leftContext;
-
-		if ( left.substr( left.length - 1 ) !== "\\" ) {
-			later += match[0];
-			expr = expr.replace( Expr.match.PSEUDO, "" );
-		} else {
-			// TODO: Need a better solution, fails: .class\:foo:realfoo(#id)
-			break;
-		}
-	}
-
-	for ( var i = 0, l = Expr.order.length; i < l; i++ ) {
-		var type = Expr.order[i];
-		
-		if ( (match = Expr.match[ type ].exec( expr )) ) {
-			var left = RegExp.leftContext;
-
-			if ( left.substr( left.length - 1 ) !== "\\" ) {
-				match[1] = (match[1] || "").replace(/\\/g, "");
-				set = Expr.find[ type ]( match, context );
-
-				if ( set != null ) {
-					expr = expr.replace( Expr.match[ type ], "" );
-					break;
-				}
-			}
-		}
-	}
-
-	if ( !set ) {
-		set = context.getElementsByTagName("*");
-	}
-
-	expr += later;
-
-	return {set: set, expr: expr};
-};
-
-Sizzle.filter = function(expr, set, inplace){
-	var old = expr, result = [], curLoop = set, match;
-
-	while ( expr && set.length ) {
-		for ( var type in Expr.filter ) {
-			if ( (match = Expr.match[ type ].exec( expr )) != null ) {
-				var anyFound = false, filter = Expr.filter[ type ], goodArray = null;
-
-				if ( curLoop == result ) {
-					result = [];
-				}
-
-				if ( Expr.preFilter[ type ] ) {
-					match = Expr.preFilter[ type ]( match, curLoop );
-
-					if ( match[0] === true ) {
-						goodArray = [];
-						var last = null, elem;
-						for ( var i = 0; (elem = curLoop[i]) !== undefined; i++ ) {
-							if ( elem && last !== elem ) {
-								goodArray.push( elem );
-								last = elem;
-							}
-						}
-					}
-
-				}
-
-				var goodPos = 0, found, item;
-
-				for ( var i = 0; (item = curLoop[i]) !== undefined; i++ ) {
-					if ( item ) {
-						if ( goodArray && item != goodArray[goodPos] ) {
-							goodPos++;
-						}
-
-						found = filter( item, match, goodPos, goodArray );
-						if ( inplace && found != null ) {
-							curLoop[i] = found ? curLoop[i] : false;
-							if ( found ) {
-								anyFound = true;
-							}
-						} else if ( found ) {
-							result.push( item );
-							anyFound = true;
-						}
-					}
-				}
-
-				if ( found !== undefined ) {
-					if ( !inplace ) {
-						curLoop = result;
-					}
-
-					expr = expr.replace( Expr.match[ type ], "" );
-
-					if ( !anyFound ) {
-						return [];
-					}
-
-					break;
-				}
-			}
-		}
-
-
-		expr = expr.replace(/\s*,\s*/, "");
-
-		// Improper expression
-		if ( expr == old ) {
-			throw "Syntax error, unrecognized expression: " + expr;
-		}
-
-		old = expr;
-	}
-
-	return curLoop;
-};
-
-var Expr = Sizzle.selectors = {
-	order: [ "ID", "NAME", "TAG" ],
-	match: {
-		ID: /#((?:[\w\u0128-\uFFFF_-]|\\.)+)/,
-		CLASS: /\.((?:[\w\u0128-\uFFFF_-]|\\.)+)/,
-		NAME: /\[name=((?:[\w\u0128-\uFFFF_-]|\\.)+)\]/,
-		ATTR: /\[((?:[\w\u0128-\uFFFF_-]|\\.)+)\s*(?:(\S{0,1}=)\s*(['"]*)(.*?)\3|)\]/,
-		TAG: /^((?:[\w\u0128-\uFFFF\*_-]|\\.)+)/,
-		CHILD: /:(only|nth|last|first)-child\(?(even|odd|[\dn+-]*)\)?/,
-		POS: /:(nth|eq|gt|lt|first|last|even|odd)\(?(\d*)\)?(?:[^-]|$)/,
-		PSEUDO: /:((?:[\w\u0128-\uFFFF_-]|\\.)+)(?:\((['"]*)((?:\([^\)]+\)|[^\2\(\)]*)+)\2\))?/
-	},
-	attrMap: {
-		"class": "className"
-	},
-	relative: {
-		"+": function(checkSet, part){
-			for ( var i = 0, l = checkSet.length; i < l; i++ ) {
-				var elem = checkSet[i];
-				if ( elem ) {
-					var cur = elem.previousSibling;
-					while ( cur && cur.nodeType !== 1 ) {
-						cur = cur.previousSibling;
-					}
-					checkSet[i] = typeof part === "string" ?
-						cur || false :
-						cur === part;
-				}
-			}
-
-			if ( typeof part === "string" ) {
-				Sizzle.filter( part, checkSet, true );
-			}
-		},
-		">": function(checkSet, part){
-			if ( typeof part === "string" && !/\W/.test(part) ) {
-				part = part.toUpperCase();
-
-				for ( var i = 0, l = checkSet.length; i < l; i++ ) {
-					var elem = checkSet[i];
-					if ( elem ) {
-						var parent = elem.parentNode;
-						checkSet[i] = parent.nodeName === part ? parent : false;
-					}
-				}
-			} else {
-				for ( var i = 0, l = checkSet.length; i < l; i++ ) {
-					var elem = checkSet[i];
-					if ( elem ) {
-						checkSet[i] = typeof part === "string" ?
-							elem.parentNode :
-							elem.parentNode === part;
-					}
-				}
-
-				if ( typeof part === "string" ) {
-					Sizzle.filter( part, checkSet, true );
-				}
-			}
-		},
-		"": function(checkSet, part){
-			var doneName = "done" + (done++), checkFn = dirCheck;
-
-			if ( !part.match(/\W/) ) {
-				var nodeCheck = part = part.toUpperCase();
-				checkFn = dirNodeCheck;
-			}
-
-			checkFn("parentNode", part, doneName, checkSet, nodeCheck);
-		},
-		"~": function(checkSet, part){
-			var doneName = "done" + (done++), checkFn = dirCheck;
-
-			if ( typeof part === "string" && !part.match(/\W/) ) {
-				var nodeCheck = part = part.toUpperCase();
-				checkFn = dirNodeCheck;
-			}
-
-			checkFn("previousSibling", part, doneName, checkSet, nodeCheck);
-		}
-	},
-	find: {
-		ID: function(match, context){
-			if ( context.getElementById ) {
-				var m = context.getElementById(match[1]);
-				return m ? [m] : [];
-			}
-		},
-		NAME: function(match, context){
-			return context.getElementsByName(match[1]);
-		},
-		TAG: function(match, context){
-			return context.getElementsByTagName(match[1]);
-		}
-	},
-	preFilter: {
-		CLASS: function(match){
-			return new RegExp( "(?:^|\\s)" + match[1] + "(?:\\s|$)" );
-		},
-		ID: function(match){
-			return match[1];
-		},
-		TAG: function(match){
-			return match[1].toUpperCase();
-		},
-		CHILD: function(match){
-			if ( match[1] == "nth" ) {
-				// parse equations like 'even', 'odd', '5', '2n', '3n+2', '4n-1', '-n+6'
-				var test = /(-?)(\d*)n((?:\+|-)?\d*)/.exec(
-					match[2] == "even" && "2n" || match[2] == "odd" && "2n+1" ||
-					!/\D/.test( match[2] ) && "0n+" + match[2] || match[2]);
-
-				// calculate the numbers (first)n+(last) including if they are negative
-				match[2] = (test[1] + (test[2] || 1)) - 0;
-				match[3] = test[3] - 0;
-			}
-
-			// TODO: Move to normal caching system
-			match[0] = "done" + (done++);
-
-			return match;
-		},
-		ATTR: function(match){
-			var name = match[1];
-			
-			if ( Expr.attrMap[name] ) {
-				match[1] = Expr.attrMap[name];
-			}
-
-			if ( match[2] === "~=" ) {
-				match[4] = " " + match[4] + " ";
-			}
-
-			return match;
-		},
-		PSEUDO: function(match){
-			if ( match[1] === "not" ) {
-				match[3] = match[3].split(/\s*,\s*/);
-			}
-			
-			return match;
-		},
-		POS: function(match){
-			match.unshift( true );
-			return match;
-		}
-	},
-	filters: {
-		enabled: function(elem){
-			return elem.disabled === false && elem.type !== "hidden";
-		},
-		disabled: function(elem){
-			return elem.disabled === true;
-		},
-		checked: function(elem){
-			return elem.checked === true;
-		},
-		selected: function(elem){
-			// Accessing this property makes selected-by-default
-			// options in Safari work properly
-			elem.parentNode.selectedIndex;
-			return elem.selected === true;
-		},
-		parent: function(elem){
-			return !!elem.firstChild;
-		},
-		empty: function(elem){
-			return !elem.firstChild;
-		},
-		has: function(elem, i, match){
-			return !!Sizzle( match[3], elem ).length;
-		},
-		header: function(elem){
-			return /h\d/i.test( elem.nodeName );
-		},
-		text: function(elem){
-			return "text" === elem.type;
-		},
-		radio: function(elem){
-			return "radio" === elem.type;
-		},
-		checkbox: function(elem){
-			return "checkbox" === elem.type;
-		},
-		file: function(elem){
-			return "file" === elem.type;
-		},
-		password: function(elem){
-			return "password" === elem.type;
-		},
-		submit: function(elem){
-			return "submit" === elem.type;
-		},
-		image: function(elem){
-			return "image" === elem.type;
-		},
-		reset: function(elem){
-			return "reset" === elem.type;
-		},
-		button: function(elem){
-			return "button" === elem.type || elem.nodeName.toUpperCase() === "BUTTON";
-		},
-		input: function(elem){
-			return /input|select|textarea|button/i.test(elem.nodeName);
-		}
-	},
-	setFilters: {
-		first: function(elem, i){
-			return i === 0;
-		},
-		last: function(elem, i, match, array){
-			return i === array.length - 1;
-		},
-		even: function(elem, i){
-			return i % 2 === 0;
-		},
-		odd: function(elem, i){
-			return i % 2 === 1;
-		},
-		lt: function(elem, i, match){
-			return i < match[3] - 0;
-		},
-		gt: function(elem, i, match){
-			return i > match[3] - 0;
-		},
-		nth: function(elem, i, match){
-			return match[3] - 0 == i;
-		},
-		eq: function(elem, i, match){
-			return match[3] - 0 == i;
-		}
-	},
-	filter: {
-		CHILD: function(elem, match){
-			var type = match[1], parent = elem.parentNode;
-
-			var doneName = match[0];
-			
-			if ( parent && !parent[ doneName ] ) {
-				var count = 1;
-
-				for ( var node = parent.firstChild; node; node = node.nextSibling ) {
-					if ( node.nodeType == 1 ) {
-						node.nodeIndex = count++;
-					}
-				}
-
-				parent[ doneName ] = count - 1;
-			}
-
-			if ( type == "first" ) {
-				return elem.nodeIndex == 1;
-			} else if ( type == "last" ) {
-				return elem.nodeIndex == parent[ doneName ];
-			} else if ( type == "only" ) {
-				return parent[ doneName ] == 1;
-			} else if ( type == "nth" ) {
-				var add = false, first = match[2], last = match[3];
-
-				if ( first == 1 && last == 0 ) {
-					return true;
-				}
-
-				if ( first == 0 ) {
-					if ( elem.nodeIndex == last ) {
-						add = true;
-					}
-				} else if ( (elem.nodeIndex - last) % first == 0 && (elem.nodeIndex - last) / first >= 0 ) {
-					add = true;
-				}
-
-				return add;
-			}
-		},
-		PSEUDO: function(elem, match, i, array){
-			var name = match[1], filter = Expr.filters[ name ];
-
-			if ( filter ) {
-				return filter( elem, i, match, array )
-			} else if ( name === "contains" ) {
-				return (elem.textContent || elem.innerText || "").indexOf(match[3]) >= 0;
-			} else if ( name === "not" ) {
-				var not = match[3];
-
-				for ( var i = 0, l = not.length; i < l; i++ ) {
-					if ( Sizzle.filter(not[i], [elem]).length > 0 ) {
-						return false;
-					}
-				}
-
-				return true;
-			}
-		},
-		ID: function(elem, match){
-			return elem.nodeType === 1 && elem.getAttribute("id") === match;
-		},
-		TAG: function(elem, match){
-			return (match === "*" && elem.nodeType === 1) || elem.nodeName === match;
-		},
-		CLASS: function(elem, match){
-			return match.test( elem.className );
-		},
-		ATTR: function(elem, match){
-			var result = elem[ match[1] ] || elem.getAttribute( match[1] ), value = result + "", type = match[2], check = match[4];
-			return result == null ?
-				false :
-				type === "=" ?
-				value === check :
-				type === "*=" ?
-				value.indexOf(check) >= 0 :
-				type === "~=" ?
-				(" " + value + " ").indexOf(check) >= 0 :
-				!match[4] ?
-				result :
-				type === "!=" ?
-				value != check :
-				type === "^=" ?
-				value.indexOf(check) === 0 :
-				type === "$=" ?
-				value.substr(value.length - check.length) === check :
-				type === "|=" ?
-				value === check || value.substr(0, check.length + 1) === check + "-" :
-				false;
-		},
-		POS: function(elem, match, i, array){
-			var name = match[2], filter = Expr.setFilters[ name ];
-
-			if ( filter ) {
-				return filter( elem, i, match, array );
-			}
-		}
-	}
-};
-
-var makeArray = function(array, results) {
-	array = Array.prototype.slice.call( array );
-
-	if ( results ) {
-		results.push.apply( results, array );
-		return results;
-	}
-	
-	return array;
-};
-
-// Perform a simple check to determine if the browser is capable of
-// converting a NodeList to an array using builtin methods.
-try {
-	Array.prototype.slice.call( document.documentElement.childNodes );
-
-// Provide a fallback method if it does not work
-} catch(e){
-	makeArray = function(array, results) {
-		var ret = results || [];
-
-		if ( array instanceof Array ) {
-			Array.prototype.push.apply( ret, array );
-		} else {
-			if ( typeof array.length === "number" ) {
-				for ( var i = 0, l = array.length; i < l; i++ ) {
-					ret.push( array[i] );
-				}
-			} else {
-				for ( var i = 0; array[i]; i++ ) {
-					ret.push( array[i] );
-				}
-			}
-		}
-
-		return ret;
-	};
-}
-
-// Check to see if the browser returns elements by name when
-// querying by getElementById (and provide a workaround)
-(function(){
-	// We're going to inject a fake input element with a specified name
-	var form = document.createElement("form"),
-		id = "script" + (new Date).getTime();
-	form.innerHTML = "<input name='" + id + "'/>";
-
-	// Inject it into the root element, check its status, and remove it quickly
-	var root = document.documentElement;
-	root.insertBefore( form, root.firstChild );
-
-	// The workaround has to do additional checks after a getElementById
-	// Which slows things down for other browsers (hence the branching)
-	if ( !!document.getElementById( id ) ) {
-		Expr.find.ID = function(match, context){
-			if ( context.getElementById ) {
-				var m = context.getElementById(match[1]);
-				return m ? m.id === match[1] || m.getAttributeNode && m.getAttributeNode("id").nodeValue === match[1] ? [m] : undefined : [];
-			}
-		};
-
-		Expr.filter.ID = function(elem, match){
-			var node = elem.getAttributeNode && elem.getAttributeNode("id");
-			return elem.nodeType === 1 && node && node.nodeValue === match;
-		};
-	}
-
-	root.removeChild( form );
-})();
-
-// Check to see if the browser returns only elements
-// when doing getElementsByTagName("*")
-(function(){
-	// Create a fake element
-	var div = document.createElement("div");
-	div.appendChild( document.createComment("") );
-
-	// Make sure no comments are found
-	if ( div.getElementsByTagName("*").length > 0 ) {
-		Expr.find.TAG = function(match, context){
-			var results = context.getElementsByTagName(match[1]);
-
-			// Filter out possible comments
-			if ( match[1] === "*" ) {
-				var tmp = [];
-
-				for ( var i = 0; results[i]; i++ ) {
-					if ( results[i].nodeType === 1 ) {
-						tmp.push( results[i] );
-					}
-				}
-
-				results = tmp;
-			}
-
-			return results;
-		};
-	}
-})();
-
-if ( document.querySelectorAll ) (function(){
-	var oldSizzle = Sizzle;
-	
-	Sizzle = function(query, context, extra){
-		context = context || document;
-
-		if ( context.nodeType === 9 ) {
-			try {
-				return makeArray( context.querySelectorAll(query) );
-			} catch(e){}
-		}
-		
-		return oldSizzle(query, context, extra);
-	};
-
-	Sizzle.find = oldSizzle.find;
-	Sizzle.filter = oldSizzle.filter;
-	Sizzle.selectors = oldSizzle.selectors;
-})();
-
-if ( document.documentElement.getElementsByClassName ) {
-	Expr.order.splice(1, 0, "CLASS");
-	Expr.find.CLASS = function(match, context) {
-		return context.getElementsByClassName(match[1]);
-	};
-}
-
-function dirNodeCheck( dir, cur, doneName, checkSet, nodeCheck ) {
-	for ( var i = 0, l = checkSet.length; i < l; i++ ) {
-		var elem = checkSet[i];
-		if ( elem ) {
-			elem = elem[dir]
-			var match = false;
-
-			while ( elem && elem.nodeType ) {
-				var done = elem[doneName];
-				if ( done ) {
-					match = checkSet[ done ];
-					break;
-				}
-
-				if ( elem.nodeType === 1 )
-					elem[doneName] = i;
-
-				if ( elem.nodeName === cur ) {
-					match = elem;
-					break;
-				}
-
-				elem = elem[dir];
-			}
-
-			checkSet[i] = match;
-		}
-	}
-}
-
-function dirCheck( dir, cur, doneName, checkSet, nodeCheck ) {
-	for ( var i = 0, l = checkSet.length; i < l; i++ ) {
-		var elem = checkSet[i];
-		if ( elem ) {
-			elem = elem[dir]
-			var match = false;
-
-			while ( elem && elem.nodeType ) {
-				if ( elem[doneName] ) {
-					match = checkSet[ elem[doneName] ];
-					break;
-				}
-
-				if ( elem.nodeType === 1 ) {
-					elem[doneName] = i;
-
-					if ( typeof cur !== "string" ) {
-						if ( elem === cur ) {
-							match = true;
-							break;
-						}
-
-					} else if ( Sizzle.filter( cur, [elem] ).length > 0 ) {
-						match = elem;
-						break;
-					}
-				}
-
-				elem = elem[dir];
-			}
-
-			checkSet[i] = match;
-		}
-	}
-}
-
-var contains = document.compareDocumentPosition ?  function(a, b){
-	return a.compareDocumentPosition(b) & 16;
-} : function(a, b){
-	return a !== b && a.contains(b);
-};
-
-// EXPOSE
-
-Firebug.Selector = Sizzle;
-
-// ************************************************************************************************
-}});
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
 
 // ************************************************************************************************
 // Console
 
-append(ConsoleAPI,
+var ConsoleAPI = 
 {
+    firebug: FBL.version,
+
     log: function()
     {
         return logFormatted(arguments, "");
@@ -1696,7 +2782,8 @@ append(ConsoleAPI,
             logFormatted(args.length ? args : ["Assertion Failure"], "error");
             throw message ? message : "Assertion Failure";
         }
-        return Console.logID;        
+        
+        return Firebug.Console.LOG_COMMAND;        
     },
     
     dir: function(object)
@@ -1758,7 +2845,7 @@ append(ConsoleAPI,
     time: function(name)
     {
         timeMap[name] = (new Date()).getTime();
-        return Console.logID;
+        return Firebug.Console.LOG_COMMAND;
     },
     
     timeEnd: function(name)
@@ -1769,7 +2856,7 @@ append(ConsoleAPI,
             logFormatted([name+ ":", delta+"ms"]);
             delete timeMap[name];
         }
-        return Console.logID;
+        return Firebug.Console.LOG_COMMAND;
     },
     
     count: function()
@@ -1789,55 +2876,50 @@ append(ConsoleAPI,
     
     profileEnd: function()
     {
-        return Console.logID;
+        return Firebug.Console.LOG_COMMAND;
     },
     
     clear: function()
     {
-        consoleBody.innerHTML = "";
-        return Console.logID;
+        fbConsole.innerHTML = "";
+        return Firebug.Console.LOG_COMMAND;
     },
 
     open: function()
     {
         toggleConsole(true);
-        return Console.logID;
+        return Firebug.Console.LOG_COMMAND;
     },
     
     close: function()
     {
         if (frameVisible)
             toggleConsole();
-        return Console.logID;
+        return Firebug.Console.LOG_COMMAND;
     }
-});
-
-
-// ********************************************************************************************
-
-var consoleFrame = null;
-var consoleBody = null;
-var commandLine = null;
-
-var frameVisible = false;
-var messageQueue = [];
-var groupStack = [];
-var timeMap = {};
-
-var clPrefix = ">>> ";
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
+};
 
 
 // ************************************************************************************************
 // Console Module
 
-var Console = Firebug.Console = extend(ConsoleAPI,
+var ConsoleModule = extend(Firebug.Module, ConsoleAPI);
+
+Firebug.Console = extend(ConsoleModule,
 {
 
-    logID: "(_____FIREBUG_LOG_____)",
+    LOG_COMMAND: {},
 
+    initialize: function(){
+        fbConsole = $("fbConsole");
+        fbPanel1 =  $("fbPanel1");
+    },
+    
+    shutdown: function()
+    {
+        fbConsole = null;
+        fbPanel1 =  null;
+    },
     
     returnDir: function(object)
     {
@@ -1874,55 +2956,76 @@ var Console = Firebug.Console = extend(ConsoleAPI,
         return html;
     }
 });
+
+Firebug.registerModule(Firebug.Console);
+
+
+// ************************************************************************************************
+// Console Panel
+
+function ConsolePanel(){};
+
+ConsolePanel.prototype = extend(Firebug.Panel,
+{
+    name: "Console",
+    title: "Console",
     
+    options: {
+        hasCommandLine: true,
+        hasToolButtons: true,
+        isPreRendered: true
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        fbConsole = $("fbConsole");
+        fbPanel1 =  $("fbPanel1");  
+    },
+    
+    shutdown: function()
+    {
+        fbConsole = null;
+        fbPanel1 =  null;
+    }
+    
+});
+
+Firebug.registerPanel(ConsolePanel);
+
+// ********************************************************************************************
+
+var fbConsole = null;
+var fbPanel1 = null;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+Firebug.cache.messageQueue = [];
+var groupStack = [];
+var timeMap = {};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 
 
 // ********************************************************************************************
 
-function focusCommandLine()
-{
-    toggleConsole(true);
-    if (commandLine)
-        commandLine.focus();
-};
-
-function evalCommandLine()
-{
-    var text = commandLine.value;
-    commandLine.value = "";
-
-    logRow([clPrefix, text], "command");
-    
-    var value;
-    try
-    {
-        value = eval(text);
-    }
-    catch (exc)
-    {
-    }
-
-    console.log(value);
-};
-
 FBL.logRow = function(message, className, handler)
 {
-    if (consoleBody)
+    if (fbConsole)
         writeMessage(message, className, handler);
     else
     {
-        messageQueue.push([message, className, handler]);
-        waitForDocument();
+        Firebug.cache.messageQueue.push([message, className, handler]);
     }
     
-    return Console.logID;
+    return Firebug.Console.LOG_COMMAND;
 };
 
 FBL.flush = function()
 {
-    var queue = messageQueue;
-    messageQueue = [];
+    var queue = Firebug.cache.messageQueue;
+    Firebug.cache.messageQueue = [];
     
     for (var i = 0; i < queue.length; ++i)
         writeMessage(queue[i][0], queue[i][1], queue[i][2]);
@@ -1930,10 +3033,8 @@ FBL.flush = function()
 
 FBL.writeMessage = function(message, className, handler)
 {
-    //var consoleFrame = consoleBodyFrame.offsetParent; 
-    var consoleFrame = consoleBodyFrame; 
     var isScrolledToBottom =
-        consoleFrame.scrollTop + consoleFrame.offsetHeight >= consoleFrame.scrollHeight;
+        fbPanel1.scrollTop + fbPanel1.offsetHeight >= fbPanel1.scrollHeight;
 
     if (!handler)
         handler = writeRow;
@@ -1941,18 +3042,18 @@ FBL.writeMessage = function(message, className, handler)
     handler(message, className);
     
     if (isScrolledToBottom)
-        consoleFrame.scrollTop = consoleFrame.scrollHeight - consoleFrame.offsetHeight;
+        fbPanel1.scrollTop = fbPanel1.scrollHeight - fbPanel1.offsetHeight;
 };
 
 FBL.appendRow = function(row)
 {
-    var container = groupStack.length ? groupStack[groupStack.length-1] : consoleBody;
+    var container = groupStack.length ? groupStack[groupStack.length-1] : fbConsole;
     container.appendChild(row);
 };
 
 FBL.writeRow = function(message, className)
 {
-    var row = consoleBody.ownerDocument.createElement("div");
+    var row = fbConsole.ownerDocument.createElement("div");
     row.className = "logRow" + (className ? " logRow-"+className : "");
     row.innerHTML = message.join("");
     appendRow(row);
@@ -1962,9 +3063,9 @@ FBL.pushGroup = function(message, className)
 {
     logFormatted(message, className);
 
-    var groupRow = consoleBody.ownerDocument.createElement("div");
+    var groupRow = fbConsole.ownerDocument.createElement("div");
     groupRow.className = "logGroup";
-    var groupRowBox = consoleBody.ownerDocument.createElement("div");
+    var groupRowBox = fbConsole.ownerDocument.createElement("div");
     groupRowBox.className = "logGroupBox";
     groupRow.appendChild(groupRowBox);
     appendRow(groupRowBox);
@@ -2071,365 +3172,13 @@ FBL.onError = function(msg, href, lineNo)
 };
 
 
-// ************************************************************************************************
-}});
+// ********************************************************************************************
+// Register console API
 
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-var Console = Firebug.Console;
-
-
-// ************************************************************************************************
-// CommandLine
-
-
-Firebug.CommandLine = function(element)
-{
-    this.element = element;
-    
-    if (isOpera)
-      fixOperaTabKey(this.element);
-    
-    this.onKeyDown = bind(this, this.onKeyDown);
-    addEvent(this.element, "keydown", this.onKeyDown);
-    window.onerror = this.onError;
-};
-
-Firebug.CommandLine.prototype = 
-{
-    element: null,
-  
-    _buffer: [],
-    _bi: -1,
-    
-    _completing: null,
-    _completePrefix: null,
-    _completeExpr: null,
-    _completeBuffer: null,
-    _ci: null,
-    
-    _completion:
-    {
-        window:
-        [
-            "console"
-        ],
-        
-        document:
-        [
-            "getElementById", 
-            "getElementsByTagName"
-        ]
-    },
-  
-    _stack: function(command)
-    {
-        this._buffer.push(command);
-        this._bi = this._buffer.length;
-    },
-    
-    initialize: function(doc)
-    {
-    },
-    
-    destroy: function()
-    {
-      removeEvent(this.element, "keydown", this.onKeyDown);
-      window.onerror = null;
-      this.element = null
-    },
-
-    execute: function()
-    {
-        var cmd = this.element;
-        var command = cmd.value;
-        
-        this._stack(command);
-        writeMessage(['<span>&gt;&gt;&gt;</span> ',command], "command");
-        
-        try
-        {
-            
-            var result = this.evaluate(command);
-            // evita que seja repetido o log, caso o comando executado
-            // j� seja um log via linha de comando
-            if (result != Console.logID)
-            {
-                var html = [];
-                appendObject(result, html)
-                writeMessage(html, "command");
-            }
-                
-        }
-        catch (e)
-        {
-            writeMessage([e.message || e], "error");
-        }
-        
-        cmd.value = "";
-    },
-    
-    evaluate: function(expr)
-    {
-      var cmd = "(function() { with(FBL.CommandLineAPI){ return " + expr + " } }).apply(window)";
-      var r;
-      
-      // Try executing the command, expecting that it returns a value
-      try
-      {
-          r = this.eval(cmd);
-      }
-      // If syntax error happens, it may be a command (if, for, while) that
-      // can't be returned by a function, so try it again without the return
-      catch(E)
-      {
-          cmd = "(function() { with(FBL.CommandLineAPI){ " + expr + " } }).apply(window)";
-          r = this.eval(cmd);
-      }
-      
-      return r;
-    },
-    
-    eval: new Function("return window.eval.apply(window, arguments)"),
-    
-    prevCommand: function()
-    {
-        var cmd = this.element;
-        var buffer = this._buffer;
-        
-        if (this._bi > 0 && buffer.length > 0)
-            cmd.value = buffer[--this._bi];
-    },
-  
-    nextCommand: function()
-    {
-        var cmd = this.element;
-        
-        var buffer = this._buffer;
-        var limit = buffer.length -1;
-        var i = this._bi;
-        
-        if (i < limit)
-          cmd.value = buffer[++this._bi];
-          
-        else if (i == limit)
-        {
-            ++this._bi;
-            cmd.value = "";
-        }
-    },
-  
-    autocomplete: function(reverse)
-    {
-        var cmd = this.element;
-        
-        var command = cmd.value;
-        var offset = getExpressionOffset(command);
-
-        var valBegin = offset ? command.substr(0, offset) : "";
-        var val = command.substr(offset);
-        
-        var buffer, obj, objName, commandBegin, result, prefix;
-        
-        // if it is the beginning of the completion
-        if(!this._completing)
-        {
-            
-            // group1 - command begin
-            // group2 - base object
-            // group3 - property prefix
-            var reObj = /(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
-            var r = reObj.exec(val);
-            
-            // parse command
-            if (r[1] || r[2] || r[3])
-            {
-                commandBegin = r[1] || "";
-                objName = r[2] || "";
-                prefix = r[3] || "";
-            }
-            else if (val == "")
-            {
-                commandBegin = objName = prefix = "";
-            } else
-                return;
-            
-            this._completing = true;
-      
-            // find base object
-            if(objName == "")
-                obj = window;
-              
-            else
-            {
-                objName = objName.replace(/\.$/, "");
-        
-                var n = objName.split(".");
-                var target = window, o;
-                
-                for (var i=0, ni; ni = n[i]; i++)
-                {
-                    if (o = target[ni])
-                      target = o;
-                      
-                    else
-                    {
-                        target = null;
-                        break;
-                    }
-                }
-                obj = target;
-            }
-            
-            // map base object
-            if(obj)
-            {
-                this._completePrefix = prefix;
-                this._completeExpr = valBegin + commandBegin + (objName ? objName + "." : "");
-                this._ci = -1;
-                
-                buffer = this._completeBuffer = isIE ?
-                    this._completion[objName || "window"] || [] : [];
-                
-                for(var p in obj)
-                    buffer.push(p);
-            }
-    
-        // if it is the continuation of the last completion
-        } else
-          buffer = this._completeBuffer;
-        
-        if (buffer)
-        {
-            prefix = this._completePrefix;
-            
-            var diff = reverse ? -1 : 1;
-            
-            for(var i=this._ci+diff, l=buffer.length, bi; i>=0 && i<l; i+=diff)
-            {
-                bi = buffer[i];
-                
-                if (bi.indexOf(prefix) == 0)
-                {
-                    this._ci = i;
-                    result = bi;
-                    break;
-                }
-            }
-        }
-        
-        if (result)
-            cmd.value = this._completeExpr + result;
-    },
-    
-    onError: function(msg, href, lineNo)
-    {
-        var html = [];
-        
-        var lastSlash = href.lastIndexOf("/");
-        var fileName = lastSlash == -1 ? href : href.substr(lastSlash+1);
-        
-        html.push(
-            '<span class="errorMessage">', msg, '</span>', 
-            '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
-          );
-        
-        writeRow(html, "error");
-    },
-    
-    clear: function()
-    {
-        this.element.value = "";
-    },
-    
-    onKeyDown: function(e)
-    {
-        e = e || event;
-        
-        var code = e.keyCode;
-        
-        /*tab, shift, control, alt*/
-        if (code != 9 && code != 16 && code != 17 && code != 18)
-            this._completing = false;
-    
-        if (code == 13 /* enter */)
-            this.execute();
-
-        else if (code == 27 /* ESC */)
-            setTimeout(this.clear, 0);
-          
-        else if (code == 38 /* up */)
-            this.prevCommand();
-          
-        else if (code == 40 /* down */)
-            this.nextCommand();
-          
-        else if (code == 9 /* tab */)
-            this.autocomplete(e.shiftKey);
-          
-        else
-            return;
-        
-        cancelEvent(e, true);
-        return false;
-    }
-};
-
-Firebug.CommandLine.API =
-{
-    $: function(id)
-    {
-        return document.getElementById(id)
-    },
-
-    $$: Firebug.Selector,
-    
-    dir: ConsoleAPI.dir,
-
-    dirxml: ConsoleAPI.dirxml
-}
-
-FBL.CommandLineAPI = {};
-function initializeCommandLineAPI()
-{
-    var api = FBL.Firebug.CommandLine.API;
-    for (var m in api)
-        if (!window[m])
-            FBL.CommandLineAPI[m] = api[m];
-}
-
-
-var reOpenBracket = /[\[\(\{]/;
-var reCloseBracket = /[\]\)\}]/;
-
-function getExpressionOffset(command)
-{
-    // XXXjoe This is kind of a poor-man's JavaScript parser - trying
-    // to find the start of the expression that the cursor is inside.
-    // Not 100% fool proof, but hey...
-
-    var bracketCount = 0;
-
-    var start = command.length-1;
-    for (; start >= 0; --start)
-    {
-        var c = command[start];
-        if ((c == "," || c == ";" || c == " ") && !bracketCount)
-            break;
-        if (reOpenBracket.test(c))
-        {
-            if (bracketCount)
-                --bracketCount;
-            else
-                break;
-        }
-        else if (reCloseBracket.test(c))
-            ++bracketCount;
-    }
-
-    return start + 1;
-}
+var alternateNS = "FB";
+var consoleNS = "console";
+var namespace = isFirefox ? alternateNS : consoleNS;
+application.global[namespace] = ConsoleAPI;
 
 
 // ************************************************************************************************
@@ -2438,1388 +3187,94 @@ function getExpressionOffset(command)
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+
+// ************************************************************************************************
+// Context
   
-// ************************************************************************************************
-// Chrome API
-
-append(ChromeAPI,
-{
-    close: function()
-    {
-        var context = Chrome.context;
-        
-        if (context)
-        {
-            if (context.element && context.element.opener)
-                context.element.close();
-                
-            if (context.isVisible)
-                Chrome.toggle();
-        }
-    },
+FBL.Context = function(win){
+    this.window = win.window;
+    this.document = win.document;
     
-    detach: function()
+    // Some windows in IE, like iframe, doesn't have the eval() method
+    if (isIE && !this.window.eval)
     {
-        Chrome.toggle(true, true);
-    },    
-    
-    showTab: function(tabName)
-    {
-        if (tabName == 0 && tabName != selectedTab)
-        {
-            selectedTab = 0;
-            tabL = fbConsole;
-            tabLStyle = tabL.style;
-            
-            fbConsole.style.display = "block";
-            fbHTML.style.display = "none";
-            
-            Chrome.document.getElementById("tc").className = "tab selectedTab";
-            Chrome.document.getElementById("th").className = "tab";
-            
-            toggleCommandLine();
-            toggleRightPanel();
-            Chrome.draw();
-
-        }
-        else if (tabName == 1 && tabName != selectedTab)
-        {
-            selectedTab = 1;
-            tabL = fbHTML;
-            tabLStyle = tabL.style;
-            
-            fbHTML.style.display = "block";
-            fbConsole.style.display = "none";
-
-            Chrome.document.getElementById("tc").className = "tab";
-            Chrome.document.getElementById("th").className = "tab selectedTab";
-
-            toggleRightPanel();
-            toggleCommandLine();
-            Chrome.draw();
-        }
-        
-    },
-    
-    startInspecting: function()
-    {
-        if (selectedTab != 1)
-            this.showTab(1);
-          
-        Firebug.Inspector.startInspecting();
-    },
-    
-    stopInspecting: function(el)
-    {
-        Firebug.Inspector.stopInspecting();
-    },
-    
-    clear: function()
-    {
-        ConsoleAPI.clear();
-        Chrome.draw();
+        // But after executing the following line the method magically appears!
+        this.window.execScript("null");
+        // Just to make sure the "magic" really happened
+        if (!this.window.eval)
+            throw new Error("Firebug Error: eval() method not found in this window");
     }
     
-});
-
-
-// ************************************************************************************************
-// Chrome Module
-
-var Chrome = Firebug.Chrome = 
-{
-    chromeHeight: 250,
-    interfaceFile: "firebug.html",
-    injectedMode: true,
-    
-    context: null,
-    
-    initialize: function()
-    {
-        addEvent(
-            document, 
-            isIE || isSafari ? "keydown" : "keypress", 
-            onPressF12
-        );
-    },
-    
-    destroy: function()
-    {
-        if (Chrome.context == Chrome.Popup)
-        {
-            destroyContext(Chrome.Popup);
-
-            var last = Chrome.Frame;
-            if(last.element)
-            {
-                createContext(last.document, last);
-                last.isVisible = false;
-                frame.style.visibility = "hidden";
-            }
-            else
-            {
-              chromeReady = false;
-            }
-        }
-        else if (Chrome.context == Chrome.Frame)
-        {
-            chromeReady = false;
-            destroyContext(Chrome.Frame);
-        }
-    },
-    
-    toggle: function(forceOpen, popup)
-    {
-        if(popup)
-        {
-            var context = Chrome.context = this.Popup;
-            
-            if(chromeReady)
-            {
-                if(!context.element)
-                {     
-                    if (this.Frame.element)
-                    {
-                        this.Frame.isVisible = false;
-                        frame.style.visibility = "hidden";
-                    }
-                    
-                    chromeReady = false;
-                    context.create();
-                    waitForChrome();
-                }
-            }
-            else
-                waitForDocument();
-        }
-        else
-        {
-            // If the context is a popup, ignores the toggle process
-            if (Chrome.context == Chrome.Popup) return;
-            
-            var context = Chrome.context = this.Frame; 
-            context.isVisible = forceOpen || !context.isVisible;
-            
-            if(chromeReady)
-            { 
-                if(context.element)
-                {
-                    if(context.isVisible)
-                    {
-                        frame.style.visibility = "visible";
-                        waitForChrome();
-                        
-                    } else {
-                        frame.style.visibility = "hidden";
-                    }
-                }
-                else
-                {
-                    context.create();
-                    waitForChrome();
-                }
-                    
-            }
-            else
-                waitForDocument();
-            
-        }
-    },
-
-    draw: function()
-    {
-        var height = frame.clientHeight;
-        var cmdHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
-        var fixedHeight = topHeight + cmdHeight;
-        var y = Math.max(height, topHeight);
-        
-        fbVSplitterStyle.height = y - 27 - cmdHeight + "px"; 
-        frame.style.height = y + "px";
-        fbContentStyle.height = Math.max(y - fixedHeight, 0)+ "px";
-
-        // Fix Firefox problem with table rows with 100% height (fit height)
-        if (isFirefox)
-        {
-            fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
-        }
-  
-        var width = frame.offsetLeft + frame.clientWidth;
-        var x = rightPanelVisible ? sidePanelWidth : 0;
-        
-        fbPanelBox1Style.width = Math.max(width - x, 0) + "px";
-        fbPanel1Style.width = Math.max(width - x, 0) + "px";                
-        
-        if (rightPanelVisible)
-        {
-            fbPanelBox2Style.width = x + "px";
-            fbPanelBar2BoxStyle.width = Math.max(x -1, 0) + "px";
-            fbVSplitterStyle.right = Math.max(x - 6, 0) + "px";
-        }
-        
-        // Avoid horizontal scrollbar problem in IE
-        if (isIE)
-        {
-            var isScrolled = tabL.offsetHeight > fbPanel1.offsetHeight;
-            var scrollFix = isScrolled ? 18 : 0;
-            tabLStyle.width = Math.max(width -2 - scrollFix - x, 0) + "px";
-        }
-    },
-    
-    saveSettings: function()
-    {
-    },
-    
-    restoreSettings: function()
-    {
-    },
-    
-    focusCommandLine: function()
-    {
-        //toggleConsole(true);
-        //if (commandLine)
-        //    commandLine.focus();
-    }    
-
+    // Create a new "black-box" eval() method that runs in the global namespace
+    // of the context window, without exposing the local variables declared
+    // by the function that calls it
+    this.eval = this.window.eval("new Function('" +
+            "try{ return window.eval.apply(window,arguments) }catch(E){ E."+evalError+"=true; return E }" +
+        "')");
 };
 
-
-
-// ************************************************************************************************
-// Chrome Internals
-
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// Shared variables
-FBL.frame = null;
-FBL.frameStyle = null;
-
-FBL.consoleBody = null;
-FBL.consoleBodyFrame = null;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-var sidePanelWidth = 300;
-var commandLineModule = null;
-
-// Internal variables
-var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 0;
-  
-var chromeReady = false;
-var selectedTab = 0; //Console
-
-var commandLineVisible = true;
-var rightPanelVisible = false;
-
-// Internal Cache
-var fbTop = null;
-var fbContent = null;
-var fbContentStyle = null;
-var fbBottom = null;
-
-var fbBtnInspect = null;
-
-var fbPanelBox1 = null;
-var fbPanelBox1Style = null;
-var fbPanelBox2 = null;
-var fbPanelBox2Style = null;
-var fbPanelBar2Box = null;
-var fbPanelBar2BoxStyle = null;
-
-var fbHSplitter = null;
-var fbVSplitter = null;
-var fbVSplitterStyle = null;
-
-var fbPanel1 = null;
-var fbPanel1Style = null;
-var fbPanel2 = null;
-
-var fbConsole = null;
-var fbConsoleStyle = null;
-var fbHTML = null;
-
-var fbCommandLine = null;
-
-var tabL = null;
-var tabLStyle = null;
-var tabR = null;
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var topHeight = null;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-
-// ************************************************************************************************
-// Interface Loading
-
-
-function waitForDocument()
-{
-    if (document.body && FBL && typeof FBL.loaded != "undefined")
-        onDocumentLoad();
-    else
-        setTimeout(waitForDocument, 100);
-};
-
-function onDocumentLoad()
-{
-    Chrome.context.create();
-    waitForChrome();
-};
-
-function waitForChrome()
-{
-    var f = FBL.frame;
-    if (f && (Chrome.context == Chrome.Frame) && f.contentWindow &&  
-        f.contentWindow.document.getElementById("fbCommandLine") || // frame loaded
-        
-        f && (Chrome.context == Chrome.Popup) &&  f.document && 
-        f.document.getElementById("fbCommandLine")) // popup loaded
-    {
-        if (!chromeReady)
-            onChromeReady();
-    }
-    else
-        setTimeout(waitForChrome, 100);
-};
-
-function onChromeReady()
-{
-    chromeReady = true;
-    
-    var frame = FBL.frame;
-        
-    if (Chrome.context == Chrome.Frame) // frame
-    {
-        Chrome.document = frame.contentWindow.document;
-        Chrome.window = frame.contentWindow.window;
-    }
-    else // popup
-    {
-        Chrome.document = frame.document;
-        Chrome.window = frame.window;
-    }
-    
-    // Create the global variable in the chrome window for the interface API 
-    Chrome.window.FB = FBL.ChromeAPI;
-    
-    // Dispatch the onChromeReady event in the current context
-    Chrome.context.onChromeReady(Chrome.document);
-    
-    // Create the new context
-    createContext(Chrome.document, Chrome.context);
-    
-    Chrome.draw();
-};
-
-
-//************************************************************************************************
-// Interface
-
-function toggleCommandLine()
-{
-    commandLineVisible = !commandLineVisible;
-    fbBottom.className = commandLineVisible ? "" : "hide";
-};
-
-function toggleRightPanel()
-{
-    rightPanelVisible = !rightPanelVisible;
-    fbPanelBox2.className = rightPanelVisible ? "" : "hide"; 
-    fbPanelBar2Box.className = rightPanelVisible ? "" : "hide";
-};
-
-
-
-// ************************************************************************************************
-// Contexts
-
-
-var createContext = function createContext(doc, context)
-{
-    fbCommandLine = $U("fbCommandLine");
-    if (Firebug.CommandLine)
-        commandLineModule = new Firebug.CommandLine(fbCommandLine);
-        
-    Chrome.context = context;
-    Chrome.context.document = doc;
-    Chrome.document = doc;
-    
-    fbTop = $U("fbTop");
-    fbContent = $U("fbContent");
-    fbContentStyle = fbContent.style;
-    fbBottom = $U("fbBottom");
-    
-    fbBtnInspect = $U("fbBtnInspect");
-    
-    fbPanelBox1 = $U("fbPanelBox1");
-    fbPanelBox1Style = fbPanelBox1.style;
-    fbPanelBox2 = $U("fbPanelBox2");
-    fbPanelBox2Style = fbPanelBox2.style;
-    fbPanelBar2Box = $U("fbPanelBar2Box");
-    fbPanelBar2BoxStyle = fbPanelBar2Box.style;
-    
-    fbHSplitter = $U("fbHSplitter");
-    fbVSplitter = $U("fbVSplitter");
-    fbVSplitterStyle = fbVSplitter.style;
-    
-    fbPanel1 = $U("fbPanel1");
-    fbPanel1Style = fbPanel1.style;
-    tabR = fbPanel2 = $U("fbPanel2");
-
-    tabL = fbConsole = $U("fbConsole");
-    tabLStyle = fbConsoleStyle = fbConsole.style;
-    
-    fbHTML = $U("fbHTML");
-
-    consoleBody = fbConsole;
-    consoleBodyFrame = fbPanel1;
-    
-    topHeight = fbTop.offsetHeight;
-
-    fbVSplitter.onmousedown = onVSplitterMouseDown;
-    fbHSplitter.onmousedown = onHSplitterMouseDown;
-    
-    // TODO: refactor
-    selectedTab = 0; //Console
-    rightPanelVisible = false;
-    // TODO: refactor
-
-    if (context == Chrome.Popup)
-    {
-        frame = doc.body;
-        
-        if (isIE)
-        {
-            Chrome.draw();
-          
-            var fbChrome = $U("fbChrome");
-            fbChrome.style.position = "absolute";
-            fbChrome.style.marginTop = "-1px";
-        }
-    }
-    else
-    {
-        frame = document.getElementById("FirebugChrome");
-        frameStyle = frame.style;
-        
-        // TODO: If the document body has some margin (IE default behaviour), the 
-        // window won't fit correctly, so an event handler should be added
-        if (isIE)
-        {
-          Chrome.draw();
-          
-          var margin = document.body.currentStyle.marginRight;
-          
-          if (margin == "10px")
-              frameStyle.width = "102%";
-          //else
-          //  alert(margin + "TODO: need to add a onresize event to adjust the window width");
-
-        }
-    }
-    
-    var controllers = context.controllers;
-    
-    controllers.push([   
-        Chrome.document, 
-        isIE || isSafari ? "keydown" : "keypress", 
-        onPressF12
-    ]);
-    
-    if(controllers)
-        for(var i=0, ci; ci=controllers[i]; i++)
-            addEvent.apply(Chrome, ci);
-            
-
-    if (isOpera) Chrome.draw();
-
-        
-    // TODO: integrate code
-    if(!!chromeLoad) chromeLoad(doc);
-    /**/
-    
-};
-
-var destroyContext = function destroyContext(context)
-{
-    fbCommandLine = null;
-    if (Firebug.CommandLine)
-        commandLineModule.destroy;
-      
-    chromeReady = false;
-    Chrome.context.element = null;
-    Chrome.frame = null;
-    
-    fbContent = null;
-    fbTop = null;
-    fbBtnInspect = null;
-    fbVSplitter = null;
-    fbHSplitter = null;
-    fbBottom = null;
-    fbPanelBox2 = null;
-    
-    fbPanelBox2Style = null;
-    fbContentStyle = null;
-
-    topHeight = null;
-    
-    var controllers = context.controllers;
-    if(controllers)
-        for(var i=0, ci; ci=controllers[i]; i++)
-          removeEvent.apply(Chrome, ci);
-};
-
-
-// ************************************************************************************************
-// Event Handlers
-
-
-var onPressF12 = function onPressF12(event)
-{
-    if (event.keyCode == 123 /* F12 */ && 
-        (!isFirefox && !event.shiftKey || event.shiftKey && isFirefox))
-        {
-            Firebug.Chrome.toggle(false, event.ctrlKey);
-            cancelEvent(event, true);
-        }
-}
-
-
-// ************************************************************************************************
-// Section
-
-function onHSplitterMouseDown(event)
-{
-    FBL.addEvent(document, "mousemove", onHSplitterMouseMove);
-    FBL.addEvent(document, "mouseup", onHSplitterMouseUp);
-  
-    for (var i = 0; i < frames.length; ++i)
-    {
-        try
-        {
-            FBL.addEvent(frames[i].document, "mousemove", onHSplitterMouseMove);
-            FBL.addEvent(frames[i].document, "mouseup", onHSplitterMouseUp);
-        }
-        catch(E)
-        {
-            // Avoid acess denied
-        }
-    }
-    
-    return false;
-};
-
-var lastHSplitterMouseMove = 0;
-
-var onHSplitterMouseMove = function onHSplitterMouseMove(event)
-{
-    cancelEvent(event, true);
-    
-    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate)
-    {
-        var clientY = event.clientY;
-        var win = document.all
-            ? event.srcElement.ownerDocument.parentWindow
-            : event.target.ownerDocument && event.target.ownerDocument.defaultView;
-      
-        if (!win)
-            return;
-        
-        if (win != win.parent)
-            clientY += win.frameElement ? win.frameElement.offsetTop : 0;
-        
-        var size = Firebug.Inspector.getWindowSize();
-        
-        var height = (isIE && win == top) ? height = size.height :
-                      frame.offsetTop + frame.clientHeight; 
-        
-        var fixedHeight = topHeight + fbCommandLine.offsetHeight + 1;
-        var y = Math.max(height - clientY + 7, topHeight);
-            y = Math.min(y, size.height);
-          
-        frameStyle.height = y + "px";
-        
-        /*
-        var t = event.srcElement || event.target;
-        Firebug.Console.log(
-            "event.clientY:", event.clientY,
-            "y: ", y, 
-            "clientY: ", clientY, 
-            "  height: ", height,
-            "window: ", win.FBL,
-            "parent window: ", win.parent.FBL,
-            "frameoff: ", win.frameElement ? win.frameElement.offsetTop : -1
-            ); /**/
-        
-        if (isIE && Chrome.context.fixIEPosition)
-          Chrome.context.fixIEPosition();
-        
-        Chrome.draw();
-        
-        lastHSplitterMouseMove = new Date().getTime();
-    }
-    
-    return false;
-};
-
-function onHSplitterMouseUp(event)
-{
-    FBL.removeEvent(document, "mousemove", onHSplitterMouseMove);
-    FBL.removeEvent(document, "mouseup", onHSplitterMouseUp);
-  
-    for (var i = 0; i < frames.length; ++i)
-    {
-        try
-        {
-            FBL.removeEvent(frames[i].document, "mousemove", onHSplitterMouseMove);
-            FBL.removeEvent(frames[i].document, "mouseup", onHSplitterMouseUp);
-        }
-        catch(E)
-        {
-            // Avoid acess denied
-        }
-    }
-    
-    Chrome.draw();
-};
-
-
-// ************************************************************************************************
-// Section
-
-function onVSplitterMouseDown(event)
-{
-    FBL.addEvent(Chrome.context.document, "mousemove", onVSplitterMouseMove);
-    FBL.addEvent(Chrome.context.document, "mouseup", onVSplitterMouseUp);
-  
-    for (var i = 0; i < frames.length; ++i)
-    {
-        FBL.addEvent(frames[i].document, "mousemove", onVSplitterMouseMove);
-        FBL.addEvent(frames[i].document, "mouseup", onVSplitterMouseUp);
-    }
-
-    FBL.cancelEvent(event, true);
-    return false; 
-};
-
-
-var lastVSplitterMouseMove = 0;
-
-var onVSplitterMouseMove = function onVSplitterMouseMove(event)
-{
-    if (new Date().getTime() - lastVSplitterMouseMove > chromeRedrawSkipRate)
-    {
-        var clientX = event.clientX;
-        var win = document.all
-            ? event.srcElement.ownerDocument.parentWindow
-            : event.target.ownerDocument.defaultView;
-      
-        if (win != win.parent)
-            clientX += win.frameElement ? win.frameElement.offsetLeft : 0;
-        
-        var width = frame.offsetLeft + frame.clientWidth;
-        var x = Math.max(width - clientX + 3, 7);
-        
-        sidePanelWidth = x;
-        Chrome.draw();
-        
-        lastVSplitterMouseMove = new Date().getTime();
-    }
-    
-    cancelEvent(event, true);
-    return false;
-};
-
-
-function onVSplitterMouseUp(event)
-{
-    //Chrome.draw();
-    FBL.removeEvent(Chrome.context.document, "mousemove", onVSplitterMouseMove);
-    FBL.removeEvent(Chrome.context.document, "mouseup", onVSplitterMouseUp);
-  
-    for (var i = 0; i < frames.length; ++i)
-    {
-        FBL.removeEvent(frames[i].document, "mousemove", onVSplitterMouseMove);
-        FBL.removeEvent(frames[i].document, "mouseup", onVSplitterMouseUp);
-    }
-};
-
-
-// ************************************************************************************************
-// ***  TODO:  ORGANIZE  **************************************************************************
-// ************************************************************************************************
-var chromeLoad = function chromeLoad(doc)
-{
-  
-    var rootNode = document.documentElement;
-    
-    /* Console event handlers */
-    addEvent(fbConsole, 'mousemove', onListMouseMove);
-    addEvent(fbConsole, 'mouseout', onListMouseOut);
-    
-    fbHTML.style.display = "none";
-    
-    Firebug.Inspector.onChromeReady();
-    
-  /*
-     TODO: Organize 
-     
-    #treeInput {
-      position: absolute;
-      font: 11px Monaco, monospace;
-      margin: 0;
-      padding: 0;
-      border: 1px solid #777;
-    }
-    
-    */
-    
-    var html = [];
-    Firebug.HTML.appendTreeNode(rootNode, html);
-    fbHTML.innerHTML = '';
-    fbHTML.innerHTML = html.join('');
-    fbHTML.style.padding = "4px 3px 0 15px";
-    fbHTML.style.display = "none";
-
-    var doc = Firebug.Chrome.document;
-    var input = doc.createElement("input");
-    input.id = "treeInput"
-    input.style.cssText = "position: absolute; font: 11px Monaco, monospace; margin: 0; padding: 0; border: 1px solid #777;"
-    input.style.display = "none";
-    doc.body.appendChild(input);
-
-    // HTML event handlers
-    input.onblur = fbHTML.onscroll = function()
-    {
-        input.style.display = "none";
-    };
-    addEvent(fbHTML, 'click', Firebug.HTML.onTreeClick);
-    addEvent(fbHTML, 'mousemove', onListMouseMove);
-    addEvent(fbHTML, 'mouseout', onListMouseOut);
-    /**/
-    
-}
-
-function onListMouseOut(e)
-{
-    e = e || event || window;
-    var targ;
-    
-    if (e.target) targ = e.target;
-    else if (e.srcElement) targ = e.srcElement;
-    if (targ.nodeType == 3) // defeat Safari bug
-      targ = targ.parentNode;
-        
-      if (targ.id == "fbConsole") {
-          FBL.Firebug.Inspector.hideBoxModel();
-          hoverElement = null;        
-      }
-};
-    
-var hoverElement = null;
-var hoverElementTS = 0;
-
-function onListMouseMove(e)
-{
-    try
-    {
-        e = e || event || window;
-        var targ;
-        
-        if (e.target) targ = e.target;
-        else if (e.srcElement) targ = e.srcElement;
-        if (targ.nodeType == 3) // defeat Safari bug
-            targ = targ.parentNode;
-            
-        var found = false;
-        while (targ && !found) {
-            if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " "))
-                targ = targ.parentNode;
-            else
-                found = true;
-        }
-        
-        if (!targ)
-        {
-            FBL.Firebug.Inspector.hideBoxModel();
-            hoverElement = null;
-            return;
-        }
-        
-        if (typeof targ.attributes[FBL.cacheID] == 'undefined') return;
-        
-        var uid = targ.attributes[FBL.cacheID];
-        if (!uid) return;
-        
-        var el = FBL.documentCache[uid.value];
-        
-        if (el.id == "FirebugChrome") return false;  
-    
-        var nodeName = el.nodeName.toLowerCase();
-        
-    
-        if (FBL.isIE && " meta title script link ".indexOf(" "+nodeName+" ") != -1)
-            return;
-    
-        if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " ")) return;
-        
-        if (" html head body br script link ".indexOf(" "+nodeName+" ") != -1) { 
-            FBL.Firebug.Inspector.hideBoxModel();
-            hoverElement = null;
-            return;
-        }
-      
-        if ((new Date().getTime() - hoverElementTS > 40) && hoverElement != el) {
-            hoverElementTS = new Date().getTime();
-            hoverElement = el;
-            FBL.Firebug.Inspector.drawBoxModel(el);
-        }
-    }
-    catch(E)
-    {
-    }
-}
-
-
-// ************************************************************************************************
-// ************************************************************************************************
-// ************************************************************************************************
-
-
-// ************************************************************************************************
-}});
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-var Chrome = Firebug.Chrome;
-
-//----------------------------------------------------------------------------
-// Frame Chrome
-//----------------------------------------------------------------------------
-Firebug.Chrome.Frame = 
-{
-    element: null,
-    viewport: null,
-    document: null,
-    
-    isVisible: false, 
-    scrollHandler: null,
-    
-    onChromeReady: function(doc)
-    {
-        var context = Chrome.Frame;
-        
-        context.controllers = [
-            [window, "resize", Chrome.draw],
-            [window, "unload", Chrome.destroy]
-          ];
-          
-        if (isIE) {
-            context.controllers.push([window, "scroll", context.fixIEPosition]);
-            context.controllers.push([window, "resize", context.fixIEPosition]);
-            //context.controllers.push([Chrome.document, "mousewheel", function(e){FBL.cancelEvent(e, true);}]);
-        }
-    
-        frame.style.visibility = context.isVisible ? "visible" : "hidden";    
-    },
-
-    create: function(){
-    
-        if (Chrome.Frame.element)
-            return;
-    
-        var injectedMode = Chrome.injectedMode;
-        
-        frame = Chrome.element = Chrome.Frame.element = document.createElement("iframe");
-        
-        Chrome.element = Chrome.Frame.element = frame;
-        frame.id = "Firebug";
-        frame.setAttribute("id", "FirebugChrome");
-        frame.setAttribute("frameBorder", "0");
-        frame.style.visibility = "hidden";
-        frame.style.zIndex = "2147483647"; // MAX z-index = 2147483647
-        frame.style.position = document.all ? "absolute" : "fixed";
-        frame.style.width = "100%"; // "102%"; IE auto margin bug
-        frame.style.left = "0";
-        frame.style.bottom = "-1px";
-        frame.style.height = Chrome.chromeHeight + "px";
-        
-        
-        if (!injectedMode)
-            frame.setAttribute("src", skinURL+"firebug.html");
-
-        document.body.appendChild(frame);
-        
-        if (injectedMode)
-        {
-            var doc = frame.contentWindow.document;
-            doc.write('<style>'+ Chrome.Injected.CSS + '</style>');
-            doc.write(Chrome.Injected.HTML);
-            doc.close();
-        }
-    },
-    
-    
-    fixIEPosition: function()
-    {
-        var size = Firebug.Inspector.getWindowSize();
-        var scroll = Firebug.Inspector.getWindowScrollPosition();
-        var maxHeight = size.height;
-        var height = frame.offsetHeight;
-        
-        frame.style.top = maxHeight - height + scroll.top + "px";
-        Chrome.draw();
-        
-        /*
-        var maxHeight = document.body.clientHeight;
-        var height = frame.offsetHeight;
-        
-        frame.style.top = maxHeight - height + document.body.scrollTop + "px";
-        Chrome.draw();
-        /**/
-    }
-};
-
-// TODO: inspect
-FBL.createFrame = Chrome.Frame.create;
-
-// ************************************************************************************************
-}});
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-var Chrome = Firebug.Chrome;
-
-//----------------------------------------------------------------------------
-// Popup Chrome
-//----------------------------------------------------------------------------
-Firebug.Chrome.Popup =
-{
-    element: null,
-    viewport: null,
-    document: null,
-    
-    controllers: null,
-    
-    onChromeReady: function(doc)
-    {
-        if (isIE6)
-            fixIE6BackgroundImageCache(doc);
-
-        var context = Chrome.Popup;
-        
-        doc.body.className = "FirebugPopup";
-        
-        context.controllers = [
-            [Chrome.window, "resize", Chrome.draw],
-            [Chrome.window, "unload", Chrome.destroy]
-          ];
-    },
-
-    create: function()
-    {
-        var injectedMode = Chrome.injectedMode;
-        
-        var url = injectedMode ? "" : (skinURL + Chrome.interfaceFile);
-        
-        var height = Chrome.chromeHeight;
-        var options = [
-            "true,top=",
-            Math.max(screen.height - height, 0),
-            ",left=0,height=",
-            height,
-            ",width=",
-            screen.width-10, // Opera opens popup in a new tab if it's too big
-            ",resizable"          
-          ].join("");
-        
-        var popup = Chrome.Popup.element = window.open(
-            url, 
-            "popup", 
-            options
-          );
-        
-        if (injectedMode)
-        {
-            var doc = popup.document;
-            doc.write("<style>"+ Chrome.Injected.CSS + "</style>");
-            doc.write(Chrome.Injected.HTML);
-            doc.close();
-        }
-        
-        // TODO: inspect
-        FBL.frame = popup;
-        
-        if (popup)
-            popup.focus();
-        else
-        {
-            Chrome.Popup.element = null;
-            alert("Disable the popup blocker to open the console in another window!")
-        }
-    }
-};
-
-
-Chrome.context = Chrome.Frame;
-if (document.documentElement.getAttribute("debug") == "true")
-    Chrome.toggle(true);
-
-
-// ************************************************************************************************
-}});
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-//----------------------------------------------------------------------------
-// Injected Chrome
-//----------------------------------------------------------------------------
-Firebug.Chrome.Injected = 
-{
-    CSS: '.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;background:#fff;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.clear{clear:both;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:50px;}#fbToolbar{position:absolute;z-index:5;width:100%;top:0;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #d4d0c8 0 0;height:28px;font-size:11px;}#fbPanelBarBox{top:28px;position:absolute;z-index:8;width:100%;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:6px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:6px 2px 0 5px;}#fbToolbarButtons span{margin:0;padding:0;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{float:left;padding:10px 0 0;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#d4d0c8 #fff #d4d0c8 #777;height:7px;margin:2px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;cursor:default;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;cursor:default;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#mainButtons{position:absolute;right:4px;top:8px;z-index:11;}#fbPanelBar1{width:255px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}* html #fbPanel1{position:absolute;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}#fbBottom[fixFirefox]{position:fixed;bottom:0;left:0;width:100%;z-index:10;}#fbBottom[fixFirefox] #fbCommand{display:block;}div.fbFitHeight{padding:0 1px;max-height:inherit;height:100%;overflow:auto;}#mainButtons a{font-size:1px;width:16px;height:16px;display:block;float:left;text-decoration:none;cursor:default;}#close{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -119px;}#close:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -16px -119px;}#detach{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -32px -119px;}#detach:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -48px -119px;}.tab{text-decoration:none;display:block;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .tabL,.fbPanelBar .tabR{height:22px;width:8px;}.fbPanelBar .tabText{padding:4px 1px 0;}.tab:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -73px;}.tab:hover .tabL{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -16px -96px;}.tab:hover .tabR{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -24px -96px;}.selectedTab{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #d4d0c8 0 -50px !important;color:#000;}.selectedTab .tabL{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -96px !important;}.selectedTab .tabR{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -8px -96px !important;}#fbHSplitter{position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/pixel_transparent.gif);z-index:9;}.fbVSplitter{background:#eee;color:#000;border:1px solid #777;border-width:0 1px;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:28px;}div.lineNo{font:11px Monaco,monospace;float:left;display:inline;position:relative;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}pre.nodeCode{font:11px Monaco,monospace;margin:0;padding-left:10px;overflow:hidden;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/tree_open.gif);}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;}.nodeComment{color:DarkGreen;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #mainButtons{display:none !important;}.FirebugPopup #mainButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}.FirebugPopup #fbCommandBox{height:18px !important;}',
-    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="mainButtons"><a id="detach" href="javascript:FB.detach()">&nbsp;</a><a id="close" href="javascript:FB.close()">&nbsp;</a></div><div id="fbHSplitter">&nbsp;</div><div id="fbToolbar"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span><a id="fbBtnInspect" href="javascript:FB.startInspecting(this)">Inspect</a></span><span id="fbConsoleButtons"><span><a href="javascript:FB.clear()">Clear</a></span></span><span id="fbHTMLButtons"><span><a href="#">Edit</a></span></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span><span id="fbHTMLStatusBar" class="fbStatusBar"><span><a href="#"><b>body</b></a></span><span>&lt;</span><span><a href="#">html</a></span></span></span></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="tc" class="tab selectedTab" href="javascript:FB.showTab(0)"><span class="tabL"></span><span class="tabText">Console</span><span class="tabR"></span></a><a id="th" class="tab" href="javascript:FB.showTab(1)"><span class="tabL"></span><span class="tabText">HTML</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">CSS</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Script</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="tab selectedTab" href="javascript:void(0);"><span class="tabL"></span><span class="tabText">Style</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Layout</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a></div></div></div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole"></div><div id="fbHTML"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style"></div><div id="fbHTML_Layout"></div><div id="fbHTML_DOM"></div></div></td></tr><tr id="fbBottom"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table>'
-};
-
-// ************************************************************************************************
-}});
-
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-// ************************************************************************************************
-
-Firebug.Panel =
-{
-    panelNode: null,
-    panelBar: null,
-    commandLine: null,
-    
-    toolButtons: null,
-    statusBar: null,
-
-    name: "HelloWorld",
-    title: "Hello World!",
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
-    searchable: false,
-    editable: true,
-    order: 2147483647,
-    statusSeparator: "<",
-
-    initialize: function(context, doc)
-    {
-        /*
-        this.context = context;
-        this.document = doc;
-
-        this.panelNode = doc.createElement("div");
-        this.panelNode.ownerPanel = this;
-
-        setClass(this.panelNode, "panelNode panelNode-"+this.name+" contextUID="+context.uid);
-        doc.body.appendChild(this.panelNode);
-
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("firebug.initialize panelNode for "+this.name+"\n");
-
-        this.initializeNode(this.panelNode);
-        /**/
-    },
-
-    destroy: function(state) // Panel may store info on state
-    {
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("firebug.destroy panelNode for "+this.name+"\n");
-
-        if (this.panelNode)
-            delete this.panelNode.ownerPanel;
-
-        this.destroyNode();
-    },
-
-    detach: function(oldChrome, newChrome)
-    {
-        this.lastScrollTop = this.panelNode.scrollTop;
-    },
-
-    reattach: function(doc)
-    {
-        this.document = doc;
-
-        if (this.panelNode)
-        {
-            this.panelNode = doc.adoptNode(this.panelNode, true);
-            this.panelNode.ownerPanel = this;
-            doc.body.appendChild(this.panelNode);
-            this.panelNode.scrollTop = this.lastScrollTop;
-            delete this.lastScrollTop;
-        }
-    },
-
-    // Called after module.initialize; addEventListener-s here
-    initializeNode: function(myPanelNode)
-    {
-    },
-
-    // removeEventListener-s here.
-    destroyNode: function()
-    {
-    },
-
-    show: function(state)  // persistedPanelState plus non-persisted hide() values
-    {
-    },
-
-    hide: function(state)  // store info on state for next show.
-    {
-    },
-
-    watchWindow: function(win)
-    {
-    },
-
-    unwatchWindow: function(win)
-    {
-    },
-
-    updateOption: function(name, value)
-    {
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    /**
-     * Toolbar helpers
-     */
-    showToolbarButtons: function(buttonsId, show)
-    {
-        try
-        {
-            if (!this.context.browser) // XXXjjb this is bug. Somehow the panel context is not FirebugContext.
-            {
-              if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("firebug.Panel showToolbarButtons this.context has no browser, this:", this)
-                return;
-            }
-            var buttons = this.context.browser.chrome.$(buttonsId);
-            if (buttons)
-                collapse(buttons, show ? "false" : "true");
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-            {
-                FBTrace.dumpProperties("firebug.Panel showToolbarButtons FAILS", exc);
-                if (!this.context.browser)FBTrace.dumpStack("firebug.Panel showToolbarButtons no browser");
-            }
-        }
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    /**
-     * Returns a number indicating the view's ability to inspect the object.
-     *
-     * Zero means not supported, and higher numbers indicate specificity.
-     */
-    supportsObject: function(object)
-    {
-        return 0;
-    },
-
-    refresh: function()
-    {
-
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    startInspecting: function()
-    {
-    },
-
-    stopInspecting: function(object, cancelled)
-    {
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    search: function(text)
-    {
-    }
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-
-};
-
-//************************************************************************************************
-
-
-//************************************************************************************************
-
-Firebug.Module =
-{
-  /**
-   * Called when the window is opened.
-   */
-  initialize: function()
-  {
-  },
-
-  /**
-   * Called when the window is closed.
-   */
-  shutdown: function()
-  {
-
-  },
-
-  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-  /**
-   * Called when a new context is created but before the page is loaded.
-   */
-  initContext: function(context)
-  {
-  },
-
-  /**
-   * Called after a context is detached to a separate window;
-   */
-  reattachContext: function(browser, context)
-  {
-  },
-
-  /**
-   * Called when a context is destroyed. Module may store info on persistedState for reloaded pages.
-   */
-  destroyContext: function(context, persistedState)
-  {
-  },
-
-  // Called when a FF tab is create or activated (user changes FF tab)
-  // Called after context is created or with context == null (to abort?)
-  showContext: function(browser, context)
-  {
-  },
-
-  /**
-   * Called after a context's page gets DOMContentLoaded
-   */
-  loadedContext: function(context)
-  {
-  },
-
-  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-  showPanel: function(browser, panel)
-  {
-  },
-
-  showSidePanel: function(browser, panel)
-  {
-  },
-
-  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-  updateOption: function(name, value)
-  {
-  },
-
-  getObjectByURL: function(context, url)
-  {
-  }
-};
-
-
-
-
-//************************************************************************************************
-//Panel Management
-
-Firebug.registerPanel = function()
-{
-
-};
-
-
-
-
-/*
-
-
-
-From Honza Tutorial
-----------------------------------------------------
-FBL.ns(function() { with (FBL) {
-var panelName = "HelloWorld";
-Firebug.HelloWorldModel = extend(Firebug.Module,
-{
-    showPanel: function(browser, panel) {
-        var isHwPanel = panel && panel.name == panelName;
-        var hwButtons = browser.chrome.$("fbHelloWorldButtons");
-        collapse(hwButtons, !isHwPanel);
-    },
-    onMyButton: function(context) {
-        alert("Hello World!");
-    }
-});
-
-function HelloWorldPanel() {}
-HelloWorldPanel.prototype = extend(Firebug.Panel,
-{
-    name: panelName,
-    title: "Hello World!",
-
-    initialize: function() {
-        Firebug.Panel.initialize.apply(this, arguments);
-    }
-});
-
-Firebug.registerModule(Firebug.HelloWorldModel);
-Firebug.registerPanel(HelloWorldPanel);
-
-}});
-----------------------------------------------------
-
-
-
-  */  
-  
-
-
-// ************************************************************************************************
-}});
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-//************************************************************************************************
-// Inspector Module
-Firebug.Context = function(window){
-  
-    this.window = window.window;
-    this.document = window.document;
-  
-};
-
-Firebug.Context.prototype =
+FBL.Context.prototype =
 {  
   
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Evalutation Method
+    
+    /**
+     * Evaluates an expression in the current context window.
+     * 
+     * @param {String}   expr           expression to be evaluated
+     * 
+     * @param {String}   context        string indicating the global location
+     *                                  of the object that will be used as the
+     *                                  context. The context is referred in
+     *                                  the expression as the "this" keyword.
+     *                                  If no context is informed, the "window"
+     *                                  context is used.
+     *                                  
+     * @param {String}   api            string indicating the global location
+     *                                  of the object that will be used as the
+     *                                  api of the evaluation.
+     *                                  
+     * @param {Function} errorHandler(message) error handler to be called
+     *                                         if the evaluation fails.
+     */
+    evaluate: function(expr, context, api, errorHandler)
+    {
+        context = context || "window";
+
+        var cmd = api ?
+            "(function(arguments){ with("+api+"){ return "+expr+" } }).call("+context+",undefined)" :
+            "(function(arguments){ return "+expr+" }).call("+context+",undefined)" ;
+        
+        var r = this.eval(cmd);
+        if (r && r[evalError])
+        {
+            cmd = api ?
+                "(function(arguments){ with("+api+"){ "+expr+" } }).call("+context+",undefined)" :
+                "(function(arguments){ "+expr+" }).call("+context+",undefined)" ;
+                
+            r = this.eval(cmd);
+            if (r && r[evalError])
+            {
+                if (errorHandler)
+                    r = errorHandler(r.message || r)
+                else
+                    r = r.message || r;
+            }
+        }
+        
+        return r;
+    },
+    
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Window Methods
     
     getWindowSize: function()
     {
         var width=0, height=0, el;
         
-        if (typeof this.window.innerWidth == 'number')
+        if (typeof this.window.innerWidth == "number")
         {
             width = this.window.innerWidth;
             height = this.window.innerHeight;
@@ -3861,7 +3316,7 @@ Firebug.Context.prototype =
     {
         var top=0, left=0, el;
         
-        if(typeof this.window.pageYOffset == 'number')
+        if(typeof this.window.pageYOffset == "number")
         {
             top = this.window.pageYOffset;
             left = this.window.pageXOffset;
@@ -3881,7 +3336,7 @@ Firebug.Context.prototype =
     },
     
 
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Element Methods
 
     getElementFromPoint: function(x, y)
@@ -3944,7 +3399,7 @@ Firebug.Context.prototype =
     },
     
 
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Measurement Methods
     
     getMeasurement: function(el, name)
@@ -4036,7 +3491,7 @@ Firebug.Context.prototype =
     },
     
     
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Unit Funtions
   
     pointsToPixels: function(name, value)
@@ -4087,9 +3542,9 @@ Firebug.Context.prototype =
         return value;
     },
     
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    getCSS: isIE ? function(el, name)
+    getCSS: this.isIE ? function(el, name)
     {
         return el.currentStyle[name] || el.style[name] || undefined;
     }
@@ -4101,64 +3556,13 @@ Firebug.Context.prototype =
 
 };
 
-//************************************************************************************************
-// Inspector Internals
-
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// Shared variables
-
-FBL.offlineFragment = null;
-
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Internal variables
 
-var boxModelVisible = false;
+var evalError = "___firebug_evaluation_error___";
+var pixelsPerInch;
 
-var pixelsPerInch, boxModel, boxModelStyle, boxMargin, boxMarginStyle, 
-boxPadding, boxPaddingStyle, boxContent, boxContentStyle;
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
-var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
-
-var inspectStyle = resetStyle + "z-index: 2147483500;";
-var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; background:url(http://pedrosimonetti.googlepages.com/pixel_transparent.gif);";
-//var inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.1; _filter: alpha(opacity=10);";
-
-var inspectModelStyle = inspectStyle + "opacity:0.8; _filter:alpha(opacity=80);";
-var inspectMarginStyle = inspectStyle + "background: #EDFF64; height:100%; width:100%;";
-var inspectPaddingStyle = inspectStyle + "background: SlateBlue;";
-var inspectContentStyle = inspectStyle + "background: SkyBlue;";
-
-
-var outlineStyle = { 
-    fbHorizontalLine: "background: #3875D7; height: 2px;",
-    fbVerticalLine: "background: #3875D7; width: 2px;"
-}
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var lastInspecting = 0;
-var fbInspectFrame = null;
-var fbBtnInspect = null;
-
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var outlineVisible = false;
-var outlineElements = {};
-var outline = {
-  "fbOutlineT": "fbHorizontalLine",
-  "fbOutlineL": "fbVerticalLine",
-  "fbOutlineB": "fbHorizontalLine",
-  "fbOutlineR": "fbVerticalLine"
-};
-
-
-//************************************************************************************************
+// ************************************************************************************************
 // Measurement Functions
 
 var calculatePixelsPerInch = function calculatePixelsPerInch()
@@ -4176,12 +3580,658 @@ var calculatePixelsPerInch = function calculatePixelsPerInch()
 };
 
 
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+
+// ************************************************************************************************
+// Chrome Window Options
+
+var ChromeDefaultOptions = 
+{
+    type: "frame",
+    id: "FirebugChrome",
+    height: 250
+};
+
+// ************************************************************************************************
+// Chrome Window Creation
+
+FBL.createChrome = function(context, options, onChromeLoad)
+{
+    options = options || {};
+    options = extend(ChromeDefaultOptions, options);
+    
+    var chrome = {};
+    
+    chrome.type = options.type;
+    
+    var isChromeFrame = chrome.type == "frame";
+    var isBookmarletMode = application.isBookmarletMode;
+    var url = isBookmarletMode ? "" : application.location.skin;
+    
+    if (isChromeFrame)
+    {
+        // Create the Chrome Frame
+        var node = chrome.node = context.document.createElement("iframe");
+        
+        node.setAttribute("id", options.id);
+        node.setAttribute("frameBorder", "0");
+        node.setAttribute("allowTransparency", "true");
+        node.style.border = "0";
+        node.style.visibility = "hidden";
+        node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
+        node.style.position = isIE6 ? "absolute" : "fixed";
+        node.style.width = "100%"; // "102%"; IE auto margin bug
+        node.style.left = "0";
+        node.style.bottom = isIE6 ? "-1px" : "0";
+        node.style.height = options.height + "px";
+        
+        var isBookmarletMode = application.isBookmarletMode;
+        if (!isBookmarletMode)
+            node.setAttribute("src", application.location.skin);
+        
+        context.document.body.appendChild(node);
+    }
+    else
+    {
+        // Create the Chrome Popup
+        var height = options.height;
+        var options = [
+                "true,top=",
+                Math.max(screen.height - height, 0),
+                ",left=0,height=",
+                height,
+                ",width=",
+                screen.width-10, // Opera opens popup in a new tab if it's too big!
+                ",resizable"          
+            ].join("");
+        
+        var node = chrome.node = Firebug.browser.window.open(
+            url, 
+            "popup", 
+            options
+          );
+    }
+    
+    if (isBookmarletMode)
+    {
+        var tpl = getChromeTemplate();
+        var doc = isChromeFrame ? node.contentWindow.document : node.document;
+        doc.write(tpl);
+        doc.close();
+    }
+    
+    var win;
+    var waitForChrome = function()
+    {
+        if ( // Frame loaded... OR
+             isChromeFrame && (win=node.contentWindow) &&
+             node.contentWindow.document.getElementById("fbCommandLine") ||
+             
+             // Popup loaded
+             !isChromeFrame && (win=node.window) && node.document &&
+             node.document.getElementById("fbCommandLine") )
+        {
+            chrome.window = win.window;
+            chrome.document = win.document;
+            
+            if (onChromeLoad)
+                onChromeLoad(chrome);
+        }
+        else
+            setTimeout(waitForChrome, 20);
+    }
+    
+    waitForChrome();    
+};
+
+var getChromeTemplate = function()
+{
+    var tpl = FirebugChrome.injected; 
+    var r = [], i = -1;
+    
+    r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
+    r[++i] = '<head><style>';
+    r[++i] = tpl.CSS;
+    r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
+    r[++i] = '</style>';
+    r[++i] = '</head><body>';
+    r[++i] = tpl.HTML;
+    r[++i] = '</body>';
+    
+    return r.join("");
+};
+
+// ************************************************************************************************
+// FirebugChrome Class
+    
+FBL.FirebugChrome = function(chrome)
+{
+    var Base = chrome.type == "frame" ? ChromeFrameBase : ChromePopupBase; 
+    
+    append(this, chrome); // inherit chrome window properties
+    append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
+    
+    return this;
+};
+
+// ************************************************************************************************
+// ChromeBase
+
+var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
+var ChromeBase = extend(ChromeBase, {
+    
+    destroy: function()
+    {
+        this.shutdown();
+    },
+    
+    initialize: function()
+    {
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create the interface elements cache
+        
+        fbTop = $("fbTop");
+        fbContent = $("fbContent");
+        fbContentStyle = fbContent.style;
+        fbBottom = $("fbBottom");
+        fbBtnInspect = $("fbBtnInspect");
+        
+        fbToolbar = $("fbToolbar");
+      
+        fbPanelBox1 = $("fbPanelBox1");
+        fbPanelBox1Style = fbPanelBox1.style;
+        fbPanelBox2 = $("fbPanelBox2");
+        fbPanelBox2Style = fbPanelBox2.style;
+        fbPanelBar2Box = $("fbPanelBar2Box");
+        fbPanelBar2BoxStyle = fbPanelBar2Box.style;
+      
+        fbHSplitter = $("fbHSplitter");
+        fbVSplitter = $("fbVSplitter");
+        fbVSplitterStyle = fbVSplitter.style;
+      
+        fbPanel1 = $("fbPanel1");
+        fbPanel1Style = fbPanel1.style;
+        fbPanel2 = $("fbPanel2");
+      
+        fbConsole = $("fbConsole");
+        fbConsoleStyle = fbConsole.style;
+        fbHTML = $("fbHTML");
+      
+        fbCommandLine = $("fbCommandLine");
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // static values cache
+        
+        topHeight = fbTop.offsetHeight;
+        topPartialHeight = fbToolbar.offsetHeight;
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        commandLineVisible = true;
+        sidePanelVisible = false;
+        sidePanelWidth = 300;
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // initialize inherited classes
+        Firebug.Controller.initialize.call(this);
+        Firebug.PanelBar.initialize.call(this);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create a new instance of the CommandLine class
+        commandLine = new Firebug.CommandLine(fbCommandLine);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // initialize all panels
+        var panels = Firebug.panelTypes;
+        for (var i=0, p; p=panels[i]; i++)
+        {
+            if (!p.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
+        
+        // Select the first registered panel
+        this.selectPanel(panels[0].prototype.name);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Remove the "javascript:void(0)" href attributes used to make the hover effect in IE6
+        if (!isIE6)
+        {
+           var as = $$("a");
+           for (var i=0, a; a=as[i]; i++)
+           {
+               if (a.href == "javascript:void(0)")
+               {
+                   a.removeAttribute("href");
+               }
+           }
+        }
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        flush();
+        
+        if (!isSafari)
+            this.draw();
+        
+    },
+    
+    shutdown: function()
+    {
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Remove the interface elements cache
+        
+        fbTop = null;
+        fbContent = null;
+        fbContentStyle = null;
+        fbBottom = null;
+        fbBtnInspect = null;
+        
+        fbToolbar = null;
+
+        fbPanelBox1 = null;
+        fbPanelBox1Style = null;
+        fbPanelBox2 = null;
+        fbPanelBox2Style = null;
+        fbPanelBar2Box = null;
+        fbPanelBar2BoxStyle = null;
+  
+        fbHSplitter = null;
+        fbVSplitter = null;
+        fbVSplitterStyle = null;
+  
+        fbPanel1 = null;
+        fbPanel1Style = null;
+        fbPanel2 = null;
+  
+        fbConsole = null;
+        fbConsoleStyle = null;
+        fbHTML = null;
+  
+        fbCommandLine = null;
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // static values cache
+        
+        topHeight = null;
+        topPartialHeight = null;
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        commandLineVisible = null;
+        sidePanelVisible = null;
+        sidePanelWidth = 300;
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // shutdown inherited classes
+        Firebug.Controller.shutdown.call(this);
+        Firebug.PanelBar.shutdown.call(this);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+        // destroy the instance of the CommandLine class
+        commandLine.destroy();
+        
+        // shutdown the chrome instance
+        Firebug.chrome.shutdown();
+    },
+    
+    
+    draw: function()
+    {
+        var size = Firebug.chrome.getWindowSize();
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Height related drawings
+        var chromeHeight = size.height;
+        var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
+        var fixedHeight = topHeight + commandLineHeight;
+        var y = Math.max(chromeHeight, topHeight);
+        
+        //fbContentStyle.height = Math.max(y - fixedHeight, 0)+ "px";
+        fbPanel1Style.height = Math.max(y - fixedHeight, 0)+ "px";
+        fbPanelBox1.height = Math.max(y - fixedHeight, 0)+ "px";
+        
+        if (isIE || isOpera)
+        {
+            // Fix IE and Opera problems with auto resizing the verticall splitter
+            fbVSplitterStyle.height = Math.max(y - topPartialHeight - commandLineHeight, 0) + "px";
+        }
+        else if (isFirefox)
+        {
+            // Fix Firefox problem with table rows with 100% height (fit height)
+            fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
+        }
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Width related drawings
+        var chromeWidth = size.width /* window borders */;
+        var sideWidth = sidePanelVisible ? sidePanelWidth : 0;
+        
+        fbPanelBox1Style.width = Math.max(chromeWidth - sideWidth, 0) + "px";
+        fbPanel1Style.width = Math.max(chromeWidth - sideWidth, 0) + "px";                
+        
+        if (sidePanelVisible)
+        {
+            fbPanelBox2Style.width = sideWidth + "px";
+            fbPanelBar2BoxStyle.width = Math.max(sideWidth, 0) + "px";
+            fbVSplitterStyle.right = Math.max(sideWidth - 6, 0) + "px";
+        }
+    },
+    
+    layout: function(options)
+    {
+        changeCommandLineVisibility(options.hasCommandLine);
+        changeSidePanelVisibility(options.hasSidePanel);
+    }
+    
+});
+
+// ************************************************************************************************
+// ChromeFrameBase
+
+var ChromeContext = extend(ChromeBase, Context.prototype); 
+
+var ChromeFrameBase = extend(ChromeContext, {
+    
+    initialize: function()
+    {
+        ChromeBase.initialize.call(this)
+        
+        this.addController(
+                [Firebug.browser.window, "resize", this.draw],
+                [Firebug.browser.window, "unload", this.destroy]
+            );
+        
+        if (isIE6)
+        {
+            this.addController(
+                    [Firebug.browser.window, "resize", this.fixPosition],
+                    [Firebug.browser.window, "scroll", this.fixPosition]
+                );
+        }
+        
+        fbVSplitter.onmousedown = onVSplitterMouseDown;
+        fbHSplitter.onmousedown = onHSplitterMouseDown;
+        
+        /*        
+        toggleCommandLine();
+        toggleRightPanel();
+        /**/
+        
+        // TODO: Check visibility preferences here
+        this.node.style.visibility = "visible";
+        
+        this.draw();
+    },
+    
+    show: function()
+    {
+        
+    },
+    
+    hide: function()
+    {
+        var chrome = Firebug.chrome;
+        var node = chrome.node;
+        node.style.height = "27px";
+        node.style.width = "100px";
+        node.style.left = "";        
+        node.style.right = 0;
+
+        if (isIE6)
+            chrome.fixPosition();
+        
+        var main = $("fbChrome");
+        main.style.display = "none";
+
+        chrome.document.body.style.backgroundColor = "transparent";
+        
+        var mini = $("fbMiniChrome");
+        mini.style.display = "block";
+    },
+    
+    shutdown: function()
+    {
+        Firebug.Controller.shutdown.apply(this);
+    },
+    
+    fixPosition: function()
+    {
+        // fix IE problem with offset when not in fullscreen mode
+        var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
+        
+        var size = Firebug.Inspector.getWindowSize();
+        var scroll = Firebug.Inspector.getWindowScrollPosition();
+        var maxHeight = size.height;
+        var height = Firebug.chrome.node.offsetHeight;
+        
+        Firebug.chrome.node.style.top = maxHeight - height + scroll.top + "px";
+    }
+
+});
+
+
+// ************************************************************************************************
+// ChromePopupBase
+
+var ChromePopupBase = extend(ChromeContext, {
+    
+    initialize: function()
+    {
+        ChromeBase.initialize.call(this)
+        
+        this.addController(
+                [Firebug.browser.window, "resize", this.draw],
+                [Firebug.browser.window, "unload", this.destroy]
+            );
+    },
+    
+    shutdown: function()
+    {
+        Firebug.Controller.shutdown.apply(this);
+    }
+
+});
+
+
+// ************************************************************************************************
+// Internals
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+//
+var commandLine = null;
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Interface Elements Cache
+
+var fbTop = null;
+var fbContent = null;
+var fbContentStyle = null;
+var fbBottom = null;
+var fbBtnInspect = null;
+
+var fbToolbar = null;
+
+var fbPanelBox1 = null;
+var fbPanelBox1Style = null;
+var fbPanelBox2 = null;
+var fbPanelBox2Style = null;
+var fbPanelBar2Box = null;
+var fbPanelBar2BoxStyle = null;
+
+var fbHSplitter = null;
+var fbVSplitter = null;
+var fbVSplitterStyle = null;
+
+var fbPanel1 = null;
+var fbPanel1Style = null;
+var fbPanel2 = null;
+
+var fbConsole = null;
+var fbConsoleStyle = null;
+var fbHTML = null;
+
+var fbCommandLine = null;
+
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var topHeight = null;
+var topPartialHeight = null;
+
+var commandLineVisible = true;
+var sidePanelVisible = false;
+var sidePanelWidth = 300;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 25;
 
 
 //************************************************************************************************
-// Section
+// UI helpers
+
+var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
+{
+    var last = commandLineVisible;
+    commandLineVisible = typeof visibility == "boolean" ? visibility : !commandLineVisible;
+    
+    if (commandLineVisible != last)
+    {
+        fbBottom.className = commandLineVisible ? "" : "hide";
+    }
+};
+
+var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
+{
+    var last = sidePanelVisible;
+    sidePanelVisible = typeof visibility == "boolean" ? visibility : !sidePanelVisible;
+    
+    if (sidePanelVisible != last)
+    {
+        fbPanelBox2.className = sidePanelVisible ? "" : "hide"; 
+        fbPanelBar2Box.className = sidePanelVisible ? "" : "hide";
+    }
+};
 
 
+// ************************************************************************************************
+// Horizontal Splitter Handling
+
+var onHSplitterMouseDown = function onHSplitterMouseDown(event)
+{
+    addGlobalEvent("mousemove", onHSplitterMouseMove);
+    addGlobalEvent("mouseup", onHSplitterMouseUp);
+    
+    fbHSplitter.className = "fbOnMovingHSplitter";
+    
+    return false;
+};
+
+var lastHSplitterMouseMove = 0;
+
+var onHSplitterMouseMove = function onHSplitterMouseMove(event)
+{
+    cancelEvent(event, true);
+    
+    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate)
+    {
+        var clientY = event.clientY;
+        var win = document.all
+            ? event.srcElement.ownerDocument.parentWindow
+            : event.target.ownerDocument && event.target.ownerDocument.defaultView;
+      
+        if (!win)
+            return;
+        
+        if (win != win.parent)
+            clientY += win.frameElement ? win.frameElement.offsetTop : 0;
+
+        var size = Firebug.browser.getWindowSize();
+        var chrome = Firebug.chrome.node;
+        var height = (isIE && win == top) ? size.height : chrome.offsetTop + chrome.clientHeight; 
+        
+        var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
+        var fixedHeight = topHeight + commandLineHeight + 1;
+        var y = Math.max(height - clientY + 7, fixedHeight);
+            y = Math.min(y, size.height);
+          
+        chrome.style.height = y + "px";
+        
+        if (isIE6)
+          Firebug.chrome.fixPosition();
+        
+        Firebug.chrome.draw();
+        
+        lastHSplitterMouseMove = new Date().getTime();
+    }
+    
+    return false;
+};
+
+var onHSplitterMouseUp = function onHSplitterMouseUp(event)
+{
+    removeGlobalEvent("mousemove", onHSplitterMouseMove);
+    removeGlobalEvent("mouseup", onHSplitterMouseUp);
+    
+    fbHSplitter.className = "";
+    
+    Firebug.chrome.draw();
+};
+
+
+// ************************************************************************************************
+// Vertical Splitter Handling
+
+var onVSplitterMouseDown = function onVSplitterMouseDown(event)
+{
+    addGlobalEvent("mousemove", onVSplitterMouseMove);
+    addGlobalEvent("mouseup", onVSplitterMouseUp);
+    
+    return false;
+};
+
+var lastVSplitterMouseMove = 0;
+
+var onVSplitterMouseMove = function onVSplitterMouseMove(event)
+{
+    if (new Date().getTime() - lastVSplitterMouseMove > chromeRedrawSkipRate)
+    {
+        var clientX = event.clientX;
+        var win = document.all
+            ? event.srcElement.ownerDocument.parentWindow
+            : event.target.ownerDocument.defaultView;
+      
+        if (win != win.parent)
+            clientX += win.frameElement ? win.frameElement.offsetLeft : 0;
+        
+        var size = Firebug.chrome.getWindowSize();
+        var x = Math.max(size.width - clientX + 3, 6);
+        
+        sidePanelWidth = x;
+        Firebug.chrome.draw();
+        
+        lastVSplitterMouseMove = new Date().getTime();
+    }
+    
+    cancelEvent(event, true);
+    return false;
+};
+
+var onVSplitterMouseUp = function onVSplitterMouseUp(event)
+{
+    removeGlobalEvent("mousemove", onVSplitterMouseMove);
+    removeGlobalEvent("mouseup", onVSplitterMouseUp);
+    
+    Firebug.chrome.draw();
+};
 
 
 // ************************************************************************************************
@@ -4190,7 +4240,824 @@ var calculatePixelsPerInch = function calculatePixelsPerInch()
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-//************************************************************************************************
+//----------------------------------------------------------------------------
+// Injected Chrome
+//----------------------------------------------------------------------------
+FirebugChrome.injected = 
+{
+    CSS: '.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;background:#fff;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.clear{clear:both;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:50px;}#fbToolbar{position:absolute;z-index:5;width:100%;top:0;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #d4d0c8 0 0;height:28px;font-size:11px;}#fbPanelBarBox{top:28px;position:absolute;z-index:8;width:100%;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:6px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:6px 2px 0 5px;}#fbToolbarButtons span{margin:0;padding:0;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{float:left;padding:10px 0 0;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#d4d0c8 #fff #d4d0c8 #777;height:7px;margin:2px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;cursor:default;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;cursor:default;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#mainButtons{position:absolute;right:4px;top:8px;z-index:11;}#fbPanelBar1{width:255px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}* html #fbPanel1{position:absolute;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}#fbBottom[fixFirefox]{position:fixed;bottom:0;left:0;width:100%;z-index:10;}#fbBottom[fixFirefox] #fbCommand{display:block;}div.fbFitHeight{padding:0 1px;max-height:inherit;height:100%;overflow:auto;}#mainButtons a{font-size:1px;width:16px;height:16px;display:block;float:left;text-decoration:none;cursor:default;}#close{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -119px;}#close:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -16px -119px;}#detach{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -32px -119px;}#detach:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -48px -119px;}.tab{text-decoration:none;display:block;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .tabL,.fbPanelBar .tabR{height:22px;width:8px;}.fbPanelBar .tabText{padding:4px 1px 0;}.tab:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -73px;}.tab:hover .tabL{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -16px -96px;}.tab:hover .tabR{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -24px -96px;}.selectedTab{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #d4d0c8 0 -50px !important;color:#000;}.selectedTab .tabL{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -96px !important;}.selectedTab .tabR{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -8px -96px !important;}#fbHSplitter{position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/pixel_transparent.gif);z-index:9;}.fbVSplitter{background:#eee;color:#000;border:1px solid #777;border-width:0 1px;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:28px;}div.lineNo{font:11px Monaco,monospace;float:left;display:inline;position:relative;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}pre.nodeCode{font:11px Monaco,monospace;margin:0;padding-left:10px;overflow:hidden;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/tree_open.gif);}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;}.nodeComment{color:DarkGreen;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #mainButtons{display:none !important;}.FirebugPopup #mainButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}.FirebugPopup #fbCommandBox{height:18px !important;}',
+    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="mainButtons"><a id="detach" href="javascript:FB.detach()">&nbsp;</a><a id="close" href="javascript:FB.close()">&nbsp;</a></div><div id="fbHSplitter">&nbsp;</div><div id="fbToolbar"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span><a id="fbBtnInspect" href="javascript:FB.startInspecting(this)">Inspect</a></span><span id="fbConsoleButtons"><span><a href="javascript:FB.clear()">Clear</a></span></span><span id="fbHTMLButtons"><span><a href="#">Edit</a></span></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span><span id="fbHTMLStatusBar" class="fbStatusBar"><span><a href="#"><b>body</b></a></span><span>&lt;</span><span><a href="#">html</a></span></span></span></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="tc" class="tab selectedTab" href="javascript:FB.showTab(0)"><span class="tabL"></span><span class="tabText">Console</span><span class="tabR"></span></a><a id="th" class="tab" href="javascript:FB.showTab(1)"><span class="tabL"></span><span class="tabText">HTML</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">CSS</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Script</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="tab selectedTab" href="javascript:void(0);"><span class="tabL"></span><span class="tabText">Style</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Layout</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a></div></div></div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole"></div><div id="fbHTML"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style"></div><div id="fbHTML_Layout"></div><div id="fbHTML_DOM"></div></div></td></tr><tr id="fbBottom"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table>'
+};
+
+// ************************************************************************************************
+}});
+
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+/*
+ * Sizzle CSS Selector Engine - v0.9
+ *  Copyright 2009, John Resig (http://ejohn.org/)
+ *  released under the MIT License
+ */
+
+var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]+\]|[^[\]]+)+\]|\\.|[^ >+~,(\[]+)+|[>+~])(\s*,\s*)?/g;
+
+var done = 0;
+
+var Sizzle = function(selector, context, results, seed) {
+    var doCache = !results;
+    results = results || [];
+    context = context || document;
+
+    if ( context.nodeType !== 1 && context.nodeType !== 9 )
+        return [];
+    
+    if ( !selector || typeof selector !== "string" ) {
+        return results;
+    }
+
+    var parts = [], m, set, checkSet, check, mode, extra;
+    
+    // Reset the position of the chunker regexp (start from head)
+    chunker.lastIndex = 0;
+    
+    while ( (m = chunker.exec(selector)) !== null ) {
+        parts.push( m[1] );
+        
+        if ( m[2] ) {
+            extra = RegExp.rightContext;
+            break;
+        }
+    }
+
+    if ( parts.length > 1 && Expr.match.POS.exec( selector ) ) {
+        if ( parts.length === 2 && Expr.relative[ parts[0] ] ) {
+            var later = "", match;
+
+            // Position selectors must be done after the filter
+            while ( (match = Expr.match.POS.exec( selector )) ) {
+                later += match[0];
+                selector = selector.replace( Expr.match.POS, "" );
+            }
+
+            set = Sizzle.filter( later, Sizzle( selector, context ) );
+        } else {
+            set = Expr.relative[ parts[0] ] ?
+                [ context ] :
+                Sizzle( parts.shift(), context );
+
+            while ( parts.length ) {
+                var tmpSet = [];
+
+                selector = parts.shift();
+                if ( Expr.relative[ selector ] )
+                    selector += parts.shift();
+
+                for ( var i = 0, l = set.length; i < l; i++ ) {
+                    Sizzle( selector, set[i], tmpSet );
+                }
+
+                set = tmpSet;
+            }
+        }
+    } else {
+        var ret = seed ?
+            { expr: parts.pop(), set: makeArray(seed) } :
+            Sizzle.find( parts.pop(), parts.length === 1 && context.parentNode ? context.parentNode : context );
+        set = Sizzle.filter( ret.expr, ret.set );
+
+        if ( parts.length > 0 ) {
+            checkSet = makeArray(set);
+        }
+
+        while ( parts.length ) {
+            var cur = parts.pop(), pop = cur;
+
+            if ( !Expr.relative[ cur ] ) {
+                cur = "";
+            } else {
+                pop = parts.pop();
+            }
+
+            if ( pop == null ) {
+                pop = context;
+            }
+
+            Expr.relative[ cur ]( checkSet, pop );
+        }
+    }
+
+    if ( !checkSet ) {
+        checkSet = set;
+    }
+
+    if ( !checkSet ) {
+        throw "Syntax error, unrecognized expression: " + (cur || selector);
+    }
+
+    if ( checkSet instanceof Array ) {
+        if ( context.nodeType === 1 ) {
+            for ( var i = 0; checkSet[i] != null; i++ ) {
+                if ( checkSet[i] && (checkSet[i] === true || checkSet[i].nodeType === 1 && contains(context, checkSet[i])) ) {
+                    results.push( set[i] );
+                }
+            }
+        } else {
+            for ( var i = 0; checkSet[i] != null; i++ ) {
+                if ( checkSet[i] && checkSet[i].nodeType === 1 ) {
+                    results.push( set[i] );
+                }
+            }
+        }
+    } else {
+        makeArray( checkSet, results );
+    }
+
+    if ( extra ) {
+        Sizzle( extra, context, results );
+    }
+
+    return results;
+};
+
+Sizzle.matches = function(expr, set){
+    return Sizzle(expr, null, null, set);
+};
+
+Sizzle.find = function(expr, context){
+    var set, match;
+
+    if ( !expr ) {
+        return [];
+    }
+
+    var later = "", match;
+
+    // Pseudo-selectors could contain other selectors (like :not)
+    while ( (match = Expr.match.PSEUDO.exec( expr )) ) {
+        var left = RegExp.leftContext;
+
+        if ( left.substr( left.length - 1 ) !== "\\" ) {
+            later += match[0];
+            expr = expr.replace( Expr.match.PSEUDO, "" );
+        } else {
+            // TODO: Need a better solution, fails: .class\:foo:realfoo(#id)
+            break;
+        }
+    }
+
+    for ( var i = 0, l = Expr.order.length; i < l; i++ ) {
+        var type = Expr.order[i];
+        
+        if ( (match = Expr.match[ type ].exec( expr )) ) {
+            var left = RegExp.leftContext;
+
+            if ( left.substr( left.length - 1 ) !== "\\" ) {
+                match[1] = (match[1] || "").replace(/\\/g, "");
+                set = Expr.find[ type ]( match, context );
+
+                if ( set != null ) {
+                    expr = expr.replace( Expr.match[ type ], "" );
+                    break;
+                }
+            }
+        }
+    }
+
+    if ( !set ) {
+        set = context.getElementsByTagName("*");
+    }
+
+    expr += later;
+
+    return {set: set, expr: expr};
+};
+
+Sizzle.filter = function(expr, set, inplace){
+    var old = expr, result = [], curLoop = set, match;
+
+    while ( expr && set.length ) {
+        for ( var type in Expr.filter ) {
+            if ( (match = Expr.match[ type ].exec( expr )) != null ) {
+                var anyFound = false, filter = Expr.filter[ type ], goodArray = null;
+
+                if ( curLoop == result ) {
+                    result = [];
+                }
+
+                if ( Expr.preFilter[ type ] ) {
+                    match = Expr.preFilter[ type ]( match, curLoop );
+
+                    if ( match[0] === true ) {
+                        goodArray = [];
+                        var last = null, elem;
+                        for ( var i = 0; (elem = curLoop[i]) !== undefined; i++ ) {
+                            if ( elem && last !== elem ) {
+                                goodArray.push( elem );
+                                last = elem;
+                            }
+                        }
+                    }
+
+                }
+
+                var goodPos = 0, found, item;
+
+                for ( var i = 0; (item = curLoop[i]) !== undefined; i++ ) {
+                    if ( item ) {
+                        if ( goodArray && item != goodArray[goodPos] ) {
+                            goodPos++;
+                        }
+
+                        found = filter( item, match, goodPos, goodArray );
+                        if ( inplace && found != null ) {
+                            curLoop[i] = found ? curLoop[i] : false;
+                            if ( found ) {
+                                anyFound = true;
+                            }
+                        } else if ( found ) {
+                            result.push( item );
+                            anyFound = true;
+                        }
+                    }
+                }
+
+                if ( found !== undefined ) {
+                    if ( !inplace ) {
+                        curLoop = result;
+                    }
+
+                    expr = expr.replace( Expr.match[ type ], "" );
+
+                    if ( !anyFound ) {
+                        return [];
+                    }
+
+                    break;
+                }
+            }
+        }
+
+
+        expr = expr.replace(/\s*,\s*/, "");
+
+        // Improper expression
+        if ( expr == old ) {
+            throw "Syntax error, unrecognized expression: " + expr;
+        }
+
+        old = expr;
+    }
+
+    return curLoop;
+};
+
+var Expr = Sizzle.selectors = {
+    order: [ "ID", "NAME", "TAG" ],
+    match: {
+        ID: /#((?:[\w\u0128-\uFFFF_-]|\\.)+)/,
+        CLASS: /\.((?:[\w\u0128-\uFFFF_-]|\\.)+)/,
+        NAME: /\[name=((?:[\w\u0128-\uFFFF_-]|\\.)+)\]/,
+        ATTR: /\[((?:[\w\u0128-\uFFFF_-]|\\.)+)\s*(?:(\S{0,1}=)\s*(['"]*)(.*?)\3|)\]/,
+        TAG: /^((?:[\w\u0128-\uFFFF\*_-]|\\.)+)/,
+        CHILD: /:(only|nth|last|first)-child\(?(even|odd|[\dn+-]*)\)?/,
+        POS: /:(nth|eq|gt|lt|first|last|even|odd)\(?(\d*)\)?(?:[^-]|$)/,
+        PSEUDO: /:((?:[\w\u0128-\uFFFF_-]|\\.)+)(?:\((['"]*)((?:\([^\)]+\)|[^\2\(\)]*)+)\2\))?/
+    },
+    attrMap: {
+        "class": "className"
+    },
+    relative: {
+        "+": function(checkSet, part){
+            for ( var i = 0, l = checkSet.length; i < l; i++ ) {
+                var elem = checkSet[i];
+                if ( elem ) {
+                    var cur = elem.previousSibling;
+                    while ( cur && cur.nodeType !== 1 ) {
+                        cur = cur.previousSibling;
+                    }
+                    checkSet[i] = typeof part === "string" ?
+                        cur || false :
+                        cur === part;
+                }
+            }
+
+            if ( typeof part === "string" ) {
+                Sizzle.filter( part, checkSet, true );
+            }
+        },
+        ">": function(checkSet, part){
+            if ( typeof part === "string" && !/\W/.test(part) ) {
+                part = part.toUpperCase();
+
+                for ( var i = 0, l = checkSet.length; i < l; i++ ) {
+                    var elem = checkSet[i];
+                    if ( elem ) {
+                        var parent = elem.parentNode;
+                        checkSet[i] = parent.nodeName === part ? parent : false;
+                    }
+                }
+            } else {
+                for ( var i = 0, l = checkSet.length; i < l; i++ ) {
+                    var elem = checkSet[i];
+                    if ( elem ) {
+                        checkSet[i] = typeof part === "string" ?
+                            elem.parentNode :
+                            elem.parentNode === part;
+                    }
+                }
+
+                if ( typeof part === "string" ) {
+                    Sizzle.filter( part, checkSet, true );
+                }
+            }
+        },
+        "": function(checkSet, part){
+            var doneName = "done" + (done++), checkFn = dirCheck;
+
+            if ( !part.match(/\W/) ) {
+                var nodeCheck = part = part.toUpperCase();
+                checkFn = dirNodeCheck;
+            }
+
+            checkFn("parentNode", part, doneName, checkSet, nodeCheck);
+        },
+        "~": function(checkSet, part){
+            var doneName = "done" + (done++), checkFn = dirCheck;
+
+            if ( typeof part === "string" && !part.match(/\W/) ) {
+                var nodeCheck = part = part.toUpperCase();
+                checkFn = dirNodeCheck;
+            }
+
+            checkFn("previousSibling", part, doneName, checkSet, nodeCheck);
+        }
+    },
+    find: {
+        ID: function(match, context){
+            if ( context.getElementById ) {
+                var m = context.getElementById(match[1]);
+                return m ? [m] : [];
+            }
+        },
+        NAME: function(match, context){
+            return context.getElementsByName(match[1]);
+        },
+        TAG: function(match, context){
+            return context.getElementsByTagName(match[1]);
+        }
+    },
+    preFilter: {
+        CLASS: function(match){
+            return new RegExp( "(?:^|\\s)" + match[1] + "(?:\\s|$)" );
+        },
+        ID: function(match){
+            return match[1];
+        },
+        TAG: function(match){
+            return match[1].toUpperCase();
+        },
+        CHILD: function(match){
+            if ( match[1] == "nth" ) {
+                // parse equations like 'even', 'odd', '5', '2n', '3n+2', '4n-1', '-n+6'
+                var test = /(-?)(\d*)n((?:\+|-)?\d*)/.exec(
+                    match[2] == "even" && "2n" || match[2] == "odd" && "2n+1" ||
+                    !/\D/.test( match[2] ) && "0n+" + match[2] || match[2]);
+
+                // calculate the numbers (first)n+(last) including if they are negative
+                match[2] = (test[1] + (test[2] || 1)) - 0;
+                match[3] = test[3] - 0;
+            }
+
+            // TODO: Move to normal caching system
+            match[0] = "done" + (done++);
+
+            return match;
+        },
+        ATTR: function(match){
+            var name = match[1];
+            
+            if ( Expr.attrMap[name] ) {
+                match[1] = Expr.attrMap[name];
+            }
+
+            if ( match[2] === "~=" ) {
+                match[4] = " " + match[4] + " ";
+            }
+
+            return match;
+        },
+        PSEUDO: function(match){
+            if ( match[1] === "not" ) {
+                match[3] = match[3].split(/\s*,\s*/);
+            }
+            
+            return match;
+        },
+        POS: function(match){
+            match.unshift( true );
+            return match;
+        }
+    },
+    filters: {
+        enabled: function(elem){
+            return elem.disabled === false && elem.type !== "hidden";
+        },
+        disabled: function(elem){
+            return elem.disabled === true;
+        },
+        checked: function(elem){
+            return elem.checked === true;
+        },
+        selected: function(elem){
+            // Accessing this property makes selected-by-default
+            // options in Safari work properly
+            elem.parentNode.selectedIndex;
+            return elem.selected === true;
+        },
+        parent: function(elem){
+            return !!elem.firstChild;
+        },
+        empty: function(elem){
+            return !elem.firstChild;
+        },
+        has: function(elem, i, match){
+            return !!Sizzle( match[3], elem ).length;
+        },
+        header: function(elem){
+            return /h\d/i.test( elem.nodeName );
+        },
+        text: function(elem){
+            return "text" === elem.type;
+        },
+        radio: function(elem){
+            return "radio" === elem.type;
+        },
+        checkbox: function(elem){
+            return "checkbox" === elem.type;
+        },
+        file: function(elem){
+            return "file" === elem.type;
+        },
+        password: function(elem){
+            return "password" === elem.type;
+        },
+        submit: function(elem){
+            return "submit" === elem.type;
+        },
+        image: function(elem){
+            return "image" === elem.type;
+        },
+        reset: function(elem){
+            return "reset" === elem.type;
+        },
+        button: function(elem){
+            return "button" === elem.type || elem.nodeName.toUpperCase() === "BUTTON";
+        },
+        input: function(elem){
+            return /input|select|textarea|button/i.test(elem.nodeName);
+        }
+    },
+    setFilters: {
+        first: function(elem, i){
+            return i === 0;
+        },
+        last: function(elem, i, match, array){
+            return i === array.length - 1;
+        },
+        even: function(elem, i){
+            return i % 2 === 0;
+        },
+        odd: function(elem, i){
+            return i % 2 === 1;
+        },
+        lt: function(elem, i, match){
+            return i < match[3] - 0;
+        },
+        gt: function(elem, i, match){
+            return i > match[3] - 0;
+        },
+        nth: function(elem, i, match){
+            return match[3] - 0 == i;
+        },
+        eq: function(elem, i, match){
+            return match[3] - 0 == i;
+        }
+    },
+    filter: {
+        CHILD: function(elem, match){
+            var type = match[1], parent = elem.parentNode;
+
+            var doneName = match[0];
+            
+            if ( parent && !parent[ doneName ] ) {
+                var count = 1;
+
+                for ( var node = parent.firstChild; node; node = node.nextSibling ) {
+                    if ( node.nodeType == 1 ) {
+                        node.nodeIndex = count++;
+                    }
+                }
+
+                parent[ doneName ] = count - 1;
+            }
+
+            if ( type == "first" ) {
+                return elem.nodeIndex == 1;
+            } else if ( type == "last" ) {
+                return elem.nodeIndex == parent[ doneName ];
+            } else if ( type == "only" ) {
+                return parent[ doneName ] == 1;
+            } else if ( type == "nth" ) {
+                var add = false, first = match[2], last = match[3];
+
+                if ( first == 1 && last == 0 ) {
+                    return true;
+                }
+
+                if ( first == 0 ) {
+                    if ( elem.nodeIndex == last ) {
+                        add = true;
+                    }
+                } else if ( (elem.nodeIndex - last) % first == 0 && (elem.nodeIndex - last) / first >= 0 ) {
+                    add = true;
+                }
+
+                return add;
+            }
+        },
+        PSEUDO: function(elem, match, i, array){
+            var name = match[1], filter = Expr.filters[ name ];
+
+            if ( filter ) {
+                return filter( elem, i, match, array )
+            } else if ( name === "contains" ) {
+                return (elem.textContent || elem.innerText || "").indexOf(match[3]) >= 0;
+            } else if ( name === "not" ) {
+                var not = match[3];
+
+                for ( var i = 0, l = not.length; i < l; i++ ) {
+                    if ( Sizzle.filter(not[i], [elem]).length > 0 ) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        },
+        ID: function(elem, match){
+            return elem.nodeType === 1 && elem.getAttribute("id") === match;
+        },
+        TAG: function(elem, match){
+            return (match === "*" && elem.nodeType === 1) || elem.nodeName === match;
+        },
+        CLASS: function(elem, match){
+            return match.test( elem.className );
+        },
+        ATTR: function(elem, match){
+            var result = elem[ match[1] ] || elem.getAttribute( match[1] ), value = result + "", type = match[2], check = match[4];
+            return result == null ?
+                false :
+                type === "=" ?
+                value === check :
+                type === "*=" ?
+                value.indexOf(check) >= 0 :
+                type === "~=" ?
+                (" " + value + " ").indexOf(check) >= 0 :
+                !match[4] ?
+                result :
+                type === "!=" ?
+                value != check :
+                type === "^=" ?
+                value.indexOf(check) === 0 :
+                type === "$=" ?
+                value.substr(value.length - check.length) === check :
+                type === "|=" ?
+                value === check || value.substr(0, check.length + 1) === check + "-" :
+                false;
+        },
+        POS: function(elem, match, i, array){
+            var name = match[2], filter = Expr.setFilters[ name ];
+
+            if ( filter ) {
+                return filter( elem, i, match, array );
+            }
+        }
+    }
+};
+
+var makeArray = function(array, results) {
+    array = Array.prototype.slice.call( array );
+
+    if ( results ) {
+        results.push.apply( results, array );
+        return results;
+    }
+    
+    return array;
+};
+
+// Perform a simple check to determine if the browser is capable of
+// converting a NodeList to an array using builtin methods.
+try {
+    Array.prototype.slice.call( document.documentElement.childNodes );
+
+// Provide a fallback method if it does not work
+} catch(e){
+    makeArray = function(array, results) {
+        var ret = results || [];
+
+        if ( array instanceof Array ) {
+            Array.prototype.push.apply( ret, array );
+        } else {
+            if ( typeof array.length === "number" ) {
+                for ( var i = 0, l = array.length; i < l; i++ ) {
+                    ret.push( array[i] );
+                }
+            } else {
+                for ( var i = 0; array[i]; i++ ) {
+                    ret.push( array[i] );
+                }
+            }
+        }
+
+        return ret;
+    };
+}
+
+// Check to see if the browser returns elements by name when
+// querying by getElementById (and provide a workaround)
+(function(){
+    // We're going to inject a fake input element with a specified name
+    var form = document.createElement("form"),
+        id = "script" + (new Date).getTime();
+    form.innerHTML = "<input name='" + id + "'/>";
+
+    // Inject it into the root element, check its status, and remove it quickly
+    var root = document.documentElement;
+    root.insertBefore( form, root.firstChild );
+
+    // The workaround has to do additional checks after a getElementById
+    // Which slows things down for other browsers (hence the branching)
+    if ( !!document.getElementById( id ) ) {
+        Expr.find.ID = function(match, context){
+            if ( context.getElementById ) {
+                var m = context.getElementById(match[1]);
+                return m ? m.id === match[1] || m.getAttributeNode && m.getAttributeNode("id").nodeValue === match[1] ? [m] : undefined : [];
+            }
+        };
+
+        Expr.filter.ID = function(elem, match){
+            var node = elem.getAttributeNode && elem.getAttributeNode("id");
+            return elem.nodeType === 1 && node && node.nodeValue === match;
+        };
+    }
+
+    root.removeChild( form );
+})();
+
+// Check to see if the browser returns only elements
+// when doing getElementsByTagName("*")
+(function(){
+    // Create a fake element
+    var div = document.createElement("div");
+    div.appendChild( document.createComment("") );
+
+    // Make sure no comments are found
+    if ( div.getElementsByTagName("*").length > 0 ) {
+        Expr.find.TAG = function(match, context){
+            var results = context.getElementsByTagName(match[1]);
+
+            // Filter out possible comments
+            if ( match[1] === "*" ) {
+                var tmp = [];
+
+                for ( var i = 0; results[i]; i++ ) {
+                    if ( results[i].nodeType === 1 ) {
+                        tmp.push( results[i] );
+                    }
+                }
+
+                results = tmp;
+            }
+
+            return results;
+        };
+    }
+})();
+
+if ( document.querySelectorAll ) (function(){
+    var oldSizzle = Sizzle;
+    
+    Sizzle = function(query, context, extra){
+        context = context || document;
+
+        if ( context.nodeType === 9 ) {
+            try {
+                return makeArray( context.querySelectorAll(query) );
+            } catch(e){}
+        }
+        
+        return oldSizzle(query, context, extra);
+    };
+
+    Sizzle.find = oldSizzle.find;
+    Sizzle.filter = oldSizzle.filter;
+    Sizzle.selectors = oldSizzle.selectors;
+})();
+
+if ( document.documentElement.getElementsByClassName ) {
+    Expr.order.splice(1, 0, "CLASS");
+    Expr.find.CLASS = function(match, context) {
+        return context.getElementsByClassName(match[1]);
+    };
+}
+
+function dirNodeCheck( dir, cur, doneName, checkSet, nodeCheck ) {
+    for ( var i = 0, l = checkSet.length; i < l; i++ ) {
+        var elem = checkSet[i];
+        if ( elem ) {
+            elem = elem[dir]
+            var match = false;
+
+            while ( elem && elem.nodeType ) {
+                var done = elem[doneName];
+                if ( done ) {
+                    match = checkSet[ done ];
+                    break;
+                }
+
+                if ( elem.nodeType === 1 )
+                    elem[doneName] = i;
+
+                if ( elem.nodeName === cur ) {
+                    match = elem;
+                    break;
+                }
+
+                elem = elem[dir];
+            }
+
+            checkSet[i] = match;
+        }
+    }
+}
+
+function dirCheck( dir, cur, doneName, checkSet, nodeCheck ) {
+    for ( var i = 0, l = checkSet.length; i < l; i++ ) {
+        var elem = checkSet[i];
+        if ( elem ) {
+            elem = elem[dir]
+            var match = false;
+
+            while ( elem && elem.nodeType ) {
+                if ( elem[doneName] ) {
+                    match = checkSet[ elem[doneName] ];
+                    break;
+                }
+
+                if ( elem.nodeType === 1 ) {
+                    elem[doneName] = i;
+
+                    if ( typeof cur !== "string" ) {
+                        if ( elem === cur ) {
+                            match = true;
+                            break;
+                        }
+
+                    } else if ( Sizzle.filter( cur, [elem] ).length > 0 ) {
+                        match = elem;
+                        break;
+                    }
+                }
+
+                elem = elem[dir];
+            }
+
+            checkSet[i] = match;
+        }
+    }
+}
+
+var contains = document.compareDocumentPosition ?  function(a, b){
+    return a.compareDocumentPosition(b) & 16;
+} : function(a, b){
+    return a !== b && a.contains(b);
+};
+
+// EXPOSE
+
+Firebug.Selector = Sizzle;
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+// ************************************************************************************************
 // Inspector Module
 
 Firebug.Inspector =
@@ -4210,7 +5077,7 @@ Firebug.Inspector =
         fbBtnInspect = $U("fbBtnInspect");
     },    
   
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Inspect functions
     
     startInspecting: function()
@@ -4288,7 +5155,7 @@ Firebug.Inspector =
         }
     },
     
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Inspector Outline
     
     drawOutline: function(el)
@@ -4342,7 +5209,7 @@ Firebug.Inspector =
         outlineVisible = true;
     },
   
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Box Model
     
     drawBoxModel: function(el)
@@ -4387,7 +5254,7 @@ Firebug.Inspector =
         boxModelVisible = true;
     },
      
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Measurement Funtions
     
     getMeasurement: function(el, name)
@@ -4603,7 +5470,7 @@ Firebug.Inspector =
     },
     
     
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Unit Funtions
   
     pointsToPixels: function(name, value)
@@ -4654,7 +5521,7 @@ Firebug.Inspector =
         return value;
     },
     
-    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     getCSS: isIE ? function(el, name)
     {
@@ -4668,25 +5535,26 @@ Firebug.Inspector =
 
 };
 
-//************************************************************************************************
+// ************************************************************************************************
 // Inspector Internals
 
 
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Shared variables
 
-FBL.offlineFragment = null;
 
 
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Internal variables
+
+var offlineFragment = null;
 
 var boxModelVisible = false;
 
 var pixelsPerInch, boxModel, boxModelStyle, boxMargin, boxMarginStyle, 
 boxPadding, boxPaddingStyle, boxContent, boxContentStyle;
 
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
 var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
@@ -4706,14 +5574,14 @@ var outlineStyle = {
     fbVerticalLine: "background: #3875D7; width: 2px;"
 }
 
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var lastInspecting = 0;
 var fbInspectFrame = null;
 var fbBtnInspect = null;
 
 
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var outlineVisible = false;
 var outlineElements = {};
@@ -4725,7 +5593,7 @@ var outline = {
 };
 
 
-//************************************************************************************************
+// ************************************************************************************************
 // Measurement Functions
 
 var calculatePixelsPerInch = function calculatePixelsPerInch()
@@ -4743,7 +5611,7 @@ var calculatePixelsPerInch = function calculatePixelsPerInch()
 };
 
 
-//************************************************************************************************
+// ************************************************************************************************
 // Section
 
 var createInspectorFrame = function createInspectorFrame()
@@ -4800,8 +5668,376 @@ var createBoxModelInspector = function createBoxModelInspector()
 
 
 
-//************************************************************************************************
+// ************************************************************************************************
 // Section
+
+
+
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+var Console = Firebug.Console;
+
+
+// ************************************************************************************************
+// CommandLine
+
+
+Firebug.CommandLine = function(element)
+{
+    this.element = element;
+    
+    if (isOpera)
+      fixOperaTabKey(this.element);
+    
+    this.onKeyDown = bind(this, this.onKeyDown);
+    addEvent(this.element, "keydown", this.onKeyDown);
+    
+    //FBL.application.global.onerror = this.onError;
+    var self = this
+    application.global.onerror = function(){self.onError.apply(self, arguments)};
+
+    //application.global.onerror = this.onError;
+    window.onerror = this.onError;
+    
+    initializeCommandLineAPI();
+};
+
+Firebug.CommandLine.prototype = 
+{
+    element: null,
+  
+    _buffer: [],
+    _bi: -1,
+    
+    _completing: null,
+    _completePrefix: null,
+    _completeExpr: null,
+    _completeBuffer: null,
+    _ci: null,
+    
+    _completion:
+    {
+        window:
+        [
+            "console"
+        ],
+        
+        document:
+        [
+            "getElementById", 
+            "getElementsByTagName"
+        ]
+    },
+  
+    _stack: function(command)
+    {
+        this._buffer.push(command);
+        this._bi = this._buffer.length;
+    },
+    
+    initialize: function(doc)
+    {
+    },
+    
+    destroy: function()
+    {
+        removeEvent(this.element, "keydown", this.onKeyDown);
+        window.onerror = null;
+        this.element = null
+    },
+
+    execute: function()
+    {
+        var cmd = this.element;
+        var command = cmd.value;
+        
+        this._stack(command);
+        writeMessage(['<span>&gt;&gt;&gt;</span> ',command], "command");
+        
+        try
+        {
+            
+            var result = this.evaluate(command);
+            // evita que seja repetido o log, caso o comando executado
+            // j� seja um log via linha de comando
+            if (result != Console.LOG_COMMAND)
+            {
+                var html = [];
+                appendObject(result, html)
+                writeMessage(html, "command");
+            }
+                
+        }
+        catch (e)
+        {
+            writeMessage([e.message || e], "error");
+        }
+        
+        cmd.value = "";
+    },
+    
+    evaluate: function(expr)
+    {
+        // TODO: need to register the API in console.firebug.commandLineAPI
+        var api = "FBL.Firebug.CommandLine.API"
+            
+        //Firebug.context = Firebug.chrome;
+        api = null;
+
+        return Firebug.context.evaluate(expr, "window", api, Console.error);
+    },
+    
+    eval: new Function("return window.eval.apply(window, arguments)"),
+    
+    prevCommand: function()
+    {
+        var cmd = this.element;
+        var buffer = this._buffer;
+        
+        if (this._bi > 0 && buffer.length > 0)
+            cmd.value = buffer[--this._bi];
+    },
+  
+    nextCommand: function()
+    {
+        var cmd = this.element;
+        
+        var buffer = this._buffer;
+        var limit = buffer.length -1;
+        var i = this._bi;
+        
+        if (i < limit)
+          cmd.value = buffer[++this._bi];
+          
+        else if (i == limit)
+        {
+            ++this._bi;
+            cmd.value = "";
+        }
+    },
+  
+    autocomplete: function(reverse)
+    {
+        var cmd = this.element;
+        
+        var command = cmd.value;
+        var offset = getExpressionOffset(command);
+
+        var valBegin = offset ? command.substr(0, offset) : "";
+        var val = command.substr(offset);
+        
+        var buffer, obj, objName, commandBegin, result, prefix;
+        
+        // if it is the beginning of the completion
+        if(!this._completing)
+        {
+            
+            // group1 - command begin
+            // group2 - base object
+            // group3 - property prefix
+            var reObj = /(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
+            var r = reObj.exec(val);
+            
+            // parse command
+            if (r[1] || r[2] || r[3])
+            {
+                commandBegin = r[1] || "";
+                objName = r[2] || "";
+                prefix = r[3] || "";
+            }
+            else if (val == "")
+            {
+                commandBegin = objName = prefix = "";
+            } else
+                return;
+            
+            this._completing = true;
+      
+            // find base object
+            if(objName == "")
+                obj = window;
+              
+            else
+            {
+                objName = objName.replace(/\.$/, "");
+        
+                var n = objName.split(".");
+                var target = window, o;
+                
+                for (var i=0, ni; ni = n[i]; i++)
+                {
+                    if (o = target[ni])
+                      target = o;
+                      
+                    else
+                    {
+                        target = null;
+                        break;
+                    }
+                }
+                obj = target;
+            }
+            
+            // map base object
+            if(obj)
+            {
+                this._completePrefix = prefix;
+                this._completeExpr = valBegin + commandBegin + (objName ? objName + "." : "");
+                this._ci = -1;
+                
+                buffer = this._completeBuffer = isIE ?
+                    this._completion[objName || "window"] || [] : [];
+                
+                for(var p in obj)
+                    buffer.push(p);
+            }
+    
+        // if it is the continuation of the last completion
+        } else
+          buffer = this._completeBuffer;
+        
+        if (buffer)
+        {
+            prefix = this._completePrefix;
+            
+            var diff = reverse ? -1 : 1;
+            
+            for(var i=this._ci+diff, l=buffer.length, bi; i>=0 && i<l; i+=diff)
+            {
+                bi = buffer[i];
+                
+                if (bi.indexOf(prefix) == 0)
+                {
+                    this._ci = i;
+                    result = bi;
+                    break;
+                }
+            }
+        }
+        
+        if (result)
+            cmd.value = this._completeExpr + result;
+    },
+    
+    onError: function(msg, href, lineNo)
+    {
+        var html = [];
+        
+        var lastSlash = href.lastIndexOf("/");
+        var fileName = lastSlash == -1 ? href : href.substr(lastSlash+1);
+        
+        html.push(
+            '<span class="errorMessage">', msg, '</span>', 
+            '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
+          );
+        
+        writeRow(html, "error");
+    },
+    
+    clear: function()
+    {
+        this.element.value = "";
+    },
+    
+    onKeyDown: function(e)
+    {
+        e = e || event;
+        
+        var code = e.keyCode;
+        
+        /*tab, shift, control, alt*/
+        if (code != 9 && code != 16 && code != 17 && code != 18)
+            this._completing = false;
+    
+        if (code == 13 /* enter */)
+            this.execute();
+
+        else if (code == 27 /* ESC */)
+            setTimeout(this.clear, 0);
+          
+        else if (code == 38 /* up */)
+            this.prevCommand();
+          
+        else if (code == 40 /* down */)
+            this.nextCommand();
+          
+        else if (code == 9 /* tab */)
+            this.autocomplete(e.shiftKey);
+          
+        else
+            return;
+        
+        cancelEvent(e, true);
+        return false;
+    }
+};
+
+
+// ************************************************************************************************
+// 
+
+var reOpenBracket = /[\[\(\{]/;
+var reCloseBracket = /[\]\)\}]/;
+
+function getExpressionOffset(command)
+{
+    // XXXjoe This is kind of a poor-man's JavaScript parser - trying
+    // to find the start of the expression that the cursor is inside.
+    // Not 100% fool proof, but hey...
+
+    var bracketCount = 0;
+
+    var start = command.length-1;
+    for (; start >= 0; --start)
+    {
+        var c = command[start];
+        if ((c == "," || c == ";" || c == " ") && !bracketCount)
+            break;
+        if (reOpenBracket.test(c))
+        {
+            if (bracketCount)
+                --bracketCount;
+            else
+                break;
+        }
+        else if (reCloseBracket.test(c))
+            ++bracketCount;
+    }
+
+    return start + 1;
+}
+
+// ************************************************************************************************
+// CommandLine API
+
+var CommandLineAPI =
+{
+    $: function(id)
+    {
+        return Firebug.browser.document.getElementById(id)
+    },
+
+    $$: function(selector)
+    {
+        return Firebug.Selector(selector, Firebug.browser.document)
+    },    
+    dir: Firebug.Console.dir,
+
+    dirxml: Firebug.Console.dirxml
+}
+
+Firebug.CommandLine.API = {};
+var initializeCommandLineAPI = function initializeCommandLineAPI()
+{
+    for (var m in CommandLineAPI)
+        if (!Firebug.browser.window[m])
+            Firebug.CommandLine.API[m] = CommandLineAPI[m];
+}
 
 
 
@@ -5022,7 +6258,7 @@ Firebug.HTML =
         
         selectElement(node);
         
-        consoleBodyFrame.scrollTop = Math.round(node.offsetTop - consoleBodyFrame.clientHeight/2);
+        fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
     }
     
 }
@@ -5104,4 +6340,3 @@ Firebug.HTML.onTreeClick = function (e)
 }});
 
 FBL.initialize();
-FBL.Firebug.Chrome.toggle(true);
