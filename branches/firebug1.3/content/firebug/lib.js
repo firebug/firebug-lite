@@ -314,7 +314,11 @@ this.escapeHTML = function(value)
     return (value+"").replace(/[<>&"']/g, replaceChars);
 };
 
-
+var reTrim = /^\s+|\s+$/g;
+this.trim = function(s)
+{
+    return s.replace(reTrim, "");
+}
 
 // ************************************************************************************************
 // Empty
@@ -438,7 +442,6 @@ this.removeGlobalEvent = function(name, handler)
     }
 };
 
-
 this.cancelEvent = function(e, preventDefault)
 {
     if (!e) return;
@@ -482,25 +485,41 @@ this.dispatch = function(listeners, name, args)
     }
 };
 
+this.disableTextSelection = function(e)
+{
+    
+    if (typeof e.onselectstart != "undefined") // IE
+        e.onselectstart = function(){ return false };
+        
+    else // others
+        e.onmousedown = function(){ return false };
+    
+    e.style.cursor = "default";
+};
+
 // ************************************************************************************************
 // class Names
 
-this.hasClass = function(object, name) {
+this.hasClass = function(object, name)
+{
     return (' '+object.className+' ').indexOf(' '+name+' ') != -1;
 }
 
-this.addClass = function(object, name) {
+this.addClass = function(object, name)
+{
     if ((' '+object.className+' ').indexOf(' '+name+' ') == -1)
         object.className = object.className ? object.className + ' ' + name : name; 
 }
 
-this.removeClass = function(object, name) {
+this.removeClass = function(object, name)
+{
     object.className = (' ' + object.className + ' ').
         replace(new RegExp('(\\S*)\\s+'+name+'\\s+(\\S*)', 'g'), '$1 $2').
         replace(/^\s*|\s*$/g, '');
 }
 
-this.toggleClass = function(object, name) {
+this.toggleClass = function(object, name)
+{
     if ((' '+object.className+' ').indexOf(' '+name+' ') >= 0)
         this.removeClass(object, name)
     else

@@ -327,8 +327,7 @@ Firebug.Panel =
             // Create Panel
             var panelNode = this.panelNode = createElement("div", {
                 id: panelId,
-                className: "fbPanel",
-                content: "woo hoo!"
+                className: "fbPanel"
             });
 
             $("fbPanel1").appendChild(panelNode);
@@ -353,8 +352,13 @@ Firebug.Panel =
             this.tabNode.style.display = "block";
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create Panel SideBar
+            // create SidePanel
             
+            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            // create StatusBar
+            
+            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            // create ToolButtons
         }
         
         /*
@@ -566,6 +570,16 @@ Firebug.PanelBar =
         var panel = new PanelType();
         panel.initialize();
         
+        // tab click handler
+        var self = this;
+        var onTabClick = function onTabClick()
+        { 
+            self.selectPanel(panelName);
+            return false;
+        };
+        
+        Firebug.chrome.addController([panel.tabNode, "mousedown", onTabClick]);
+        
         this.panels.push(panel);
         this.panelMap[panelName] = panel;
     },
@@ -600,6 +614,28 @@ Firebug.PanelBar =
         return this.selectedPanel;
     }    
    
+};
+
+
+function ToolButtons(){};
+
+ToolButtons.prototype = 
+{
+    //asd
+};
+
+function StatusBar(){};
+
+StatusBar.prototype = 
+{
+    //asd
+};
+
+function PanelOptions(){};
+
+PanelOptions.prototype = 
+{
+    //asd
 };
 
 

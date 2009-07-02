@@ -196,6 +196,9 @@ var ChromeBase = extend(ChromeBase, {
         Firebug.Controller.initialize.call(this);
         Firebug.PanelBar.initialize.call(this);
         
+        disableTextSelection($("fbToolbar"));
+        disableTextSelection($("fbPanelBarBox"));
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
         commandLine = new Firebug.CommandLine(fbCommandLine);
@@ -215,16 +218,13 @@ var ChromeBase = extend(ChromeBase, {
         this.selectPanel(panels[0].prototype.name);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Remove the "javascript:void(0)" href attributes used to make the hover effect in IE6
-        if (!isIE6)
+        // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
+        if (isIE6)
         {
-           var as = $$("a");
+           var as = $$(".fbHover");
            for (var i=0, a; a=as[i]; i++)
            {
-               if (a.href == "javascript:void(0)")
-               {
-                   a.removeAttribute("href");
-               }
+               a.setAttribute("href", "javascript:void(0)");
            }
         }
         
@@ -343,6 +343,7 @@ var ChromeBase = extend(ChromeBase, {
     {
         changeCommandLineVisibility(options.hasCommandLine);
         changeSidePanelVisibility(options.hasSidePanel);
+        Firebug.chrome.draw();
     }
     
 });
@@ -373,11 +374,6 @@ var ChromeFrameBase = extend(ChromeContext, {
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
-        
-        /*        
-        toggleCommandLine();
-        toggleRightPanel();
-        /**/
         
         // TODO: Check visibility preferences here
         this.node.style.visibility = "visible";
@@ -556,7 +552,7 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
 {
     cancelEvent(event, true);
     
-    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate)
+    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
     {
         var clientY = event.clientY;
         var win = document.all
@@ -617,21 +613,25 @@ var lastVSplitterMouseMove = 0;
 
 var onVSplitterMouseMove = function onVSplitterMouseMove(event)
 {
-    if (new Date().getTime() - lastVSplitterMouseMove > chromeRedrawSkipRate)
+    if (new Date().getTime() - lastVSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
     {
-        var clientX = event.clientX;
-        var win = document.all
-            ? event.srcElement.ownerDocument.parentWindow
-            : event.target.ownerDocument.defaultView;
-      
-        if (win != win.parent)
-            clientX += win.frameElement ? win.frameElement.offsetLeft : 0;
-        
-        var size = Firebug.chrome.getWindowSize();
-        var x = Math.max(size.width - clientX + 3, 6);
-        
-        sidePanelWidth = x;
-        Firebug.chrome.draw();
+        var target = event.target || event.srcElement;
+        if (target && target.ownerDocument) // avoid error when cursor reaches out of the chrome
+        {
+            var clientX = event.clientX;
+            var win = document.all
+                ? event.srcElement.ownerDocument.parentWindow
+                : event.target.ownerDocument.defaultView;
+          
+            if (win != win.parent)
+                clientX += win.frameElement ? win.frameElement.offsetLeft : 0;
+            
+            var size = Firebug.chrome.getWindowSize();
+            var x = Math.max(size.width - clientX + 3, 6);
+            
+            sidePanelWidth = x;
+            Firebug.chrome.draw();
+        }
         
         lastVSplitterMouseMove = new Date().getTime();
     }

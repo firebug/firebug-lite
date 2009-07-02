@@ -172,7 +172,7 @@ Firebug.Console = extend(ConsoleModule,
 {
 
     LOG_COMMAND: {},
-
+    /*
     initialize: function(){
         fbConsole = $("fbConsole");
         fbPanel1 =  $("fbPanel1");
@@ -183,7 +183,9 @@ Firebug.Console = extend(ConsoleModule,
         fbConsole = null;
         fbPanel1 =  null;
     },
+    /**/
     
+    // TODO: check if this function can be deleted
     returnDir: function(object)
     {
         var html = [];
