@@ -346,7 +346,8 @@ var CommandLineAPI =
     $$: function(selector)
     {
         return Firebug.Selector(selector, Firebug.browser.document)
-    },    
+    },
+    
     dir: Firebug.Console.dir,
 
     dirxml: Firebug.Console.dirxml

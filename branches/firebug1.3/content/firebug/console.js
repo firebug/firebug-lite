@@ -7,7 +7,7 @@ FBL.ns(function() { with (FBL) {
 
 var ConsoleAPI = 
 {
-    firebug: version,
+    firebug: Firebug.version,
 
     log: function()
     {
@@ -144,7 +144,7 @@ var ConsoleAPI =
     
     clear: function()
     {
-        fbConsole.innerHTML = "";
+        Firebug.Console.getPanel().panelNode.innerHTML = "";
         return Firebug.Console.LOG_COMMAND;
     },
 
@@ -158,6 +158,7 @@ var ConsoleAPI =
     {
         if (frameVisible)
             toggleConsole();
+        
         return Firebug.Console.LOG_COMMAND;
     }
 };
@@ -174,14 +175,16 @@ Firebug.Console = extend(ConsoleModule,
 
     logRow: function(message, className, handler)
     {
-        if (fbConsole)
-            Firebug.Console.writeMessage(message, className, handler);
+        var panel = this.getPanel();
+        
+        if (panel && panel.panelNode)
+            this.writeMessage(message, className, handler);
         else
         {
             Firebug.cache.messageQueue.push([message, className, handler]);
         }
         
-        return Firebug.Console.LOG_COMMAND;
+        return this.LOG_COMMAND;
     },
     
     flush: function()
@@ -190,47 +193,52 @@ Firebug.Console = extend(ConsoleModule,
         Firebug.cache.messageQueue = [];
         
         for (var i = 0; i < queue.length; ++i)
-            Firebug.Console.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
     },
     
     writeMessage: function(message, className, handler)
     {
+        var container = this.getPanel().panelContainer;
         var isScrolledToBottom =
-            fbPanel1.scrollTop + fbPanel1.offsetHeight >= fbPanel1.scrollHeight;
+            container.scrollTop + container.offsetHeight >= container.scrollHeight;
     
         if (!handler)
-            handler = Firebug.Console.writeRow;
+            handler = this.writeRow;
         
-        handler(message, className);
+        handler.call(this, message, className);
         
         if (isScrolledToBottom)
-            fbPanel1.scrollTop = fbPanel1.scrollHeight - fbPanel1.offsetHeight;
+            container.scrollTop = container.scrollHeight - container.offsetHeight;
     },
     
     appendRow: function(row)
     {
-        var container = groupStack.length ? groupStack[groupStack.length-1] : fbConsole;
+        if (groupStack.length > 0)
+            var container = groupStack[groupStack.length-1];
+        else
+            var container = this.getPanel().panelNode;
+        
         container.appendChild(row);
     },
     
     writeRow: function(message, className)
     {
-        var row = fbConsole.ownerDocument.createElement("div");
+        var row = this.getPanel().panelNode.ownerDocument.createElement("div");
         row.className = "logRow" + (className ? " logRow-"+className : "");
         row.innerHTML = message.join("");
-        Firebug.Console.appendRow(row);
+        this.appendRow(row);
     },
     
     pushGroup: function(message, className)
     {
-        Firebug.Console.logFormatted(message, className);
+        this.logFormatted(message, className);
     
-        var groupRow = fbConsole.ownerDocument.createElement("div");
+        var groupRow = this.getPanel().panelNode.ownerDocument.createElement("div");
         groupRow.className = "logGroup";
-        var groupRowBox = fbConsole.ownerDocument.createElement("div");
+        var groupRowBox = this.getPanel().panelNode.ownerDocument.createElement("div");
         groupRowBox.className = "logGroupBox";
         groupRow.appendChild(groupRowBox);
-        Firebug.Console.appendRow(groupRowBox);
+        this.appendRow(groupRowBox);
         groupStack.push(groupRowBox);
     },
     
@@ -254,7 +262,7 @@ Firebug.Console = extend(ConsoleModule,
             objIndex = -1;
         }
     
-        var parts = Firebug.Console.parseFormat(format);
+        var parts = this.parseFormat(format);
         for (var i = 0; i < parts.length; ++i)
         {
             var part = parts[i];
@@ -278,7 +286,7 @@ Firebug.Console = extend(ConsoleModule,
                 Firebug.Reps.appendObject(object, html);
         }
         
-        return Firebug.Console.logRow(html, className);    
+        return this.logRow(html, className);    
     },
     
     parseFormat: function(format)
@@ -309,7 +317,12 @@ Firebug.Console = extend(ConsoleModule,
         parts.push(format);
     
         return parts;
-    }    
+    },
+    
+    getPanel: function()
+    {
+        return Firebug.chrome.getPanel("Console");
+    }
 
 });
 
@@ -334,15 +347,6 @@ ConsolePanel.prototype = extend(Firebug.Panel,
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
-        
-        fbConsole = $("fbConsole");
-        fbPanel1 =  $("fbPanel1");
-    },
-    
-    shutdown: function()
-    {
-        fbConsole = null;
-        fbPanel1 =  null;
     }
     
 });
@@ -350,11 +354,6 @@ ConsolePanel.prototype = extend(Firebug.Panel,
 Firebug.registerPanel(ConsolePanel);
 
 // ********************************************************************************************
-
-var fbConsole = null;
-var fbPanel1 = null;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 Firebug.cache.messageQueue = [];
 var groupStack = [];

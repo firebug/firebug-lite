@@ -193,7 +193,7 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
-        Firebug.Controller.initialize.call(this);
+        Firebug.Controller.initialize.call(this, this.node);
         Firebug.PanelBar.initialize.call(this);
         
         disableTextSelection($("fbToolbar"));

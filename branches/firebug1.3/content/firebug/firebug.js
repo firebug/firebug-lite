@@ -4,10 +4,6 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Globals
 
-FBL.version = "FirebugLite - 1.3.0a - $Revision$";
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
 FBL.cacheID = "___FBL_";
 FBL.documentCache = {};
 
@@ -25,6 +21,9 @@ var panelTypeMap = {};
 
 FBL.Firebug =  
 {
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    version: "FirebugLite - 1.3.0a - $Revision$",
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
@@ -102,11 +101,11 @@ FBL.Firebug =
 Firebug.Controller = {
         
     _controllers: null,
-        
+    
     initialize: function(node)
     {
         this._controllers = [];
-        this.node = this.node || node;
+        this.controllerNode = this.controllerNode || node;
     },
     
     shutdown: function()
@@ -125,7 +124,7 @@ Firebug.Controller = {
             // within the controller node context
             if (typeof arg[0] == "string")
             {
-                arg[0] = $$(arg[0], this.node);
+                arg[0] = $$(arg[0], this.controllerNode);
             }
             
             // bind the handler to the proper context
@@ -291,8 +290,8 @@ Firebug.Panel =
     editable: true,
     order: 2147483647,
     statusSeparator: "<",
-
-    initialize: function(context, doc)
+    
+    create: function(context, doc)
     {
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
@@ -335,7 +334,7 @@ Firebug.Panel =
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // Create Panel Tab
             var tabContent = '<span class="fbTabL"></span><span class="fbTabText">' +
-                    this.name + '</span><span class="fbTabR"></span>';            
+                    this.title + '</span><span class="fbTabR"></span>';            
             
             var tabNode = this.tabNode = createElement("a", {
                 id: panelId + "Tab",
@@ -360,6 +359,8 @@ Firebug.Panel =
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create ToolButtons
         }
+        
+        this.panelContainer = this.panelNode.parentNode;
         
         /*
         this.context = context;
@@ -387,6 +388,40 @@ Firebug.Panel =
             delete this.panelNode.ownerPanel;
 
         this.destroyNode();
+    },
+    
+    initialize: function()
+    {
+        var options = this.options = extend(Firebug.Panel.options, this.options);
+        var panelId = "fb" + this.name;
+        
+        this.panelNode = $(panelId);
+        
+        this.tabNode = $(panelId + "Tab");
+        this.tabNode.style.display = "block";
+        
+        if (options.hasSidePanel)
+        {
+            //this.sidePanelNode = $(panelId + "StatusBar");
+        }
+        
+        if (options.hasStatusBar)
+        {
+            this.statusBarBox = $("fbStatusBarBox");
+            this.statusBarNode = $(panelId + "StatusBar");
+        }
+        
+        if (options.hasToolButtons)
+        {
+            this.toolButtonsNode = $(panelId + "Buttons");
+        }
+            
+        this.panelContainer = this.panelNode.parentNode;
+    },
+    
+    shutdown: function()
+    {
+        
     },
 
     detach: function(oldChrome, newChrome)
@@ -568,7 +603,7 @@ Firebug.PanelBar =
     {
         var PanelType = panelTypeMap[panelName];
         var panel = new PanelType();
-        panel.initialize();
+        panel.create();
         
         // tab click handler
         var self = this;
@@ -600,18 +635,22 @@ Firebug.PanelBar =
             {
                 removeClass(selectedPanel.tabNode, "fbSelectedTab");
                 selectedPanel.hide();
+                panel.shutdown();
             }
             
             this.selectedPanel = panel;
             
             addClass(panel.tabNode, "fbSelectedTab");
+            panel.initialize();
             panel.show();
         }
     },
     
     getPanel: function(panelName)
     {
+        var panel = this.panelMap[panelName];
         
+        return panel;
     },
     
     getSelectedPanel: function()

@@ -72,6 +72,7 @@ this.application = {
     // Application preferences
     isBookmarletMode: false, //TODO!!
     isPersistentMode: false, //TODO!!
+    isDebugMode: true,
     skin: "xp",
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application States
