@@ -7,7 +7,7 @@ FBL.ns(function() { with (FBL) {
 
 var ConsoleAPI = 
 {
-    firebug: FBL.version,
+    firebug: version,
 
     log: function()
     {
