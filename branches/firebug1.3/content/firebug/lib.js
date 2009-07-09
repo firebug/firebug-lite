@@ -76,11 +76,11 @@ this.application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application States
     isDevelopmentMode: false,
-    isChromeContext: false, // TODO: change to isChromeContext
+    isChromeContext: false,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application References
     global: null,
-    chrome: null  
+    chrome: null
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -606,9 +606,9 @@ this.Ajax =
      * Realiza uma requisição ajax.
      * 
      * @name request
-     * @param {Object}   options               Opções da requisição.  
-     * @param {String}   options.url           URL a ser requisitada.
-     * @param {String}   options.type          Tipo de requisição ("get" ou "post"). O padrão é "get".
+     * @param {Object}   options               Request options
+     * @param {String}   options.url           URL to be requested
+     * @param {String}   options.type          Request type ("get" ou "post"). Default is "get".
      * @param {Boolean}  options.async         Indica se a requisição é assíncrona. O padrão é "true".   
      * @param {String}   options.dataType      Dado requisitado ("text", "html", "xml" ou "json"). O padrão é "text".
      * @param {String}   options.contentType   ContentType a ser usado. O padrão é "application/x-www-form-urlencoded".  

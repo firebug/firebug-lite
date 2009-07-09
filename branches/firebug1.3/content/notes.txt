@@ -1,3 +1,19 @@
+FB vs FBLite
+
+FB
+    - Each Panel has its own window
+    - A single Firebug application run across all browser tabs
+    - The Firebug application is persistent, that is, it can live after page change, or reload 
+
+FBLite
+    - All Chrome Panels runs in the same window, the chrome window
+    - The FirebugLite application run in a single browser tab
+    - The Firebug application isn't persistent 
+
+
+
+
+
 ################################################################################
 User Interface
 ################################################################################
@@ -9,6 +25,10 @@ MiniChrome
     - 
 
 Skins
+    - port changes in XP skin to the "classic" and "light" ones
+    - divide .css files? so new skins can be easier to write, and changes in UI can be easily 
+      ported across skins 
+    
     - each skin has in his own folder a file called "firebug.json" (or similar)
     - improve the build skin methods in FBDev
     - loadJSON method

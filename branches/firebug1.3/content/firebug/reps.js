@@ -1,7 +1,7 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-append(FBL, {
+Firebug.Reps = {
 
     appendText: function(object, html)
     {
@@ -42,28 +42,28 @@ append(FBL, {
         try
         {
             if (object == undefined)
-                appendNull("undefined", html);
+                this.appendNull("undefined", html);
             else if (object == null)
-                appendNull("null", html);
+                this.appendNull("null", html);
             else if (typeof object == "string")
-                appendString(object, html);
+                this.appendString(object, html);
             else if (typeof object == "number")
-                appendInteger(object, html);
+                this.appendInteger(object, html);
             else if (typeof object == "boolean")
-                appendInteger(object, html);
+                this.appendInteger(object, html);
             else if (typeof object == "function")
-                appendFunction(object, html);
+                this.appendFunction(object, html);
             else if (object.nodeType == 1)
-                appendSelector(object, html);
+                this.appendSelector(object, html);
             else if (typeof object == "object")
             {
                 if (typeof object.length != "undefined")
-                    appendArray(object, html);
+                    this.appendArray(object, html);
                 else
-                    appendObjectFormatted(object, html);
+                    this.appendObjectFormatted(object, html);
             }
             else
-                appendText(object, html);
+                this.appendText(object, html);
         }
         catch (exc)
         {
@@ -122,7 +122,7 @@ append(FBL, {
                 html.push('&gt;</div><div class="nodeChildren">');
     
                 for (var child = node.firstChild; child; child = child.nextSibling)
-                    appendNode(child, html);
+                    this.appendNode(child, html);
                     
                 html.push('</div><div class="objectBox-element">&lt;/<span class="nodeTag">', 
                     node.nodeName.toLowerCase(), '&gt;</span></div>');
@@ -143,7 +143,7 @@ append(FBL, {
         
         for (var i = 0, l = object.length, obj; i < l; ++i)
         {
-            appendObject(object[i], html);
+            this.appendObject(object[i], html);
             
             if (i < l-1)
             html.push(', ');
@@ -152,7 +152,7 @@ append(FBL, {
         html.push(' <b>]</b></span>');
     }
 
-});
+};
 
 
 

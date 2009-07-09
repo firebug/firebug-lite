@@ -229,7 +229,7 @@ var ChromeBase = extend(ChromeBase, {
         }
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        flush();
+        Firebug.Console.flush();
         
         if (!isSafari)
             this.draw();

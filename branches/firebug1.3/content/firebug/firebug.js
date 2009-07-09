@@ -609,6 +609,11 @@ Firebug.PanelBar =
         }
     },
     
+    getPanel: function(panelName)
+    {
+        
+    },
+    
     getSelectedPanel: function()
     {
         return this.selectedPanel;
@@ -616,27 +621,45 @@ Firebug.PanelBar =
    
 };
 
+//************************************************************************************************
+// ToolButtons
 
 function ToolButtons(){};
 
-ToolButtons.prototype = 
-{
-    //asd
-};
+ToolButtons.prototype = extend(Firebug.Controller, {
+    
+    initialize: function(parentPanel)
+    {
+        this.parentPanel = parentPanel;
+    },
+    
+    destroy: function()
+    {
+    },
+    
+    addButton: function(caption, title, handler)
+    {
+    },
+    
+    removeAllButtons: function()
+    {
+        
+    }
+    
+});
+
 
 function StatusBar(){};
 
-StatusBar.prototype = 
-{
-    //asd
-};
+StatusBar.prototype = extend(Firebug.Controller, {
+    
+});
 
 function PanelOptions(){};
 
-PanelOptions.prototype = 
-{
-    //asd
-};
+PanelOptions.prototype = extend(Firebug.Controller, {
+    
+});
 
 
 // ************************************************************************************************

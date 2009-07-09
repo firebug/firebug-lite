@@ -78,7 +78,7 @@ Firebug.CommandLine.prototype =
         var command = cmd.value;
         
         this._stack(command);
-        writeMessage(['<span>&gt;&gt;&gt;</span> ',command], "command");
+        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ',command], "command");
         
         try
         {
@@ -89,14 +89,14 @@ Firebug.CommandLine.prototype =
             if (result != Console.LOG_COMMAND)
             {
                 var html = [];
-                appendObject(result, html)
-                writeMessage(html, "command");
+                Firebug.Reps.appendObject(result, html)
+                Firebug.Console.writeMessage(html, "command");
             }
                 
         }
         catch (e)
         {
-            writeMessage([e.message || e], "error");
+            Firebug.Console.writeMessage([e.message || e], "error");
         }
         
         cmd.value = "";
@@ -257,7 +257,7 @@ Firebug.CommandLine.prototype =
             '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
           );
         
-        writeRow(html, "error");
+        Firebug.Console.writeRow(html, "error");
     },
     
     clear: function()
