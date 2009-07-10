@@ -4,6 +4,9 @@
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title></title>
 <link href="firebug.css" rel="stylesheet" type="text/css" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="firebug.IE6.css" type="text/css" />
+<![endif]-->
 </head>
 <body>
 <table id="fbChrome" cellpadding="0" cellspacing="0" border="0">
@@ -12,14 +15,18 @@
       <!-- Interface - Top Area -->
       <td id="fbTop" colspan="2">
       
-        <!-- Main Buttons -->
-        <div id="mainButtons">
-          <a id="detach" href="javascript:FB.detach()">&nbsp;</a>
-          <a id="close" href="javascript:FB.close()">&nbsp;</a>
-        </div>
-        
         <!-- Horizontal Splitter -->
         <div id="fbHSplitter">&nbsp;</div>
+      
+        <!-- Main Buttons -->
+        <div id="mainButtons">
+          <a id="close" class="fbHover" title="Minimize Firebug">&nbsp;</a>
+          <a id="detach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a>
+          <!-- 
+          <span id="fbToolbarErrors" class="fbErrors">2 errors</span>
+           -->
+          <input type="text" id="fbToolbarSearch" />
+        </div>
         
         <!-- Toolbar buttons and Status Bar -->
         <div id="fbToolbar">
@@ -29,20 +36,26 @@
             <a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a>
           </span>
           
+          <!-- 
+          <span id="fbLeftToolbarErrors" class="fbErrors">2 errors</span>
+           -->
+           
           <!-- Toolbar Buttons -->
           <span id="fbToolbarButtons">
-            <span><a id="fbBtnInspect" href="javascript:FB.startInspecting(this)">Inspect</a></span>
+            <!-- Fixed Toolbar Buttons -->
+            <span id="fbFixedButtons">
+                <a id="fbBtnInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a>
+            </span>
             
             <!-- Console Panel Toolbar Buttons -->
-            <span id="fbConsoleButtons">
-              <span><a href="javascript:FB.clear()">Clear</a></span>
+            <span id="fbConsoleButtons" class="fbToolbarButtons">
+              <a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a>
             </span>
             
             <!-- HTML Panel Toolbar Buttons -->
-            <span id="fbHTMLButtons">
-              <span><a href="#">Edit</a></span>
+            <span id="fbHTMLButtons" class="fbToolbarButtons">
+              <a id="fbHTML_btEdit" class="fbHover" title="Edit this HTML">Edit</a>
             </span>
-            
           </span>
           
           <!-- Status Bar -->
@@ -51,7 +64,16 @@
           
             <!-- HTML Panel Status Bar -->
             <span id="fbHTMLStatusBar" class="fbStatusBar">
-              <span><a href="#"><b>body</b></a></span><span>&lt;</span><span><a href="#">html</a></span>
+<span><a class="fbHover"><b>body</b></a></span>
+<span>&lt;</span><span><a class="fbHover">html</a></span>
+<span>&lt;</span><span><a class="fbHover">iframe</a></span>
+<span>&lt;</span><span><a class="fbHover">div</a></span>
+<span>&lt;</span><span><a class="fbHover">div.class</a></span>
+<span>&lt;</span><span><a class="fbHover">iframe</a></span>
+<span>&lt;</span><span><a class="fbHover">body</a></span>
+<span>&lt;</span><span><a class="fbHover">html</a></span>
+<span>&lt;</span><span><a class="fbHover">div</a></span>
+<span>&lt;</span><span><a class="fbHover">div</a></span>
             </span>
             
           </span>
@@ -63,19 +85,53 @@
         
           <!-- Main PanelBar -->
           <div id="fbPanelBar1" class="fbPanelBar">
-            <a id="tc" class="tab selectedTab" href="javascript:FB.showTab(0)"><span class="tabL"></span><span class="tabText">Console</span><span class="tabR"></span></a>
-            <a id="th" class="tab" href="javascript:FB.showTab(1)"><span class="tabL"></span><span class="tabText">HTML</span><span class="tabR"></span></a>
-            <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">CSS</span><span class="tabR"></span></a>
-            <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Script</span><span class="tabR"></span></a>
-            <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a>
+            <a id="fbConsoleTab" class="fbTab fbHover">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">Console</span>
+                <span class="fbTabR"></span>
+            </a>
+            <a id="fbHTMLTab" class="fbTab fbHover">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">HTML</span>
+                <span class="fbTabR"></span>
+            </a>
+            <a class="fbTab fbHover">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">CSS</span>
+                <span class="fbTabR"></span>
+            </a>
+            <a class="fbTab fbHover">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">Script</span>
+                <span class="fbTabR"></span>
+            </a>
+            <a class="fbTab fbHover">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">DOM</span>
+                <span class="fbTabR"></span>
+            </a>
           </div>
           
           <!-- Side PanelBars -->
           <div id="fbPanelBar2Box" class="hide">
             <div id="fbPanelBar2" class="fbPanelBar">
-              <a class="tab selectedTab" href="javascript:void(0);"><span class="tabL"></span><span class="tabText">Style</span><span class="tabR"></span></a>
-              <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Layout</span><span class="tabR"></span></a>
-              <a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a>
+            
+              <a class="fbTab fbHover">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">Style</span>
+                <span class="fbTabR"></span>
+              </a>
+              <a class="fbTab fbHover">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">Layout</span>
+                <span class="fbTabR"></span>
+              </a>
+              <a class="fbTab fbHover">
+                <span class="fbTabL"></span>
+                <span class="fbTabText">DOM</span>
+                <span class="fbTabR"></span>
+              </a>
+              
             </div>
           </div>
           
@@ -90,8 +146,8 @@
       <!-- Panels  -->
       <td id="fbPanelBox1">
         <div id="fbPanel1" class="fbFitHeight">
-          <div id="fbConsole"></div>
-          <div id="fbHTML"></div>
+          <div id="fbConsole" class="fbPanel"></div>
+          <div id="fbHTML" class="fbPanel"></div>
         </div>
       </td>
       
@@ -105,9 +161,9 @@
         <div id="fbPanel2" class="fbFitHeight">
         
           <!-- HTML Side Panels -->
-          <div id="fbHTML_Style"></div>
-          <div id="fbHTML_Layout"></div>
-          <div id="fbHTML_DOM"></div>
+          <div id="fbHTML_Style" class="fbPanel"></div>
+          <div id="fbHTML_Layout" class="fbPanel"></div>
+          <div id="fbHTML_DOM" class="fbPanel"></div>
           
         </div>
       </td>
@@ -129,5 +185,18 @@
     
   </tbody>
 </table>
+<div id="fbMiniChrome">
+  <div id="fbMiniContent">
+    <div id="fbMiniErrors" class="fbErrors">2 errors</div>
+    <div id="fbMiniIcon"></div>
+  </div>
+</div>
+<!-- 
+<div id="fbErrorPopup">
+  <div id="fbErrorPopupContent">
+    <div id="fbErrorIndicator" class="fbErrors">2 errors</div>
+  </div>
+</div>
+ -->
 </body>
 </html>

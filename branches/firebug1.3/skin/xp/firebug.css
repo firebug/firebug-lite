@@ -63,6 +63,7 @@ body {
     font-size: 11px;
     background: #fff;    
 }
+
 .clear {
     clear: both;
 }
@@ -159,7 +160,7 @@ body {
     background: url(sprite.png) #f1f2ee 0 0;
     height: 27px;
     font-size: 11px;
-    overflow: hidden;    
+    overflow: hidden;
 }
 
 #fbPanelBarBox {

@@ -1,28 +1,144 @@
+.fbToolbarButtons {
+    display: none;
+}
+
+#fbStatusBarBox {
+    display: none;
+}
+
+/************************************************************************************************
+ Error Popup
+*************************************************************************************************/
+#fbErrorPopup {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    height: 19px;
+    width: 75px;
+    background: url(sprite.png) #f1f2ee 0 0;
+    z-index: 999;
+}
+
+#fbErrorPopupContent {
+    position: absolute;
+    right: 0;
+    top: 1px;
+    height: 18px;
+    width: 75px;
+    _width: 74px;
+    border-left: 1px solid #aca899;
+}
+
+#fbErrorIndicator {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+}
+
+
+
+
+
+
+
+
+
 
 .fbBtnInspectActive {
     background: #aaa;
     color: #fff !important;
 }
 
-/*-----------------------------------------------------------------------------
+/************************************************************************************************
  General
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: #fff;
+}
+
+body {
     font-family: Lucida Grande, Tahoma, sans-serif;
     font-size: 11px;
+    background: #fff;    
 }
 
 .clear {
     clear: both;
 }
 
-/*-----------------------------------------------------------------------------
+/************************************************************************************************
+ Mini Chrome
+*************************************************************************************************/
+#fbMiniChrome {
+    display: none;
+    position: absolute;
+    right: 0;
+    height: 27px;
+    width: 99px;
+    background: url(sprite.png) #f1f2ee 0 0;
+}
+
+#fbMiniContent {
+    position: absolute;
+    right: 0;
+    top: 1px;
+    height: 25px;
+    width: 99px;
+    _width: 98px;
+    border-left: 1px solid #aca899;
+}
+
+#fbToolbarSearch {
+    float: right;
+    border: 1px solid #ccc;
+    margin: 0 5px 0 0;
+    background: #fff url(search.png) no-repeat 4px 2px;
+    padding-left: 20px;    
+    font-size: 11px;
+}
+
+#fbToolbarErrors {
+    float: right;
+    margin: 1px 4px 0 0;
+    font-size: 11px;
+}
+
+#fbLeftToolbarErrors {
+    float: left;
+    margin: 7px 0px 0 5px;
+    font-size: 11px;
+}
+
+.fbErrors {
+    padding-left: 20px;
+    height: 14px;
+    background: url(errorIcon.png) no-repeat;
+    color: #f00;
+    font-weight: bold;    
+}
+
+#fbMiniErrors {
+    position: absolute;
+    top: 6px;
+    right: 30px;
+}
+
+#fbMiniIcon {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    height: 20px;
+    width: 20px;
+    float: right;    
+    background: url(sprite.png) 0 -135px;
+}
+
+
+/************************************************************************************************
  Master Layout
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 #fbChrome {
     position: fixed;
     overflow: hidden;
@@ -44,6 +160,7 @@ html, body {
     background: url(sprite.png) #d4d0c8 0 0;
     height: 28px;
     font-size: 11px;
+    overflow: hidden;
 }
 
 #fbPanelBarBox {
@@ -65,12 +182,12 @@ html, body {
     background: #fff;
 }
 
-/*-----------------------------------------------------------------------------
+/************************************************************************************************
  Sub-Layout 
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 
 /* fbToolbar 
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 #fbToolbarIcon {
     float: left;
     padding: 6px 5px 0;
@@ -88,11 +205,6 @@ html, body {
 #fbToolbarButtons {
     float: left;
     padding: 6px 2px 0 5px;
-}
-
-#fbToolbarButtons span {
-    margin: 0;
-    padding: 0;
 }
 
 #fbToolbarButtons a {
@@ -113,8 +225,10 @@ html, body {
 }
 
 #fbStatusBarBox {
-    float: left;
-    padding: 10px 0 0;
+    position: relative;
+    top: 5px;
+    line-height: 19px;
+    cursor: default;    
 }
 
 .fbToolbarSeparator{
@@ -123,37 +237,40 @@ html, body {
     border-color: transparent #fff transparent #777;
     _border-color: #d4d0c8 #fff #d4d0c8 #777;
     height: 7px;
-    margin: 2px 6px 0 0;
+    margin: 10px 6px 0 0;
     float: left;
 }
 
 .fbStatusBar span {
     color: #808080;
-    cursor: default;
     padding: 0 4px 0 0;
 }
 
 .fbStatusBar span a {
     text-decoration: none;
     color: black;
-    cursor: default;
 }
 
 .fbStatusBar span a:hover {
     color: blue;
-    cursor: pointer;
+    cursor: pointer;    
 }
 
 
 #mainButtons {
     position: absolute;
-    right: 4px;
-    top: 8px;
-    z-index: 11;
+    white-space: nowrap;
+    right: 0;
+    top: 0;
+    height: 17px;
+    _width: 270px;
+    padding: 7px 0 4px 5px;
+    z-index: 6;
+    background: url(sprite.png) #eee 0 0;
 }
 
 /* fbPanelBarBox
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 
 #fbPanelBar1 {
     width: 255px; /* fixed width to avoid tabs breaking line */
@@ -177,14 +294,17 @@ html, body {
 #fbPanelBar2 {
     position: absolute;
     width: 290px; /* fixed width to avoid tabs breaking line */
-    height: 22px;
+    height: 23px;
     padding-left: 10px;
 }
 
 /* body 
------------------------------------------------------------------------------*/
+*************************************************************************************************/
+.fbPanel {
+    display: none;
+}
 
-#fbPanelBox1,#fbPanelBox2 {
+#fbPanelBox1, #fbPanelBox2 {
     max-height: inherit;
     height: 100%;
     font-size: 11px;
@@ -199,6 +319,7 @@ html, body {
     background: #fff;
 }
 
+/* TODO: REVISE IN IE6 */
 * html #fbPanel1 {
     position: absolute;
 }
@@ -216,7 +337,7 @@ html, body {
 }
 
 /* fbBottom 
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 
 #fbCommand {
     height: 18px;
@@ -279,18 +400,19 @@ div.fbFitHeight {
 }
 
 
-/*-----------------------------------------------------------------------------
+/************************************************************************************************
  Layout Controls
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 
 /* fbToolbar buttons 
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 #mainButtons a {
     font-size: 1px;
     width: 16px;
     height: 16px;
     display: block;
-    float: left;
+    float: right;
+    margin-right: 4px;
     text-decoration: none;
     cursor: default;
 }
@@ -312,10 +434,10 @@ div.fbFitHeight {
 }
 
 /* fbPanelBarBox tabs 
------------------------------------------------------------------------------*/
-.tab {
+*************************************************************************************************/
+.fbTab {
     text-decoration: none;
-    display: block;
+    display: none;
     float: left;
     width: auto;
     float: left;
@@ -332,42 +454,42 @@ div.fbFitHeight {
     float: left;
 }
 
-.fbPanelBar .tabL,.fbPanelBar .tabR {
+.fbPanelBar .fbTabL,.fbPanelBar .fbTabR {
     height: 22px;
     width: 8px;
 }
 
-.fbPanelBar .tabText {
+.fbPanelBar .fbTabText {
     padding: 4px 1px 0;
 }
 
-.tab:hover {
+.fbTab:hover {
     background: url(sprite.png) 0 -73px;
 }
 
-.tab:hover .tabL {
+.fbTab:hover .fbTabL {
     background: url(sprite.png) -16px -96px;
 }
 
-.tab:hover .tabR {
+.fbTab:hover .fbTabR {
     background: url(sprite.png) -24px -96px;
 }
 
-.selectedTab {
+.fbSelectedTab {
     background: url(sprite.png) #d4d0c8 0 -50px !important;
     color: #000;
 }
 
-.selectedTab .tabL {
+.fbSelectedTab .fbTabL {
     background: url(sprite.png) 0 -96px !important;
 }
 
-.selectedTab .tabR {
+.fbSelectedTab .fbTabR {
     background: url(sprite.png) -8px -96px !important;
 }
 
 /* splitters 
------------------------------------------------------------------------------*/
+*************************************************************************************************/
 #fbHSplitter {
     position: absolute;
     left: 0;
@@ -378,6 +500,11 @@ div.fbFitHeight {
     cursor: n-resize !important;
     background: url(pixel_transparent.gif);
     z-index: 9;
+}
+
+#fbHSplitter.fbOnMovingHSplitter {
+    height: 100%;
+    z-index: 100;
 }
 
 .fbVSplitter {
@@ -467,7 +594,7 @@ div.objectBox-element {
 }
 
 /************************************************************************************************/
-  /************************************************************************************************/
+/************************************************************************************************/
 .logRow * {
     font-size: 11px;
 }
