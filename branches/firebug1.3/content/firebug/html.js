@@ -1,6 +1,44 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+// ************************************************************************************************
+// Console Panel
+
+function ConsolePanel(){};
+
+ConsolePanel.prototype = extend(Firebug.Panel,
+{
+    name: "HTML",
+    title: "HTML",
+    
+    options: {
+        hasSidePanel: true,
+        hasToolButtons: true,
+        hasStatusBar: true,
+        isPreRendered: true
+    },
+
+    create: function(){
+        Firebug.Panel.create.apply(this, arguments);
+        
+        var rootNode = Firebug.browser.document.documentElement;
+        var html = [];
+        Firebug.HTML.appendTreeNode(rootNode, html);
+        
+        this.panelNode.style.padding = "4px 3px 0 15px";
+        this.panelNode.innerHTML = html.join("");
+        
+        addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+    }
+    
+});
+
+Firebug.registerPanel(ConsolePanel);
+
 
 /*============================================================================
   html
@@ -19,7 +57,6 @@ Firebug.HTML =
         
             if (node.nodeType == 1)
             {
-              
                 var uid = node[cacheID];
                 var child = node.childNodes;
                 var childLength = child.length;
@@ -30,9 +67,8 @@ Firebug.HTML =
                 var nodeControl = !hasSingleTextChild && childLength > 0 ? 
                     ('<div class="nodeControl"></div>') : '';
 
-                
                 if(isIE && nodeControl)
-                  html.push(nodeControl);
+                    html.push(nodeControl);
               
                 if (typeof uid != 'undefined')
                     html.push(
@@ -135,7 +171,7 @@ Firebug.HTML =
     
     appendTreeChildren: function(treeNode)
     {
-        var doc = Firebug.Chrome.document;
+        var doc = Firebug.chrome.document;
         
         var uid = treeNode.attributes[cacheID].value;
         var parentNode = documentCache[uid];
@@ -278,7 +314,7 @@ Firebug.HTML.onTreeClick = function (e)
     }
     else if (targ.className == 'nodeValue' || targ.className == 'nodeName')
     {
-        var input = FBL.Firebug.Chrome.document.getElementById('treeInput');
+        var input = FBL.Firebug.chrome.document.getElementById('treeInput');
         
         input.style.display = "block";
         input.style.left = targ.offsetLeft + 'px';

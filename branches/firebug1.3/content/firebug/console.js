@@ -360,6 +360,10 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         hasToolButtons: true,
         isPreRendered: true
     },
+
+    create: function(){
+        Firebug.Panel.create.apply(this, arguments);
+    },
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);

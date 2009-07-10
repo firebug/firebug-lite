@@ -7,30 +7,30 @@ if (!application.isDebugMode) return;
 // ************************************************************************************************
 // FBTrace Module
 
-Firebug.FBTrace = extend(Firebug.Module,
+Firebug.Trace = extend(Firebug.Module,
 {
     getPanel: function()
     {
-        return Firebug.chrome ? Firebug.chrome.getPanel("FBTrace") : null;
+        return Firebug.chrome ? Firebug.chrome.getPanel("Trace") : null;
     }
 });
 
-Firebug.registerModule(Firebug.FBTrace);
+Firebug.registerModule(Firebug.Trace);
 
 
 // ************************************************************************************************
 // FBTrace Panel
 
-function FBTracePanel(){};
+function TracePanel(){};
 
-FBTracePanel.prototype = extend(Firebug.Panel,
+TracePanel.prototype = extend(Firebug.Panel,
 {
-    name: "FBTrace",
-    title: "FBTrace",
+    name: "Trace",
+    title: "Trace",
     
     options: {
-        hasCommandLine: true,
-        hasSidePanel: true
+        //hasSidePanel: true,
+        hasCommandLine: true
     },
     
     initialize: function(){
@@ -39,7 +39,7 @@ FBTracePanel.prototype = extend(Firebug.Panel,
     
 });
 
-Firebug.registerPanel(FBTracePanel);
+Firebug.registerPanel(TracePanel);
 
 // ************************************************************************************************
 }});

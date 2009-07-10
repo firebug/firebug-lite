@@ -38,10 +38,10 @@ FBL.Firebug =
         Firebug.browser = new Context(application.global);
         Firebug.context = Firebug.browser;
         
+        Firebug.cacheDocument();
+        
         Firebug.chrome = new FirebugChrome(application.chrome);
         Firebug.chrome.initialize();
-        
-        Firebug.cacheDocument();
         
         dispatch(modules, "initialize", []);
     },
@@ -60,11 +60,7 @@ FBL.Firebug =
     {
         modules.push.apply(modules, arguments);
 
-        //for (var i = 0; i < arguments.length; ++i)
-        //    TabWatcher.addListener(arguments[i]);
-        
-        //                                                                                          /*@explore*/
-        //if (FBTrace.DBG_INITIALIZE) FBTrace.dumpProperties("registerModule", arguments);          /*@explore*/
+        //if (FBTrace.DBG_INITIALIZE) FBTrace.dumpProperties("registerModule", arguments);
     },
 
     registerPanel: function()
@@ -74,10 +70,9 @@ FBL.Firebug =
         for (var i = 0; i < arguments.length; ++i)
             panelTypeMap[arguments[i].prototype.name] = arguments[i];
         
-        //                                                                                          /*@explore*/
-        //if (FBTrace.DBG_INITIALIZE)                                                               /*@explore*/
-        //    for (var i = 0; i < arguments.length; ++i)                                            /*@explore*/
-        //        FBTrace.sysout("registerPanel "+arguments[i].prototype.name+"\n");                /*@explore*/
+        if (FBTrace.DBG_INITIALIZE)
+            for (var i = 0; i < arguments.length; ++i)
+                FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -362,6 +357,9 @@ Firebug.Panel =
         
         this.panelContainer = this.panelNode.parentNode;
         
+        if (FBTrace.DBG_INITIALIZE)
+            FBTrace.sysout("Firebug.Panel.initialize", this.name);
+        
         /*
         this.context = context;
         this.document = doc;
@@ -382,7 +380,7 @@ Firebug.Panel =
     destroy: function(state) // Panel may store info on state
     {
         if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("firebug.destroy panelNode for "+this.name+"\n");
+            FBTrace.sysout("Firebug.Panel.destroy", this.name);
 
         if (this.panelNode)
             delete this.panelNode.ownerPanel;
@@ -447,8 +445,6 @@ Firebug.Panel =
     {
         var options = this.options;
         
-        this.panelNode.style.display = "block";
-        
         if (options.hasSidePanel)
         {
             //this.sidePanelNode = $(panelId + "StatusBar");
@@ -465,14 +461,14 @@ Firebug.Panel =
             this.toolButtonsNode.style.display = "inline";
         }
         
+        this.panelNode.style.display = "block";
+        
         Firebug.chrome.layout(options);
     },
 
     hide: function(state)
     {
         var options = this.options;
-        
-        this.panelNode.style.display = "none";
         
         if (options.hasSidePanel)
         {
@@ -489,6 +485,8 @@ Firebug.Panel =
         {
             this.toolButtonsNode.style.display = "none";
         }
+        
+        this.panelNode.style.display = "none";
     },
 
     watchWindow: function(win)
