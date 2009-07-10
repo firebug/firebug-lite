@@ -1,80 +1,176 @@
-FBL.ns(function() { with (FBL) {
+var FBTrace = {};
+
+(function() {
 // ************************************************************************************************
+
+var traceOptions = {
+    DBG_TIMESTAMP: 1,
+    DBG_INITIALIZE: 1,
+    DBG_ERRORS: 1,
+    DBG_DISPATCH: 1
+};
+
+this.messageQueue = [];
+this.module = null;
+
+this.initialize = function()
+{
+    for (var name in traceOptions)
+        this[name] = traceOptions[name]; 
+};
 
 // ************************************************************************************************
 // FBTrace API
 
-FBL.FBTrace = {
-
-    DBG_INITIALIZE: 1,
-    DBG_ERRORS: 1,
-    DBG_DISPATCH: 1,
-    
-    sysout: function()
-    {
-        var now = new Date();
-        var ms = ""+(now.getMilliseconds()/1000).toFixed(3);
-        ms = ms.substr(2);
-        
-        var time = [now.toLocaleTimeString() + "." + ms + " : "];
-        
-        var args = Array.prototype.concat.apply(time, arguments);
-        return Firebug.FBTrace.logFormatted(args, "");
-    },
-    
-    dumpProperties: function(title, object)
-    {
-        return Firebug.FBTrace.logFormatted("dumpProperties() not supported.", "warning");
-    },
-    
-    dumpStack: function()
-    {
-        return Firebug.FBTrace.logFormatted("dumpStack() not supported.", "warning");
-    }
-
-}
-
-// If application isn't in debug mode, the FBTrace panel won't be loaded
-if (!application.isDebugMode) return;
-
-// ************************************************************************************************
-// FBTrace Module
-
-Firebug.FBTrace = extend(Firebug.Console,
+this.sysout = function()
 {
-    getPanel: function()
-    {
-        return Firebug.chrome ? Firebug.chrome.getPanel("FBTrace") : null;
-    }
-});
+    return this.logFormatted(arguments, "");
+};
 
-Firebug.FBTrace.create();
-
-Firebug.registerModule(Firebug.FBTrace);
-
-
-// ************************************************************************************************
-// FBTrace Panel
-
-function FBTracePanel(){};
-
-FBTracePanel.prototype = extend(Firebug.Panel,
+this.dumpProperties = function(title, object)
 {
-    name: "FBTrace",
-    title: "FBTrace",
+    return this.logFormatted("dumpProperties() not supported.", "warning");
+};
+
+this.dumpStack = function()
+{
+    return this.logFormatted("dumpStack() not supported.", "warning");
+};
+
+this.flush = function(module)
+{
+    this.module = module;
     
-    options: {
-        hasCommandLine: true,
-        hasSidePanel: true
-    },
+    var queue = this.messageQueue;
+    this.messageQueue = [];
     
-    initialize: function(){
-        Firebug.Panel.initialize.apply(this, arguments);
+    for (var i = 0; i < queue.length; ++i)
+        this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+};
+
+this.getPanel = function()
+{
+    return this.module ? this.module.getPanel() : null;
+};
+
+//*************************************************************************************************
+
+this.logFormatted = function(objects, className)
+{
+    var html = this.DBG_TIMESTAMP ? [getTimestamp(), " | "] : [];
+
+    var length = objects.length;
+    var isMultiple = length > 1;
+    
+    for (var i = 0; i < length; ++i)
+    {
+        appendText(" ", html);
+        
+        var object = objects[i];
+        
+        if (isMultiple && i == 0)
+        {
+            html.push("<b>");
+            appendText(object, html);
+            html.push("</b>");
+        }
+        else
+            appendText(object, html);
     }
     
-});
+    return this.logRow(html, className);    
+};
 
-Firebug.registerPanel(FBTracePanel);
+this.logRow = function(message, className)
+{
+    var panel = this.getPanel();
+    
+    if (panel && panel.panelNode)
+        this.writeMessage(message, className);
+    else
+    {
+        this.messageQueue.push([message, className]);
+    }
+    
+    return this.LOG_COMMAND;
+};
+
+this.writeMessage = function(message, className)
+{
+    var container = this.getPanel().panelContainer;
+    var isScrolledToBottom =
+        container.scrollTop + container.offsetHeight >= container.scrollHeight;
+    
+    this.writeRow.call(this, message, className);
+    
+    if (isScrolledToBottom)
+        container.scrollTop = container.scrollHeight - container.offsetHeight;
+};
+
+this.appendRow = function(row)
+{
+    var container = this.getPanel().panelNode;
+    container.appendChild(row);
+};
+
+this.writeRow = function(message, className)
+{
+    var row = this.getPanel().panelNode.ownerDocument.createElement("div");
+    row.className = "logRow" + (className ? " logRow-"+className : "");
+    row.innerHTML = message.join("");
+    this.appendRow(row);
+};
+
+//*************************************************************************************************
+
+function appendText(object, html)
+{
+    html.push(escapeHTML(objectToString(object)));
+};
+
+function getTimestamp()
+{
+    var now = new Date();
+    var ms = "" + (now.getMilliseconds() / 1000).toFixed(3);
+    ms = ms.substr(2);
+    
+    return now.toLocaleTimeString() + "." + ms;
+};
+
+//*************************************************************************************************
+
+var HTMLtoEntity =
+{
+    "<": "&lt;",
+    ">": "&gt;",
+    "&": "&amp;",
+    "'": "&#39;",
+    '"': "&quot;"
+};
+
+function replaceChars(ch)
+{
+    return HTMLtoEntity[ch];
+};
+
+function escapeHTML(value)
+{
+    return (value+"").replace(/[<>&"']/g, replaceChars);
+};
+
+//*************************************************************************************************
+
+function objectToString(object)
+{
+    try
+    {
+        return object+"";
+    }
+    catch (exc)
+    {
+        return null;
+    }
+};
 
 // ************************************************************************************************
-}});
+}).apply(FBTrace);

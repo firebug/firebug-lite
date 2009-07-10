@@ -10,6 +10,7 @@ window.FBDev =
     [ 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Core
+        "firebug/trace.js",
         "firebug/lib.js",
         "firebug/firebug.js",
         //"firebug/domplate.js", // not used yet
@@ -18,7 +19,6 @@ window.FBDev =
         "firebug/chrome.js",
         "firebug/chrome.injected.js",
         "firebug/console.js",
-        "firebug/trace.js",
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Classes
         "firebug/selector.js",
@@ -28,6 +28,7 @@ window.FBDev =
         // Application Panels
         "firebug/html.js",
         
+        "firebug/tracePanel.js",
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Bootstrap
         "firebug/boot.js"

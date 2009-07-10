@@ -78,7 +78,7 @@ Firebug.CommandLine.prototype =
         var command = cmd.value;
         
         this._stack(command);
-        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ',command], "command");
+        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
         
         try
         {

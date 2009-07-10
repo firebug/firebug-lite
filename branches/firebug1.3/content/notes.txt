@@ -8,6 +8,9 @@ Library Expose
 ##################################################################################################
 FBTrace
 ##################################################################################################
+    - FBTrace should have no dependency, therefore, it should NOT be a Firebug module.
+      But there should be also a FBTrace panel/module to show its messages
+    
  OK - FBTrace not loaded when parsing lib.js?
  OK - Console variables should be placed in Firebug.Console namespace, so FBTrace can use it
      OK - messageQueue
@@ -58,7 +61,7 @@ MiniChrome
     - 
 
 Skins
-    - port changes in XP skin to the "classic" and "light" ones
+ OK - port changes in XP skin to the "classic" and "light" ones
     - divide .css files? so new skins can be easier to write, and changes in UI can be easily 
       ported across skins 
     
@@ -153,7 +156,7 @@ Chrome
 Controllers
 -------------------------------------------------------------------------------
     - (?) add option to skip frames
-    - add controllers Class
+ OK - add controllers Class
 
 -------------------------------------------------------------------------------
 Core
@@ -206,7 +209,7 @@ CommandLine
 ##################################################################################################
 BUGS
 ##################################################################################################
- OK - tabLStyle reference in Chrome
+OK  - tabLStyle reference in Chrome
 
     - context.evaluate
     - context is not being properly handled in persistent mode, when using

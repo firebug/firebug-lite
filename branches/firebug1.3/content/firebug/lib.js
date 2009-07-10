@@ -6,7 +6,6 @@ var FBL = {};
 // ************************************************************************************************
 // Namespaces
 
-var FBTrace = null;
 var namespaces = [];
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -20,6 +19,10 @@ this.ns = function(fn)
 
 this.initialize = function()
 {
+    if (FBL.application.isDebugMode) FBTrace.initialize();
+    
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length+" namespaces BEGIN");
+    
     initializeApplication();
     
     for (var i = 0; i < namespaces.length; i += 2)
@@ -29,9 +32,9 @@ this.initialize = function()
         fn.apply(ns);
     }
     
-    FBTrace = FBL.FBTrace;
+    //FBTrace = FBL.FBTrace;
     
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize - "+namespaces.length+" namespaces loaded");
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length+" namespaces END");
     
     waitForInit();
 };
@@ -40,7 +43,7 @@ var waitForInit = function waitForInit()
 {
     if (document.body)
     {
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL waitForInit - main HTML document loaded");
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL waitForInit", "main HTML document loaded");
         
         if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
         {
@@ -108,7 +111,7 @@ var initializeApplication = function initializeApplication()
 
 var createApplication = function createApplication()
 {
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication - BEGIN creating the application chrome");
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication", "create application chrome BEGIN");
     
     findLocation();
     
@@ -116,7 +119,7 @@ var createApplication = function createApplication()
     
     FBL.createChrome(FBL.application.global, options, onChromeLoad);
     
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication - END creating the application chrome");
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication", "create application chrome END");
 };
 
 var destroyApplication = function destroyApplication()
@@ -133,6 +136,8 @@ var destroyApplication = function destroyApplication()
 var onChromeLoad = function onChromeLoad(chrome)
 {
     FBL.application.chrome = chrome;
+    
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onChromeLoad", "chrome loaded");
     
     if (FBL.application.isPersistentMode)
     {
@@ -471,7 +476,7 @@ this.cancelEvent = function(e, preventDefault)
 
 this.dispatch = function(listeners, name, args)
 {
-    if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch "+name+" to "+listeners.length+" listeners");
+    if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
     
     try {
         for (var i = 0; i < listeners.length; ++i)
@@ -495,7 +500,6 @@ this.dispatch = function(listeners, name, args)
 
 this.disableTextSelection = function(e)
 {
-    
     if (typeof e.onselectstart != "undefined") // IE
         e.onselectstart = function(){ return false };
         

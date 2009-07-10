@@ -232,7 +232,7 @@ var ChromeBase = extend(ChromeBase, {
         Firebug.Console.flush();
         
         if (Firebug.FBTrace)
-            Firebug.FBTrace.flush();
+            FBTrace.flush(Firebug.FBTrace);
         
         if (!isSafari)
             this.draw();
