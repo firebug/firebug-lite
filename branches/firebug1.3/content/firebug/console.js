@@ -7,7 +7,7 @@ FBL.ns(function() { with (FBL) {
 
 var ConsoleAPI = 
 {
-    firebug: Firebug.version,
+    firebuglite: Firebug.version,
 
     log: function()
     {
@@ -97,27 +97,27 @@ var ConsoleAPI =
     
     group: function()
     {
-        return Firebug.Console.logRow(arguments, "group", pushGroup);
+        return Firebug.Console.logRow(arguments, "group", Firebug.Console.pushGroup);
     },
     
     groupEnd: function()
     {
-        return Firebug.Console.logRow(arguments, "", popGroup);
+        return Firebug.Console.logRow(arguments, "", Firebug.Console.popGroup);
     },
     
     time: function(name)
     {
-        timeMap[name] = (new Date()).getTime();
+        this.timeMap[name] = (new Date()).getTime();
         return Firebug.Console.LOG_COMMAND;
     },
     
     timeEnd: function(name)
     {
-        if (name in timeMap)
+        if (name in this.timeMap)
         {
-            var delta = (new Date()).getTime() - timeMap[name];
+            var delta = (new Date()).getTime() - this.timeMap[name];
             Firebug.Console.logFormatted([name+ ":", delta+"ms"]);
-            delete timeMap[name];
+            delete this.timeMap[name];
         }
         return Firebug.Console.LOG_COMMAND;
     },
@@ -172,6 +172,20 @@ var ConsoleModule = extend(Firebug.Module, ConsoleAPI);
 Firebug.Console = extend(ConsoleModule,
 {
     LOG_COMMAND: {},
+    
+    create: function()
+    {
+        this.messageQueue = [];
+        this.groupStack = [];
+        this.timeMap = {};
+        
+        // ****************************************************************************************
+        // Register console API
+        var alternateNS = "FB";
+        var consoleNS = "console";
+        var namespace = isFirefox ? alternateNS : consoleNS;
+        application.global[namespace] = ConsoleAPI;        
+    },
 
     logRow: function(message, className, handler)
     {
@@ -181,7 +195,7 @@ Firebug.Console = extend(ConsoleModule,
             this.writeMessage(message, className, handler);
         else
         {
-            Firebug.cache.messageQueue.push([message, className, handler]);
+            this.messageQueue.push([message, className, handler]);
         }
         
         return this.LOG_COMMAND;
@@ -189,8 +203,8 @@ Firebug.Console = extend(ConsoleModule,
     
     flush: function()
     {
-        var queue = Firebug.cache.messageQueue;
-        Firebug.cache.messageQueue = [];
+        var queue = this.messageQueue;
+        this.messageQueue = [];
         
         for (var i = 0; i < queue.length; ++i)
             this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
@@ -213,8 +227,8 @@ Firebug.Console = extend(ConsoleModule,
     
     appendRow: function(row)
     {
-        if (groupStack.length > 0)
-            var container = groupStack[groupStack.length-1];
+        if (this.groupStack.length > 0)
+            var container = this.groupStack[this.groupStack.length-1];
         else
             var container = this.getPanel().panelNode;
         
@@ -239,12 +253,12 @@ Firebug.Console = extend(ConsoleModule,
         groupRowBox.className = "logGroupBox";
         groupRow.appendChild(groupRowBox);
         this.appendRow(groupRowBox);
-        groupStack.push(groupRowBox);
+        this.groupStack.push(groupRowBox);
     },
     
     popGroup: function()
     {
-        groupStack.pop();
+        this.groupStack.pop();
     },
     
     // ********************************************************************************************
@@ -321,10 +335,12 @@ Firebug.Console = extend(ConsoleModule,
     
     getPanel: function()
     {
-        return Firebug.chrome.getPanel("Console");
+        return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
     }
 
 });
+
+Firebug.Console.create();
 
 Firebug.registerModule(Firebug.Console);
 
@@ -355,14 +371,6 @@ Firebug.registerPanel(ConsolePanel);
 
 // ********************************************************************************************
 
-Firebug.cache.messageQueue = [];
-var groupStack = [];
-var timeMap = {};
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-// ********************************************************************************************
-
 FBL.objectToString = function(object)
 {
     try
@@ -376,6 +384,7 @@ FBL.objectToString = function(object)
 };
 
 // ********************************************************************************************
+
 FBL.onError = function(msg, href, lineNo)
 {
     var html = [];
@@ -390,16 +399,6 @@ FBL.onError = function(msg, href, lineNo)
     
     Firebug.Console.logRow(html, "error");
 };
-
-
-// ********************************************************************************************
-// Register console API
-
-var alternateNS = "FB";
-var consoleNS = "console";
-var namespace = isFirefox ? alternateNS : consoleNS;
-application.global[namespace] = ConsoleAPI;
-
 
 // ************************************************************************************************
 }});

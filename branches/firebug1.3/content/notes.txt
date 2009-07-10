@@ -1,11 +1,32 @@
 ##################################################################################################
+Library Expose
+##################################################################################################
+    - if a FBLite extension can be dynamically loaded, the FBL namespace should be exposed 
+    - if the FBL is exposed inside the iframe, it is less visible, and less conflictable 
+
+
+##################################################################################################
+FBTrace
+##################################################################################################
+ OK - FBTrace not loaded when parsing lib.js?
+ OK - Console variables should be placed in Firebug.Console namespace, so FBTrace can use it
+     OK - messageQueue
+     OK - groupStack
+     OK - timeMap
+
+ OK - console getPanel() should be implemented like FBTrace.getPanel(), because if console
+      it is called before the chrome load, it will cause an error.
+    
+ OK - put console global namespace creation inside Console.create() method
+
+##################################################################################################
 
 ##################################################################################################
  OK - Refactoring Console to use getPanel() method
  OK - Panel create() versus initialize() 
     
-    - Panel controllers?
-        - controller context? 
+ ~~ - Panel controllers?
+        - controller context should be the module Firebug.ModuleName 
         
     - Panel event delegation?
 
@@ -185,7 +206,7 @@ CommandLine
 ##################################################################################################
 BUGS
 ##################################################################################################
-    - tabLStyle reference in Chrome
+ OK - tabLStyle reference in Chrome
 
     - context.evaluate
     - context is not being properly handled in persistent mode, when using
@@ -194,7 +215,7 @@ BUGS
     - define FBL.console to point to the global console
     - console should be installed in each Chrome window
     
-    - commandLine API should be place in console.firebug.commandLineAPI
+    - commandLine API should be place in console.firebuglite.commandLineAPI
     - commandLine API not well defined, when in persistent mode
 
 OK  - commandLine API. Firebug.browser isn't avaiable when the library is initialized

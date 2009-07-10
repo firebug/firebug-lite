@@ -108,12 +108,12 @@ Firebug.CommandLine.prototype =
         var api = "FBL.Firebug.CommandLine.API"
             
         //Firebug.context = Firebug.chrome;
-        api = null;
+        //api = null;
 
         return Firebug.context.evaluate(expr, "window", api, Console.error);
     },
     
-    eval: new Function("return window.eval.apply(window, arguments)"),
+    //eval: new Function("return window.eval.apply(window, arguments)"),
     
     prevCommand: function()
     {

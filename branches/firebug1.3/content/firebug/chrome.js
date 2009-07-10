@@ -231,6 +231,9 @@ var ChromeBase = extend(ChromeBase, {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         Firebug.Console.flush();
         
+        if (Firebug.FBTrace)
+            Firebug.FBTrace.flush();
+        
         if (!isSafari)
             this.draw();
         

@@ -6,6 +6,7 @@ var FBL = {};
 // ************************************************************************************************
 // Namespaces
 
+var FBTrace = null;
 var namespaces = [];
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -19,8 +20,6 @@ this.ns = function(fn)
 
 this.initialize = function()
 {
-    //if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize BEGIN "+namespaces.length+" namespaces\n");
-    
     initializeApplication();
     
     for (var i = 0; i < namespaces.length; i += 2)
@@ -30,15 +29,19 @@ this.initialize = function()
         fn.apply(ns);
     }
     
+    FBTrace = FBL.FBTrace;
+    
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize - "+namespaces.length+" namespaces loaded");
+    
     waitForInit();
-
-    //if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize END "+namespaces.length+" namespaces\n");
 };
 
 var waitForInit = function waitForInit()
 {
     if (document.body)
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL waitForInit - main HTML document loaded");
+        
         if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
         {
             if (FBL.isIE6)
@@ -70,8 +73,8 @@ var waitForInit = function waitForInit()
 this.application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
-    isBookmarletMode: false, //TODO!!
-    isPersistentMode: false, //TODO!!
+    isBookmarletMode: false,
+    isPersistentMode: false,
     isDebugMode: true,
     skin: "xp",
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
@@ -105,11 +108,15 @@ var initializeApplication = function initializeApplication()
 
 var createApplication = function createApplication()
 {
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication - BEGIN creating the application chrome");
+    
     findLocation();
     
     var options = FBL.extend({}, WindowDefaultOptions);
     
     FBL.createChrome(FBL.application.global, options, onChromeLoad);
+    
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication - END creating the application chrome");
 };
 
 var destroyApplication = function destroyApplication()
@@ -319,7 +326,7 @@ var reTrim = /^\s+|\s+$/g;
 this.trim = function(s)
 {
     return s.replace(reTrim, "");
-}
+};
 
 // ************************************************************************************************
 // Empty
@@ -377,7 +384,7 @@ this.createElement = function(tagName, options)
     }
     
     return element;
-}
+};
 
 // ************************************************************************************************
 // Event
@@ -385,7 +392,7 @@ this.createElement = function(tagName, options)
 this.bind = function(object, fn)
 {
     return function(){return fn.apply(object, arguments);};
-}
+};
 
 this.addEvent = function(object, name, handler)
 {
@@ -464,8 +471,8 @@ this.cancelEvent = function(e, preventDefault)
 
 this.dispatch = function(listeners, name, args)
 {
-    //if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch "+name+" to "+listeners.length+" listeners\n"); /*@explore*/
-    //                                                                                                       /*@explore*/
+    if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch "+name+" to "+listeners.length+" listeners");
+    
     try {
         for (var i = 0; i < listeners.length; ++i)
         {
@@ -504,20 +511,20 @@ this.disableTextSelection = function(e)
 this.hasClass = function(object, name)
 {
     return (' '+object.className+' ').indexOf(' '+name+' ') != -1;
-}
+};
 
 this.addClass = function(object, name)
 {
     if ((' '+object.className+' ').indexOf(' '+name+' ') == -1)
         object.className = object.className ? object.className + ' ' + name : name; 
-}
+};
 
 this.removeClass = function(object, name)
 {
     object.className = (' ' + object.className + ' ').
         replace(new RegExp('(\\S*)\\s+'+name+'\\s+(\\S*)', 'g'), '$1 $2').
         replace(/^\s*|\s*$/g, '');
-}
+};
 
 this.toggleClass = function(object, name)
 {
@@ -525,7 +532,7 @@ this.toggleClass = function(object, name)
         this.removeClass(object, name)
     else
         this.addClass(object, name);
-}
+};
 
 
 // ************************************************************************************************

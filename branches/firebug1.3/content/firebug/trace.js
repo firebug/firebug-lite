@@ -7,12 +7,19 @@ FBL.ns(function() { with (FBL) {
 FBL.FBTrace = {
 
     DBG_INITIALIZE: 1,
-    DBG_ERRORS: 0,
-    DBG_DISPATCH: 0,
+    DBG_ERRORS: 1,
+    DBG_DISPATCH: 1,
     
     sysout: function()
     {
-        return Firebug.FBTrace.logFormatted(arguments, "");
+        var now = new Date();
+        var ms = ""+(now.getMilliseconds()/1000).toFixed(3);
+        ms = ms.substr(2);
+        
+        var time = [now.toLocaleTimeString() + "." + ms + " : "];
+        
+        var args = Array.prototype.concat.apply(time, arguments);
+        return Firebug.FBTrace.logFormatted(args, "");
     },
     
     dumpProperties: function(title, object)
@@ -37,9 +44,11 @@ Firebug.FBTrace = extend(Firebug.Console,
 {
     getPanel: function()
     {
-        return Firebug.chrome.getPanel("FBTrace");
+        return Firebug.chrome ? Firebug.chrome.getPanel("FBTrace") : null;
     }
 });
+
+Firebug.FBTrace.create();
 
 Firebug.registerModule(Firebug.FBTrace);
 

@@ -18,6 +18,7 @@ window.FBDev =
         "firebug/chrome.js",
         "firebug/chrome.injected.js",
         "firebug/console.js",
+        "firebug/trace.js",
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Classes
         "firebug/selector.js",
@@ -26,8 +27,6 @@ window.FBDev =
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Panels
         "firebug/html.js",
-        
-        "firebug/trace.js",
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Bootstrap
