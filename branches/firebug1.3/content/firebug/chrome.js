@@ -147,6 +147,8 @@ var ChromeBase = extend(ChromeBase, {
     
     initialize: function()
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome");
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
         
@@ -342,8 +344,9 @@ var ChromeBase = extend(ChromeBase, {
         }
     },
     
-    layout: function(options)
+    layout: function(panel)
     {
+        var options = panel.options;
         changeCommandLineVisibility(options.hasCommandLine);
         changeSidePanelVisibility(options.hasSidePanel);
         Firebug.chrome.draw();

@@ -58,9 +58,7 @@ this.getPanel = function()
 this.logFormatted = function(objects, className)
 {
     var html = this.DBG_TIMESTAMP ? [getTimestamp(), " | "] : [];
-
     var length = objects.length;
-    var isMultiple = length > 1;
     
     for (var i = 0; i < length; ++i)
     {
@@ -68,7 +66,7 @@ this.logFormatted = function(objects, className)
         
         var object = objects[i];
         
-        if (isMultiple && i == 0)
+        if (i == 0)
         {
             html.push("<b>");
             appendText(object, html);

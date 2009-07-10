@@ -1,3 +1,10 @@
+/*!
+ * Firebug Lite - v1.3a
+ *  Copyright 2009, Firebug Working Group
+ *  Released under BSD license.
+ *  More information: http://getfirebug.com/lite.html
+ */
+
 var FBL = {};
 
 (function() {

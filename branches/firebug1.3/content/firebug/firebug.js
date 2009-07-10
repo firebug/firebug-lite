@@ -35,6 +35,8 @@ FBL.Firebug =
     
     initialize: function()
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.initialize", "initializing application");
+        
         Firebug.browser = new Context(application.global);
         Firebug.context = Firebug.browser;
         
@@ -60,7 +62,7 @@ FBL.Firebug =
     {
         modules.push.apply(modules, arguments);
 
-        //if (FBTrace.DBG_INITIALIZE) FBTrace.dumpProperties("registerModule", arguments);
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.registerModule");
     },
 
     registerPanel: function()
@@ -463,7 +465,7 @@ Firebug.Panel =
         
         this.panelNode.style.display = "block";
         
-        Firebug.chrome.layout(options);
+        Firebug.chrome.layout(this);
     },
 
     hide: function(state)

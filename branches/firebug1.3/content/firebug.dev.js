@@ -10,8 +10,8 @@ window.FBDev =
     [ 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Core
-        "firebug/trace.js",
         "firebug/lib.js",
+        "firebug/trace.js",
         "firebug/firebug.js",
         //"firebug/domplate.js", // not used yet
         "firebug/reps.js",

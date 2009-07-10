@@ -30,7 +30,7 @@ TracePanel.prototype = extend(Firebug.Panel,
     
     options: {
         //hasSidePanel: true,
-        hasCommandLine: true
+        //hasCommandLine: true
     },
     
     initialize: function(){

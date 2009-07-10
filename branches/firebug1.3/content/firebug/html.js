@@ -1,51 +1,12 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+
 // ************************************************************************************************
-// Console Panel
+// HTML Module
 
-function ConsolePanel(){};
-
-ConsolePanel.prototype = extend(Firebug.Panel,
+Firebug.HTML = extend(Firebug.Module, 
 {
-    name: "HTML",
-    title: "HTML",
-    
-    options: {
-        hasSidePanel: true,
-        hasToolButtons: true,
-        hasStatusBar: true,
-        isPreRendered: true
-    },
-
-    create: function(){
-        Firebug.Panel.create.apply(this, arguments);
-        
-        var rootNode = Firebug.browser.document.documentElement;
-        var html = [];
-        Firebug.HTML.appendTreeNode(rootNode, html);
-        
-        this.panelNode.style.padding = "4px 3px 0 15px";
-        this.panelNode.innerHTML = html.join("");
-        
-        addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
-    },
-    
-    initialize: function(){
-        Firebug.Panel.initialize.apply(this, arguments);
-    }
-    
-});
-
-Firebug.registerPanel(ConsolePanel);
-
-
-/*============================================================================
-  html
-*===========================================================================*/
-Firebug.HTML =
-{
-
     appendTreeNode: function(nodeArray, html)
     {
         var reTrim = /^\s+|\s+$/g;
@@ -250,7 +211,50 @@ Firebug.HTML =
         fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
     }
     
-}
+});
+
+Firebug.registerModule(Firebug.HTML);
+
+// ************************************************************************************************
+// HTML Panel
+
+function HTMLPanel(){};
+
+HTMLPanel.prototype = extend(Firebug.Panel,
+{
+    name: "HTML",
+    title: "HTML",
+    
+    options: {
+        hasSidePanel: true,
+        hasToolButtons: true,
+        hasStatusBar: true,
+        isPreRendered: true
+    },
+
+    create: function(){
+        Firebug.Panel.create.apply(this, arguments);
+        
+        var rootNode = Firebug.browser.document.documentElement;
+        var html = [];
+        Firebug.HTML.appendTreeNode(rootNode, html);
+        
+        this.panelNode.style.padding = "4px 3px 1px 15px";
+        var d = Firebug.chrome.document.createElement("div");
+        d.innerHTML = html.join("");
+        this.panelNode.appendChild(d);
+        
+        addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+    }
+    
+});
+
+Firebug.registerPanel(HTMLPanel);
+
 
 var selectedElement = null
 function selectElement(e)
