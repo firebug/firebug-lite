@@ -319,11 +319,6 @@ body {
     background: #fff;
 }
 
-/* TODO: REVISE IN IE6 */
-* html #fbPanel1 {
-    position: absolute;
-}
-
 #fbPanel2 {
     padding-left: 6px;
     background: #fff;
@@ -353,9 +348,6 @@ body {
     background: #fff;
     border: 0;
     border-top: 1px solid #ccc;
-    /*
-    _height: 18px;
-    /**/
 }
 
 #fbCommandIcon {
@@ -380,22 +372,7 @@ body {
     z-index: 9;
 }
 
-#fbBottom[fixFirefox] {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 10;
-}
-
-#fbBottom[fixFirefox] #fbCommand {
-    display: block;
-}
-
 div.fbFitHeight {
-    padding: 0 1px;
-    max-height: inherit;
-    height: 100%;
     overflow: auto;
 }
 
