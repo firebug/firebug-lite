@@ -6,6 +6,9 @@ Missing
     - Check create() and initialize() methods of Modules and Panels.
     
     - toolButtons
+        - default button
+        - toggle button (inspect, edit html)
+    
     - mouseover Inspect
     - inspect
   
