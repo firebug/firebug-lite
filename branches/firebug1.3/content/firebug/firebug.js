@@ -99,10 +99,11 @@ Firebug.Controller = {
         
     _controllers: null,
     
-    initialize: function(node)
+    initialize: function(context)
     {
         this._controllers = [];
-        this.controllerNode = this.controllerNode || node;
+        
+        this.controllerContext = context || Firebug.chrome;
     },
     
     shutdown: function()
@@ -110,9 +111,6 @@ Firebug.Controller = {
         this.removeControllers();
     },
     
-    /**
-     * 
-     */
     addController: function()
     {
         for (var i=0, arg; arg=arguments[i]; i++)
@@ -121,7 +119,7 @@ Firebug.Controller = {
             // within the controller node context
             if (typeof arg[0] == "string")
             {
-                arg[0] = $$(arg[0], this.controllerNode);
+                arg[0] = $$(arg[0], this.controllerContext);
             }
             
             // bind the handler to the proper context
@@ -330,13 +328,13 @@ Firebug.Panel =
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // Create Panel Tab
-            var tabContent = '<span class="fbTabL"></span><span class="fbTabText">' +
+            var tabHTML = '<span class="fbTabL"></span><span class="fbTabText">' +
                     this.title + '</span><span class="fbTabR"></span>';            
             
             var tabNode = this.tabNode = createElement("a", {
                 id: panelId + "Tab",
                 className: "fbTab",
-                content: tabContent
+                innerHTML: tabHTML
             });
             
             if (isIE6)
@@ -661,21 +659,151 @@ Firebug.PanelBar =
 };
 
 //************************************************************************************************
-// ToolButtons
+// ToolButton
 
-function ToolButtons(){};
+/*
 
-ToolButtons.prototype = extend(Firebug.Controller, {
+bt = new ToolButton({
+    parentNode: node,
+    context: Panel,
+    click: handler
+}):
+
+bt = new ToolButton({
+    type: "toggle",
+    parentNode: node,
+    context: Panel,
+    on: handler,
+    off: handler
+}):
+ 
+ */
+
+
+Firebug.ToolButton = function(options)
+{
+    this.module = options.module;
+    this.panel = options.panel;
+    this.container = this.panel.toolButtonsNode;
     
-    initialize: function(parentPanel)
-    {
-        this.parentPanel = parentPanel;
-    },
+    this.caption = options.caption || "caption";
+    this.title = options.title || "title";
+    
+    this.type = options.type || "normal";
+    this.state = "unpressed";
+    this.display = "unpressed";
+    
+    this.node = createElement("a", {
+        className: "fbHover",
+        title: this.title,
+        innerHTML: this.caption
+    });
+    
+    this.container.appendChild(this.node);
+};
+
+Firebug.ToolButton.prototype = extend(Firebug.Controller,
+{
+    title: null,
+    caption: null,
+    
+    module: null,
+    panel: null,
+    container: null,
+    node: null,
+    
+    type: null,
+    state: null,
+    display: null,
     
     destroy: function()
     {
+        this.shutdown();
+        
+        this.container.removeChild(this.node);
     },
     
+    initialize: function()
+    {
+        Firebug.Controller.initialize.apply(this);
+        var node = this.node;
+        
+        this.addController(
+            [node, "mousedown", this.handlePress],
+            [node, "mouseout", this.handleUnpress],
+            [node, "click", this.handleClick]
+        );
+    },
+    
+    shutdown: function()
+    {
+        this.removeControllers();
+    },
+    
+    restore: function()
+    {
+        this.changeState("unpressed");        
+    },
+    
+    changeState: function(state)
+    {
+        this.state = state;
+        this.changeDisplay(state);
+    },
+    
+    changeDisplay: function(display)
+    {
+        if (display != this.display)
+        {
+            if (display == "pressed")
+            {
+                addClass(this.node, "fbBtnPressed");
+            }
+            else if (display == "unpressed")
+            {
+                removeClass(this.node, "fbBtnPressed");
+            }
+            this.display = display;
+        }
+    },
+    
+    handlePress: function()
+    {
+        this.changeDisplay("pressed");
+        this.beforeClick = true;
+    },
+    
+    handleUnpress: function()
+    {
+        if (this.beforeClick)
+            this.changeDisplay("unpressed");
+    },
+    
+    handleClick: function()
+    {
+        if (this.type == "normal")
+        {
+            if (this.click)
+                this.click.apply(this.module);
+            
+            this.changeState("unpressed");
+        }
+        else if (this.type == "toggle")
+        {
+            if (this.state == "pressed")
+            {
+                this.changeState("unpressed");
+            }
+            else
+            {
+                this.changeState("pressed");
+            }
+        }
+        
+        this.beforeClick = false;
+    },
+    
+    // should be place inside module
     addButton: function(caption, title, handler)
     {
     },
