@@ -179,88 +179,18 @@ Firebug.Console = extend(ConsoleModule,
         this.groupStack = [];
         this.timeMap = {};
         
-        // ****************************************************************************************
         // Register console API
         var alternateNS = "FB";
         var consoleNS = "console";
         var namespace = isFirefox ? alternateNS : consoleNS;
         application.global[namespace] = ConsoleAPI;        
     },
+    
+    getPanel: function()
+    {
+        return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
+    },    
 
-    logRow: function(message, className, handler)
-    {
-        var panel = this.getPanel();
-        
-        if (panel && panel.panelNode)
-            this.writeMessage(message, className, handler);
-        else
-        {
-            this.messageQueue.push([message, className, handler]);
-        }
-        
-        return this.LOG_COMMAND;
-    },
-    
-    flush: function()
-    {
-        var queue = this.messageQueue;
-        this.messageQueue = [];
-        
-        for (var i = 0; i < queue.length; ++i)
-            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
-    },
-    
-    writeMessage: function(message, className, handler)
-    {
-        var container = this.getPanel().panelContainer;
-        var isScrolledToBottom =
-            container.scrollTop + container.offsetHeight >= container.scrollHeight;
-    
-        if (!handler)
-            handler = this.writeRow;
-        
-        handler.call(this, message, className);
-        
-        if (isScrolledToBottom)
-            container.scrollTop = container.scrollHeight - container.offsetHeight;
-    },
-    
-    appendRow: function(row)
-    {
-        if (this.groupStack.length > 0)
-            var container = this.groupStack[this.groupStack.length-1];
-        else
-            var container = this.getPanel().panelNode;
-        
-        container.appendChild(row);
-    },
-    
-    writeRow: function(message, className)
-    {
-        var row = this.getPanel().panelNode.ownerDocument.createElement("div");
-        row.className = "logRow" + (className ? " logRow-"+className : "");
-        row.innerHTML = message.join("");
-        this.appendRow(row);
-    },
-    
-    pushGroup: function(message, className)
-    {
-        this.logFormatted(message, className);
-    
-        var groupRow = this.getPanel().panelNode.ownerDocument.createElement("div");
-        groupRow.className = "logGroup";
-        var groupRowBox = this.getPanel().panelNode.ownerDocument.createElement("div");
-        groupRowBox.className = "logGroupBox";
-        groupRow.appendChild(groupRowBox);
-        this.appendRow(groupRowBox);
-        this.groupStack.push(groupRowBox);
-    },
-    
-    popGroup: function()
-    {
-        this.groupStack.pop();
-    },
-    
     // ********************************************************************************************
     
     logFormatted: function(objects, className)
@@ -333,9 +263,80 @@ Firebug.Console = extend(ConsoleModule,
         return parts;
     },
     
-    getPanel: function()
+    // ********************************************************************************************
+    
+    logRow: function(message, className, handler)
     {
-        return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
+        var panel = this.getPanel();
+        
+        if (panel && panel.panelNode)
+            this.writeMessage(message, className, handler);
+        else
+        {
+            this.messageQueue.push([message, className, handler]);
+        }
+        
+        return this.LOG_COMMAND;
+    },
+    
+    flush: function()
+    {
+        var queue = this.messageQueue;
+        this.messageQueue = [];
+        
+        for (var i = 0; i < queue.length; ++i)
+            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+    },
+    
+    writeMessage: function(message, className, handler)
+    {
+        var container = this.getPanel().panelContainer;
+        var isScrolledToBottom =
+            container.scrollTop + container.offsetHeight >= container.scrollHeight;
+    
+        if (!handler)
+            handler = this.writeRow;
+        
+        handler.call(this, message, className);
+        
+        if (isScrolledToBottom)
+            container.scrollTop = container.scrollHeight - container.offsetHeight;
+    },
+    
+    appendRow: function(row)
+    {
+        if (this.groupStack.length > 0)
+            var container = this.groupStack[this.groupStack.length-1];
+        else
+            var container = this.getPanel().panelNode;
+        
+        container.appendChild(row);
+    },
+    
+    writeRow: function(message, className)
+    {
+        var row = this.getPanel().panelNode.ownerDocument.createElement("div");
+        row.className = "logRow" + (className ? " logRow-"+className : "");
+        row.innerHTML = message.join("");
+        this.appendRow(row);
+    },
+    
+    pushGroup: function(message, className)
+    {
+        this.logFormatted(message, className);
+    
+        var groupRow = this.getPanel().panelNode.ownerDocument.createElement("div");
+        groupRow.className = "logGroup";
+        var groupRowBox = this.getPanel().panelNode.ownerDocument.createElement("div");
+        groupRowBox.className = "logGroupBox";
+        groupRow.appendChild(groupRowBox);
+        this.appendRow(groupRowBox);
+        this.groupStack.push(groupRowBox);
+    },
+    
+    popGroup: function()
+    {
+        this.groupStack.pop();
     }
 
 });
@@ -373,7 +374,7 @@ ConsolePanel.prototype = extend(Firebug.Panel,
 
 Firebug.registerPanel(ConsolePanel);
 
-// ********************************************************************************************
+// ************************************************************************************************
 
 FBL.objectToString = function(object)
 {
@@ -387,7 +388,7 @@ FBL.objectToString = function(object)
     }
 };
 
-// ********************************************************************************************
+// ************************************************************************************************
 
 FBL.onError = function(msg, href, lineNo)
 {
