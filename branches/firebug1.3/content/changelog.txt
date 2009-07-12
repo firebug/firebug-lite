@@ -1,4 +1,45 @@
 -------------------------------------------------------------------------------
+Core Changes
+-------------------------------------------------------------------------------
+    - Context Class
+    - library initialization reimplemented to support future persistent applications
+    - FBTrace - internal logging system
+    - better settings handling: 
+        - modes: BookmarletMode, PersistentMode, DebugMode
+        - skin: xp, classic, light
+
+    
+-------------------------------------------------------------------------------
+Core Additions
+-------------------------------------------------------------------------------
+    - DOM methods:
+        - createElement()
+        
+    - Event methods:
+        - bind()
+        - cancelEvent()
+        - addGlobalEvent()
+        - removeGlobalEvent()
+        - dispatch()
+        - disableTextSelection()
+    
+    - className methods:
+        - addClass()
+        - removeClass()
+        - hasClass()
+        - toggleClass() 
+    
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - Controller Class
+    - Module Class
+    - Panel Class
+    - PanelBar Class
+    - ToolButton Class
+
+
+-------------------------------------------------------------------------------
 Inspector
 -------------------------------------------------------------------------------
 DONE: Inspect function implemented.

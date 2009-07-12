@@ -1,8 +1,8 @@
 (function(){
 
 var bookmarletMode = true;
-var bookmarletURL = "http://fbug.googlecode.com/svn/trunk/lite/1.3/build/";
-var bookmarletSkinURL = "http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/";
+var bookmarletURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/";
+var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
 
 window.FBDev =
 {
@@ -207,7 +207,7 @@ function findLocation()
     {
         sourceURL = path;
         baseURL = path.substr(0, path.length - m[1].length - 1);
-        skinURL = baseURL + "skin/classic/";
+        skinURL = baseURL + "skin/xp/";
         fullURL = path + fileName;
         
         /*        
