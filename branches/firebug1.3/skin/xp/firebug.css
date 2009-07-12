@@ -382,6 +382,7 @@ body {
 
 div.fbFitHeight {
     overflow: auto;
+    _position: absolute;
 }
 
 
@@ -548,6 +549,7 @@ pre.nodeCode {
     background: url(tree_open.gif);
     _margin-left: -11px;    
     _display: inline;
+    _position: absolute;
 }
 
 div.nodeMaximized {
@@ -563,6 +565,7 @@ div.objectBox-element {
 
 .selectedElement{
     background: highlight;
+    /* background: url(roundCorner.svg); Opera */
     color: #fff !important;
 }
 .selectedElement span{
