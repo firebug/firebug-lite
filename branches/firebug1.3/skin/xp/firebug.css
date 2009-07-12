@@ -547,6 +547,7 @@ pre.nodeCode {
     overflow: hidden;
     cursor: default;
     background: url(tree_open.gif);
+    _float: none;
     _margin-left: -11px;    
     _display: inline;
     _position: absolute;
