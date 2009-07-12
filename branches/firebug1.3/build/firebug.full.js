@@ -1,3 +1,10 @@
+/*!
+ * Firebug Lite - v1.3a
+ *  Copyright 2009, Firebug Working Group
+ *  Released under BSD license.
+ *  More information: http://getfirebug.com/lite.html
+ */
+
 var FBL = {};
 
 (function() {
@@ -19,9 +26,29 @@ this.ns = function(fn)
 
 this.initialize = function()
 {
-    //if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize BEGIN "+namespaces.length+" namespaces\n");
+    if (FBL.application.isDebugMode) FBTrace.initialize();
     
-    initializeApplication();
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length+" namespaces BEGIN");
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // initialize application
+
+    // isPersistentMode, isChromeContext
+    if (FBL.application.isPersistentMode && typeof window.FirebugApplication == "object")
+    {
+        FBL.application = window.FirebugApplication;
+        FBL.application.isChromeContext = true;
+    }
+    // Global application
+    else
+    {
+        // TODO: get preferences here...
+        FBL.application.global = window;
+        FBL.application.destroy = destroyApplication;
+    }    
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // initialize namespaces
     
     for (var i = 0; i < namespaces.length; i += 2)
     {
@@ -30,15 +57,17 @@ this.initialize = function()
         fn.apply(ns);
     }
     
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length+" namespaces END");
+    
     waitForInit();
-
-    //if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize END "+namespaces.length+" namespaces\n");
 };
 
 var waitForInit = function waitForInit()
 {
     if (document.body)
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL waitForInit", "main HTML document loaded");
+        
         if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
         {
             if (FBL.isIE6)
@@ -70,8 +99,9 @@ var waitForInit = function waitForInit()
 this.application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
-    isBookmarletMode: false, //TODO!!
-    isPersistentMode: false, //TODO!!
+    isBookmarletMode: true,
+    isPersistentMode: false,
+    isDebugMode: true,
     skin: "xp",
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application States
@@ -85,25 +115,10 @@ this.application = {
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var initializeApplication = function initializeApplication()
-{
-    // isPersistentMode, isChromeContext
-    if (FBL.application.isPersistentMode && typeof window.FirebugApplication == "object")
-    {
-        FBL.application = window.FirebugApplication;
-        FBL.application.isChromeContext = true;
-    }
-    // Global application
-    else
-    {
-        // TODO: get preferences here...
-        FBL.application.global = window;
-        FBL.application.destroy = destroyApplication;
-    }
-};
-
 var createApplication = function createApplication()
 {
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication", "create application chrome");
+    
     findLocation();
     
     var options = FBL.extend({}, WindowDefaultOptions);
@@ -125,6 +140,8 @@ var destroyApplication = function destroyApplication()
 var onChromeLoad = function onChromeLoad(chrome)
 {
     FBL.application.chrome = chrome;
+    
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onChromeLoad", "chrome loaded");
     
     if (FBL.application.isPersistentMode)
     {
@@ -318,7 +335,7 @@ var reTrim = /^\s+|\s+$/g;
 this.trim = function(s)
 {
     return s.replace(reTrim, "");
-}
+};
 
 // ************************************************************************************************
 // Empty
@@ -353,30 +370,23 @@ this.$$ = function(selector, doc)
     }
 };
 
-this.createElement = function(tagName, options)
+this.createElement = function(tagName, properties)
 {
-    options = options || {};
-    var doc = options.document || FBL.Firebug.chrome.document;
+    properties = properties || {};
+    var doc = properties.document || FBL.Firebug.chrome.document;
     
     var element = doc.createElement(tagName);
     
-    if (options.id)
+    for(var name in properties)
     {
-        element.id = options.id;
-    }
-    
-    if (options.className)
-    {
-        element.className = options.className;
-    }
-    
-    if (options.content)
-    {
-        element.innerHTML = options.content;
+        if (name != "document")
+        {
+            element[name] = properties[name];
+        }
     }
     
     return element;
-}
+};
 
 // ************************************************************************************************
 // Event
@@ -384,7 +394,7 @@ this.createElement = function(tagName, options)
 this.bind = function(object, fn)
 {
     return function(){return fn.apply(object, arguments);};
-}
+};
 
 this.addEvent = function(object, name, handler)
 {
@@ -401,6 +411,27 @@ this.removeEvent = function(object, name, handler)
     else
         object.removeEventListener(name, handler, false);
 };
+
+this.cancelEvent = function(e, preventDefault)
+{
+    if (!e) return;
+    
+    if (preventDefault)
+    {
+                if (e.preventDefault)
+                    e.preventDefault();
+                else
+                    e.returnValue = false;
+    }
+    
+    if (document.all)
+        e.cancelBubble = true;
+    else
+        e.stopPropagation();
+                
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 this.addGlobalEvent = function(name, handler)
 {
@@ -442,29 +473,12 @@ this.removeGlobalEvent = function(name, handler)
     }
 };
 
-this.cancelEvent = function(e, preventDefault)
-{
-    if (!e) return;
-    
-    if (preventDefault)
-    {
-                if (e.preventDefault)
-                    e.preventDefault();
-                else
-                    e.returnValue = false;
-    }
-    
-    if (document.all)
-        e.cancelBubble = true;
-    else
-        e.stopPropagation();
-                
-};
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 this.dispatch = function(listeners, name, args)
 {
-    //if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch "+name+" to "+listeners.length+" listeners\n"); /*@explore*/
-    //                                                                                                       /*@explore*/
+    if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
+    
     try {
         for (var i = 0; i < listeners.length; ++i)
         {
@@ -485,9 +499,10 @@ this.dispatch = function(listeners, name, args)
     }
 };
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
 this.disableTextSelection = function(e)
 {
-    
     if (typeof e.onselectstart != "undefined") // IE
         e.onselectstart = function(){ return false };
         
@@ -503,20 +518,20 @@ this.disableTextSelection = function(e)
 this.hasClass = function(object, name)
 {
     return (' '+object.className+' ').indexOf(' '+name+' ') != -1;
-}
+};
 
 this.addClass = function(object, name)
 {
     if ((' '+object.className+' ').indexOf(' '+name+' ') == -1)
         object.className = object.className ? object.className + ' ' + name : name; 
-}
+};
 
 this.removeClass = function(object, name)
 {
     object.className = (' ' + object.className + ' ').
         replace(new RegExp('(\\S*)\\s+'+name+'\\s+(\\S*)', 'g'), '$1 $2').
         replace(/^\s*|\s*$/g, '');
-}
+};
 
 this.toggleClass = function(object, name)
 {
@@ -524,7 +539,7 @@ this.toggleClass = function(object, name)
         this.removeClass(object, name)
     else
         this.addClass(object, name);
-}
+};
 
 
 // ************************************************************************************************
@@ -794,6 +809,181 @@ var fixIE6BackgroundImageCache = function(doc)
 // ************************************************************************************************
 }).apply(FBL);
 
+var FBTrace = {};
+
+(function() {
+// ************************************************************************************************
+
+var traceOptions = {
+    DBG_TIMESTAMP: 1,
+    DBG_INITIALIZE: 1,
+    DBG_ERRORS: 1,
+    DBG_DISPATCH: 1
+};
+
+this.messageQueue = [];
+this.module = null;
+
+this.initialize = function()
+{
+    for (var name in traceOptions)
+        this[name] = traceOptions[name]; 
+};
+
+// ************************************************************************************************
+// FBTrace API
+
+this.sysout = function()
+{
+    return this.logFormatted(arguments, "");
+};
+
+this.dumpProperties = function(title, object)
+{
+    return this.logFormatted("dumpProperties() not supported.", "warning");
+};
+
+this.dumpStack = function()
+{
+    return this.logFormatted("dumpStack() not supported.", "warning");
+};
+
+this.flush = function(module)
+{
+    this.module = module;
+    
+    var queue = this.messageQueue;
+    this.messageQueue = [];
+    
+    for (var i = 0; i < queue.length; ++i)
+        this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+};
+
+this.getPanel = function()
+{
+    return this.module ? this.module.getPanel() : null;
+};
+
+//*************************************************************************************************
+
+this.logFormatted = function(objects, className)
+{
+    var html = this.DBG_TIMESTAMP ? [getTimestamp(), " | "] : [];
+    var length = objects.length;
+    
+    for (var i = 0; i < length; ++i)
+    {
+        appendText(" ", html);
+        
+        var object = objects[i];
+        
+        if (i == 0)
+        {
+            html.push("<b>");
+            appendText(object, html);
+            html.push("</b>");
+        }
+        else
+            appendText(object, html);
+    }
+    
+    return this.logRow(html, className);    
+};
+
+this.logRow = function(message, className)
+{
+    var panel = this.getPanel();
+    
+    if (panel && panel.panelNode)
+        this.writeMessage(message, className);
+    else
+    {
+        this.messageQueue.push([message, className]);
+    }
+    
+    return this.LOG_COMMAND;
+};
+
+this.writeMessage = function(message, className)
+{
+    var container = this.getPanel().panelContainer;
+    var isScrolledToBottom =
+        container.scrollTop + container.offsetHeight >= container.scrollHeight;
+    
+    this.writeRow.call(this, message, className);
+    
+    if (isScrolledToBottom)
+        container.scrollTop = container.scrollHeight - container.offsetHeight;
+};
+
+this.appendRow = function(row)
+{
+    var container = this.getPanel().panelNode;
+    container.appendChild(row);
+};
+
+this.writeRow = function(message, className)
+{
+    var row = this.getPanel().panelNode.ownerDocument.createElement("div");
+    row.className = "logRow" + (className ? " logRow-"+className : "");
+    row.innerHTML = message.join("");
+    this.appendRow(row);
+};
+
+//*************************************************************************************************
+
+function appendText(object, html)
+{
+    html.push(escapeHTML(objectToString(object)));
+};
+
+function getTimestamp()
+{
+    var now = new Date();
+    var ms = "" + (now.getMilliseconds() / 1000).toFixed(3);
+    ms = ms.substr(2);
+    
+    return now.toLocaleTimeString() + "." + ms;
+};
+
+//*************************************************************************************************
+
+var HTMLtoEntity =
+{
+    "<": "&lt;",
+    ">": "&gt;",
+    "&": "&amp;",
+    "'": "&#39;",
+    '"': "&quot;"
+};
+
+function replaceChars(ch)
+{
+    return HTMLtoEntity[ch];
+};
+
+function escapeHTML(value)
+{
+    return (value+"").replace(/[<>&"']/g, replaceChars);
+};
+
+//*************************************************************************************************
+
+function objectToString(object)
+{
+    try
+    {
+        return object+"";
+    }
+    catch (exc)
+    {
+        return null;
+    }
+};
+
+// ************************************************************************************************
+}).apply(FBTrace);
+
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
@@ -818,7 +1008,7 @@ var panelTypeMap = {};
 FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "FirebugLite - 1.3.0a - $Revision: 3453 $",
+    version: "FirebugLite - 1.3.0a - $Revision: 3482 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -831,13 +1021,15 @@ FBL.Firebug =
     
     initialize: function()
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.initialize", "initializing application");
+        
         Firebug.browser = new Context(application.global);
         Firebug.context = Firebug.browser;
         
+        Firebug.cacheDocument();
+        
         Firebug.chrome = new FirebugChrome(application.chrome);
         Firebug.chrome.initialize();
-        
-        Firebug.cacheDocument();
         
         dispatch(modules, "initialize", []);
     },
@@ -856,11 +1048,7 @@ FBL.Firebug =
     {
         modules.push.apply(modules, arguments);
 
-        //for (var i = 0; i < arguments.length; ++i)
-        //    TabWatcher.addListener(arguments[i]);
-        
-        //                                                                                          /*@explore*/
-        //if (FBTrace.DBG_INITIALIZE) FBTrace.dumpProperties("registerModule", arguments);          /*@explore*/
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.registerModule");
     },
 
     registerPanel: function()
@@ -870,10 +1058,9 @@ FBL.Firebug =
         for (var i = 0; i < arguments.length; ++i)
             panelTypeMap[arguments[i].prototype.name] = arguments[i];
         
-        //                                                                                          /*@explore*/
-        //if (FBTrace.DBG_INITIALIZE)                                                               /*@explore*/
-        //    for (var i = 0; i < arguments.length; ++i)                                            /*@explore*/
-        //        FBTrace.sysout("registerPanel "+arguments[i].prototype.name+"\n");                /*@explore*/
+        if (FBTrace.DBG_INITIALIZE)
+            for (var i = 0; i < arguments.length; ++i)
+                FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -898,10 +1085,11 @@ Firebug.Controller = {
         
     _controllers: null,
     
-    initialize: function(node)
+    initialize: function(context)
     {
         this._controllers = [];
-        this.controllerNode = this.controllerNode || node;
+        
+        this.controllerContext = context || Firebug.chrome;
     },
     
     shutdown: function()
@@ -909,9 +1097,6 @@ Firebug.Controller = {
         this.removeControllers();
     },
     
-    /**
-     * 
-     */
     addController: function()
     {
         for (var i=0, arg; arg=arguments[i]; i++)
@@ -920,7 +1105,7 @@ Firebug.Controller = {
             // within the controller node context
             if (typeof arg[0] == "string")
             {
-                arg[0] = $$(arg[0], this.controllerNode);
+                arg[0] = $$(arg[0], this.controllerContext);
             }
             
             // bind the handler to the proper context
@@ -1129,13 +1314,13 @@ Firebug.Panel =
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // Create Panel Tab
-            var tabContent = '<span class="fbTabL"></span><span class="fbTabText">' +
+            var tabHTML = '<span class="fbTabL"></span><span class="fbTabText">' +
                     this.title + '</span><span class="fbTabR"></span>';            
             
             var tabNode = this.tabNode = createElement("a", {
                 id: panelId + "Tab",
                 className: "fbTab",
-                content: tabContent
+                innerHTML: tabHTML
             });
             
             if (isIE6)
@@ -1158,6 +1343,9 @@ Firebug.Panel =
         
         this.panelContainer = this.panelNode.parentNode;
         
+        if (FBTrace.DBG_INITIALIZE)
+            FBTrace.sysout("Firebug.Panel.initialize", this.name);
+        
         /*
         this.context = context;
         this.document = doc;
@@ -1178,7 +1366,7 @@ Firebug.Panel =
     destroy: function(state) // Panel may store info on state
     {
         if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("firebug.destroy panelNode for "+this.name+"\n");
+            FBTrace.sysout("Firebug.Panel.destroy", this.name);
 
         if (this.panelNode)
             delete this.panelNode.ownerPanel;
@@ -1243,8 +1431,6 @@ Firebug.Panel =
     {
         var options = this.options;
         
-        this.panelNode.style.display = "block";
-        
         if (options.hasSidePanel)
         {
             //this.sidePanelNode = $(panelId + "StatusBar");
@@ -1261,14 +1447,14 @@ Firebug.Panel =
             this.toolButtonsNode.style.display = "inline";
         }
         
-        Firebug.chrome.layout(options);
+        this.panelNode.style.display = "block";
+        
+        Firebug.chrome.layout(this);
     },
 
     hide: function(state)
     {
         var options = this.options;
-        
-        this.panelNode.style.display = "none";
         
         if (options.hasSidePanel)
         {
@@ -1285,6 +1471,8 @@ Firebug.Panel =
         {
             this.toolButtonsNode.style.display = "none";
         }
+        
+        this.panelNode.style.display = "none";
     },
 
     watchWindow: function(win)
@@ -1457,21 +1645,151 @@ Firebug.PanelBar =
 };
 
 //************************************************************************************************
-// ToolButtons
+// ToolButton
 
-function ToolButtons(){};
+/*
 
-ToolButtons.prototype = extend(Firebug.Controller, {
+bt = new ToolButton({
+    parentNode: node,
+    context: Panel,
+    click: handler
+}):
+
+bt = new ToolButton({
+    type: "toggle",
+    parentNode: node,
+    context: Panel,
+    on: handler,
+    off: handler
+}):
+ 
+ */
+
+
+Firebug.ToolButton = function(options)
+{
+    this.module = options.module;
+    this.panel = options.panel;
+    this.container = this.panel.toolButtonsNode;
     
-    initialize: function(parentPanel)
-    {
-        this.parentPanel = parentPanel;
-    },
+    this.caption = options.caption || "caption";
+    this.title = options.title || "title";
+    
+    this.type = options.type || "normal";
+    this.state = "unpressed";
+    this.display = "unpressed";
+    
+    this.node = createElement("a", {
+        className: "fbHover",
+        title: this.title,
+        innerHTML: this.caption
+    });
+    
+    this.container.appendChild(this.node);
+};
+
+Firebug.ToolButton.prototype = extend(Firebug.Controller,
+{
+    title: null,
+    caption: null,
+    
+    module: null,
+    panel: null,
+    container: null,
+    node: null,
+    
+    type: null,
+    state: null,
+    display: null,
     
     destroy: function()
     {
+        this.shutdown();
+        
+        this.container.removeChild(this.node);
     },
     
+    initialize: function()
+    {
+        Firebug.Controller.initialize.apply(this);
+        var node = this.node;
+        
+        this.addController(
+            [node, "mousedown", this.handlePress],
+            [node, "mouseout", this.handleUnpress],
+            [node, "click", this.handleClick]
+        );
+    },
+    
+    shutdown: function()
+    {
+        this.removeControllers();
+    },
+    
+    restore: function()
+    {
+        this.changeState("unpressed");        
+    },
+    
+    changeState: function(state)
+    {
+        this.state = state;
+        this.changeDisplay(state);
+    },
+    
+    changeDisplay: function(display)
+    {
+        if (display != this.display)
+        {
+            if (display == "pressed")
+            {
+                addClass(this.node, "fbBtnPressed");
+            }
+            else if (display == "unpressed")
+            {
+                removeClass(this.node, "fbBtnPressed");
+            }
+            this.display = display;
+        }
+    },
+    
+    handlePress: function()
+    {
+        this.changeDisplay("pressed");
+        this.beforeClick = true;
+    },
+    
+    handleUnpress: function()
+    {
+        if (this.beforeClick)
+            this.changeDisplay("unpressed");
+    },
+    
+    handleClick: function()
+    {
+        if (this.type == "normal")
+        {
+            if (this.click)
+                this.click.apply(this.module);
+            
+            this.changeState("unpressed");
+        }
+        else if (this.type == "toggle")
+        {
+            if (this.state == "pressed")
+            {
+                this.changeState("unpressed");
+            }
+            else
+            {
+                this.changeState("pressed");
+            }
+        }
+        
+        this.beforeClick = false;
+    },
+    
+    // should be place inside module
     addButton: function(caption, title, handler)
     {
     },
@@ -2338,6 +2656,8 @@ var ChromeBase = extend(ChromeBase, {
     
     initialize: function()
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome");
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
         
@@ -2384,8 +2704,8 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
-        Firebug.Controller.initialize.call(this, this.node);
-        Firebug.PanelBar.initialize.call(this);
+        Firebug.Controller.initialize.apply(this);
+        Firebug.PanelBar.initialize.apply(this);
         
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
@@ -2408,6 +2728,14 @@ var ChromeBase = extend(ChromeBase, {
         // Select the first registered panel
         this.selectPanel(panels[0].prototype.name);
         
+        var toolButton = new Firebug.ToolButton({
+            type: "toggle",
+            panel: Firebug.chrome.panels[0], 
+            module: Firebug.Console
+        });
+        toolButton.initialize();
+        
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
         if (isIE6)
@@ -2421,6 +2749,9 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         Firebug.Console.flush();
+        
+        if (Firebug.Trace)
+            FBTrace.flush(Firebug.Trace);
         
         if (!isSafari)
             this.draw();
@@ -2475,16 +2806,12 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
-        Firebug.Controller.shutdown.call(this);
-        Firebug.PanelBar.shutdown.call(this);
+        Firebug.Controller.shutdown.apply(this);
+        Firebug.PanelBar.shutdown.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
         // destroy the instance of the CommandLine class
         commandLine.destroy();
-        
-        // shutdown the chrome instance
-        Firebug.chrome.shutdown();
     },
     
     
@@ -2530,8 +2857,9 @@ var ChromeBase = extend(ChromeBase, {
         }
     },
     
-    layout: function(options)
+    layout: function(panel)
     {
+        var options = panel.options;
         changeCommandLineVisibility(options.hasCommandLine);
         changeSidePanelVisibility(options.hasSidePanel);
         Firebug.chrome.draw();
@@ -2572,6 +2900,11 @@ var ChromeFrameBase = extend(ChromeContext, {
         this.draw();
     },
     
+    shutdown: function()
+    {
+        ChromeBase.shutdown.apply(this);
+    },
+    
     show: function()
     {
         
@@ -2596,11 +2929,6 @@ var ChromeFrameBase = extend(ChromeContext, {
         
         var mini = $("fbMiniChrome");
         mini.style.display = "block";
-    },
-    
-    shutdown: function()
-    {
-        Firebug.Controller.shutdown.apply(this);
     },
     
     fixPosition: function()
@@ -2636,7 +2964,7 @@ var ChromePopupBase = extend(ChromeContext, {
     
     shutdown: function()
     {
-        Firebug.Controller.shutdown.apply(this);
+        ChromeBase.shutdown.apply(this);
     }
 
 });
@@ -2851,8 +3179,8 @@ FBL.ns(function() { with (FBL) {
 //----------------------------------------------------------------------------
 FirebugChrome.injected = 
 {
-    CSS: '.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;background:#fff;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.clear{clear:both;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:50px;}#fbToolbar{position:absolute;z-index:5;width:100%;top:0;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #d4d0c8 0 0;height:28px;font-size:11px;}#fbPanelBarBox{top:28px;position:absolute;z-index:8;width:100%;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:6px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:6px 2px 0 5px;}#fbToolbarButtons span{margin:0;padding:0;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{float:left;padding:10px 0 0;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#d4d0c8 #fff #d4d0c8 #777;height:7px;margin:2px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;cursor:default;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;cursor:default;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#mainButtons{position:absolute;right:4px;top:8px;z-index:11;}#fbPanelBar1{width:255px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #c5c1ba 0 -28px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}* html #fbPanel1{position:absolute;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}#fbBottom[fixFirefox]{position:fixed;bottom:0;left:0;width:100%;z-index:10;}#fbBottom[fixFirefox] #fbCommand{display:block;}div.fbFitHeight{padding:0 1px;max-height:inherit;height:100%;overflow:auto;}#mainButtons a{font-size:1px;width:16px;height:16px;display:block;float:left;text-decoration:none;cursor:default;}#close{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -119px;}#close:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -16px -119px;}#detach{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -32px -119px;}#detach:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -48px -119px;}.tab{text-decoration:none;display:block;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .tabL,.fbPanelBar .tabR{height:22px;width:8px;}.fbPanelBar .tabText{padding:4px 1px 0;}.tab:hover{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -73px;}.tab:hover .tabL{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -16px -96px;}.tab:hover .tabR{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -24px -96px;}.selectedTab{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) #d4d0c8 0 -50px !important;color:#000;}.selectedTab .tabL{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) 0 -96px !important;}.selectedTab .tabR{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/sprite.png) -8px -96px !important;}#fbHSplitter{position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/pixel_transparent.gif);z-index:9;}.fbVSplitter{background:#eee;color:#000;border:1px solid #777;border-width:0 1px;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:28px;}div.lineNo{font:11px Monaco,monospace;float:left;display:inline;position:relative;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}pre.nodeCode{font:11px Monaco,monospace;margin:0;padding-left:10px;overflow:hidden;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/tree_open.gif);}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/trunk/lite/1.3/skin/classic/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;}.nodeComment{color:DarkGreen;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #mainButtons{display:none !important;}.FirebugPopup #mainButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}.FirebugPopup #fbCommandBox{height:18px !important;}',
-    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="mainButtons"><a id="detach" href="javascript:FB.detach()">&nbsp;</a><a id="close" href="javascript:FB.close()">&nbsp;</a></div><div id="fbHSplitter">&nbsp;</div><div id="fbToolbar"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span><a id="fbBtnInspect" href="javascript:FB.startInspecting(this)">Inspect</a></span><span id="fbConsoleButtons"><span><a href="javascript:FB.clear()">Clear</a></span></span><span id="fbHTMLButtons"><span><a href="#">Edit</a></span></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span><span id="fbHTMLStatusBar" class="fbStatusBar"><span><a href="#"><b>body</b></a></span><span>&lt;</span><span><a href="#">html</a></span></span></span></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="tc" class="tab selectedTab" href="javascript:FB.showTab(0)"><span class="tabL"></span><span class="tabText">Console</span><span class="tabR"></span></a><a id="th" class="tab" href="javascript:FB.showTab(1)"><span class="tabL"></span><span class="tabText">HTML</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">CSS</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Script</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="tab selectedTab" href="javascript:void(0);"><span class="tabL"></span><span class="tabText">Style</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">Layout</span><span class="tabR"></span></a><a class="tab" href="javascript:void(0)"><span class="tabL"></span><span class="tabText">DOM</span><span class="tabR"></span></a></div></div></div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole"></div><div id="fbHTML"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style"></div><div id="fbHTML_Layout"></div><div id="fbHTML_DOM"></div></div></td></tr><tr id="fbBottom"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table>'
+    CSS: '.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 0 0 1px;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}.fbToolbarButtons{display:none;}#fbStatusBarBox{display:none;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;position:absolute;right:0;height:27px;width:99px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbMiniContent{position:absolute;right:0;top:1px;height:25px;width:99px;_width:98px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{position:absolute;top:6px;right:30px;}#fbMiniIcon{position:absolute;top:4px;right:5px;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{position:absolute;z-index:5;width:100%;top:0;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;overflow:hidden;}#fbPanelBarBox{top:27px;position:absolute;z-index:8;width:100%;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:4px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:4px 2px 0 5px;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{position:relative;top:5px;line-height:19px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:10px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#mainButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;_width:270px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:255px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;}#mainButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#close{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#close:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#detach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#detach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;}div.lineNo{font:11px Monaco,monospace;float:left;display:inline;position:relative;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}pre.nodeCode{font:11px Monaco,monospace;margin:0;padding-left:10px;overflow:hidden;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_margin-left:-11px;_display:inline;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;}.nodeComment{color:DarkGreen;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #mainButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbHSplitter">&nbsp;</div><div id="mainButtons"><a id="close" class="fbHover" title="Minimize Firebug">&nbsp;</a><a id="detach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a><input type="text" id="fbToolbarSearch"/></div><div id="fbToolbar"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbBtnInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a></span><span id="fbHTMLButtons" class="fbToolbarButtons"><a id="fbHTML_btEdit" class="fbHover" title="Edit this HTML">Edit</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span><span id="fbHTMLStatusBar" class="fbStatusBar"><span><a class="fbHover"><b>body</b></a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div.class</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">body</a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div</a></span></span></span></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Style</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Layout</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div></div></div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div></td></tr><tr id="fbBottom"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table>'
 };
 
 // ************************************************************************************************
@@ -2868,7 +3196,7 @@ FBL.ns(function() { with (FBL) {
 
 var ConsoleAPI = 
 {
-    firebug: Firebug.version,
+    firebuglite: Firebug.version,
 
     log: function()
     {
@@ -2958,27 +3286,27 @@ var ConsoleAPI =
     
     group: function()
     {
-        return Firebug.Console.logRow(arguments, "group", pushGroup);
+        return Firebug.Console.logRow(arguments, "group", Firebug.Console.pushGroup);
     },
     
     groupEnd: function()
     {
-        return Firebug.Console.logRow(arguments, "", popGroup);
+        return Firebug.Console.logRow(arguments, "", Firebug.Console.popGroup);
     },
     
     time: function(name)
     {
-        timeMap[name] = (new Date()).getTime();
+        this.timeMap[name] = (new Date()).getTime();
         return Firebug.Console.LOG_COMMAND;
     },
     
     timeEnd: function(name)
     {
-        if (name in timeMap)
+        if (name in this.timeMap)
         {
-            var delta = (new Date()).getTime() - timeMap[name];
+            var delta = (new Date()).getTime() - this.timeMap[name];
             Firebug.Console.logFormatted([name+ ":", delta+"ms"]);
-            delete timeMap[name];
+            delete this.timeMap[name];
         }
         return Firebug.Console.LOG_COMMAND;
     },
@@ -3033,81 +3361,25 @@ var ConsoleModule = extend(Firebug.Module, ConsoleAPI);
 Firebug.Console = extend(ConsoleModule,
 {
     LOG_COMMAND: {},
+    
+    create: function()
+    {
+        this.messageQueue = [];
+        this.groupStack = [];
+        this.timeMap = {};
+        
+        // Register console API
+        var alternateNS = "FB";
+        var consoleNS = "console";
+        var namespace = isFirefox ? alternateNS : consoleNS;
+        application.global[namespace] = ConsoleAPI;        
+    },
+    
+    getPanel: function()
+    {
+        return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
+    },    
 
-    logRow: function(message, className, handler)
-    {
-        var panel = this.getPanel();
-        
-        if (panel && panel.panelNode)
-            this.writeMessage(message, className, handler);
-        else
-        {
-            Firebug.cache.messageQueue.push([message, className, handler]);
-        }
-        
-        return this.LOG_COMMAND;
-    },
-    
-    flush: function()
-    {
-        var queue = Firebug.cache.messageQueue;
-        Firebug.cache.messageQueue = [];
-        
-        for (var i = 0; i < queue.length; ++i)
-            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
-    },
-    
-    writeMessage: function(message, className, handler)
-    {
-        var container = this.getPanel().panelContainer;
-        var isScrolledToBottom =
-            container.scrollTop + container.offsetHeight >= container.scrollHeight;
-    
-        if (!handler)
-            handler = this.writeRow;
-        
-        handler.call(this, message, className);
-        
-        if (isScrolledToBottom)
-            container.scrollTop = container.scrollHeight - container.offsetHeight;
-    },
-    
-    appendRow: function(row)
-    {
-        if (groupStack.length > 0)
-            var container = groupStack[groupStack.length-1];
-        else
-            var container = this.getPanel().panelNode;
-        
-        container.appendChild(row);
-    },
-    
-    writeRow: function(message, className)
-    {
-        var row = this.getPanel().panelNode.ownerDocument.createElement("div");
-        row.className = "logRow" + (className ? " logRow-"+className : "");
-        row.innerHTML = message.join("");
-        this.appendRow(row);
-    },
-    
-    pushGroup: function(message, className)
-    {
-        this.logFormatted(message, className);
-    
-        var groupRow = this.getPanel().panelNode.ownerDocument.createElement("div");
-        groupRow.className = "logGroup";
-        var groupRowBox = this.getPanel().panelNode.ownerDocument.createElement("div");
-        groupRowBox.className = "logGroupBox";
-        groupRow.appendChild(groupRowBox);
-        this.appendRow(groupRowBox);
-        groupStack.push(groupRowBox);
-    },
-    
-    popGroup: function()
-    {
-        groupStack.pop();
-    },
-    
     // ********************************************************************************************
     
     logFormatted: function(objects, className)
@@ -3180,12 +3452,85 @@ Firebug.Console = extend(ConsoleModule,
         return parts;
     },
     
-    getPanel: function()
+    // ********************************************************************************************
+    
+    logRow: function(message, className, handler)
     {
-        return Firebug.chrome.getPanel("Console");
+        var panel = this.getPanel();
+        
+        if (panel && panel.panelNode)
+            this.writeMessage(message, className, handler);
+        else
+        {
+            this.messageQueue.push([message, className, handler]);
+        }
+        
+        return this.LOG_COMMAND;
+    },
+    
+    flush: function()
+    {
+        var queue = this.messageQueue;
+        this.messageQueue = [];
+        
+        for (var i = 0; i < queue.length; ++i)
+            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+    },
+    
+    writeMessage: function(message, className, handler)
+    {
+        var container = this.getPanel().panelContainer;
+        var isScrolledToBottom =
+            container.scrollTop + container.offsetHeight >= container.scrollHeight;
+    
+        if (!handler)
+            handler = this.writeRow;
+        
+        handler.call(this, message, className);
+        
+        if (isScrolledToBottom)
+            container.scrollTop = container.scrollHeight - container.offsetHeight;
+    },
+    
+    appendRow: function(row)
+    {
+        if (this.groupStack.length > 0)
+            var container = this.groupStack[this.groupStack.length-1];
+        else
+            var container = this.getPanel().panelNode;
+        
+        container.appendChild(row);
+    },
+    
+    writeRow: function(message, className)
+    {
+        var row = this.getPanel().panelNode.ownerDocument.createElement("div");
+        row.className = "logRow" + (className ? " logRow-"+className : "");
+        row.innerHTML = message.join("");
+        this.appendRow(row);
+    },
+    
+    pushGroup: function(message, className)
+    {
+        this.logFormatted(message, className);
+    
+        var groupRow = this.getPanel().panelNode.ownerDocument.createElement("div");
+        groupRow.className = "logGroup";
+        var groupRowBox = this.getPanel().panelNode.ownerDocument.createElement("div");
+        groupRowBox.className = "logGroupBox";
+        groupRow.appendChild(groupRowBox);
+        this.appendRow(groupRowBox);
+        this.groupStack.push(groupRowBox);
+    },
+    
+    popGroup: function()
+    {
+        this.groupStack.pop();
     }
 
 });
+
+Firebug.Console.create();
 
 Firebug.registerModule(Firebug.Console);
 
@@ -3205,6 +3550,10 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         hasToolButtons: true,
         isPreRendered: true
     },
+
+    create: function(){
+        Firebug.Panel.create.apply(this, arguments);
+    },
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
@@ -3214,15 +3563,7 @@ ConsolePanel.prototype = extend(Firebug.Panel,
 
 Firebug.registerPanel(ConsolePanel);
 
-// ********************************************************************************************
-
-Firebug.cache.messageQueue = [];
-var groupStack = [];
-var timeMap = {};
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-// ********************************************************************************************
+// ************************************************************************************************
 
 FBL.objectToString = function(object)
 {
@@ -3236,7 +3577,8 @@ FBL.objectToString = function(object)
     }
 };
 
-// ********************************************************************************************
+// ************************************************************************************************
+
 FBL.onError = function(msg, href, lineNo)
 {
     var html = [];
@@ -3252,45 +3594,37 @@ FBL.onError = function(msg, href, lineNo)
     Firebug.Console.logRow(html, "error");
 };
 
-
-// ********************************************************************************************
-// Register console API
-
-var alternateNS = "FB";
-var consoleNS = "console";
-var namespace = isFirefox ? alternateNS : consoleNS;
-application.global[namespace] = ConsoleAPI;
-
-
 // ************************************************************************************************
 }});
 
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-/*
- * Sizzle CSS Selector Engine - v0.9
- *  Copyright 2009, John Resig (http://ejohn.org/)
- *  released under the MIT License
+/*!
+ * Sizzle CSS Selector Engine - v1.0
+ *  Copyright 2009, The Dojo Foundation
+ *  Released under the MIT, BSD, and GPL Licenses.
+ *  More information: http://sizzlejs.com/
  */
 
-var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]+\]|[^[\]]+)+\]|\\.|[^ >+~,(\[]+)+|[>+~])(\s*,\s*)?/g;
-
-var done = 0;
+var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?/g,
+    done = 0,
+    toString = Object.prototype.toString,
+    hasDuplicate = false;
 
 var Sizzle = function(selector, context, results, seed) {
-    var doCache = !results;
     results = results || [];
-    context = context || document;
+    var origContext = context = context || document;
 
-    if ( context.nodeType !== 1 && context.nodeType !== 9 )
+    if ( context.nodeType !== 1 && context.nodeType !== 9 ) {
         return [];
+    }
     
     if ( !selector || typeof selector !== "string" ) {
         return results;
     }
 
-    var parts = [], m, set, checkSet, check, mode, extra;
+    var parts = [], m, set, checkSet, check, mode, extra, prune = true, contextXML = isXML(context);
     
     // Reset the position of the chunker regexp (start from head)
     chunker.lastIndex = 0;
@@ -3304,60 +3638,61 @@ var Sizzle = function(selector, context, results, seed) {
         }
     }
 
-    if ( parts.length > 1 && Expr.match.POS.exec( selector ) ) {
+    if ( parts.length > 1 && origPOS.exec( selector ) ) {
         if ( parts.length === 2 && Expr.relative[ parts[0] ] ) {
-            var later = "", match;
-
-            // Position selectors must be done after the filter
-            while ( (match = Expr.match.POS.exec( selector )) ) {
-                later += match[0];
-                selector = selector.replace( Expr.match.POS, "" );
-            }
-
-            set = Sizzle.filter( later, Sizzle( selector, context ) );
+            set = posProcess( parts[0] + parts[1], context );
         } else {
             set = Expr.relative[ parts[0] ] ?
                 [ context ] :
                 Sizzle( parts.shift(), context );
 
             while ( parts.length ) {
-                var tmpSet = [];
-
                 selector = parts.shift();
+
                 if ( Expr.relative[ selector ] )
                     selector += parts.shift();
 
-                for ( var i = 0, l = set.length; i < l; i++ ) {
-                    Sizzle( selector, set[i], tmpSet );
-                }
-
-                set = tmpSet;
+                set = posProcess( selector, set );
             }
         }
     } else {
-        var ret = seed ?
-            { expr: parts.pop(), set: makeArray(seed) } :
-            Sizzle.find( parts.pop(), parts.length === 1 && context.parentNode ? context.parentNode : context );
-        set = Sizzle.filter( ret.expr, ret.set );
-
-        if ( parts.length > 0 ) {
-            checkSet = makeArray(set);
+        // Take a shortcut and set the context if the root selector is an ID
+        // (but not if it'll be faster if the inner selector is an ID)
+        if ( !seed && parts.length > 1 && context.nodeType === 9 && !contextXML &&
+                Expr.match.ID.test(parts[0]) && !Expr.match.ID.test(parts[parts.length - 1]) ) {
+            var ret = Sizzle.find( parts.shift(), context, contextXML );
+            context = ret.expr ? Sizzle.filter( ret.expr, ret.set )[0] : ret.set[0];
         }
 
-        while ( parts.length ) {
-            var cur = parts.pop(), pop = cur;
+        if ( context ) {
+            var ret = seed ?
+                { expr: parts.pop(), set: makeArray(seed) } :
+                Sizzle.find( parts.pop(), parts.length === 1 && (parts[0] === "~" || parts[0] === "+") && context.parentNode ? context.parentNode : context, contextXML );
+            set = ret.expr ? Sizzle.filter( ret.expr, ret.set ) : ret.set;
 
-            if ( !Expr.relative[ cur ] ) {
-                cur = "";
+            if ( parts.length > 0 ) {
+                checkSet = makeArray(set);
             } else {
-                pop = parts.pop();
+                prune = false;
             }
 
-            if ( pop == null ) {
-                pop = context;
-            }
+            while ( parts.length ) {
+                var cur = parts.pop(), pop = cur;
 
-            Expr.relative[ cur ]( checkSet, pop );
+                if ( !Expr.relative[ cur ] ) {
+                    cur = "";
+                } else {
+                    pop = parts.pop();
+                }
+
+                if ( pop == null ) {
+                    pop = context;
+                }
+
+                Expr.relative[ cur ]( checkSet, pop, contextXML );
+            }
+        } else {
+            checkSet = parts = [];
         }
     }
 
@@ -3369,8 +3704,10 @@ var Sizzle = function(selector, context, results, seed) {
         throw "Syntax error, unrecognized expression: " + (cur || selector);
     }
 
-    if ( checkSet instanceof Array ) {
-        if ( context.nodeType === 1 ) {
+    if ( toString.call(checkSet) === "[object Array]" ) {
+        if ( !prune ) {
+            results.push.apply( results, checkSet );
+        } else if ( context && context.nodeType === 1 ) {
             for ( var i = 0; checkSet[i] != null; i++ ) {
                 if ( checkSet[i] && (checkSet[i] === true || checkSet[i].nodeType === 1 && contains(context, checkSet[i])) ) {
                     results.push( set[i] );
@@ -3388,48 +3725,48 @@ var Sizzle = function(selector, context, results, seed) {
     }
 
     if ( extra ) {
-        Sizzle( extra, context, results );
+        Sizzle( extra, origContext, results, seed );
+        Sizzle.uniqueSort( results );
     }
 
     return results;
+};
+
+Sizzle.uniqueSort = function(results){
+    if ( sortOrder ) {
+        hasDuplicate = false;
+        results.sort(sortOrder);
+
+        if ( hasDuplicate ) {
+            for ( var i = 1; i < results.length; i++ ) {
+                if ( results[i] === results[i-1] ) {
+                    results.splice(i--, 1);
+                }
+            }
+        }
+    }
 };
 
 Sizzle.matches = function(expr, set){
     return Sizzle(expr, null, null, set);
 };
 
-Sizzle.find = function(expr, context){
+Sizzle.find = function(expr, context, isXML){
     var set, match;
 
     if ( !expr ) {
         return [];
     }
 
-    var later = "", match;
-
-    // Pseudo-selectors could contain other selectors (like :not)
-    while ( (match = Expr.match.PSEUDO.exec( expr )) ) {
-        var left = RegExp.leftContext;
-
-        if ( left.substr( left.length - 1 ) !== "\\" ) {
-            later += match[0];
-            expr = expr.replace( Expr.match.PSEUDO, "" );
-        } else {
-            // TODO: Need a better solution, fails: .class\:foo:realfoo(#id)
-            break;
-        }
-    }
-
     for ( var i = 0, l = Expr.order.length; i < l; i++ ) {
-        var type = Expr.order[i];
+        var type = Expr.order[i], match;
         
         if ( (match = Expr.match[ type ].exec( expr )) ) {
             var left = RegExp.leftContext;
 
             if ( left.substr( left.length - 1 ) !== "\\" ) {
                 match[1] = (match[1] || "").replace(/\\/g, "");
-                set = Expr.find[ type ]( match, context );
-
+                set = Expr.find[ type ]( match, context, isXML );
                 if ( set != null ) {
                     expr = expr.replace( Expr.match[ type ], "" );
                     break;
@@ -3442,56 +3779,49 @@ Sizzle.find = function(expr, context){
         set = context.getElementsByTagName("*");
     }
 
-    expr += later;
-
     return {set: set, expr: expr};
 };
 
-Sizzle.filter = function(expr, set, inplace){
-    var old = expr, result = [], curLoop = set, match;
+Sizzle.filter = function(expr, set, inplace, not){
+    var old = expr, result = [], curLoop = set, match, anyFound,
+        isXMLFilter = set && set[0] && isXML(set[0]);
 
     while ( expr && set.length ) {
         for ( var type in Expr.filter ) {
             if ( (match = Expr.match[ type ].exec( expr )) != null ) {
-                var anyFound = false, filter = Expr.filter[ type ], goodArray = null;
+                var filter = Expr.filter[ type ], found, item;
+                anyFound = false;
 
                 if ( curLoop == result ) {
                     result = [];
                 }
 
                 if ( Expr.preFilter[ type ] ) {
-                    match = Expr.preFilter[ type ]( match, curLoop );
+                    match = Expr.preFilter[ type ]( match, curLoop, inplace, result, not, isXMLFilter );
 
-                    if ( match[0] === true ) {
-                        goodArray = [];
-                        var last = null, elem;
-                        for ( var i = 0; (elem = curLoop[i]) !== undefined; i++ ) {
-                            if ( elem && last !== elem ) {
-                                goodArray.push( elem );
-                                last = elem;
-                            }
-                        }
+                    if ( !match ) {
+                        anyFound = found = true;
+                    } else if ( match === true ) {
+                        continue;
                     }
-
                 }
 
-                var goodPos = 0, found, item;
+                if ( match ) {
+                    for ( var i = 0; (item = curLoop[i]) != null; i++ ) {
+                        if ( item ) {
+                            found = filter( item, match, i, curLoop );
+                            var pass = not ^ !!found;
 
-                for ( var i = 0; (item = curLoop[i]) !== undefined; i++ ) {
-                    if ( item ) {
-                        if ( goodArray && item != goodArray[goodPos] ) {
-                            goodPos++;
-                        }
-
-                        found = filter( item, match, goodPos, goodArray );
-                        if ( inplace && found != null ) {
-                            curLoop[i] = found ? curLoop[i] : false;
-                            if ( found ) {
+                            if ( inplace && found != null ) {
+                                if ( pass ) {
+                                    anyFound = true;
+                                } else {
+                                    curLoop[i] = false;
+                                }
+                            } else if ( pass ) {
+                                result.push( item );
                                 anyFound = true;
                             }
-                        } else if ( found ) {
-                            result.push( item );
-                            anyFound = true;
                         }
                     }
                 }
@@ -3512,12 +3842,13 @@ Sizzle.filter = function(expr, set, inplace){
             }
         }
 
-
-        expr = expr.replace(/\s*,\s*/, "");
-
         // Improper expression
         if ( expr == old ) {
-            throw "Syntax error, unrecognized expression: " + expr;
+            if ( anyFound == null ) {
+                throw "Syntax error, unrecognized expression: " + expr;
+            } else {
+                break;
+            }
         }
 
         old = expr;
@@ -3529,40 +3860,53 @@ Sizzle.filter = function(expr, set, inplace){
 var Expr = Sizzle.selectors = {
     order: [ "ID", "NAME", "TAG" ],
     match: {
-        ID: /#((?:[\w\u0128-\uFFFF_-]|\\.)+)/,
-        CLASS: /\.((?:[\w\u0128-\uFFFF_-]|\\.)+)/,
-        NAME: /\[name=((?:[\w\u0128-\uFFFF_-]|\\.)+)\]/,
-        ATTR: /\[((?:[\w\u0128-\uFFFF_-]|\\.)+)\s*(?:(\S{0,1}=)\s*(['"]*)(.*?)\3|)\]/,
-        TAG: /^((?:[\w\u0128-\uFFFF\*_-]|\\.)+)/,
-        CHILD: /:(only|nth|last|first)-child\(?(even|odd|[\dn+-]*)\)?/,
-        POS: /:(nth|eq|gt|lt|first|last|even|odd)\(?(\d*)\)?(?:[^-]|$)/,
-        PSEUDO: /:((?:[\w\u0128-\uFFFF_-]|\\.)+)(?:\((['"]*)((?:\([^\)]+\)|[^\2\(\)]*)+)\2\))?/
+        ID: /#((?:[\w\u00c0-\uFFFF_-]|\\.)+)/,
+        CLASS: /\.((?:[\w\u00c0-\uFFFF_-]|\\.)+)/,
+        NAME: /\[name=['"]*((?:[\w\u00c0-\uFFFF_-]|\\.)+)['"]*\]/,
+        ATTR: /\[\s*((?:[\w\u00c0-\uFFFF_-]|\\.)+)\s*(?:(\S?=)\s*(['"]*)(.*?)\3|)\s*\]/,
+        TAG: /^((?:[\w\u00c0-\uFFFF\*_-]|\\.)+)/,
+        CHILD: /:(only|nth|last|first)-child(?:\((even|odd|[\dn+-]*)\))?/,
+        POS: /:(nth|eq|gt|lt|first|last|even|odd)(?:\((\d*)\))?(?=[^-]|$)/,
+        PSEUDO: /:((?:[\w\u00c0-\uFFFF_-]|\\.)+)(?:\((['"]*)((?:\([^\)]+\)|[^\2\(\)]*)+)\2\))?/
     },
     attrMap: {
-        "class": "className"
+        "class": "className",
+        "for": "htmlFor"
+    },
+    attrHandle: {
+        href: function(elem){
+            return elem.getAttribute("href");
+        }
     },
     relative: {
-        "+": function(checkSet, part){
-            for ( var i = 0, l = checkSet.length; i < l; i++ ) {
-                var elem = checkSet[i];
-                if ( elem ) {
-                    var cur = elem.previousSibling;
-                    while ( cur && cur.nodeType !== 1 ) {
-                        cur = cur.previousSibling;
-                    }
-                    checkSet[i] = typeof part === "string" ?
-                        cur || false :
-                        cur === part;
+        "+": function(checkSet, part, isXML){
+            var isPartStr = typeof part === "string",
+                isTag = isPartStr && !/\W/.test(part),
+                isPartStrNotTag = isPartStr && !isTag;
+
+            if ( isTag && !isXML ) {
+                part = part.toUpperCase();
+            }
+
+            for ( var i = 0, l = checkSet.length, elem; i < l; i++ ) {
+                if ( (elem = checkSet[i]) ) {
+                    while ( (elem = elem.previousSibling) && elem.nodeType !== 1 ) {}
+
+                    checkSet[i] = isPartStrNotTag || elem && elem.nodeName === part ?
+                        elem || false :
+                        elem === part;
                 }
             }
 
-            if ( typeof part === "string" ) {
+            if ( isPartStrNotTag ) {
                 Sizzle.filter( part, checkSet, true );
             }
         },
-        ">": function(checkSet, part){
-            if ( typeof part === "string" && !/\W/.test(part) ) {
-                part = part.toUpperCase();
+        ">": function(checkSet, part, isXML){
+            var isPartStr = typeof part === "string";
+
+            if ( isPartStr && !/\W/.test(part) ) {
+                part = isXML ? part : part.toUpperCase();
 
                 for ( var i = 0, l = checkSet.length; i < l; i++ ) {
                     var elem = checkSet[i];
@@ -3575,61 +3919,89 @@ var Expr = Sizzle.selectors = {
                 for ( var i = 0, l = checkSet.length; i < l; i++ ) {
                     var elem = checkSet[i];
                     if ( elem ) {
-                        checkSet[i] = typeof part === "string" ?
+                        checkSet[i] = isPartStr ?
                             elem.parentNode :
                             elem.parentNode === part;
                     }
                 }
 
-                if ( typeof part === "string" ) {
+                if ( isPartStr ) {
                     Sizzle.filter( part, checkSet, true );
                 }
             }
         },
-        "": function(checkSet, part){
-            var doneName = "done" + (done++), checkFn = dirCheck;
+        "": function(checkSet, part, isXML){
+            var doneName = done++, checkFn = dirCheck;
 
             if ( !part.match(/\W/) ) {
-                var nodeCheck = part = part.toUpperCase();
+                var nodeCheck = part = isXML ? part : part.toUpperCase();
                 checkFn = dirNodeCheck;
             }
 
-            checkFn("parentNode", part, doneName, checkSet, nodeCheck);
+            checkFn("parentNode", part, doneName, checkSet, nodeCheck, isXML);
         },
-        "~": function(checkSet, part){
-            var doneName = "done" + (done++), checkFn = dirCheck;
+        "~": function(checkSet, part, isXML){
+            var doneName = done++, checkFn = dirCheck;
 
             if ( typeof part === "string" && !part.match(/\W/) ) {
-                var nodeCheck = part = part.toUpperCase();
+                var nodeCheck = part = isXML ? part : part.toUpperCase();
                 checkFn = dirNodeCheck;
             }
 
-            checkFn("previousSibling", part, doneName, checkSet, nodeCheck);
+            checkFn("previousSibling", part, doneName, checkSet, nodeCheck, isXML);
         }
     },
     find: {
-        ID: function(match, context){
-            if ( context.getElementById ) {
+        ID: function(match, context, isXML){
+            if ( typeof context.getElementById !== "undefined" && !isXML ) {
                 var m = context.getElementById(match[1]);
                 return m ? [m] : [];
             }
         },
-        NAME: function(match, context){
-            return context.getElementsByName(match[1]);
+        NAME: function(match, context, isXML){
+            if ( typeof context.getElementsByName !== "undefined" ) {
+                var ret = [], results = context.getElementsByName(match[1]);
+
+                for ( var i = 0, l = results.length; i < l; i++ ) {
+                    if ( results[i].getAttribute("name") === match[1] ) {
+                        ret.push( results[i] );
+                    }
+                }
+
+                return ret.length === 0 ? null : ret;
+            }
         },
         TAG: function(match, context){
             return context.getElementsByTagName(match[1]);
         }
     },
     preFilter: {
-        CLASS: function(match){
-            return new RegExp( "(?:^|\\s)" + match[1] + "(?:\\s|$)" );
+        CLASS: function(match, curLoop, inplace, result, not, isXML){
+            match = " " + match[1].replace(/\\/g, "") + " ";
+
+            if ( isXML ) {
+                return match;
+            }
+
+            for ( var i = 0, elem; (elem = curLoop[i]) != null; i++ ) {
+                if ( elem ) {
+                    if ( not ^ (elem.className && (" " + elem.className + " ").indexOf(match) >= 0) ) {
+                        if ( !inplace )
+                            result.push( elem );
+                    } else if ( inplace ) {
+                        curLoop[i] = false;
+                    }
+                }
+            }
+
+            return false;
         },
         ID: function(match){
-            return match[1];
+            return match[1].replace(/\\/g, "");
         },
-        TAG: function(match){
-            return match[1].toUpperCase();
+        TAG: function(match, curLoop){
+            for ( var i = 0; curLoop[i] === false; i++ ){}
+            return curLoop[i] && isXML(curLoop[i]) ? match[1] : match[1].toUpperCase();
         },
         CHILD: function(match){
             if ( match[1] == "nth" ) {
@@ -3644,14 +4016,14 @@ var Expr = Sizzle.selectors = {
             }
 
             // TODO: Move to normal caching system
-            match[0] = "done" + (done++);
+            match[0] = done++;
 
             return match;
         },
-        ATTR: function(match){
-            var name = match[1];
+        ATTR: function(match, curLoop, inplace, result, not, isXML){
+            var name = match[1].replace(/\\/g, "");
             
-            if ( Expr.attrMap[name] ) {
+            if ( !isXML && Expr.attrMap[name] ) {
                 match[1] = Expr.attrMap[name];
             }
 
@@ -3661,9 +4033,20 @@ var Expr = Sizzle.selectors = {
 
             return match;
         },
-        PSEUDO: function(match){
+        PSEUDO: function(match, curLoop, inplace, result, not){
             if ( match[1] === "not" ) {
-                match[3] = match[3].split(/\s*,\s*/);
+                // If we're dealing with a complex expression, or a simple one
+                if ( match[3].match(chunker).length > 1 || /^\w/.test(match[3]) ) {
+                    match[3] = Sizzle(match[3], null, null, curLoop);
+                } else {
+                    var ret = Sizzle.filter(match[3], curLoop, inplace, true ^ not);
+                    if ( !inplace ) {
+                        result.push.apply( result, ret );
+                    }
+                    return false;
+                }
+            } else if ( Expr.match.POS.test( match[0] ) || Expr.match.CHILD.test( match[0] ) ) {
+                return true;
             }
             
             return match;
@@ -3759,64 +4142,66 @@ var Expr = Sizzle.selectors = {
         }
     },
     filter: {
-        CHILD: function(elem, match){
-            var type = match[1], parent = elem.parentNode;
-
-            var doneName = match[0];
-            
-            if ( parent && !parent[ doneName ] ) {
-                var count = 1;
-
-                for ( var node = parent.firstChild; node; node = node.nextSibling ) {
-                    if ( node.nodeType == 1 ) {
-                        node.nodeIndex = count++;
-                    }
-                }
-
-                parent[ doneName ] = count - 1;
-            }
-
-            if ( type == "first" ) {
-                return elem.nodeIndex == 1;
-            } else if ( type == "last" ) {
-                return elem.nodeIndex == parent[ doneName ];
-            } else if ( type == "only" ) {
-                return parent[ doneName ] == 1;
-            } else if ( type == "nth" ) {
-                var add = false, first = match[2], last = match[3];
-
-                if ( first == 1 && last == 0 ) {
-                    return true;
-                }
-
-                if ( first == 0 ) {
-                    if ( elem.nodeIndex == last ) {
-                        add = true;
-                    }
-                } else if ( (elem.nodeIndex - last) % first == 0 && (elem.nodeIndex - last) / first >= 0 ) {
-                    add = true;
-                }
-
-                return add;
-            }
-        },
         PSEUDO: function(elem, match, i, array){
             var name = match[1], filter = Expr.filters[ name ];
 
             if ( filter ) {
-                return filter( elem, i, match, array )
+                return filter( elem, i, match, array );
             } else if ( name === "contains" ) {
                 return (elem.textContent || elem.innerText || "").indexOf(match[3]) >= 0;
             } else if ( name === "not" ) {
                 var not = match[3];
 
-                for ( var i = 0, l = not.length; i < l; i++ ) {
-                    if ( Sizzle.filter(not[i], [elem]).length > 0 ) {
+                for ( i = 0, l = not.length; i < l; i++ ) {
+                    if ( not[i] === elem ) {
                         return false;
                     }
                 }
 
                 return true;
+            }
+        },
+        CHILD: function(elem, match){
+            var type = match[1], node = elem;
+            switch (type) {
+                case 'only':
+                case 'first':
+                    while ( (node = node.previousSibling) )  {
+                        if ( node.nodeType === 1 ) return false;
+                    }
+                    if ( type == 'first') return true;
+                    node = elem;
+                case 'last':
+                    while ( (node = node.nextSibling) )  {
+                        if ( node.nodeType === 1 ) return false;
+                    }
+                    return true;
+                case 'nth':
+                    var first = match[2], last = match[3];
+
+                    if ( first == 1 && last == 0 ) {
+                        return true;
+                    }
+                    
+                    var doneName = match[0],
+                        parent = elem.parentNode;
+    
+                    if ( parent && (parent.sizcache !== doneName || !elem.nodeIndex) ) {
+                        var count = 0;
+                        for ( node = parent.firstChild; node; node = node.nextSibling ) {
+                            if ( node.nodeType === 1 ) {
+                                node.nodeIndex = ++count;
+                            }
+                        } 
+                        parent.sizcache = doneName;
+                    }
+                    
+                    var diff = elem.nodeIndex - last;
+                    if ( first == 0 ) {
+                        return diff == 0;
+                    } else {
+                        return ( diff % first == 0 && diff / first >= 0 );
+                    }
             }
         },
         ID: function(elem, match){
@@ -3826,20 +4211,30 @@ var Expr = Sizzle.selectors = {
             return (match === "*" && elem.nodeType === 1) || elem.nodeName === match;
         },
         CLASS: function(elem, match){
-            return match.test( elem.className );
+            return (" " + (elem.className || elem.getAttribute("class")) + " ")
+                .indexOf( match ) > -1;
         },
         ATTR: function(elem, match){
-            var result = elem[ match[1] ] || elem.getAttribute( match[1] ), value = result + "", type = match[2], check = match[4];
+            var name = match[1],
+                result = Expr.attrHandle[ name ] ?
+                    Expr.attrHandle[ name ]( elem ) :
+                    elem[ name ] != null ?
+                        elem[ name ] :
+                        elem.getAttribute( name ),
+                value = result + "",
+                type = match[2],
+                check = match[4];
+
             return result == null ?
-                false :
+                type === "!=" :
                 type === "=" ?
                 value === check :
                 type === "*=" ?
                 value.indexOf(check) >= 0 :
                 type === "~=" ?
                 (" " + value + " ").indexOf(check) >= 0 :
-                !match[4] ?
-                result :
+                !check ?
+                value && result !== false :
                 type === "!=" ?
                 value != check :
                 type === "^=" ?
@@ -3859,6 +4254,12 @@ var Expr = Sizzle.selectors = {
         }
     }
 };
+
+var origPOS = Expr.match.POS;
+
+for ( var type in Expr.match ) {
+    Expr.match[ type ] = new RegExp( Expr.match[ type ].source + /(?![^\[]*\])(?![^\(]*\))/.source );
+}
 
 var makeArray = function(array, results) {
     array = Array.prototype.slice.call( array );
@@ -3881,7 +4282,7 @@ try {
     makeArray = function(array, results) {
         var ret = results || [];
 
-        if ( array instanceof Array ) {
+        if ( toString.call(array) === "[object Array]" ) {
             Array.prototype.push.apply( ret, array );
         } else {
             if ( typeof array.length === "number" ) {
@@ -3899,13 +4300,46 @@ try {
     };
 }
 
+var sortOrder;
+
+if ( document.documentElement.compareDocumentPosition ) {
+    sortOrder = function( a, b ) {
+        var ret = a.compareDocumentPosition(b) & 4 ? -1 : a === b ? 0 : 1;
+        if ( ret === 0 ) {
+            hasDuplicate = true;
+        }
+        return ret;
+    };
+} else if ( "sourceIndex" in document.documentElement ) {
+    sortOrder = function( a, b ) {
+        var ret = a.sourceIndex - b.sourceIndex;
+        if ( ret === 0 ) {
+            hasDuplicate = true;
+        }
+        return ret;
+    };
+} else if ( document.createRange ) {
+    sortOrder = function( a, b ) {
+        var aRange = a.ownerDocument.createRange(), bRange = b.ownerDocument.createRange();
+        aRange.selectNode(a);
+        aRange.collapse(true);
+        bRange.selectNode(b);
+        bRange.collapse(true);
+        var ret = aRange.compareBoundaryPoints(Range.START_TO_END, bRange);
+        if ( ret === 0 ) {
+            hasDuplicate = true;
+        }
+        return ret;
+    };
+}
+
 // Check to see if the browser returns elements by name when
 // querying by getElementById (and provide a workaround)
 (function(){
     // We're going to inject a fake input element with a specified name
-    var form = document.createElement("form"),
+    var form = document.createElement("div"),
         id = "script" + (new Date).getTime();
-    form.innerHTML = "<input name='" + id + "'/>";
+    form.innerHTML = "<a name='" + id + "'/>";
 
     // Inject it into the root element, check its status, and remove it quickly
     var root = document.documentElement;
@@ -3914,25 +4348,27 @@ try {
     // The workaround has to do additional checks after a getElementById
     // Which slows things down for other browsers (hence the branching)
     if ( !!document.getElementById( id ) ) {
-        Expr.find.ID = function(match, context){
-            if ( context.getElementById ) {
+        Expr.find.ID = function(match, context, isXML){
+            if ( typeof context.getElementById !== "undefined" && !isXML ) {
                 var m = context.getElementById(match[1]);
-                return m ? m.id === match[1] || m.getAttributeNode && m.getAttributeNode("id").nodeValue === match[1] ? [m] : undefined : [];
+                return m ? m.id === match[1] || typeof m.getAttributeNode !== "undefined" && m.getAttributeNode("id").nodeValue === match[1] ? [m] : undefined : [];
             }
         };
 
         Expr.filter.ID = function(elem, match){
-            var node = elem.getAttributeNode && elem.getAttributeNode("id");
+            var node = typeof elem.getAttributeNode !== "undefined" && elem.getAttributeNode("id");
             return elem.nodeType === 1 && node && node.nodeValue === match;
         };
     }
 
     root.removeChild( form );
+    root = form = null; // release memory in IE
 })();
 
-// Check to see if the browser returns only elements
-// when doing getElementsByTagName("*")
 (function(){
+    // Check to see if the browser returns only elements
+    // when doing getElementsByTagName("*")
+
     // Create a fake element
     var div = document.createElement("div");
     div.appendChild( document.createComment("") );
@@ -3958,51 +4394,96 @@ try {
             return results;
         };
     }
+
+    // Check to see if an attribute returns normalized href attributes
+    div.innerHTML = "<a href='#'></a>";
+    if ( div.firstChild && typeof div.firstChild.getAttribute !== "undefined" &&
+            div.firstChild.getAttribute("href") !== "#" ) {
+        Expr.attrHandle.href = function(elem){
+            return elem.getAttribute("href", 2);
+        };
+    }
+
+    div = null; // release memory in IE
 })();
 
 if ( document.querySelectorAll ) (function(){
-    var oldSizzle = Sizzle;
+    var oldSizzle = Sizzle, div = document.createElement("div");
+    div.innerHTML = "<p class='TEST'></p>";
+
+    // Safari can't handle uppercase or unicode characters when
+    // in quirks mode.
+    if ( div.querySelectorAll && div.querySelectorAll(".TEST").length === 0 ) {
+        return;
+    }
     
-    Sizzle = function(query, context, extra){
+    Sizzle = function(query, context, extra, seed){
         context = context || document;
 
-        if ( context.nodeType === 9 ) {
+        // Only use querySelectorAll on non-XML documents
+        // (ID selectors don't work in non-HTML documents)
+        if ( !seed && context.nodeType === 9 && !isXML(context) ) {
             try {
-                return makeArray( context.querySelectorAll(query) );
+                return makeArray( context.querySelectorAll(query), extra );
             } catch(e){}
         }
         
-        return oldSizzle(query, context, extra);
+        return oldSizzle(query, context, extra, seed);
     };
 
-    Sizzle.find = oldSizzle.find;
-    Sizzle.filter = oldSizzle.filter;
-    Sizzle.selectors = oldSizzle.selectors;
+    for ( var prop in oldSizzle ) {
+        Sizzle[ prop ] = oldSizzle[ prop ];
+    }
+
+    div = null; // release memory in IE
 })();
 
-if ( document.documentElement.getElementsByClassName ) {
-    Expr.order.splice(1, 0, "CLASS");
-    Expr.find.CLASS = function(match, context) {
-        return context.getElementsByClassName(match[1]);
-    };
-}
+if ( document.getElementsByClassName && document.documentElement.getElementsByClassName ) (function(){
+    var div = document.createElement("div");
+    div.innerHTML = "<div class='test e'></div><div class='test'></div>";
 
-function dirNodeCheck( dir, cur, doneName, checkSet, nodeCheck ) {
+    // Opera can't find a second classname (in 9.6)
+    if ( div.getElementsByClassName("e").length === 0 )
+        return;
+
+    // Safari caches class attributes, doesn't catch changes (in 3.2)
+    div.lastChild.className = "e";
+
+    if ( div.getElementsByClassName("e").length === 1 )
+        return;
+
+    Expr.order.splice(1, 0, "CLASS");
+    Expr.find.CLASS = function(match, context, isXML) {
+        if ( typeof context.getElementsByClassName !== "undefined" && !isXML ) {
+            return context.getElementsByClassName(match[1]);
+        }
+    };
+
+    div = null; // release memory in IE
+})();
+
+function dirNodeCheck( dir, cur, doneName, checkSet, nodeCheck, isXML ) {
+    var sibDir = dir == "previousSibling" && !isXML;
     for ( var i = 0, l = checkSet.length; i < l; i++ ) {
         var elem = checkSet[i];
         if ( elem ) {
-            elem = elem[dir]
+            if ( sibDir && elem.nodeType === 1 ){
+                elem.sizcache = doneName;
+                elem.sizset = i;
+            }
+            elem = elem[dir];
             var match = false;
 
-            while ( elem && elem.nodeType ) {
-                var done = elem[doneName];
-                if ( done ) {
-                    match = checkSet[ done ];
+            while ( elem ) {
+                if ( elem.sizcache === doneName ) {
+                    match = checkSet[elem.sizset];
                     break;
                 }
 
-                if ( elem.nodeType === 1 )
-                    elem[doneName] = i;
+                if ( elem.nodeType === 1 && !isXML ){
+                    elem.sizcache = doneName;
+                    elem.sizset = i;
+                }
 
                 if ( elem.nodeName === cur ) {
                     match = elem;
@@ -4017,22 +4498,29 @@ function dirNodeCheck( dir, cur, doneName, checkSet, nodeCheck ) {
     }
 }
 
-function dirCheck( dir, cur, doneName, checkSet, nodeCheck ) {
+function dirCheck( dir, cur, doneName, checkSet, nodeCheck, isXML ) {
+    var sibDir = dir == "previousSibling" && !isXML;
     for ( var i = 0, l = checkSet.length; i < l; i++ ) {
         var elem = checkSet[i];
         if ( elem ) {
-            elem = elem[dir]
+            if ( sibDir && elem.nodeType === 1 ) {
+                elem.sizcache = doneName;
+                elem.sizset = i;
+            }
+            elem = elem[dir];
             var match = false;
 
-            while ( elem && elem.nodeType ) {
-                if ( elem[doneName] ) {
-                    match = checkSet[ elem[doneName] ];
+            while ( elem ) {
+                if ( elem.sizcache === doneName ) {
+                    match = checkSet[elem.sizset];
                     break;
                 }
 
                 if ( elem.nodeType === 1 ) {
-                    elem[doneName] = i;
-
+                    if ( !isXML ) {
+                        elem.sizcache = doneName;
+                        elem.sizset = i;
+                    }
                     if ( typeof cur !== "string" ) {
                         if ( elem === cur ) {
                             match = true;
@@ -4056,7 +4544,32 @@ function dirCheck( dir, cur, doneName, checkSet, nodeCheck ) {
 var contains = document.compareDocumentPosition ?  function(a, b){
     return a.compareDocumentPosition(b) & 16;
 } : function(a, b){
-    return a !== b && a.contains(b);
+    return a !== b && (a.contains ? a.contains(b) : true);
+};
+
+var isXML = function(elem){
+    return elem.nodeType === 9 && elem.documentElement.nodeName !== "HTML" ||
+        !!elem.ownerDocument && elem.ownerDocument.documentElement.nodeName !== "HTML";
+};
+
+var posProcess = function(selector, context){
+    var tmpSet = [], later = "", match,
+        root = context.nodeType ? [context] : context;
+
+    // Position selectors must be done after the filter
+    // And so must :not(positional) so we move all PSEUDOs to the end
+    while ( (match = Expr.match.PSEUDO.exec( selector )) ) {
+        later += match[0];
+        selector = selector.replace( Expr.match.PSEUDO, "" );
+    }
+
+    selector = Expr.relative[selector] ? selector + "*" : selector;
+
+    for ( var i = 0, l = root.length; i < l; i++ ) {
+        Sizzle( selector, root[i], tmpSet );
+    }
+
+    return Sizzle.filter( later, tmpSet );
 };
 
 // EXPOSE
@@ -4769,7 +5282,7 @@ Firebug.CommandLine.prototype =
         var command = cmd.value;
         
         this._stack(command);
-        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ',command], "command");
+        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
         
         try
         {
@@ -4799,12 +5312,12 @@ Firebug.CommandLine.prototype =
         var api = "FBL.Firebug.CommandLine.API"
             
         //Firebug.context = Firebug.chrome;
-        api = null;
+        //api = null;
 
         return Firebug.context.evaluate(expr, "window", api, Console.error);
     },
     
-    eval: new Function("return window.eval.apply(window, arguments)"),
+    //eval: new Function("return window.eval.apply(window, arguments)"),
     
     prevCommand: function()
     {
@@ -5062,12 +5575,11 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
 
-/*============================================================================
-  html
-*===========================================================================*/
-Firebug.HTML =
-{
+// ************************************************************************************************
+// HTML Module
 
+Firebug.HTML = extend(Firebug.Module, 
+{
     appendTreeNode: function(nodeArray, html)
     {
         var reTrim = /^\s+|\s+$/g;
@@ -5079,7 +5591,6 @@ Firebug.HTML =
         
             if (node.nodeType == 1)
             {
-              
                 var uid = node[cacheID];
                 var child = node.childNodes;
                 var childLength = child.length;
@@ -5090,9 +5601,8 @@ Firebug.HTML =
                 var nodeControl = !hasSingleTextChild && childLength > 0 ? 
                     ('<div class="nodeControl"></div>') : '';
 
-                
                 if(isIE && nodeControl)
-                  html.push(nodeControl);
+                    html.push(nodeControl);
               
                 if (typeof uid != 'undefined')
                     html.push(
@@ -5195,7 +5705,7 @@ Firebug.HTML =
     
     appendTreeChildren: function(treeNode)
     {
-        var doc = Firebug.Chrome.document;
+        var doc = Firebug.chrome.document;
         
         var uid = treeNode.attributes[cacheID].value;
         var parentNode = documentCache[uid];
@@ -5274,7 +5784,50 @@ Firebug.HTML =
         fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
     }
     
-}
+});
+
+Firebug.registerModule(Firebug.HTML);
+
+// ************************************************************************************************
+// HTML Panel
+
+function HTMLPanel(){};
+
+HTMLPanel.prototype = extend(Firebug.Panel,
+{
+    name: "HTML",
+    title: "HTML",
+    
+    options: {
+        hasSidePanel: true,
+        hasToolButtons: true,
+        hasStatusBar: true,
+        isPreRendered: true
+    },
+
+    create: function(){
+        Firebug.Panel.create.apply(this, arguments);
+        
+        var rootNode = Firebug.browser.document.documentElement;
+        var html = [];
+        Firebug.HTML.appendTreeNode(rootNode, html);
+        
+        this.panelNode.style.padding = "4px 3px 1px 15px";
+        var d = Firebug.chrome.document.createElement("div");
+        d.innerHTML = html.join("");
+        this.panelNode.appendChild(d);
+        
+        addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+    }
+    
+});
+
+Firebug.registerPanel(HTMLPanel);
+
 
 var selectedElement = null
 function selectElement(e)
@@ -5338,7 +5891,7 @@ Firebug.HTML.onTreeClick = function (e)
     }
     else if (targ.className == 'nodeValue' || targ.className == 'nodeName')
     {
-        var input = FBL.Firebug.Chrome.document.getElementById('treeInput');
+        var input = FBL.Firebug.chrome.document.getElementById('treeInput');
         
         input.style.display = "block";
         input.style.left = targ.offsetLeft + 'px';
@@ -5355,60 +5908,36 @@ Firebug.HTML.onTreeClick = function (e)
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-
-// ************************************************************************************************
-// FBTrace API
-
-FBL.FBTrace = {
-
-    DBG_INITIALIZE: 0,
-    DBG_ERRORS: 0,
-    DBG_DISPATCH: 0,
-    
-    sysout: function()
-    {
-        return Firebug.FBTrace.logFormatted(arguments, "");
-    },
-    
-    dumpProperties: function(title, object)
-    {
-        return Firebug.FBTrace.logFormatted("dumpProperties() not supported.", "warning");
-    },
-    
-    dumpStack: function()
-    {
-        return Firebug.FBTrace.logFormatted("dumpStack() not supported.", "warning");
-    }
-
-}
+// If application isn't in debug mode, the FBTrace panel won't be loaded
+if (!application.isDebugMode) return;
 
 // ************************************************************************************************
 // FBTrace Module
 
-Firebug.FBTrace = extend(Firebug.Console,
+Firebug.Trace = extend(Firebug.Module,
 {
     getPanel: function()
     {
-        return Firebug.chrome.getPanel("FBTrace");
+        return Firebug.chrome ? Firebug.chrome.getPanel("Trace") : null;
     }
 });
 
-Firebug.registerModule(Firebug.FBTrace);
+Firebug.registerModule(Firebug.Trace);
 
 
 // ************************************************************************************************
 // FBTrace Panel
 
-function FBTracePanel(){};
+function TracePanel(){};
 
-FBTracePanel.prototype = extend(Firebug.Panel,
+TracePanel.prototype = extend(Firebug.Panel,
 {
-    name: "FBTrace",
-    title: "FBTrace",
+    name: "Trace",
+    title: "Trace",
     
     options: {
-        hasCommandLine: true,
-        hasSidePanel: true
+        //hasSidePanel: true,
+        //hasCommandLine: true
     },
     
     initialize: function(){
@@ -5417,7 +5946,7 @@ FBTracePanel.prototype = extend(Firebug.Panel,
     
 });
 
-Firebug.registerPanel(FBTracePanel);
+Firebug.registerPanel(TracePanel);
 
 // ************************************************************************************************
 }});

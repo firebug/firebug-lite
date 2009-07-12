@@ -99,7 +99,7 @@ var waitForInit = function waitForInit()
 this.application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
-    isBookmarletMode: false,
+    isBookmarletMode: true,
     isPersistentMode: false,
     isDebugMode: true,
     skin: "xp",
