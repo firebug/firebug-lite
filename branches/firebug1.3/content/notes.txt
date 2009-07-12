@@ -2,13 +2,6 @@
 Missing
 ###################################################################################################
 ---------------------------------------------------------------------------------------------------
- UI
----------------------------------------------------------------------------------------------------
-    - IE problem with tree node control positioning [+]
-        - fix is to use absolute position in the control and the left and right panels
-          need to check the z-indexes of the overall interface.
-
----------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------
     - Check the initializing order. 
@@ -25,6 +18,23 @@ Missing
         - controller context should be the module Firebug.ModuleName 
         
     - Panel event delegation?
+
+---------------------------------------------------------------------------------------------------
+ Popup
+---------------------------------------------------------------------------------------------------
+    - problem with opera popup blocker. popup chrome isn't being initialized
+      this problem doesn't happens when in bookmarlet mode. Maybe the best way to detect
+      when the chrome is loaded is the Joe Hewitt old way putting JS in the end of HTML body
+    
+    - problem with global events when in popup window
+    
+    
+    - Detach method
+    - Synchronize chromes
+      
+---------------------------------------------------------------------------------------------------
+ Preferences?
+---------------------------------------------------------------------------------------------------
     
 ---------------------------------------------------------------------------------------------------
 Tool Buttons
@@ -35,6 +45,16 @@ Tool Buttons
     
     - button location: Fixed buttons (inspect) and Panel buttons 
  
+---------------------------------------------------------------------------------------------------
+ UI
+---------------------------------------------------------------------------------------------------
+ OK - IE problem with Console and Trace panels. Scroll isnt working!!
+      maybe a dummy div solves the problem? because the HTML has one, and scrolls fine
+    
+ OK - IE problem with tree node control positioning [+]
+     OK - fix is to use absolute position in the control and the left and right panels
+          need to check the z-indexes of the overall interface.
+
  
 ###################################################################################################
 User Interface
@@ -109,6 +129,11 @@ Preferences
 ---------------------------------------------------------------------------------------------------
 User Interface
 ---------------------------------------------------------------------------------------------------
+    - Highlighted nodes in HTML tree with round corners (with OS color)
+        - current implementation isn't good (it uses both CSS hack and JS)
+        - Opera round corner SVG trick
+        - best way to go is dynamically create a CSS rule according each browser 
+    
     - UI styling
         - (?) detect Windows theme (XP or classic?)
         - (?) detect OS (windows or mac?)

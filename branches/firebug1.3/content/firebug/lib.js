@@ -172,7 +172,7 @@ var onChromeLoad = function onChromeLoad(chrome)
 
 var WindowDefaultOptions = 
 {
-    type: "frame"
+    type: "popup"
 };
 
 var FrameDefaultOptions = 

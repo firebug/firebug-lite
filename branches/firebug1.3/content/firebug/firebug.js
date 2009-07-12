@@ -728,11 +728,14 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
         Firebug.Controller.initialize.apply(this);
         var node = this.node;
         
-        this.addController(
-            [node, "mousedown", this.handlePress],
-            [node, "mouseout", this.handleUnpress],
-            [node, "click", this.handleClick]
-        );
+        this.addController([node, "mousedown", this.handlePress]);
+        
+        if (this.type == "normal")
+            this.addController(
+                [node, "mouseup", this.handleUnpress],
+                [node, "mouseout", this.handleUnpress],
+                [node, "click", this.handleClick]
+            );
     },
     
     shutdown: function()
@@ -769,8 +772,22 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
     
     handlePress: function()
     {
-        this.changeDisplay("pressed");
-        this.beforeClick = true;
+        if (this.type == "normal")
+        {
+            this.changeDisplay("pressed");
+            this.beforeClick = true;
+        }
+        else if (this.type == "toggle")
+        {
+            if (this.state == "pressed")
+            {
+                this.changeState("unpressed");
+            }
+            else
+            {
+                this.changeState("pressed");
+            }
+        }
     },
     
     handleUnpress: function()
@@ -787,17 +804,6 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
                 this.click.apply(this.module);
             
             this.changeState("unpressed");
-        }
-        else if (this.type == "toggle")
-        {
-            if (this.state == "pressed")
-            {
-                this.changeState("unpressed");
-            }
-            else
-            {
-                this.changeState("pressed");
-            }
         }
         
         this.beforeClick = false;

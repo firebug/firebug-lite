@@ -57,19 +57,31 @@ FBL.createChrome = function(context, options, onChromeLoad)
         var height = options.height;
         var options = [
                 "true,top=",
-                Math.max(screen.height - height, 0),
+                Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
                 ",left=0,height=",
                 height,
                 ",width=",
-                screen.width-10, // Opera opens popup in a new tab if it's too big!
+                screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
                 ",resizable"          
             ].join("");
         
-        var node = chrome.node = Firebug.browser.window.open(
+        var node = chrome.node = context.window.open(
             url, 
             "popup", 
             options
           );
+        
+        /*
+        if (node)
+        {
+            node.focus();
+        }
+        else
+        {
+            //Chrome.Popup.element = null;
+            alert("Disable the popup blocker to open the console in another window!")
+        }
+        /**/
     }
     
     if (isBookmarletMode)
@@ -98,10 +110,10 @@ FBL.createChrome = function(context, options, onChromeLoad)
                 onChromeLoad(chrome);
         }
         else
-            setTimeout(waitForChrome, 20);
+            setTimeout(waitForChrome, 10);
     }
     
-    waitForChrome();    
+    waitForChrome();
 };
 
 var getChromeTemplate = function()
@@ -244,9 +256,7 @@ var ChromeBase = extend(ChromeBase, {
         if (Firebug.Trace)
             FBTrace.flush(Firebug.Trace);
         
-        if (!isSafari)
-            this.draw();
-        
+        this.draw();
     },
     
     shutdown: function()
@@ -370,16 +380,16 @@ var ChromeFrameBase = extend(ChromeContext, {
         ChromeBase.initialize.call(this)
         
         this.addController(
-                [Firebug.browser.window, "resize", this.draw],
-                [Firebug.browser.window, "unload", this.destroy]
-            );
+            [Firebug.browser.window, "resize", this.draw],
+            [Firebug.browser.window, "unload", this.destroy]
+        );
         
         if (isIE6)
         {
             this.addController(
-                    [Firebug.browser.window, "resize", this.fixPosition],
-                    [Firebug.browser.window, "scroll", this.fixPosition]
-                );
+                [Firebug.browser.window, "resize", this.fixPosition],
+                [Firebug.browser.window, "scroll", this.fixPosition]
+            );
         }
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
@@ -387,8 +397,6 @@ var ChromeFrameBase = extend(ChromeContext, {
         
         // TODO: Check visibility preferences here
         this.node.style.visibility = "visible";
-        
-        this.draw();
     },
     
     shutdown: function()
@@ -448,9 +456,11 @@ var ChromePopupBase = extend(ChromeContext, {
         ChromeBase.initialize.call(this)
         
         this.addController(
-                [Firebug.browser.window, "resize", this.draw],
-                [Firebug.browser.window, "unload", this.destroy]
-            );
+            [Firebug.chrome.window, "resize", this.draw],
+            [Firebug.chrome.window, "unload", this.destroy]
+        );
+        
+        fbVSplitter.onmousedown = onVSplitterMouseDown;
     },
     
     shutdown: function()
