@@ -195,8 +195,8 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
-        Firebug.Controller.initialize.call(this, this.node);
-        Firebug.PanelBar.initialize.call(this);
+        Firebug.Controller.initialize.apply(this);
+        Firebug.PanelBar.initialize.apply(this);
         
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
@@ -218,6 +218,14 @@ var ChromeBase = extend(ChromeBase, {
         
         // Select the first registered panel
         this.selectPanel(panels[0].prototype.name);
+        
+        var toolButton = new Firebug.ToolButton({
+            type: "toggle",
+            panel: Firebug.chrome.panels[0], 
+            module: Firebug.Console
+        });
+        toolButton.initialize();
+        
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
@@ -289,16 +297,12 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
-        Firebug.Controller.shutdown.call(this);
-        Firebug.PanelBar.shutdown.call(this);
+        Firebug.Controller.shutdown.apply(this);
+        Firebug.PanelBar.shutdown.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
         // destroy the instance of the CommandLine class
         commandLine.destroy();
-        
-        // shutdown the chrome instance
-        Firebug.chrome.shutdown();
     },
     
     
@@ -387,6 +391,11 @@ var ChromeFrameBase = extend(ChromeContext, {
         this.draw();
     },
     
+    shutdown: function()
+    {
+        ChromeBase.shutdown.apply(this);
+    },
+    
     show: function()
     {
         
@@ -411,11 +420,6 @@ var ChromeFrameBase = extend(ChromeContext, {
         
         var mini = $("fbMiniChrome");
         mini.style.display = "block";
-    },
-    
-    shutdown: function()
-    {
-        Firebug.Controller.shutdown.apply(this);
     },
     
     fixPosition: function()
@@ -451,7 +455,7 @@ var ChromePopupBase = extend(ChromeContext, {
     
     shutdown: function()
     {
-        Firebug.Controller.shutdown.apply(this);
+        ChromeBase.shutdown.apply(this);
     }
 
 });
