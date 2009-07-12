@@ -26,20 +26,18 @@ this.ns = function(fn)
 
 this.initialize = function()
 {
-    if (FBL.application.isDebugMode) FBTrace.initialize();
-    
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length+" namespaces BEGIN");
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize application
 
-    // isPersistentMode, isChromeContext
+    if (FBL.application.isDebugMode) FBTrace.initialize();
+    
+    // persistent application
     if (FBL.application.isPersistentMode && typeof window.FirebugApplication == "object")
     {
         FBL.application = window.FirebugApplication;
         FBL.application.isChromeContext = true;
     }
-    // Global application
+    // non-persistent application
     else
     {
         // TODO: get preferences here...
@@ -47,8 +45,10 @@ this.initialize = function()
         FBL.application.destroy = destroyApplication;
     }    
     
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize namespaces
+
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces BEGIN");
     
     for (var i = 0; i < namespaces.length; i += 2)
     {
@@ -57,74 +57,75 @@ this.initialize = function()
         fn.apply(ns);
     }
     
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length+" namespaces END");
+    if (FBTrace.DBG_INITIALIZE) {
+        FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces END");
+        FBTrace.sysout("FBL waitForDocument", "waiting document load");
+    }
     
-    waitForInit();
+    waitForDocument();
 };
 
-var waitForInit = function waitForInit()
+var waitForDocument = function waitForDocument()
 {
     if (document.body)
     {
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL waitForInit", "main HTML document loaded");
-        
-        if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
-        {
-            if (FBL.isIE6)
-                fixIE6BackgroundImageCache();
-            
-            // initialize the chrome application
-            FBL.Firebug.initialize();
-            
-            // Destroy the main application
-            window.FirebugApplication.destroy();
-            
-            if (FBL.isIE)
-                window.FirebugApplication = null;
-            else
-                delete window.FirebugApplication;
-        }
-        else
-        {
-            createApplication();
-        }
+        onDocumentLoad();
     }
     else
-        setTimeout(waitForInit, 50);
+        setTimeout(waitForDocument, 50);
+};
+
+var onDocumentLoad = function onDocumentLoad()
+{
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "create application chrome");
+    
+    if (FBL.isIE6)
+        fixIE6BackgroundImageCache();
+        
+    // persistent application
+    if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
+    {
+        FBL.Firebug.initialize();
+        
+        window.FirebugApplication.destroy();
+        
+        if (FBL.isIE)
+            window.FirebugApplication = null;
+        else
+            delete window.FirebugApplication;
+    }
+    // non-persistent application
+    else
+    {
+        findLocation();
+        
+        var options = FBL.extend({}, WindowDefaultOptions);
+        
+        FBL.createChrome(FBL.application.global, options, onChromeLoad);
+    }    
 };
 
 // ************************************************************************************************
 // Application
 
 this.application = {
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
     isBookmarletMode: true,
     isPersistentMode: false,
     isDebugMode: true,
     skin: "xp",
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application States
     isDevelopmentMode: false,
     isChromeContext: false,
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application References
     global: null,
     chrome: null
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var createApplication = function createApplication()
-{
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication", "create application chrome");
-    
-    findLocation();
-    
-    var options = FBL.extend({}, WindowDefaultOptions);
-    
-    FBL.createChrome(FBL.application.global, options, onChromeLoad);
-};
 
 var destroyApplication = function destroyApplication()
 {
@@ -172,7 +173,7 @@ var onChromeLoad = function onChromeLoad(chrome)
 
 var WindowDefaultOptions = 
 {
-    type: "popup"
+    type: "frame"
 };
 
 var FrameDefaultOptions = 

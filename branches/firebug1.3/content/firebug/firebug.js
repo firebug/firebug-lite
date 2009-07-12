@@ -28,8 +28,6 @@ FBL.Firebug =
     modules: modules,
     panelTypes: panelTypes,
     
-    cache: {},
-    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
     

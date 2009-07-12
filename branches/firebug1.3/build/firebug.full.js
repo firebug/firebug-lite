@@ -26,20 +26,18 @@ this.ns = function(fn)
 
 this.initialize = function()
 {
-    if (FBL.application.isDebugMode) FBTrace.initialize();
-    
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length+" namespaces BEGIN");
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize application
 
-    // isPersistentMode, isChromeContext
+    if (FBL.application.isDebugMode) FBTrace.initialize();
+    
+    // persistent application
     if (FBL.application.isPersistentMode && typeof window.FirebugApplication == "object")
     {
         FBL.application = window.FirebugApplication;
         FBL.application.isChromeContext = true;
     }
-    // Global application
+    // non-persistent application
     else
     {
         // TODO: get preferences here...
@@ -47,8 +45,10 @@ this.initialize = function()
         FBL.application.destroy = destroyApplication;
     }    
     
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize namespaces
+
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces BEGIN");
     
     for (var i = 0; i < namespaces.length; i += 2)
     {
@@ -57,74 +57,75 @@ this.initialize = function()
         fn.apply(ns);
     }
     
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length+" namespaces END");
+    if (FBTrace.DBG_INITIALIZE) {
+        FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces END");
+        FBTrace.sysout("FBL waitForDocument", "waiting document load");
+    }
     
-    waitForInit();
+    waitForDocument();
 };
 
-var waitForInit = function waitForInit()
+var waitForDocument = function waitForDocument()
 {
     if (document.body)
     {
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL waitForInit", "main HTML document loaded");
-        
-        if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
-        {
-            if (FBL.isIE6)
-                fixIE6BackgroundImageCache();
-            
-            // initialize the chrome application
-            FBL.Firebug.initialize();
-            
-            // Destroy the main application
-            window.FirebugApplication.destroy();
-            
-            if (FBL.isIE)
-                window.FirebugApplication = null;
-            else
-                delete window.FirebugApplication;
-        }
-        else
-        {
-            createApplication();
-        }
+        onDocumentLoad();
     }
     else
-        setTimeout(waitForInit, 50);
+        setTimeout(waitForDocument, 50);
+};
+
+var onDocumentLoad = function onDocumentLoad()
+{
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "create application chrome");
+    
+    if (FBL.isIE6)
+        fixIE6BackgroundImageCache();
+        
+    // persistent application
+    if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
+    {
+        FBL.Firebug.initialize();
+        
+        window.FirebugApplication.destroy();
+        
+        if (FBL.isIE)
+            window.FirebugApplication = null;
+        else
+            delete window.FirebugApplication;
+    }
+    // non-persistent application
+    else
+    {
+        findLocation();
+        
+        var options = FBL.extend({}, WindowDefaultOptions);
+        
+        FBL.createChrome(FBL.application.global, options, onChromeLoad);
+    }    
 };
 
 // ************************************************************************************************
 // Application
 
 this.application = {
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
     isBookmarletMode: true,
     isPersistentMode: false,
     isDebugMode: true,
     skin: "xp",
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application States
     isDevelopmentMode: false,
     isChromeContext: false,
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application References
     global: null,
     chrome: null
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var createApplication = function createApplication()
-{
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL createApplication", "create application chrome");
-    
-    findLocation();
-    
-    var options = FBL.extend({}, WindowDefaultOptions);
-    
-    FBL.createChrome(FBL.application.global, options, onChromeLoad);
-};
 
 var destroyApplication = function destroyApplication()
 {
@@ -1008,13 +1009,11 @@ var panelTypeMap = {};
 FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "FirebugLite - 1.3.0a - $Revision: 3482 $",
+    version: "FirebugLite - 1.3.0a - $Revision: 3486 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
-    
-    cache: {},
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
@@ -1714,11 +1713,14 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
         Firebug.Controller.initialize.apply(this);
         var node = this.node;
         
-        this.addController(
-            [node, "mousedown", this.handlePress],
-            [node, "mouseout", this.handleUnpress],
-            [node, "click", this.handleClick]
-        );
+        this.addController([node, "mousedown", this.handlePress]);
+        
+        if (this.type == "normal")
+            this.addController(
+                [node, "mouseup", this.handleUnpress],
+                [node, "mouseout", this.handleUnpress],
+                [node, "click", this.handleClick]
+            );
     },
     
     shutdown: function()
@@ -1755,8 +1757,22 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
     
     handlePress: function()
     {
-        this.changeDisplay("pressed");
-        this.beforeClick = true;
+        if (this.type == "normal")
+        {
+            this.changeDisplay("pressed");
+            this.beforeClick = true;
+        }
+        else if (this.type == "toggle")
+        {
+            if (this.state == "pressed")
+            {
+                this.changeState("unpressed");
+            }
+            else
+            {
+                this.changeState("pressed");
+            }
+        }
     },
     
     handleUnpress: function()
@@ -1773,17 +1789,6 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
                 this.click.apply(this.module);
             
             this.changeState("unpressed");
-        }
-        else if (this.type == "toggle")
-        {
-            if (this.state == "pressed")
-            {
-                this.changeState("unpressed");
-            }
-            else
-            {
-                this.changeState("pressed");
-            }
         }
         
         this.beforeClick = false;
@@ -2566,19 +2571,31 @@ FBL.createChrome = function(context, options, onChromeLoad)
         var height = options.height;
         var options = [
                 "true,top=",
-                Math.max(screen.height - height, 0),
+                Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
                 ",left=0,height=",
                 height,
                 ",width=",
-                screen.width-10, // Opera opens popup in a new tab if it's too big!
+                screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
                 ",resizable"          
             ].join("");
         
-        var node = chrome.node = Firebug.browser.window.open(
+        var node = chrome.node = context.window.open(
             url, 
             "popup", 
             options
           );
+        
+        /*
+        if (node)
+        {
+            node.focus();
+        }
+        else
+        {
+            //Chrome.Popup.element = null;
+            alert("Disable the popup blocker to open the console in another window!")
+        }
+        /**/
     }
     
     if (isBookmarletMode)
@@ -2607,10 +2624,10 @@ FBL.createChrome = function(context, options, onChromeLoad)
                 onChromeLoad(chrome);
         }
         else
-            setTimeout(waitForChrome, 20);
+            setTimeout(waitForChrome, 10);
     }
     
-    waitForChrome();    
+    waitForChrome();
 };
 
 var getChromeTemplate = function()
@@ -2658,7 +2675,7 @@ var ChromeBase = extend(ChromeBase, {
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome");
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
         
         fbTop = $("fbTop");
@@ -2690,19 +2707,19 @@ var ChromeBase = extend(ChromeBase, {
       
         fbCommandLine = $("fbCommandLine");
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
         
         topHeight = fbTop.offsetHeight;
         topPartialHeight = fbToolbar.offsetHeight;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         commandLineVisible = true;
         sidePanelVisible = false;
         sidePanelWidth = 300;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
         Firebug.Controller.initialize.apply(this);
         Firebug.PanelBar.initialize.apply(this);
@@ -2710,11 +2727,11 @@ var ChromeBase = extend(ChromeBase, {
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
         commandLine = new Firebug.CommandLine(fbCommandLine);
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize all panels
         var panels = Firebug.panelTypes;
         for (var i=0, p; p=panels[i]; i++)
@@ -2736,7 +2753,7 @@ var ChromeBase = extend(ChromeBase, {
         toolButton.initialize();
         
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
         if (isIE6)
         {
@@ -2747,20 +2764,18 @@ var ChromeBase = extend(ChromeBase, {
            }
         }
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         Firebug.Console.flush();
         
         if (Firebug.Trace)
             FBTrace.flush(Firebug.Trace);
         
-        if (!isSafari)
-            this.draw();
-        
+        this.draw();
     },
     
     shutdown: function()
     {
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Remove the interface elements cache
         
         fbTop = null;
@@ -2792,41 +2807,124 @@ var ChromeBase = extend(ChromeBase, {
   
         fbCommandLine = null;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
         
         topHeight = null;
         topPartialHeight = null;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         commandLineVisible = null;
         sidePanelVisible = null;
         sidePanelWidth = 300;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
         Firebug.Controller.shutdown.apply(this);
         Firebug.PanelBar.shutdown.apply(this);
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // destroy the instance of the CommandLine class
         commandLine.destroy();
     },
     
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
+    show: function()
+    {
+        
+    },
+    
+    hide: function()
+    {
+        
+    },
+    
+    toggle: function(forceOpen, popup)
+    {
+        if(popup)
+        {
+            var context = Chrome.context = this.Popup;
+            
+            if(chromeReady)
+            {
+                if(!context.element)
+                {     
+                    if (this.Frame.element)
+                    {
+                        this.Frame.isVisible = false;
+                        frame.style.visibility = "hidden";
+                    }
+                    
+                    chromeReady = false;
+                    context.create();
+                    waitForChrome();
+                }
+            }
+            else
+                waitForDocument();
+        }
+        else
+        {
+            // If the context is a popup, ignores the toggle process
+            if (Firebug.chrome.type == "popup") return;
+            
+            var context = Firebug.chrome;
+            context.isVisible = forceOpen || !context.isVisible;
+            
+            var chromeReady = true;
+            if(chromeReady)
+            { 
+                if(context.node)
+                {
+                    if(context.isVisible)
+                    {
+                        context.node.style.visibility = "visible";
+                        //waitForChrome();
+                        
+                    } else {
+                        context.node.style.visibility = "hidden";
+                    }
+                }
+                else
+                {
+                    context.create();
+                    waitForChrome();
+                }
+                    
+            }
+            else
+                waitForDocument();
+            
+        }       
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    detach: function()
+    {
+        
+    },
+    
+    reattach: function()
+    {
+        
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
     draw: function()
     {
         var size = Firebug.chrome.getWindowSize();
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Height related drawings
         var chromeHeight = size.height;
         var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
         var fixedHeight = topHeight + commandLineHeight;
         var y = Math.max(chromeHeight, topHeight);
         
-        //fbContentStyle.height = Math.max(y - fixedHeight, 0)+ "px";
         fbPanel1Style.height = Math.max(y - fixedHeight, 0)+ "px";
         fbPanelBox1.height = Math.max(y - fixedHeight, 0)+ "px";
         
@@ -2841,7 +2939,7 @@ var ChromeBase = extend(ChromeBase, {
             fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
         }
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Width related drawings
         var chromeWidth = size.width /* window borders */;
         var sideWidth = sidePanelVisible ? sidePanelWidth : 0;
@@ -2879,25 +2977,24 @@ var ChromeFrameBase = extend(ChromeContext, {
         ChromeBase.initialize.call(this)
         
         this.addController(
-                [Firebug.browser.window, "resize", this.draw],
-                [Firebug.browser.window, "unload", this.destroy]
-            );
+            [Firebug.browser.window, "resize", this.draw],
+            [Firebug.browser.window, "unload", this.destroy]
+        );
         
         if (isIE6)
         {
             this.addController(
-                    [Firebug.browser.window, "resize", this.fixPosition],
-                    [Firebug.browser.window, "scroll", this.fixPosition]
-                );
+                [Firebug.browser.window, "resize", this.fixPosition],
+                [Firebug.browser.window, "scroll", this.fixPosition]
+            );
         }
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
         
         // TODO: Check visibility preferences here
+        this.isVisible = true;
         this.node.style.visibility = "visible";
-        
-        this.draw();
     },
     
     shutdown: function()
@@ -2957,9 +3054,11 @@ var ChromePopupBase = extend(ChromeContext, {
         ChromeBase.initialize.call(this)
         
         this.addController(
-                [Firebug.browser.window, "resize", this.draw],
-                [Firebug.browser.window, "unload", this.destroy]
-            );
+            [Firebug.chrome.window, "resize", this.draw],
+            [Firebug.chrome.window, "unload", this.destroy]
+        );
+        
+        fbVSplitter.onmousedown = onVSplitterMouseDown;
     },
     
     shutdown: function()
@@ -3380,6 +3479,15 @@ Firebug.Console = extend(ConsoleModule,
         return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
     },    
 
+    flush: function()
+    {
+        var queue = this.messageQueue;
+        this.messageQueue = [];
+        
+        for (var i = 0; i < queue.length; ++i)
+            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+    },
+    
     // ********************************************************************************************
     
     logFormatted: function(objects, className)
@@ -3466,15 +3574,6 @@ Firebug.Console = extend(ConsoleModule,
         }
         
         return this.LOG_COMMAND;
-    },
-    
-    flush: function()
-    {
-        var queue = this.messageQueue;
-        this.messageQueue = [];
-        
-        for (var i = 0; i < queue.length; ++i)
-            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
     },
     
     writeMessage: function(message, className, handler)
@@ -5846,6 +5945,11 @@ function selectElement(e)
         else if (FBL.isSafari)
             e.style.WebkitBorderRadius = "2px";
         
+        /*
+        else if (FBL.isOpera)
+            e.style.background = "url(roundCorner.svg)";
+            /**/
+
         selectedElement = e;
     }
 }

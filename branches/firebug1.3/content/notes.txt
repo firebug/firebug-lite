@@ -19,22 +19,33 @@ Missing
         
     - Panel event delegation?
 
----------------------------------------------------------------------------------------------------
- Popup
----------------------------------------------------------------------------------------------------
-    - problem with opera popup blocker. popup chrome isn't being initialized
-      this problem doesn't happens when in bookmarlet mode. Maybe the best way to detect
-      when the chrome is loaded is the Joe Hewitt old way putting JS in the end of HTML body
-    
-    - problem with global events when in popup window
-    
-    
-    - Detach method
-    - Synchronize chromes
-      
+
 ---------------------------------------------------------------------------------------------------
  Preferences?
 ---------------------------------------------------------------------------------------------------
+    - FBL.application
+    - FBL.preferences
+    
+---------------------------------------------------------------------------------------------------
+ Chrome context synchronize
+---------------------------------------------------------------------------------------------------
+    - frame.isVisible --> isOpen?
+    - Firebug.chromes.frame & Firebug.chromes.popup
+    
+---------------------------------------------------------------------------------------------------
+ Popup
+---------------------------------------------------------------------------------------------------
+    - problem with global events when in popup window
+      add/removeGlobalEvent looks for iframes only, excluding popup windows.
+    
+    - Detach method
+    - Synchronize chromes
+    
+    - popup chrome in Opera isn't being initialized when NOT in bookmarlet mode. 
+      Maybe the best way to detect when the chrome is loaded is the Joe Hewitt old way putting 
+      JS in the end of HTML body. This is not a major issue since bookmarlet mode will be
+      allways active when in production.
+    
     
 ---------------------------------------------------------------------------------------------------
 Tool Buttons

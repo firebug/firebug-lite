@@ -161,7 +161,7 @@ var ChromeBase = extend(ChromeBase, {
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome");
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
         
         fbTop = $("fbTop");
@@ -193,19 +193,19 @@ var ChromeBase = extend(ChromeBase, {
       
         fbCommandLine = $("fbCommandLine");
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
         
         topHeight = fbTop.offsetHeight;
         topPartialHeight = fbToolbar.offsetHeight;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         commandLineVisible = true;
         sidePanelVisible = false;
         sidePanelWidth = 300;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
         Firebug.Controller.initialize.apply(this);
         Firebug.PanelBar.initialize.apply(this);
@@ -213,11 +213,11 @@ var ChromeBase = extend(ChromeBase, {
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
         commandLine = new Firebug.CommandLine(fbCommandLine);
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize all panels
         var panels = Firebug.panelTypes;
         for (var i=0, p; p=panels[i]; i++)
@@ -239,7 +239,7 @@ var ChromeBase = extend(ChromeBase, {
         toolButton.initialize();
         
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
         if (isIE6)
         {
@@ -250,7 +250,7 @@ var ChromeBase = extend(ChromeBase, {
            }
         }
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         Firebug.Console.flush();
         
         if (Firebug.Trace)
@@ -261,7 +261,7 @@ var ChromeBase = extend(ChromeBase, {
     
     shutdown: function()
     {
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Remove the interface elements cache
         
         fbTop = null;
@@ -293,41 +293,124 @@ var ChromeBase = extend(ChromeBase, {
   
         fbCommandLine = null;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
         
         topHeight = null;
         topPartialHeight = null;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         commandLineVisible = null;
         sidePanelVisible = null;
         sidePanelWidth = 300;
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
         Firebug.Controller.shutdown.apply(this);
         Firebug.PanelBar.shutdown.apply(this);
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // destroy the instance of the CommandLine class
         commandLine.destroy();
     },
     
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
+    show: function()
+    {
+        
+    },
+    
+    hide: function()
+    {
+        
+    },
+    
+    toggle: function(forceOpen, popup)
+    {
+        if(popup)
+        {
+            var context = Chrome.context = this.Popup;
+            
+            if(chromeReady)
+            {
+                if(!context.element)
+                {     
+                    if (this.Frame.element)
+                    {
+                        this.Frame.isVisible = false;
+                        frame.style.visibility = "hidden";
+                    }
+                    
+                    chromeReady = false;
+                    context.create();
+                    waitForChrome();
+                }
+            }
+            else
+                waitForDocument();
+        }
+        else
+        {
+            // If the context is a popup, ignores the toggle process
+            if (Firebug.chrome.type == "popup") return;
+            
+            var context = Firebug.chrome;
+            context.isVisible = forceOpen || !context.isVisible;
+            
+            var chromeReady = true;
+            if(chromeReady)
+            { 
+                if(context.node)
+                {
+                    if(context.isVisible)
+                    {
+                        context.node.style.visibility = "visible";
+                        //waitForChrome();
+                        
+                    } else {
+                        context.node.style.visibility = "hidden";
+                    }
+                }
+                else
+                {
+                    context.create();
+                    waitForChrome();
+                }
+                    
+            }
+            else
+                waitForDocument();
+            
+        }       
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    detach: function()
+    {
+        
+    },
+    
+    reattach: function()
+    {
+        
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
     draw: function()
     {
         var size = Firebug.chrome.getWindowSize();
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Height related drawings
         var chromeHeight = size.height;
         var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
         var fixedHeight = topHeight + commandLineHeight;
         var y = Math.max(chromeHeight, topHeight);
         
-        //fbContentStyle.height = Math.max(y - fixedHeight, 0)+ "px";
         fbPanel1Style.height = Math.max(y - fixedHeight, 0)+ "px";
         fbPanelBox1.height = Math.max(y - fixedHeight, 0)+ "px";
         
@@ -342,7 +425,7 @@ var ChromeBase = extend(ChromeBase, {
             fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
         }
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Width related drawings
         var chromeWidth = size.width /* window borders */;
         var sideWidth = sidePanelVisible ? sidePanelWidth : 0;
@@ -396,6 +479,7 @@ var ChromeFrameBase = extend(ChromeContext, {
         fbHSplitter.onmousedown = onHSplitterMouseDown;
         
         // TODO: Check visibility preferences here
+        this.isVisible = true;
         this.node.style.visibility = "visible";
     },
     
