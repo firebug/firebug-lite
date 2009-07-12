@@ -191,6 +191,15 @@ Firebug.Console = extend(ConsoleModule,
         return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
     },    
 
+    flush: function()
+    {
+        var queue = this.messageQueue;
+        this.messageQueue = [];
+        
+        for (var i = 0; i < queue.length; ++i)
+            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+    },
+    
     // ********************************************************************************************
     
     logFormatted: function(objects, className)
@@ -277,15 +286,6 @@ Firebug.Console = extend(ConsoleModule,
         }
         
         return this.LOG_COMMAND;
-    },
-    
-    flush: function()
-    {
-        var queue = this.messageQueue;
-        this.messageQueue = [];
-        
-        for (var i = 0; i < queue.length; ++i)
-            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
     },
     
     writeMessage: function(message, className, handler)

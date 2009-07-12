@@ -273,6 +273,11 @@ function selectElement(e)
         else if (FBL.isSafari)
             e.style.WebkitBorderRadius = "2px";
         
+        /*
+        else if (FBL.isOpera)
+            e.style.background = "url(roundCorner.svg)";
+            /**/
+
         selectedElement = e;
     }
 }
