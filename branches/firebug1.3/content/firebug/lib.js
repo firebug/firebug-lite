@@ -370,26 +370,19 @@ this.$$ = function(selector, doc)
     }
 };
 
-this.createElement = function(tagName, options)
+this.createElement = function(tagName, properties)
 {
-    options = options || {};
-    var doc = options.document || FBL.Firebug.chrome.document;
+    properties = properties || {};
+    var doc = properties.document || FBL.Firebug.chrome.document;
     
     var element = doc.createElement(tagName);
     
-    if (options.id)
+    for(var name in properties)
     {
-        element.id = options.id;
-    }
-    
-    if (options.className)
-    {
-        element.className = options.className;
-    }
-    
-    if (options.content)
-    {
-        element.innerHTML = options.content;
+        if (name != "document")
+        {
+            element[name] = properties[name];
+        }
     }
     
     return element;
@@ -418,6 +411,27 @@ this.removeEvent = function(object, name, handler)
     else
         object.removeEventListener(name, handler, false);
 };
+
+this.cancelEvent = function(e, preventDefault)
+{
+    if (!e) return;
+    
+    if (preventDefault)
+    {
+                if (e.preventDefault)
+                    e.preventDefault();
+                else
+                    e.returnValue = false;
+    }
+    
+    if (document.all)
+        e.cancelBubble = true;
+    else
+        e.stopPropagation();
+                
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 this.addGlobalEvent = function(name, handler)
 {
@@ -459,24 +473,7 @@ this.removeGlobalEvent = function(name, handler)
     }
 };
 
-this.cancelEvent = function(e, preventDefault)
-{
-    if (!e) return;
-    
-    if (preventDefault)
-    {
-                if (e.preventDefault)
-                    e.preventDefault();
-                else
-                    e.returnValue = false;
-    }
-    
-    if (document.all)
-        e.cancelBubble = true;
-    else
-        e.stopPropagation();
-                
-};
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 this.dispatch = function(listeners, name, args)
 {
@@ -501,6 +498,8 @@ this.dispatch = function(listeners, name, args)
         /**/
     }
 };
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 this.disableTextSelection = function(e)
 {
