@@ -25,8 +25,8 @@ FBL.createChrome = function(context, options, onChromeLoad)
     chrome.type = options.type;
     
     var isChromeFrame = chrome.type == "frame";
-    var isBookmarletMode = application.isBookmarletMode;
-    var url = isBookmarletMode ? "" : application.location.skin;
+    var isBookmarletMode = Application.isBookmarletMode;
+    var url = isBookmarletMode ? "" : Application.location.skin;
     
     if (isChromeFrame)
     {
@@ -37,6 +37,7 @@ FBL.createChrome = function(context, options, onChromeLoad)
         node.setAttribute("frameBorder", "0");
         node.setAttribute("allowTransparency", "true");
         node.style.border = "0";
+        node.style.display = "none"; // avoid flickering during chrome rendering
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
         node.style.position = isIE6 ? "absolute" : "fixed";
@@ -45,9 +46,9 @@ FBL.createChrome = function(context, options, onChromeLoad)
         node.style.bottom = isIE6 ? "-1px" : "0";
         node.style.height = options.height + "px";
         
-        var isBookmarletMode = application.isBookmarletMode;
+        var isBookmarletMode = Application.isBookmarletMode;
         if (!isBookmarletMode)
-            node.setAttribute("src", application.location.skin);
+            node.setAttribute("src", Application.location.skin);
         
         context.document.body.appendChild(node);
     }
@@ -118,7 +119,7 @@ FBL.createChrome = function(context, options, onChromeLoad)
 
 var getChromeTemplate = function()
 {
-    var tpl = FirebugChrome.injected; 
+    var tpl = Chrome.injected; 
     var r = [], i = -1;
     
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
@@ -134,9 +135,9 @@ var getChromeTemplate = function()
 };
 
 // ************************************************************************************************
-// FirebugChrome Class
+// Chrome Class
     
-FBL.FirebugChrome = function(chrome)
+FBL.Chrome = function(chrome)
 {
     var Base = chrome.type == "frame" ? ChromeFrameBase : ChromePopupBase; 
     
@@ -479,6 +480,8 @@ var ChromeFrameBase = extend(ChromeContext, {
         fbHSplitter.onmousedown = onHSplitterMouseDown;
         
         // TODO: Check visibility preferences here
+        this.node.style.display = "";
+        
         this.isVisible = true;
         this.node.style.visibility = "visible";
     },

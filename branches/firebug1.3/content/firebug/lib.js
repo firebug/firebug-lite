@@ -14,6 +14,7 @@ var FBL = {};
 // Namespaces
 
 var namespaces = [];
+var FBTrace = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -28,21 +29,22 @@ this.initialize = function()
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize application
-
-    if (FBL.application.isDebugMode) FBTrace.initialize();
+    
+    FBTrace = FBL.FBTrace;
+    if (Application.isDebugMode) FBTrace.initialize();
     
     // persistent application
-    if (FBL.application.isPersistentMode && typeof window.FirebugApplication == "object")
+    if (Application.isPersistentMode && typeof window.FirebugApplication == "object")
     {
-        FBL.application = window.FirebugApplication;
-        FBL.application.isChromeContext = true;
+        Application = window.FirebugApplication;
+        Application.isChromeContext = true;
     }
     // non-persistent application
     else
     {
         // TODO: get preferences here...
-        FBL.application.global = window;
-        FBL.application.destroy = destroyApplication;
+        Application.browser = window;
+        Application.destroy = destroyApplication;
     }    
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
@@ -82,8 +84,8 @@ var onDocumentLoad = function onDocumentLoad()
     if (FBL.isIE6)
         fixIE6BackgroundImageCache();
         
-    // persistent application
-    if (FBL.application.isPersistentMode && FBL.application.isChromeContext)
+    // persistent application - chrome document loaded
+    if (Application.isPersistentMode && Application.isChromeContext)
     {
         FBL.Firebug.initialize();
         
@@ -94,34 +96,36 @@ var onDocumentLoad = function onDocumentLoad()
         else
             delete window.FirebugApplication;
     }
-    // non-persistent application
+    // main document loaded
     else
     {
         findLocation();
         
         var options = FBL.extend({}, WindowDefaultOptions);
         
-        FBL.createChrome(FBL.application.global, options, onChromeLoad);
+        FBL.createChrome(Application.browser, options, onChromeLoad);
     }    
 };
 
 // ************************************************************************************************
 // Application
 
-this.application = {
+var Application = this.Application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
     isBookmarletMode: true,
     isPersistentMode: false,
     isDebugMode: true,
     skin: "xp",
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // Application States
+    // Application states
     isDevelopmentMode: false,
     isChromeContext: false,
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // Application References
-    global: null,
+    // Application references
+    browser: null,
     chrome: null
 };
 
@@ -140,15 +144,15 @@ var destroyApplication = function destroyApplication()
 
 var onChromeLoad = function onChromeLoad(chrome)
 {
-    FBL.application.chrome = chrome;
+    Application.chrome = chrome;
     
     if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onChromeLoad", "chrome loaded");
     
-    if (FBL.application.isPersistentMode)
+    if (Application.isPersistentMode)
     {
-        chrome.window.FirebugApplication = FBL.application;
+        chrome.window.FirebugApplication = Application;
     
-        if (FBL.application.isDevelopmentMode)
+        if (Application.isDevelopmentMode)
         {
             FBDev.loadChromeApplication(chrome);
         }
@@ -156,7 +160,7 @@ var onChromeLoad = function onChromeLoad(chrome)
         {
             var doc = chrome.document;
             var script = doc.createElement("script");
-            script.src = application.location.app;
+            script.src = Application.location.app;
             doc.getElementsByTagName("head")[0].appendChild(script);
         }
     }
@@ -191,7 +195,7 @@ var PopupDefaultOptions =
 // ************************************************************************************************
 // Library location
 
-this.application.location = {
+this.Application.location = {
     source: null,
     base: null,
     skin: null,
@@ -252,14 +256,14 @@ var findLocation =  function findLocation()
     
     if (path && m)
     {
-        var loc = FBL.application.location; 
+        var loc = Application.location; 
         loc.source = path;
         loc.base = path.substr(0, path.length - m[1].length - 1);
-        loc.skin = loc.base + "skin/" + FBL.application.skin + "/firebug.html";
+        loc.skin = loc.base + "skin/" + Application.skin + "/firebug.html";
         loc.app = path + fileName;
         
         if (fileName == "firebug.dev.js")
-            FBL.application.isDevelopmentMode = true;
+            Application.isDevelopmentMode = true;
 
         if (fileOptions)
         {
@@ -354,10 +358,10 @@ this.$ = function(id, doc)
         return doc.getElementById(id);
     else
     {
-        if (FBL.application.isPersistentMode)
+        if (Application.isPersistentMode)
             return document.getElementById(id);
         else
-            return FBL.application.chrome.document.getElementById(id);
+            return Application.chrome.document.getElementById(id);
     }
 };
 

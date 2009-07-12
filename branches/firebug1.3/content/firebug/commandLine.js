@@ -18,11 +18,11 @@ Firebug.CommandLine = function(element)
     this.onKeyDown = bind(this, this.onKeyDown);
     addEvent(this.element, "keydown", this.onKeyDown);
     
-    //FBL.application.global.onerror = this.onError;
+    //Application.browser.onerror = this.onError;
     var self = this
-    application.global.onerror = function(){self.onError.apply(self, arguments)};
+    Application.browser.onerror = function(){self.onError.apply(self, arguments)};
 
-    //application.global.onerror = this.onError;
+    //Application.browser.onerror = this.onError;
     window.onerror = this.onError;
     
     initializeCommandLineAPI();

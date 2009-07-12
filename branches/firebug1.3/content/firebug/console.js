@@ -183,7 +183,7 @@ Firebug.Console = extend(ConsoleModule,
         var alternateNS = "FB";
         var consoleNS = "console";
         var namespace = isFirefox ? alternateNS : consoleNS;
-        application.global[namespace] = ConsoleAPI;        
+        Application.browser[namespace] = ConsoleAPI;        
     },
     
     getPanel: function()

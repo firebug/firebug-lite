@@ -35,12 +35,12 @@ FBL.Firebug =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.initialize", "initializing application");
         
-        Firebug.browser = new Context(application.global);
+        Firebug.browser = new Context(Application.browser);
         Firebug.context = Firebug.browser;
         
         Firebug.cacheDocument();
         
-        Firebug.chrome = new FirebugChrome(application.chrome);
+        Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chrome.initialize();
         
         dispatch(modules, "initialize", []);
