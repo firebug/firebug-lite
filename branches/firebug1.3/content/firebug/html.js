@@ -282,7 +282,10 @@ function selectElement(e)
     }
 }
 
-// TODO : Refactor
+
+// ************************************************************************************************
+// ***  TODO:  REFACTOR  **************************************************************************
+// ************************************************************************************************
 Firebug.HTML.onTreeClick = function (e)
 {
     e = e || event;
@@ -333,6 +336,105 @@ Firebug.HTML.onTreeClick = function (e)
         input.focus(); 
     }
 }
+
+var OLD_chromeLoad = function OLD_chromeLoad(doc)
+{
+    Firebug.Inspector.onChromeReady();
+    
+    var rootNode = document.documentElement;
+    
+    /* Console event handlers */
+    addEvent(fbConsole, 'mousemove', onListMouseMove);
+    addEvent(fbConsole, 'mouseout', onListMouseOut);
+    
+    
+    // HTML event handlers
+    addEvent(fbHTML, 'click', Firebug.HTML.onTreeClick);
+    
+    addEvent(fbHTML, 'mousemove', onListMouseMove);
+    addEvent(fbHTML, 'mouseout', onListMouseOut);
+}
+
+function onListMouseOut(e)
+{
+    e = e || event || window;
+    var targ;
+    
+    if (e.target) targ = e.target;
+    else if (e.srcElement) targ = e.srcElement;
+    if (targ.nodeType == 3) // defeat Safari bug
+      targ = targ.parentNode;
+        
+      if (targ.id == "fbConsole") {
+          FBL.Firebug.Inspector.hideBoxModel();
+          hoverElement = null;        
+      }
+};
+    
+var hoverElement = null;
+var hoverElementTS = 0;
+
+Firebug.HTML.onListMouseMove = function onListMouseMove(e)
+{
+    try
+    {
+        e = e || event || window;
+        var targ;
+        
+        if (e.target) targ = e.target;
+        else if (e.srcElement) targ = e.srcElement;
+        if (targ.nodeType == 3) // defeat Safari bug
+            targ = targ.parentNode;
+            
+        var found = false;
+        while (targ && !found) {
+            if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " "))
+                targ = targ.parentNode;
+            else
+                found = true;
+        }
+        
+        if (!targ)
+        {
+            FBL.Firebug.Inspector.hideBoxModel();
+            hoverElement = null;
+            return;
+        }
+        
+        if (typeof targ.attributes[FBL.cacheID] == 'undefined') return;
+        
+        var uid = targ.attributes[FBL.cacheID];
+        if (!uid) return;
+        
+        var el = FBL.documentCache[uid.value];
+        
+        if (el.id == "FirebugChrome") return false;  
+    
+        var nodeName = el.nodeName.toLowerCase();
+        
+    
+        if (FBL.isIE && " meta title script link ".indexOf(" "+nodeName+" ") != -1)
+            return;
+    
+        if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " ")) return;
+        
+        if (" html head body br script link ".indexOf(" "+nodeName+" ") != -1) { 
+            FBL.Firebug.Inspector.hideBoxModel();
+            hoverElement = null;
+            return;
+        }
+      
+        if ((new Date().getTime() - hoverElementTS > 40) && hoverElement != el) {
+            hoverElementTS = new Date().getTime();
+            hoverElement = el;
+            FBL.Firebug.Inspector.drawBoxModel(el);
+        }
+    }
+    catch(E)
+    {
+    }
+}
+
 
 // ************************************************************************************************
 }});

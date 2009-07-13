@@ -37,7 +37,6 @@ FBL.createChrome = function(context, options, onChromeLoad)
         node.setAttribute("frameBorder", "0");
         node.setAttribute("allowTransparency", "true");
         node.style.border = "0";
-        node.style.display = "none"; // avoid flickering during chrome rendering
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
         node.style.position = isIE6 ? "absolute" : "fixed";
@@ -45,6 +44,10 @@ FBL.createChrome = function(context, options, onChromeLoad)
         node.style.left = "0";
         node.style.bottom = isIE6 ? "-1px" : "0";
         node.style.height = options.height + "px";
+        
+         // avoid flickering during chrome rendering
+        if (isFirefox)
+            node.style.display = "none";
         
         var isBookmarletMode = Application.isBookmarletMode;
         if (!isBookmarletMode)
@@ -232,12 +235,27 @@ var ChromeBase = extend(ChromeBase, {
         // Select the first registered panel
         this.selectPanel(panels[0].prototype.name);
         
+        
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
         var toolButton = new Firebug.ToolButton({
             type: "toggle",
             panel: Firebug.chrome.panels[0], 
             module: Firebug.Console
         });
         toolButton.initialize();
+        
+        Firebug.Inspector.initialize();
+        Firebug.Inspector.onChromeReady();
+        
+        addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
+        addEvent(fbPanel1, 'mouseout', Firebug.HTML.onListMouseMove);
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
         
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -413,7 +431,7 @@ var ChromeBase = extend(ChromeBase, {
         var y = Math.max(chromeHeight, topHeight);
         
         fbPanel1Style.height = Math.max(y - fixedHeight, 0)+ "px";
-        fbPanelBox1.height = Math.max(y - fixedHeight, 0)+ "px";
+        fbPanelBox1Style.height = Math.max(y - fixedHeight, 0)+ "px";
         
         if (isIE || isOpera)
         {
@@ -461,7 +479,7 @@ var ChromeFrameBase = extend(ChromeContext, {
     
     initialize: function()
     {
-        ChromeBase.initialize.call(this)
+        ChromeBase.initialize.call(this);
         
         this.addController(
             [Firebug.browser.window, "resize", this.draw],
@@ -479,9 +497,11 @@ var ChromeFrameBase = extend(ChromeContext, {
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
         
-        // TODO: Check visibility preferences here
-        this.node.style.display = "";
+        // restore display for the anti-flicker trick
+        if (isFirefox)
+            this.node.style.display = "block";
         
+        // TODO: Check visibility preferences here
         this.isVisible = true;
         this.node.style.visibility = "visible";
     },

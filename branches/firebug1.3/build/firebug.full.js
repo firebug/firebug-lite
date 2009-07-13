@@ -1,4 +1,5 @@
 (function(){
+
 /*!
  * Firebug Lite - v1.3a
  *  Copyright 2009, Firebug Working Group
@@ -210,10 +211,11 @@ var findLocation =  function findLocation()
     var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
-    var head = document.getElementsByTagName("head")[0];
+    //var head = document.getElementsByTagName("head")[0];
     var path = null;
     
-    for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
+    //for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
+    for(var i=0, c=document.getElementsByTagName("script"), ci; ci=c[i]; i++)
     {
         var file = null;
         
@@ -368,7 +370,7 @@ this.$ = function(id, doc)
 
 this.$$ = function(selector, doc)
 {
-    if (doc)
+    if (doc || !FBL.Firebug.chrome)
         return FBL.Firebug.Selector(selector, doc);
     else
     {
@@ -1014,7 +1016,7 @@ var panelTypeMap = {};
 FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "FirebugLite - 1.3.0a - $Revision: 3487 $",
+    version: "FirebugLite - 1.3.0a - $Revision: 3489 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -2556,7 +2558,6 @@ FBL.createChrome = function(context, options, onChromeLoad)
         node.setAttribute("frameBorder", "0");
         node.setAttribute("allowTransparency", "true");
         node.style.border = "0";
-        node.style.display = "none"; // avoid flickering during chrome rendering
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
         node.style.position = isIE6 ? "absolute" : "fixed";
@@ -2564,6 +2565,10 @@ FBL.createChrome = function(context, options, onChromeLoad)
         node.style.left = "0";
         node.style.bottom = isIE6 ? "-1px" : "0";
         node.style.height = options.height + "px";
+        
+         // avoid flickering during chrome rendering
+        if (isFirefox)
+            node.style.display = "none";
         
         var isBookmarletMode = Application.isBookmarletMode;
         if (!isBookmarletMode)
@@ -2751,12 +2756,27 @@ var ChromeBase = extend(ChromeBase, {
         // Select the first registered panel
         this.selectPanel(panels[0].prototype.name);
         
+        
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
         var toolButton = new Firebug.ToolButton({
             type: "toggle",
             panel: Firebug.chrome.panels[0], 
             module: Firebug.Console
         });
         toolButton.initialize();
+        
+        Firebug.Inspector.initialize();
+        Firebug.Inspector.onChromeReady();
+        
+        addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
+        addEvent(fbPanel1, 'mouseout', Firebug.HTML.onListMouseMove);
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
         
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -2932,7 +2952,7 @@ var ChromeBase = extend(ChromeBase, {
         var y = Math.max(chromeHeight, topHeight);
         
         fbPanel1Style.height = Math.max(y - fixedHeight, 0)+ "px";
-        fbPanelBox1.height = Math.max(y - fixedHeight, 0)+ "px";
+        fbPanelBox1Style.height = Math.max(y - fixedHeight, 0)+ "px";
         
         if (isIE || isOpera)
         {
@@ -2980,7 +3000,7 @@ var ChromeFrameBase = extend(ChromeContext, {
     
     initialize: function()
     {
-        ChromeBase.initialize.call(this)
+        ChromeBase.initialize.call(this);
         
         this.addController(
             [Firebug.browser.window, "resize", this.draw],
@@ -2998,9 +3018,11 @@ var ChromeFrameBase = extend(ChromeContext, {
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
         
-        // TODO: Check visibility preferences here
-        this.node.style.display = "";
+        // restore display for the anti-flicker trick
+        if (isFirefox)
+            this.node.style.display = "block";
         
+        // TODO: Check visibility preferences here
         this.isVisible = true;
         this.node.style.visibility = "visible";
     },
@@ -4706,7 +4728,7 @@ Firebug.Inspector =
     
     onChromeReady: function()
     {
-        fbBtnInspect = $U("fbBtnInspect");
+        fbBtnInspect = $("fbBtnInspect");
     },    
   
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -5962,7 +5984,10 @@ function selectElement(e)
     }
 }
 
-// TODO : Refactor
+
+// ************************************************************************************************
+// ***  TODO:  REFACTOR  **************************************************************************
+// ************************************************************************************************
 Firebug.HTML.onTreeClick = function (e)
 {
     e = e || event;
@@ -6013,6 +6038,105 @@ Firebug.HTML.onTreeClick = function (e)
         input.focus(); 
     }
 }
+
+var OLD_chromeLoad = function OLD_chromeLoad(doc)
+{
+    Firebug.Inspector.onChromeReady();
+    
+    var rootNode = document.documentElement;
+    
+    /* Console event handlers */
+    addEvent(fbConsole, 'mousemove', onListMouseMove);
+    addEvent(fbConsole, 'mouseout', onListMouseOut);
+    
+    
+    // HTML event handlers
+    addEvent(fbHTML, 'click', Firebug.HTML.onTreeClick);
+    
+    addEvent(fbHTML, 'mousemove', onListMouseMove);
+    addEvent(fbHTML, 'mouseout', onListMouseOut);
+}
+
+function onListMouseOut(e)
+{
+    e = e || event || window;
+    var targ;
+    
+    if (e.target) targ = e.target;
+    else if (e.srcElement) targ = e.srcElement;
+    if (targ.nodeType == 3) // defeat Safari bug
+      targ = targ.parentNode;
+        
+      if (targ.id == "fbConsole") {
+          FBL.Firebug.Inspector.hideBoxModel();
+          hoverElement = null;        
+      }
+};
+    
+var hoverElement = null;
+var hoverElementTS = 0;
+
+Firebug.HTML.onListMouseMove = function onListMouseMove(e)
+{
+    try
+    {
+        e = e || event || window;
+        var targ;
+        
+        if (e.target) targ = e.target;
+        else if (e.srcElement) targ = e.srcElement;
+        if (targ.nodeType == 3) // defeat Safari bug
+            targ = targ.parentNode;
+            
+        var found = false;
+        while (targ && !found) {
+            if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " "))
+                targ = targ.parentNode;
+            else
+                found = true;
+        }
+        
+        if (!targ)
+        {
+            FBL.Firebug.Inspector.hideBoxModel();
+            hoverElement = null;
+            return;
+        }
+        
+        if (typeof targ.attributes[FBL.cacheID] == 'undefined') return;
+        
+        var uid = targ.attributes[FBL.cacheID];
+        if (!uid) return;
+        
+        var el = FBL.documentCache[uid.value];
+        
+        if (el.id == "FirebugChrome") return false;  
+    
+        var nodeName = el.nodeName.toLowerCase();
+        
+    
+        if (FBL.isIE && " meta title script link ".indexOf(" "+nodeName+" ") != -1)
+            return;
+    
+        if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " ")) return;
+        
+        if (" html head body br script link ".indexOf(" "+nodeName+" ") != -1) { 
+            FBL.Firebug.Inspector.hideBoxModel();
+            hoverElement = null;
+            return;
+        }
+      
+        if ((new Date().getTime() - hoverElementTS > 40) && hoverElement != el) {
+            hoverElementTS = new Date().getTime();
+            hoverElement = el;
+            FBL.Firebug.Inspector.drawBoxModel(el);
+        }
+    }
+    catch(E)
+    {
+    }
+}
+
 
 // ************************************************************************************************
 }});

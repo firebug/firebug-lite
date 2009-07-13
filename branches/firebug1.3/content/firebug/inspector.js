@@ -18,7 +18,7 @@ Firebug.Inspector =
     
     onChromeReady: function()
     {
-        fbBtnInspect = $U("fbBtnInspect");
+        fbBtnInspect = $("fbBtnInspect");
     },    
   
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

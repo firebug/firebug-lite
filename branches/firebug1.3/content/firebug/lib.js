@@ -209,10 +209,11 @@ var findLocation =  function findLocation()
     var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
-    var head = document.getElementsByTagName("head")[0];
+    //var head = document.getElementsByTagName("head")[0];
     var path = null;
     
-    for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
+    //for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
+    for(var i=0, c=document.getElementsByTagName("script"), ci; ci=c[i]; i++)
     {
         var file = null;
         
@@ -367,7 +368,7 @@ this.$ = function(id, doc)
 
 this.$$ = function(selector, doc)
 {
-    if (doc)
+    if (doc || !FBL.Firebug.chrome)
         return FBL.Firebug.Selector(selector, doc);
     else
     {
