@@ -683,66 +683,80 @@ var onHSplitterMouseDown = function onHSplitterMouseDown(event)
 };
 
 var lastHSplitterMouseMove = 0;
+var onHSplitterMouseMoveBuffer = null;
+var onHSplitterMouseMoveTimer = null;
 
 var onHSplitterMouseMove = function onHSplitterMouseMove(event)
 {
     cancelEvent(event, true);
     
-    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
+    var clientY = event.clientY;
+    var win = isIE
+        ? event.srcElement.ownerDocument.parentWindow
+        : event.target.ownerDocument && event.target.ownerDocument.defaultView;
+    
+    if (!win)
+        return;
+    
+    if (win != win.parent)
     {
-        var clientY = event.clientY;
-        var win = isIE
-            ? event.srcElement.ownerDocument.parentWindow
-            : event.target.ownerDocument && event.target.ownerDocument.defaultView;
-      
-        if (!win)
-            return;
-        
-        var windowSize = Firebug.browser.getWindowSize();
-        var scrollPos = Firebug.browser.getWindowScrollPosition();
-        var scrollSize = Firebug.browser.getWindowScrollSize();
-        
-        // find mouse position relative to the viewport (browser window)
-        // old way
-        //if (win != win.parent) clientY += win.frameElement ? win.frameElement.offsetTop : 0;
-        if (win != win.parent)
+        var frameElement = win.frameElement;
+        if (frameElement)
         {
-            var frameElement = win.frameElement;
+            var framePos = Firebug.Inspector.getElementPosition(frameElement).top;
+            clientY += framePos;
             
-            if (frameElement)
-            {
-                var framePos = Firebug.Inspector.getElementPosition(frameElement).top;
-                clientY += framePos;
-                
-                if(frameElement.style.position != "fixed")
-                    clientY -= scrollPos.top;
-            }            
+            if (frameElement.style.position != "fixed")
+                clientY -= Firebug.browser.getWindowScrollPosition().top;
         }
-        
-        // compute chrome fixed size (top bar and command line)
-        var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
-        var fixedHeight = topHeight + commandLineHeight;
-        var chromeNode = Firebug.chrome.node;
-        
-        var scrollbarSize = !isIE && (scrollSize.width > windowSize.width) ? 17 : 0;
-        
-        var height = isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height; 
-         
-        // compute the min and max size of the chrome
-        var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
-            chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
-
-        chromeNode.style.height = chromeHeight + "px";
-        
-        if (isIE6)
-          Firebug.chrome.fixIEPosition();
-        
-        Firebug.chrome.draw();
-        
-        lastHSplitterMouseMove = new Date().getTime();
     }
     
+    onHSplitterMouseMoveBuffer = clientY; // buffer
+    
+    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
+    {
+        lastHSplitterMouseMove = new Date().getTime();
+        handleHSplitterMouseMove();
+    }
+    else
+        if (!onHSplitterMouseMoveTimer)
+            onHSplitterMouseMoveTimer = setTimeout(handleHSplitterMouseMove, chromeRedrawSkipRate);
+    
     return false;
+};
+
+var handleHSplitterMouseMove = function()
+{
+    if (onHSplitterMouseMoveTimer)
+    {
+        clearTimeout(onHSplitterMouseMoveTimer);
+        onHSplitterMouseMoveTimer = null;
+    }
+    
+    var clientY = onHSplitterMouseMoveBuffer;
+    
+    var windowSize = Firebug.browser.getWindowSize();
+    var scrollSize = Firebug.browser.getWindowScrollSize();
+    
+    // compute chrome fixed size (top bar and command line)
+    var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
+    var fixedHeight = topHeight + commandLineHeight;
+    var chromeNode = Firebug.chrome.node;
+    
+    var scrollbarSize = !isIE && (scrollSize.width > windowSize.width) ? 17 : 0;
+    
+    var height = isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height; 
+     
+    // compute the min and max size of the chrome
+    var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
+        chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
+
+    chromeNode.style.height = chromeHeight + "px";
+    
+    if (isIE6)
+        Firebug.chrome.fixIEPosition();
+    
+    Firebug.chrome.draw();
 };
 
 var onHSplitterMouseUp = function onHSplitterMouseUp(event)
