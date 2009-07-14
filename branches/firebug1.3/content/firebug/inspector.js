@@ -244,18 +244,15 @@ Firebug.Inspector =
 
     getElementPosition: function(el)
     {
-        var left = 0
-        var top = 0;
+        var left = 0, top = 0;
         
-        if (el.offsetParent)
+        do
         {
-            do
-            {
-                left += el.offsetLeft;
-                top += el.offsetTop;
-            }
-            while (el = el.offsetParent);
+            left += el.offsetLeft;
+            top += el.offsetTop;
         }
+        while (el = el.offsetParent);
+    
         return {left:left, top:top};      
     },
     
