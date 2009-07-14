@@ -35,7 +35,7 @@ FBL.createChrome = function(context, options, onChromeLoad)
         
         node.setAttribute("id", options.id);
         node.setAttribute("frameBorder", "0");
-        node.setAttribute("allowTransparency", "true");
+        //node.setAttribute("allowTransparency", "true"); // bug in IE in some pages
         node.style.border = "0";
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
@@ -199,7 +199,6 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
-        
         topHeight = fbTop.offsetHeight;
         topPartialHeight = fbToolbar.offsetHeight;
         
@@ -234,7 +233,6 @@ var ChromeBase = extend(ChromeBase, {
         
         // Select the first registered panel
         this.selectPanel(panels[0].prototype.name);
-        
         
         // ************************************************************************************************
         // ************************************************************************************************
@@ -460,6 +458,17 @@ var ChromeBase = extend(ChromeBase, {
         }
     },
     
+    resize: function()
+    {
+        var self = this;
+        setTimeout(function(){
+            self.draw();
+            
+            if (isIE && self.type == "frame")
+                self.fixIEPosition();
+        }, 0);
+    },
+    
     layout: function(panel)
     {
         var options = panel.options;
@@ -479,31 +488,31 @@ var ChromeFrameBase = extend(ChromeContext, {
     
     initialize: function()
     {
+        // restore display for the anti-flicker trick
+        if (isFirefox)
+            this.node.style.display = "block";        
+        
+        // TODO: Check visibility preferences here
+        this.isVisible = true;
+        this.node.style.visibility = "visible";
+        
         ChromeBase.initialize.call(this);
         
         this.addController(
-            [Firebug.browser.window, "resize", this.draw],
+            [Firebug.browser.window, "resize", this.resize],
             [Firebug.browser.window, "unload", this.destroy]
         );
         
         if (isIE6)
         {
             this.addController(
-                [Firebug.browser.window, "resize", this.fixPosition],
-                [Firebug.browser.window, "scroll", this.fixPosition]
+                //[Firebug.browser.window, "resize", this.fixIEPosition],
+                [Firebug.browser.window, "scroll", this.fixIEPosition]
             );
         }
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
-        
-        // restore display for the anti-flicker trick
-        if (isFirefox)
-            this.node.style.display = "block";
-        
-        // TODO: Check visibility preferences here
-        this.isVisible = true;
-        this.node.style.visibility = "visible";
     },
     
     shutdown: function()
@@ -526,7 +535,7 @@ var ChromeFrameBase = extend(ChromeContext, {
         node.style.right = 0;
 
         if (isIE6)
-            chrome.fixPosition();
+            chrome.fixIEPosition();
         
         var main = $("fbChrome");
         main.style.display = "none";
@@ -537,13 +546,13 @@ var ChromeFrameBase = extend(ChromeContext, {
         mini.style.display = "block";
     },
     
-    fixPosition: function()
+    fixIEPosition: function()
     {
         // fix IE problem with offset when not in fullscreen mode
         var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
         
-        var size = Firebug.Inspector.getWindowSize();
-        var scroll = Firebug.Inspector.getWindowScrollPosition();
+        var size = Firebug.browser.getWindowSize();
+        var scroll = Firebug.browser.getWindowScrollPosition();
         var maxHeight = size.height;
         var height = Firebug.chrome.node.offsetHeight;
         
@@ -563,7 +572,7 @@ var ChromePopupBase = extend(ChromeContext, {
         ChromeBase.initialize.call(this)
         
         this.addController(
-            [Firebug.chrome.window, "resize", this.draw],
+            [Firebug.chrome.window, "resize", this.resize],
             [Firebug.chrome.window, "unload", this.destroy]
         );
         
@@ -630,7 +639,7 @@ var sidePanelWidth = 300;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 25;
+var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 75;
 
 
 //************************************************************************************************
@@ -682,29 +691,51 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
     if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
     {
         var clientY = event.clientY;
-        var win = document.all
+        var win = isIE
             ? event.srcElement.ownerDocument.parentWindow
             : event.target.ownerDocument && event.target.ownerDocument.defaultView;
       
         if (!win)
             return;
         
-        if (win != win.parent)
-            clientY += win.frameElement ? win.frameElement.offsetTop : 0;
-
-        var size = Firebug.browser.getWindowSize();
-        var chrome = Firebug.chrome.node;
-        var height = (isIE && win == top) ? size.height : chrome.offsetTop + chrome.clientHeight; 
+        var windowSize = Firebug.browser.getWindowSize();
+        var scrollPos = Firebug.browser.getWindowScrollPosition();
+        var scrollSize = Firebug.browser.getWindowScrollSize();
         
+        // find mouse position relative to the viewport (browser window)
+        // old way
+        //if (win != win.parent) clientY += win.frameElement ? win.frameElement.offsetTop : 0;
+        if (win != win.parent)
+        {
+            var frameElement = win.frameElement;
+            
+            if (frameElement)
+            {
+                var framePos = Firebug.Inspector.getElementPosition(frameElement).top;
+                clientY += framePos;
+                
+                if(frameElement.style.position != "fixed")
+                    clientY -= scrollPos.top;
+            }            
+        }
+        
+        // compute chrome fixed size (top bar and command line)
         var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
-        var fixedHeight = topHeight + commandLineHeight + 1;
-        var y = Math.max(height - clientY + 7, fixedHeight);
-            y = Math.min(y, size.height);
-          
-        chrome.style.height = y + "px";
+        var fixedHeight = topHeight + commandLineHeight;
+        var chromeNode = Firebug.chrome.node;
+        
+        var scrollbarSize = !isIE && (scrollSize.width > windowSize.width) ? 17 : 0;
+        
+        var height = isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height; 
+         
+        // compute the min and max size of the chrome
+        var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
+            chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
+
+        chromeNode.style.height = chromeHeight + "px";
         
         if (isIE6)
-          Firebug.chrome.fixPosition();
+          Firebug.chrome.fixIEPosition();
         
         Firebug.chrome.draw();
         
