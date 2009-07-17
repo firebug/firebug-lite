@@ -106,59 +106,62 @@ Firebug.Controller = function()
     var _controllers = [];
     var _context = null;
     
-    return {
-
-        addController: function()
+    this.setContext = function(context)
+    {
+        _context = context;
+    };
+    
+    this.addController = function()
+    {
+        for (var i=0, arg; arg=arguments[i]; i++)
         {
-            for (var i=0, arg; arg=arguments[i]; i++)
+            // If the first argument is a string, make a selector query 
+            // within the controller node context
+            if (typeof arg[0] == "string")
             {
-                // If the first argument is a string, make a selector query 
-                // within the controller node context
-                if (typeof arg[0] == "string")
-                {
-                    arg[0] = $$(arg[0], _context);
-                }
-                
-                // bind the handler to the proper context
-                var handler = arg[2];
-                arg[2] = bind(this, handler);
-                // save the original handler as an extra-argument, so we can
-                // look for it later, when removing a particular controller            
-                arg[3] = handler;
-                
-                _controllers.push(arg);
-                addEvent.apply(this, arg);
+                arg[0] = $$(arg[0], _context);
             }
-        },
-        
-        removeController: function()
+            
+            // bind the handler to the proper context
+            var handler = arg[2];
+            arg[2] = bind(this, handler);
+            // save the original handler as an extra-argument, so we can
+            // look for it later, when removing a particular controller            
+            arg[3] = handler;
+            
+            _controllers.push(arg);
+            addEvent.apply(this, arg);
+        }
+    };
+    
+    this.removeController = function()
+    {
+        for (var i=0, arg; arg=arguments[i]; i++)
         {
-            for (var i=0, arg; arg=arguments[i]; i++)
+            for (var j=0, c; c=_controllers[j]; j++)
             {
-                for (var j=0, c; c=_controllers[j]; j++)
-                {
-                    if (arg[0] == c[0] && arg[1] == c[1] && arg[2] == c[3])
-                        removeEvent.apply(this, c);
-                }
-            }
-        },
-        
-        removeControllers: function()
-        {
-            for (var i=0, c; c=_controllers[i]; i++)
-            {
-                removeEvent.apply(this, c);
+                if (arg[0] == c[0] && arg[1] == c[1] && arg[2] == c[3])
+                    removeEvent.apply(this, c);
             }
         }
     };
+    
+    this.removeControllers = function()
+    {
+        for (var i=0, c; c=_controllers[i]; i++)
+        {
+            removeEvent.apply(this, c);
+        }
+    };
+    
+    return this;
 };
 
 append(Firebug.Controller.prototype, 
 {
     initialize: function(context)
     {
-        _controllers = [];
-        _context = context || Firebug.chrome;
+        this.setContext(context);
     },
     
     shutdown: function()
