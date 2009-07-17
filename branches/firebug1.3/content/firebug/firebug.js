@@ -27,9 +27,15 @@ FBL.Firebug =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
+    chromeMap: {},
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
+    
+    initializeContext: function(chrome)
+    {
+        
+    },
     
     initialize: function()
     {
@@ -38,10 +44,11 @@ FBL.Firebug =
         Firebug.browser = new Context(Application.browser);
         Firebug.context = Firebug.browser;
         
-        Firebug.cacheDocument();
+        var chrome = Firebug.chrome = new Chrome(Application.chrome);
+        Firebug.chromeMap[chrome.type] = chrome;
+        chrome.initialize();
         
-        Firebug.chrome = new Chrome(Application.chrome);
-        Firebug.chrome.initialize();
+        Firebug.cacheDocument();
         
         dispatch(modules, "initialize", []);
     },
@@ -93,6 +100,73 @@ FBL.Firebug =
 // ************************************************************************************************
 // Controller
 
+Firebug.Controller = function()
+{
+    var _controllers = [];
+    var _context = null;
+    
+    return {
+
+        addController: function()
+        {
+            for (var i=0, arg; arg=arguments[i]; i++)
+            {
+                // If the first argument is a string, make a selector query 
+                // within the controller node context
+                if (typeof arg[0] == "string")
+                {
+                    arg[0] = $$(arg[0], _context);
+                }
+                
+                // bind the handler to the proper context
+                var handler = arg[2];
+                arg[2] = bind(this, handler);
+                // save the original handler as an extra-argument, so we can
+                // look for it later, when removing a particular controller            
+                arg[3] = handler;
+                
+                _controllers.push(arg);
+                addEvent.apply(this, arg);
+            }
+        },
+        
+        removeController: function()
+        {
+            for (var i=0, arg; arg=arguments[i]; i++)
+            {
+                for (var j=0, c; c=_controllers[j]; j++)
+                {
+                    if (arg[0] == c[0] && arg[1] == c[1] && arg[2] == c[3])
+                        removeEvent.apply(this, c);
+                }
+            }
+        },
+        
+        removeControllers: function()
+        {
+            for (var i=0, c; c=_controllers[i]; i++)
+            {
+                removeEvent.apply(this, c);
+            }
+        }
+    };
+};
+
+append(Firebug.Controller.prototype, 
+{
+    initialize: function(context)
+    {
+        _controllers = [];
+        _context = context || Firebug.chrome;
+    },
+    
+    shutdown: function()
+    {
+        this.removeControllers();
+    }
+});
+
+/*
 Firebug.Controller = {
         
     _controllers: null,
@@ -152,6 +226,7 @@ Firebug.Controller = {
         }
     }
 };
+/**/
 
 
 // ************************************************************************************************
@@ -575,14 +650,13 @@ Firebug.PanelBar =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     selectedPanel: null,
     
-    panelBarNode: null,
-    context: null,
+    //panelBarNode: null,
+    //context: null,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     initialize: function()
     {
-        this.panels = [];
         this.panelMap = {};
         
         //this.panelBarNode = panelBarNode;    
@@ -611,7 +685,6 @@ Firebug.PanelBar =
         
         Firebug.chrome.addController([panel.tabNode, "mousedown", onTabClick]);
         
-        this.panels.push(panel);
         this.panelMap[panelName] = panel;
     },
     
@@ -633,6 +706,9 @@ Firebug.PanelBar =
                 selectedPanel.hide();
                 panel.shutdown();
             }
+            
+            if (!panel.parentPanel)
+                FirebugChrome.selectedPanel = panelName;
             
             this.selectedPanel = panel;
             
@@ -700,7 +776,7 @@ Firebug.ToolButton = function(options)
     this.container.appendChild(this.node);
 };
 
-Firebug.ToolButton.prototype = extend(Firebug.Controller,
+Firebug.ToolButton.prototype = extend(new Firebug.Controller(),
 {
     title: null,
     caption: null,
@@ -723,7 +799,7 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
     
     initialize: function()
     {
-        Firebug.Controller.initialize.apply(this);
+        Firebug.Controller.prototype.initialize.apply(this);
         var node = this.node;
         
         this.addController([node, "mousedown", this.handlePress]);
@@ -738,7 +814,7 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
     
     shutdown: function()
     {
-        this.removeControllers();
+        Firebug.Controller.prototype.shutdown.apply(this);
     },
     
     restore: function()
@@ -822,13 +898,13 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
 
 function StatusBar(){};
 
-StatusBar.prototype = extend(Firebug.Controller, {
+StatusBar.prototype = extend(new Firebug.Controller(), {
     
 });
 
 function PanelOptions(){};
 
-PanelOptions.prototype = extend(Firebug.Controller, {
+PanelOptions.prototype = extend(new Firebug.Controller(), {
     
 });
 
