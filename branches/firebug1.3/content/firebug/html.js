@@ -176,7 +176,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     isTreeNodeVisible: function(id)
     {
-        return $U(id);
+        return $(id);
     },
     
     selectTreeNode: function(id)
@@ -200,7 +200,7 @@ Firebug.HTML = extend(Firebug.Module,
         while(stack.length > 0)
         {
             id = stack.pop();
-            node = $U(id);
+            node = $(id);
             
             if (stack.length > 0 && documentCache[id].childNodes.length > 0)
               this.appendTreeChildren(node);
@@ -208,7 +208,7 @@ Firebug.HTML = extend(Firebug.Module,
         
         selectElement(node);
         
-        fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+        //fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
     }
     
 });
