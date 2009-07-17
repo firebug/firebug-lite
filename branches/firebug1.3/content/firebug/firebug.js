@@ -370,6 +370,9 @@ Firebug.Panel =
             // create ToolButtons
         }
         
+        var panelContent = this.panelContent = createElement("div");
+        this.panelNode.appendChild(panelContent);
+        
         this.panelContainer = this.panelNode.parentNode;
         
         if (FBTrace.DBG_INITIALIZE)

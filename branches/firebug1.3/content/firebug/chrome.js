@@ -45,11 +45,20 @@ var PopupDefaultOptions =
 // ************************************************************************************************
 var onPopupChromeLoad = function(chromeContext)
 {
-    var chrome = Firebug.chrome = new Chrome(chromeContext);
-    Firebug.chromeMap[chrome.type] = chrome;
+    debugger;
+    
+    var chrome = Firebug.chromeMap[chromeContext.type] = Firebug.chrome = new Chrome(chromeContext);
     chrome.initialize();
     
+    var framePanelMap = Firebug.chromeMap.frame.panelMap;
+    var popupPanelMap = Firebug.chromeMap.popup.panelMap;
+    for(var name in framePanelMap)
+    {
+        popupPanelMap[name].panelContent.innerHTML = framePanelMap[name].panelContent.innerHTML;
+    }
+    
     dispatch(Firebug.modules, "initialize", []);
+    
 };
    
 // ************************************************************************************************

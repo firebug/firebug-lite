@@ -87,7 +87,11 @@ OK  - problem with global events when in popup window
     - Frame/Popup settings
     
 ~~  - Detach method
+
     - Synchronize chromes
+    
+        - refactor panel. each panel should have a single panelContentNode that will be shared
+          across Chrome windows.
     
     - popup chrome in Opera isn't being initialized when NOT in bookmarlet mode. 
       Maybe the best way to detect when the chrome is loaded is the Joe Hewitt old way putting 

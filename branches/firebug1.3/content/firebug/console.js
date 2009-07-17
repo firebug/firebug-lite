@@ -144,7 +144,7 @@ var ConsoleAPI =
     
     clear: function()
     {
-        Firebug.Console.getPanel().panelNode.innerHTML = "";
+        Firebug.Console.getPanel().panelContent.innerHTML = "";
         return Firebug.Console.LOG_COMMAND;
     },
 
@@ -269,7 +269,7 @@ Firebug.Console = extend(ConsoleModule,
     {
         var panel = this.getPanel();
         
-        if (panel && panel.panelNode)
+        if (panel && panel.panelContent)
             this.writeMessage(message, className, handler);
         else
         {
@@ -299,14 +299,14 @@ Firebug.Console = extend(ConsoleModule,
         if (this.groupStack.length > 0)
             var container = this.groupStack[this.groupStack.length-1];
         else
-            var container = this.getPanel().panelNode;
+            var container = this.getPanel().panelContent;
         
         container.appendChild(row);
     },
     
     writeRow: function(message, className)
     {
-        var row = this.getPanel().panelNode.ownerDocument.createElement("div");
+        var row = this.getPanel().panelContent.ownerDocument.createElement("div");
         row.className = "logRow" + (className ? " logRow-"+className : "");
         row.innerHTML = message.join("");
         this.appendRow(row);
@@ -316,9 +316,9 @@ Firebug.Console = extend(ConsoleModule,
     {
         this.logFormatted(message, className);
     
-        var groupRow = this.getPanel().panelNode.ownerDocument.createElement("div");
+        var groupRow = this.getPanel().panelContent.ownerDocument.createElement("div");
         groupRow.className = "logGroup";
-        var groupRowBox = this.getPanel().panelNode.ownerDocument.createElement("div");
+        var groupRowBox = this.getPanel().panelContent.ownerDocument.createElement("div");
         groupRowBox.className = "logGroupBox";
         groupRow.appendChild(groupRowBox);
         this.appendRow(groupRowBox);

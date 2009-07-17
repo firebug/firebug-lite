@@ -232,11 +232,12 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         isPreRendered: true
     },
 
-    /*
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
+        
+        if (Firebug.chrome.type != "popup")
+            this.createUI();
     },
-    /**/
     
     createUI: function()
     {
@@ -245,7 +246,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.HTML.appendTreeNode(rootNode, html);
         
         this.panelNode.style.padding = "4px 3px 1px 15px";
-        var d = Firebug.chrome.document.createElement("div");
+        
+        var d = this.panelContent;
         d.innerHTML = html.join("");
         this.panelNode.appendChild(d);
     },
