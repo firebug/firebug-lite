@@ -44,11 +44,12 @@ FBL.Firebug =
         Firebug.browser = new Context(Application.browser);
         Firebug.context = Firebug.browser;
         
+        // Document must be cached before chrome initialization
+        Firebug.cacheDocument();
+        
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chromeMap[chrome.type] = chrome;
         chrome.initialize();
-        
-        Firebug.cacheDocument();
         
         dispatch(modules, "initialize", []);
     },
