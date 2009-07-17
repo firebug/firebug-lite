@@ -160,6 +160,8 @@ function findLocation()
     var reProtocol = /^\w+:\/\//;
     
     var head = document.getElementsByTagName("head")[0];
+    //var head = document.getElementsByTagName("body")[0];
+    
     var path = null;
     
     for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
@@ -230,6 +232,8 @@ function loadModules() {
     var sufix = isApplicationContext ? "#app" : "";
     
     var useDocWrite = isIE || isSafari;
+    //var useDocWrite = isIE;
+    
     var moduleURL, script;
     var scriptTags = [];
     
@@ -245,7 +249,9 @@ function loadModules() {
         {
             script = document.createElement("script");
             script.src = moduleURL;
+            
             document.getElementsByTagName("head")[0].appendChild(script);
+            //document.getElementsByTagName("body")[0].appendChild(script);
         }
     }
     
