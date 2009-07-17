@@ -173,19 +173,10 @@ Firebug.Console = extend(ConsoleModule,
 {
     LOG_COMMAND: {},
     
-    create: function()
-    {
-        this.messageQueue = [];
-        this.groupStack = [];
-        this.timeMap = {};
+    messageQueue: [],
+    groupStack: [],
+    timeMap: {},
         
-        // Register console API
-        var alternateNS = "FB";
-        var consoleNS = "console";
-        var namespace = isFirefox ? alternateNS : consoleNS;
-        Application.browser[namespace] = ConsoleAPI;        
-    },
-    
     getPanel: function()
     {
         return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
@@ -341,8 +332,6 @@ Firebug.Console = extend(ConsoleModule,
 
 });
 
-Firebug.Console.create();
-
 Firebug.registerModule(Firebug.Console);
 
 
@@ -376,20 +365,6 @@ Firebug.registerPanel(ConsolePanel);
 
 // ************************************************************************************************
 
-FBL.objectToString = function(object)
-{
-    try
-    {
-        return object+"";
-    }
-    catch (exc)
-    {
-        return null;
-    }
-};
-
-// ************************************************************************************************
-
 FBL.onError = function(msg, href, lineNo)
 {
     var html = [];
@@ -404,6 +379,16 @@ FBL.onError = function(msg, href, lineNo)
     
     Firebug.Console.logRow(html, "error");
 };
+
+
+// ************************************************************************************************
+// Register console namespace
+
+var alternateNS = "FB";
+var consoleNS = "console";
+var namespace = isFirefox ? alternateNS : consoleNS;
+Application.browser[namespace] = ConsoleAPI;        
+
 
 // ************************************************************************************************
 }});
