@@ -167,68 +167,6 @@ append(Firebug.Controller.prototype,
     }
 });
 
-/*
-Firebug.Controller = {
-        
-    _controllers: null,
-    
-    initialize: function(context)
-    {
-        this._controllers = [];
-        
-        this.controllerContext = context || Firebug.chrome;
-    },
-    
-    shutdown: function()
-    {
-        this.removeControllers();
-    },
-    
-    addController: function()
-    {
-        for (var i=0, arg; arg=arguments[i]; i++)
-        {
-            // If the first argument is a string, make a selector query 
-            // within the controller node context
-            if (typeof arg[0] == "string")
-            {
-                arg[0] = $$(arg[0], this.controllerContext);
-            }
-            
-            // bind the handler to the proper context
-            var handler = arg[2];
-            arg[2] = bind(this, handler);
-            // save the original handler as an extra-argument, so we can
-            // look for it later, when removing a particular controller            
-            arg[3] = handler;
-            
-            this._controllers.push(arg);
-            addEvent.apply(this, arg);
-        }
-    },
-    
-    removeController: function()
-    {
-        for (var i=0, arg; arg=arguments[i]; i++)
-        {
-            for (var j=0, c; c=this._controllers[j]; j++)
-            {
-                if (arg[0] == c[0] && arg[1] == c[1] && arg[2] == c[3])
-                    removeEvent.apply(this, c);
-            }
-        }
-    },
-    
-    removeControllers: function()
-    {
-        for (var i=0, c; c=this._controllers[i]; i++)
-        {
-            removeEvent.apply(this, c);
-        }
-    }
-};
-/**/
-
 
 // ************************************************************************************************
 // Module
