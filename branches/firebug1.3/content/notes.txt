@@ -93,15 +93,23 @@ OK  - problem with global events when in popup window
       Maybe the best way to detect when the chrome is loaded is the Joe Hewitt old way putting 
       JS in the end of HTML body. This is not a major issue since bookmarlet mode will be
       allways active when in production.
-    
----------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------
+ Loading
+---------------------------------------------------------------------------------------------------
+    - Console.create() is being called in the wrong time
+    
+    - window onerror - wrong time 
+    
     - Check the initializing order. 
     
     - Check create() and initialize() methods of Modules and Panels.
         - HTML panel create() will be called twice (1 for frame and 1 for popup)
     
+    
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
     
 ~~  - toolButtons
     ~~  - default button

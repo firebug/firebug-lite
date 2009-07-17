@@ -101,9 +101,7 @@ var onDocumentLoad = function onDocumentLoad()
     {
         findLocation();
         
-        var options = FBL.extend({}, WindowDefaultOptions);
-        
-        FBL.createChrome(Application.browser, options, onChromeLoad);
+        FBL.FirebugChrome.initialize();        
     }    
 };
 
@@ -137,59 +135,6 @@ var destroyApplication = function destroyApplication()
     {
         FBL = null;
     }, 100);
-};
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// Chrome loading
-
-var onChromeLoad = function onChromeLoad(chrome)
-{
-    Application.chrome = chrome;
-    
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onChromeLoad", "chrome loaded");
-    
-    if (Application.isPersistentMode)
-    {
-        chrome.window.FirebugApplication = Application;
-    
-        if (Application.isDevelopmentMode)
-        {
-            FBDev.loadChromeApplication(chrome);
-        }
-        else
-        {
-            var doc = chrome.document;
-            var script = doc.createElement("script");
-            script.src = Application.location.app;
-            doc.getElementsByTagName("head")[0].appendChild(script);
-        }
-    }
-    else
-        // initialize the chrome application
-        setTimeout(function(){
-            FBL.Firebug.initialize();
-        },100);
-};
-
-
-// ************************************************************************************************
-// Application Chromes
-
-var WindowDefaultOptions = 
-{
-    type: "frame"
-};
-
-var FrameDefaultOptions = 
-{
-    id: "FirebugChrome",
-    height: 250
-};
-
-var PopupDefaultOptions = 
-{
-    id: "FirebugChromePopup",
-    height: 250
 };
 
 // ************************************************************************************************
@@ -554,6 +499,19 @@ this.toggleClass = function(object, name)
         this.addClass(object, name);
 };
 
+// ************************************************************************************************
+
+this.objectToString = function(object)
+{
+    try
+    {
+        return object+"";
+    }
+    catch (exc)
+    {
+        return null;
+    }
+};
 
 // ************************************************************************************************
 // Opera Tab Fix

@@ -232,9 +232,14 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         isPreRendered: true
     },
 
+    /*
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
-        
+    },
+    /**/
+    
+    createUI: function()
+    {
         var rootNode = Firebug.browser.document.documentElement;
         var html = [];
         Firebug.HTML.appendTreeNode(rootNode, html);
@@ -243,12 +248,11 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         var d = Firebug.chrome.document.createElement("div");
         d.innerHTML = html.join("");
         this.panelNode.appendChild(d);
-        
-        addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
     },
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
+        addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
     }
     
 });

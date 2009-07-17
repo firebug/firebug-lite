@@ -1,5 +1,42 @@
 FBL.ns(function() { with (FBL) {
 
+    
+FBL.FirebugChrome = 
+{
+    commandLineVisible: true,
+    sidePanelVisible: false,
+    sidePanelWidth: 300,
+    selectedPanel: "Console",
+    
+    
+    initialize: function()
+    {
+        var options = FBL.extend({}, WindowDefaultOptions);
+        
+        FBL.createChrome(Application.browser, options, onChromeLoad);
+    }
+};
+    
+
+// ************************************************************************************************
+// Application Chromes
+
+var WindowDefaultOptions = 
+{
+    type: "frame"
+};
+
+var FrameDefaultOptions = 
+{
+    id: "FirebugChrome",
+    height: 250
+};
+
+var PopupDefaultOptions = 
+{
+    id: "FirebugChromePopup",
+    height: 250
+};
 
 
 
@@ -14,16 +51,7 @@ var onPopupChromeLoad = function(chromeContext)
     
     dispatch(Firebug.modules, "initialize", []);
 };
-
-FBL.FirebugChrome = 
-{
-    commandLineVisible: true,
-    sidePanelVisible: false,
-    sidePanelWidth: 300,
-    selectedPanel: "Console"
-};
-
-    
+   
 // ************************************************************************************************
 // Chrome Window Options
 
@@ -141,6 +169,37 @@ FBL.createChrome = function(context, options, onChromeLoad)
     
     waitForChrome();
 };
+
+
+var onChromeLoad = function onChromeLoad(chrome)
+{
+    Application.chrome = chrome;
+    
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome loaded");
+    
+    if (Application.isPersistentMode)
+    {
+        chrome.window.FirebugApplication = Application;
+    
+        if (Application.isDevelopmentMode)
+        {
+            FBDev.loadChromeApplication(chrome);
+        }
+        else
+        {
+            var doc = chrome.document;
+            var script = doc.createElement("script");
+            script.src = Application.location.app;
+            doc.getElementsByTagName("head")[0].appendChild(script);
+        }
+    }
+    else
+        // initialize the chrome application
+        setTimeout(function(){
+            FBL.Firebug.initialize();
+        },100);
+};
+
 
 var getChromeTemplate = function()
 {
