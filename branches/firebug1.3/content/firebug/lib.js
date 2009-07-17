@@ -362,7 +362,7 @@ this.$ = function(id, doc)
         if (Application.isPersistentMode)
             return document.getElementById(id);
         else
-            return Application.chrome.document.getElementById(id);
+            return FBL.Firebug.chrome.document.getElementById(id);
     }
 };
 
@@ -445,6 +445,9 @@ this.addGlobalEvent = function(name, handler)
     var frames = FBL.Firebug.browser.window.frames;
     
     FBL.addEvent(doc, name, handler);
+    
+    if (FBL.Firebug.chrome.type == "popup")
+        FBL.addEvent(FBL.Firebug.chrome.document, name, handler);
   
     for (var i = 0, frame; frame = frames[i]; i++)
     {
@@ -465,6 +468,9 @@ this.removeGlobalEvent = function(name, handler)
     var frames = FBL.Firebug.browser.window.frames;
     
     FBL.removeEvent(doc, name, handler);
+    
+    if (FBL.Firebug.chrome.type == "popup")
+        FBL.removeEvent(FBL.Firebug.chrome.document, name, handler);
   
     for (var i = 0, frame; frame = frames[i]; i++)
     {
@@ -485,7 +491,8 @@ this.dispatch = function(listeners, name, args)
 {
     if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
     
-    try {
+    try
+    {
         for (var i = 0; i < listeners.length; ++i)
         {
             var listener = listeners[i];
@@ -765,7 +772,6 @@ this.Ajax =
 this.Ajax.initialize();
 
 
-
 // ************************************************************************************************
 // Cookie, from http://www.quirksmode.org/js/cookies.html
 
@@ -799,17 +805,20 @@ this.eraseCookie = function(name)
 };
 
 
-
 // ************************************************************************************************
 // http://www.mister-pixel.com/#Content__state=is_that_simple
 var fixIE6BackgroundImageCache = function(doc)
 {
     doc = doc || document;
-    try {
+    try
+    {
         doc.execCommand("BackgroundImageCache", false, true);
-    } catch(err) {}
+    } 
+    catch(E)
+    {
+        
+    }
 };
-
 
 
 // ************************************************************************************************
