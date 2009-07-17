@@ -1,7 +1,29 @@
 FBL.ns(function() { with (FBL) {
+
+
+
+
+
+
 // ************************************************************************************************
+var onPopupChromeLoad = function(chromeContext)
+{
+    var chrome = Firebug.chrome = new Chrome(chromeContext);
+    Firebug.chromeMap[chrome.type] = chrome;
+    chrome.initialize();
+    
+    dispatch(Firebug.modules, "initialize", []);
+};
 
+FBL.FirebugChrome = 
+{
+    commandLineVisible: true,
+    sidePanelVisible: false,
+    sidePanelWidth: 300,
+    selectedPanel: "Console"
+};
 
+    
 // ************************************************************************************************
 // Chrome Window Options
 
@@ -153,7 +175,7 @@ FBL.Chrome = function(chrome)
 // ************************************************************************************************
 // ChromeBase
 
-var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
+var ChromeBase = extend(new Firebug.Controller(), Firebug.PanelBar);
 var ChromeBase = extend(ChromeBase, {
     
     destroy: function()
@@ -203,14 +225,8 @@ var ChromeBase = extend(ChromeBase, {
         topPartialHeight = fbToolbar.offsetHeight;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
-        commandLineVisible = true;
-        sidePanelVisible = false;
-        sidePanelWidth = 300;
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
-        Firebug.Controller.initialize.apply(this);
+        Firebug.Controller.prototype.initialize.apply(this);
         Firebug.PanelBar.initialize.apply(this);
         
         disableTextSelection($("fbToolbar"));
@@ -221,9 +237,21 @@ var ChromeBase = extend(ChromeBase, {
         commandLine = new Firebug.CommandLine(fbCommandLine);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
+        if (isIE6)
+        {
+           var as = $$(".fbHover");
+           for (var i=0, a; a=as[i]; i++)
+           {
+               a.setAttribute("href", "javascript:void(0)");
+           }
+        }
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize all panels
-        var panels = Firebug.panelTypes;
-        for (var i=0, p; p=panels[i]; i++)
+        
+        var panelMap = Firebug.panelTypes;
+        for (var i=0, p; p=panelMap[i]; i++)
         {
             if (!p.parentPanel)
             {
@@ -232,7 +260,7 @@ var ChromeBase = extend(ChromeBase, {
         }
         
         // Select the first registered panel
-        this.selectPanel(panels[0].prototype.name);
+        this.selectPanel(FirebugChrome.selectedPanel);
         
         // ************************************************************************************************
         // ************************************************************************************************
@@ -240,7 +268,7 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         var toolButton = new Firebug.ToolButton({
             type: "toggle",
-            panel: Firebug.chrome.panels[0], 
+            panel: Firebug.chrome.panelMap.Console, 
             module: Firebug.Console
         });
         toolButton.initialize();
@@ -257,22 +285,12 @@ var ChromeBase = extend(ChromeBase, {
         
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
-        if (isIE6)
-        {
-           var as = $$(".fbHover");
-           for (var i=0, a; a=as[i]; i++)
-           {
-               a.setAttribute("href", "javascript:void(0)");
-           }
-        }
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         Firebug.Console.flush();
         
         if (Firebug.Trace)
             FBTrace.flush(Firebug.Trace);
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         this.draw();
     },
     
@@ -317,14 +335,8 @@ var ChromeBase = extend(ChromeBase, {
         topPartialHeight = null;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
-        commandLineVisible = null;
-        sidePanelVisible = null;
-        sidePanelWidth = 300;
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
-        Firebug.Controller.shutdown.apply(this);
+        Firebug.Controller.prototype.shutdown.apply(this);
         Firebug.PanelBar.shutdown.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -348,32 +360,36 @@ var ChromeBase = extend(ChromeBase, {
     {
         if(popup)
         {
-            var context = Chrome.context = this.Popup;
+            var context = Firebug.chrome = Firebug.chromeMap.popup;
             
+            var chromeReady = true;
             if(chromeReady)
             {
-                if(!context.element)
+                if(!context)
                 {     
-                    if (this.Frame.element)
+                    if (Firebug.chromeMap.frame)
                     {
-                        this.Frame.isVisible = false;
-                        frame.style.visibility = "hidden";
+                        Firebug.chromeMap.frame.isVisible = false;
+                        Firebug.chromeMap.frame.node.style.visibility = "hidden";
                     }
                     
                     chromeReady = false;
-                    context.create();
-                    waitForChrome();
+                    FBTrace.module = null;
+                    
+                    createChrome(Application.browser, {id:"i",type:"popup"}, onPopupChromeLoad);
+                    //context.create();
+                    //waitForChrome();
                 }
             }
-            else
-                waitForDocument();
+            //else
+            //    waitForDocument();
         }
         else
         {
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
             
-            var context = Firebug.chrome;
+            var context = Firebug.chrome = Firebug.chromeMap.frame;
             context.isVisible = forceOpen || !context.isVisible;
             
             var chromeReady = true;
@@ -392,13 +408,13 @@ var ChromeBase = extend(ChromeBase, {
                 }
                 else
                 {
-                    context.create();
-                    waitForChrome();
+                    //context.create();
+                    //waitForChrome();
                 }
                     
             }
-            else
-                waitForDocument();
+            //else
+            //    waitForDocument();
             
         }       
     },
@@ -424,7 +440,7 @@ var ChromeBase = extend(ChromeBase, {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Height related drawings
         var chromeHeight = size.height;
-        var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
+        var commandLineHeight = FirebugChrome.commandLineVisible ? fbCommandLine.offsetHeight : 0;
         var fixedHeight = topHeight + commandLineHeight;
         var y = Math.max(chromeHeight, topHeight);
         
@@ -445,12 +461,12 @@ var ChromeBase = extend(ChromeBase, {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Width related drawings
         var chromeWidth = size.width /* window borders */;
-        var sideWidth = sidePanelVisible ? sidePanelWidth : 0;
+        var sideWidth = FirebugChrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0;
         
         fbPanelBox1Style.width = Math.max(chromeWidth - sideWidth, 0) + "px";
         fbPanel1Style.width = Math.max(chromeWidth - sideWidth, 0) + "px";                
         
-        if (sidePanelVisible)
+        if (FirebugChrome.sidePanelVisible)
         {
             fbPanelBox2Style.width = sideWidth + "px";
             fbPanelBar2BoxStyle.width = Math.max(sideWidth, 0) + "px";
@@ -569,6 +585,8 @@ var ChromePopupBase = extend(ChromeContext, {
     
     initialize: function()
     {
+        this.document.body.className = "FirebugPopup";
+        
         ChromeBase.initialize.call(this)
         
         this.addController(
@@ -633,10 +651,6 @@ var fbCommandLine = null;
 var topHeight = null;
 var topPartialHeight = null;
 
-var commandLineVisible = true;
-var sidePanelVisible = false;
-var sidePanelWidth = 300;
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 75;
@@ -647,24 +661,24 @@ var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 75;
 
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
-    var last = commandLineVisible;
-    commandLineVisible = typeof visibility == "boolean" ? visibility : !commandLineVisible;
+    var last = FirebugChrome.commandLineVisible;
+    FirebugChrome.commandLineVisible = typeof visibility == "boolean" ? visibility : !FirebugChrome.commandLineVisible;
     
-    if (commandLineVisible != last)
+    if (FirebugChrome.commandLineVisible != last)
     {
-        fbBottom.className = commandLineVisible ? "" : "hide";
+        fbBottom.className = FirebugChrome.commandLineVisible ? "" : "hide";
     }
 };
 
 var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 {
-    var last = sidePanelVisible;
-    sidePanelVisible = typeof visibility == "boolean" ? visibility : !sidePanelVisible;
+    var last = FirebugChrome.sidePanelVisible;
+    FirebugChrome.sidePanelVisible = typeof visibility == "boolean" ? visibility : !FirebugChrome.sidePanelVisible;
     
-    if (sidePanelVisible != last)
+    if (FirebugChrome.sidePanelVisible != last)
     {
-        fbPanelBox2.className = sidePanelVisible ? "" : "hide"; 
-        fbPanelBar2Box.className = sidePanelVisible ? "" : "hide";
+        fbPanelBox2.className = FirebugChrome.sidePanelVisible ? "" : "hide"; 
+        fbPanelBar2Box.className = FirebugChrome.sidePanelVisible ? "" : "hide";
     }
 };
 
@@ -739,7 +753,7 @@ var handleHSplitterMouseMove = function()
     var scrollSize = Firebug.browser.getWindowScrollSize();
     
     // compute chrome fixed size (top bar and command line)
-    var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
+    var commandLineHeight = FirebugChrome.commandLineVisible ? fbCommandLine.offsetHeight : 0;
     var fixedHeight = topHeight + commandLineHeight;
     var chromeNode = Firebug.chrome.node;
     
@@ -801,7 +815,7 @@ var onVSplitterMouseMove = function onVSplitterMouseMove(event)
             var size = Firebug.chrome.getWindowSize();
             var x = Math.max(size.width - clientX + 3, 6);
             
-            sidePanelWidth = x;
+            FirebugChrome.sidePanelWidth = x;
             Firebug.chrome.draw();
         }
         
