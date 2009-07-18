@@ -227,14 +227,12 @@ var findLocation =  function findLocation()
 
 this.extend = function(l, r)
 {
-    r = r || {};
     var newOb = {};
     for (var n in l)
         newOb[n] = l[n];
     for (var n in r)
         newOb[n] = r[n];
-
-    return newOb;
+    return newOb;    
 };
 
 
