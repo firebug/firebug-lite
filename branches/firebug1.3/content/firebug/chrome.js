@@ -11,9 +11,9 @@ FBL.FirebugChrome =
     
     initialize: function()
     {
-        var options = FBL.extend({}, WindowDefaultOptions);
+        var options = extend({}, WindowDefaultOptions);
         
-        FBL.createChrome(Application.browser, options, onChromeLoad);
+        createChrome(Application.browser, options, onChromeLoad);
     }
 };
     
@@ -45,10 +45,22 @@ var PopupDefaultOptions =
 // ************************************************************************************************
 var onPopupChromeLoad = function(chromeContext)
 {
-    debugger;
+    FBTrace.sysout("onPopupChromeLoad", "-------------------------");
     
-    var chrome = Firebug.chromeMap[chromeContext.type] = Firebug.chrome = new Chrome(chromeContext);
-    chrome.initialize();
+    if (Firebug.chromeMap.frame)
+    {
+        Firebug.chromeMap.frame.isVisible = false;
+        Firebug.chromeMap.frame.node.style.visibility = "hidden";
+    }
+    
+    FBL.FirebugChrome.commandLineVisible = true;
+    FBL.FirebugChrome.sidePanelVisible = false;
+    
+    dispatch(Firebug.modules, "initialize", []);
+    
+    //FBTrace.module = null;
+    
+    var chrome = new Chrome(chromeContext);
     
     var framePanelMap = Firebug.chromeMap.frame.panelMap;
     var popupPanelMap = Firebug.chromeMap.popup.panelMap;
@@ -57,8 +69,7 @@ var onPopupChromeLoad = function(chromeContext)
         popupPanelMap[name].panelContent.innerHTML = framePanelMap[name].panelContent.innerHTML;
     }
     
-    dispatch(Firebug.modules, "initialize", []);
-    
+    chrome.initialize();
 };
    
 // ************************************************************************************************
@@ -74,7 +85,7 @@ var ChromeDefaultOptions =
 // ************************************************************************************************
 // Chrome Window Creation
 
-FBL.createChrome = function(context, options, onChromeLoad)
+var createChrome = function(context, options, onChromeLoad)
 {
     options = options || {};
     options = extend(ChromeDefaultOptions, options);
@@ -232,10 +243,16 @@ var getChromeTemplate = function()
     
 FBL.Chrome = function(chrome)
 {
-    var Base = chrome.type == "frame" ? ChromeFrameBase : ChromePopupBase; 
+    var type = chrome.type;
+    var Base = type == "frame" ? ChromeFrameBase : ChromePopupBase; 
     
     append(this, chrome); // inherit chrome window properties
     append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
+    
+    Firebug.chromeMap[type] = this;
+    Firebug.chrome = this;
+
+    this.create();
     
     return this;
 };
@@ -246,6 +263,20 @@ FBL.Chrome = function(chrome)
 var ChromeBase = extend(new Firebug.Controller(), Firebug.PanelBar);
 var ChromeBase = extend(ChromeBase, {
     
+    create: function()
+    {
+        Firebug.PanelBar.create.apply(this);
+        
+        var panelMap = Firebug.panelTypes;
+        for (var i=0, p; p=panelMap[i]; i++)
+        {
+            if (!p.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
+    },
+    
     destroy: function()
     {
         this.shutdown();
@@ -253,7 +284,19 @@ var ChromeBase = extend(ChromeBase, {
     
     initialize: function()
     {
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        Firebug.Console.flush();
+        
+        if (Firebug.Trace)
+            FBTrace.flush(Firebug.Trace);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome");
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // initialize inherited classes
+        Firebug.Controller.prototype.initialize.apply(this);
+        Firebug.PanelBar.initialize.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
@@ -293,9 +336,6 @@ var ChromeBase = extend(ChromeBase, {
         topPartialHeight = fbToolbar.offsetHeight;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // initialize inherited classes
-        Firebug.Controller.prototype.initialize.apply(this);
-        Firebug.PanelBar.initialize.apply(this);
         
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
@@ -317,7 +357,7 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize all panels
-        
+        /*
         var panelMap = Firebug.panelTypes;
         for (var i=0, p; p=panelMap[i]; i++)
         {
@@ -326,6 +366,7 @@ var ChromeBase = extend(ChromeBase, {
                 this.addPanel(p.prototype.name);
             }
         }
+        /**/
         
         // Select the first registered panel
         this.selectPanel(FirebugChrome.selectedPanel);
@@ -351,12 +392,6 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         // ************************************************************************************************
         
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        Firebug.Console.flush();
-        
-        if (Firebug.Trace)
-            FBTrace.flush(Firebug.Trace);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         this.draw();
@@ -435,6 +470,7 @@ var ChromeBase = extend(ChromeBase, {
             {
                 if(!context)
                 {     
+                    /*
                     if (Firebug.chromeMap.frame)
                     {
                         Firebug.chromeMap.frame.isVisible = false;
@@ -443,6 +479,7 @@ var ChromeBase = extend(ChromeBase, {
                     
                     chromeReady = false;
                     FBTrace.module = null;
+                    /**/
                     
                     createChrome(Application.browser, {id:"i",type:"popup"}, onPopupChromeLoad);
                     //context.create();
@@ -555,6 +592,8 @@ var ChromeBase = extend(ChromeBase, {
     
     layout: function(panel)
     {
+        if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
+        
         var options = panel.options;
         changeCommandLineVisibility(options.hasCommandLine);
         changeSidePanelVisibility(options.hasSidePanel);

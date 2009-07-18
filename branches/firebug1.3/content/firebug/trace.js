@@ -6,6 +6,7 @@ FBL.FBTrace = {};
 var traceOptions = {
     DBG_TIMESTAMP: 1,
     DBG_INITIALIZE: 1,
+    DBG_CHROME: 1,
     DBG_ERRORS: 1,
     DBG_DISPATCH: 1
 };

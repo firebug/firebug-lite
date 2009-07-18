@@ -79,6 +79,12 @@ Missing
 ###################################################################################################
 
 ---------------------------------------------------------------------------------------------------
+ Chrome context synchronize
+---------------------------------------------------------------------------------------------------
+    - frame.isVisible --> isOpen?
+    - Firebug.chromes.frame & Firebug.chromes.popup
+
+---------------------------------------------------------------------------------------------------
  Popup
 ---------------------------------------------------------------------------------------------------
 OK  - problem with global events when in popup window
@@ -90,8 +96,12 @@ OK  - problem with global events when in popup window
 
     - Synchronize chromes
     
-        - refactor panel. each panel should have a single panelContentNode that will be shared
+    ~~  - refactor panel. each panel should have a single panelContentNode that will be shared
           across Chrome windows.
+          
+        - divide Chrome.initialize and Chrome.create. addPanel() should be added only in create()
+        
+        - selected element in HTML tree isn't being synchronized
     
     - popup chrome in Opera isn't being initialized when NOT in bookmarlet mode. 
       Maybe the best way to detect when the chrome is loaded is the Joe Hewitt old way putting 
@@ -133,12 +143,6 @@ OK  - problem with global events when in popup window
 ---------------------------------------------------------------------------------------------------
     - FBL.application
     - FBL.preferences
-    
----------------------------------------------------------------------------------------------------
- Chrome context synchronize
----------------------------------------------------------------------------------------------------
-    - frame.isVisible --> isOpen?
-    - Firebug.chromes.frame & Firebug.chromes.popup
     
 
     

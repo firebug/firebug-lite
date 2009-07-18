@@ -600,16 +600,17 @@ Firebug.PanelBar =
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    initialize: function()
+    create: function()
     {
         this.panelMap = {};
-        
-        //this.panelBarNode = panelBarNode;    
+    },
+    
+    initialize: function()
+    {
     },
     
     shutdown: function()
     {
-    
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

@@ -101,7 +101,7 @@ var onDocumentLoad = function onDocumentLoad()
     {
         findLocation();
         
-        FBL.FirebugChrome.initialize();        
+        FBL.FirebugChrome.initialize();
     }    
 };
 
