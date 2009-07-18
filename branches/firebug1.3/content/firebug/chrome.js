@@ -8,40 +8,19 @@ FBL.FirebugChrome =
     sidePanelWidth: 300,
     selectedPanel: "Console",
     
+    create: function()
+    {
+        createChrome({onChromeLoad: onChromeLoad});
+    },
     
     initialize: function()
     {
-        var options = extend({}, WindowDefaultOptions);
-        
-        createChrome(Application.browser, options, onChromeLoad);
+        var chrome = Firebug.chrome = new Chrome(Application.chrome);
+        Firebug.chromeMap[chrome.type] = chrome;
+        chrome.initialize();        
     }
 };
     
-
-// ************************************************************************************************
-// Application Chromes
-
-var WindowDefaultOptions = 
-{
-    type: "frame"
-};
-
-var FrameDefaultOptions = 
-{
-    id: "FirebugChrome",
-    height: 250
-};
-
-var PopupDefaultOptions = 
-{
-    id: "FirebugChromePopup",
-    height: 250
-};
-
-
-
-
-
 // ************************************************************************************************
 var onPopupChromeLoad = function(chromeContext)
 {
@@ -85,10 +64,13 @@ var ChromeDefaultOptions =
 // ************************************************************************************************
 // Chrome Window Creation
 
-var createChrome = function(context, options, onChromeLoad)
+var createChrome = function(options)
 {
     options = options || {};
     options = extend(ChromeDefaultOptions, options);
+    
+    var context = options.context || Application.browser;
+    var onChromeLoad = options.onChromeLoad;
     
     var chrome = {};
     
@@ -144,18 +126,7 @@ var createChrome = function(context, options, onChromeLoad)
             "popup", 
             options
           );
-        
-        /*
-        if (node)
-        {
-            node.focus();
-        }
-        else
-        {
-            //Chrome.Popup.element = null;
-            alert("Disable the popup blocker to open the console in another window!")
-        }
-        /**/
+
     }
     
     if (isBookmarletMode)
@@ -223,7 +194,7 @@ var onChromeLoad = function onChromeLoad(chrome)
 
 var getChromeTemplate = function()
 {
-    var tpl = Chrome.injected; 
+    var tpl = FirebugChrome.injected; 
     var r = [], i = -1;
     
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
@@ -241,7 +212,7 @@ var getChromeTemplate = function()
 // ************************************************************************************************
 // Chrome Class
     
-FBL.Chrome = function(chrome)
+var Chrome = function Chrome(chrome)
 {
     var type = chrome.type;
     var Base = type == "frame" ? ChromeFrameBase : ChromePopupBase; 
@@ -481,7 +452,7 @@ var ChromeBase = extend(ChromeBase, {
                     FBTrace.module = null;
                     /**/
                     
-                    createChrome(Application.browser, {id:"i",type:"popup"}, onPopupChromeLoad);
+                    createChrome({type:"popup", onChromeLoad: onPopupChromeLoad});
                     //context.create();
                     //waitForChrome();
                 }
@@ -582,6 +553,7 @@ var ChromeBase = extend(ChromeBase, {
     resize: function()
     {
         var self = this;
+        // avoid partial resize when maximizing window
         setTimeout(function(){
             self.draw();
             

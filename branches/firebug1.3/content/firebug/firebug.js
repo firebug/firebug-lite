@@ -47,9 +47,7 @@ FBL.Firebug =
         // Document must be cached before chrome initialization
         Firebug.cacheDocument();
         
-        var chrome = Firebug.chrome = new Chrome(Application.chrome);
-        Firebug.chromeMap[chrome.type] = chrome;
-        chrome.initialize();
+        FirebugChrome.initialize();
         
         dispatch(modules, "initialize", []);
     },

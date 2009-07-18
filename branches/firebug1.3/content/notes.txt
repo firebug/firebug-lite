@@ -1,7 +1,7 @@
 ###################################################################################################
 
 ###################################################################################################
-    - Popup window cannot use addGlobalEvent on Vertical Slipper (the position/size of the 
+OK  - Popup window cannot use addGlobalEvent on Vertical Slipper (the position/size of the 
       popup is different, so only the popup window should be listened)
       
     - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
@@ -9,7 +9,7 @@
     - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
       the "open tag" node (<div>).
     
-    - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
+1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
       and is getting hidden 
 
 
@@ -82,7 +82,7 @@ Missing
  Chrome context synchronize
 ---------------------------------------------------------------------------------------------------
     - frame.isVisible --> isOpen?
-    - Firebug.chromes.frame & Firebug.chromes.popup
+OK  - Firebug.chromeMap.frame & Firebug.chromeMap.popup
 
 ---------------------------------------------------------------------------------------------------
  Popup
@@ -99,7 +99,9 @@ OK  - problem with global events when in popup window
     ~~  - refactor panel. each panel should have a single panelContentNode that will be shared
           across Chrome windows.
           
-        - divide Chrome.initialize and Chrome.create. addPanel() should be added only in create()
+    ~~  - divide Chrome.initialize and Chrome.create. addPanel() should be added only in create()
+        
+        - margin in HTML tree isn't being synchronized
         
         - selected element in HTML tree isn't being synchronized
     
@@ -111,23 +113,19 @@ OK  - problem with global events when in popup window
 ---------------------------------------------------------------------------------------------------
  Loading
 ---------------------------------------------------------------------------------------------------
-    - Console.create() is being called in the wrong time
+OK  - Console.create() is being called in the wrong time
     
     - window onerror - wrong time 
     
     - Check the initializing order. 
     
-    - Check create() and initialize() methods of Modules and Panels.
-        - HTML panel create() will be called twice (1 for frame and 1 for popup)
+OK  - Check create() and initialize() methods of Modules and Panels.
+    OK  - HTML panel create() will be called twice (1 for frame and 1 for popup)
     
     
 ---------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------
-    
-~~  - toolButtons
-    ~~  - default button
-    ~~  - toggle button (inspect, edit html)
     
 ~~  - mouseover Inspect
 ~~  - inspect
@@ -149,9 +147,13 @@ OK  - problem with global events when in popup window
 ---------------------------------------------------------------------------------------------------
 Tool Buttons
 ---------------------------------------------------------------------------------------------------
-~~  - inherits from Controller
-~~  - it has one of 2 types (normal and toggle buttons)
-~~  - it has, on a giving time, one of 2 states (pressed, and unpressed)
+OK  - toolButtons
+    OK  - default button
+    OK  - toggle button (inspect, edit html)
+    
+OK  - inherits from Controller
+OK  - it has one of 2 types (normal and toggle buttons)
+OK  - it has, on a giving time, one of 2 states (pressed, and unpressed)
     
     - button location: Fixed buttons (inspect) and Panel buttons 
  
