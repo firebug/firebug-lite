@@ -31,20 +31,20 @@ this.initialize = function()
     // initialize application
     
     FBTrace = FBL.FBTrace;
-    if (Application.isDebugMode) FBTrace.initialize();
+    if (FBL.Application.isDebugMode) FBTrace.initialize();
     
     // persistent application
-    if (Application.isPersistentMode && typeof window.FirebugApplication == "object")
+    if (FBL.Application.isPersistentMode && typeof window.FirebugApplication == "object")
     {
-        Application = window.FirebugApplication;
-        Application.isChromeContext = true;
+        FBL.Application = window.FirebugApplication;
+        FBL.Application.isChromeContext = true;
     }
     // non-persistent application
     else
     {
         // TODO: get preferences here...
-        Application.browser = window;
-        Application.destroy = destroyApplication;
+        FBL.Application.browser = window;
+        FBL.Application.destroy = destroyApplication;
     }    
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
@@ -85,7 +85,7 @@ var onDocumentLoad = function onDocumentLoad()
         fixIE6BackgroundImageCache();
         
     // persistent application - chrome document loaded
-    if (Application.isPersistentMode && Application.isChromeContext)
+    if (FBL.Application.isPersistentMode && FBL.Application.isChromeContext)
     {
         FBL.Firebug.initialize();
         
@@ -108,7 +108,7 @@ var onDocumentLoad = function onDocumentLoad()
 // ************************************************************************************************
 // Application
 
-var Application = this.Application = {
+this.Application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
     isBookmarletMode: true,
@@ -202,14 +202,14 @@ var findLocation =  function findLocation()
     
     if (path && m)
     {
-        var loc = Application.location; 
+        var loc = FBL.Application.location; 
         loc.source = path;
         loc.base = path.substr(0, path.length - m[1].length - 1);
-        loc.skin = loc.base + "skin/" + Application.skin + "/firebug.html";
+        loc.skin = loc.base + "skin/" + FBL.Application.skin + "/firebug.html";
         loc.app = path + fileName;
         
         if (fileName == "firebug.dev.js")
-            Application.isDevelopmentMode = true;
+            FBL.Application.isDevelopmentMode = true;
 
         if (fileOptions)
         {
@@ -302,7 +302,7 @@ this.$ = function(id, doc)
         return doc.getElementById(id);
     else
     {
-        if (Application.isPersistentMode)
+        if (FBL.Application.isPersistentMode)
             return document.getElementById(id);
         else
             return FBL.Firebug.chrome.document.getElementById(id);

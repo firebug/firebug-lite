@@ -11,6 +11,8 @@ OK  - Popup window cannot use addGlobalEvent on Vertical Slipper (the position/s
     
 1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
       and is getting hidden 
+      
+    - remove events added in disableTextSelection
 
 
 ###################################################################################################

@@ -18,6 +18,16 @@ FBL.FirebugChrome =
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chromeMap[chrome.type] = chrome;
         chrome.initialize();        
+    },
+    
+    detach: function()
+    {
+        
+    },
+    
+    reattach: function()
+    {
+        
     }
 };
     
@@ -41,6 +51,7 @@ var onPopupChromeLoad = function(chromeContext)
     
     var chrome = new Chrome(chromeContext);
     
+    // chrome synchronization
     var framePanelMap = Firebug.chromeMap.frame.panelMap;
     var popupPanelMap = Firebug.chromeMap.popup.panelMap;
     for(var name in framePanelMap)
@@ -231,7 +242,7 @@ var Chrome = function Chrome(chrome)
 // ************************************************************************************************
 // ChromeBase
 
-var ChromeBase = extend(new Firebug.Controller(), Firebug.PanelBar);
+var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
 var ChromeBase = extend(ChromeBase, {
     
     create: function()
@@ -266,7 +277,7 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
-        Firebug.Controller.prototype.initialize.apply(this);
+        Firebug.Controller.initialize.apply(this);
         Firebug.PanelBar.initialize.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -410,7 +421,7 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
-        Firebug.Controller.prototype.shutdown.apply(this);
+        Firebug.Controller.shutdown.apply(this);
         Firebug.PanelBar.shutdown.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

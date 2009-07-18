@@ -228,7 +228,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     options: {
         hasSidePanel: true,
         hasToolButtons: true,
-        hasStatusBar: true,
+        //hasStatusBar: true,
         isPreRendered: true
     },
 
