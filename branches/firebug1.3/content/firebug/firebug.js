@@ -22,7 +22,8 @@ var panelTypeMap = {};
 FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "FirebugLite - 1.3.0a - $Revision$",
+    version: "Firebug Lite 1.3.0a",
+    revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,

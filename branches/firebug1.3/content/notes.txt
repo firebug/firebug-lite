@@ -1,6 +1,8 @@
 ###################################################################################################
 
 ###################################################################################################
+    - put IE6CSS in injected chrome
+    
 OK  - Popup window cannot use addGlobalEvent on Vertical Slipper (the position/size of the 
       popup is different, so only the popup window should be listened)
       

@@ -33,14 +33,16 @@ this.initialize = function()
     FBTrace = FBL.FBTrace;
     if (FBL.Application.isDebugMode) FBTrace.initialize();
     
-    // persistent application
-    if (FBL.Application.isPersistentMode && typeof window.FirebugApplication == "object")
+    var isChromeContext = FBL.Application.isPersistentMode && 
+            typeof window.FirebugApplication == "object"; 
+    
+    if (isChromeContext) // persistent application
     {
         FBL.Application = window.FirebugApplication;
         FBL.Application.isChromeContext = true;
+        FBL.FirebugChrome = FBL.Application.FirebugChrome;
     }
-    // non-persistent application
-    else
+    else // non-persistent application
     {
         // TODO: get preferences here...
         FBL.Application.browser = window;
@@ -62,6 +64,13 @@ this.initialize = function()
     if (FBTrace.DBG_INITIALIZE) {
         FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces END");
         FBTrace.sysout("FBL waitForDocument", "waiting document load");
+    }
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    
+    if (!isChromeContext)
+    {
+        FBL.Application.FirebugChrome = FBL.FirebugChrome;
     }
     
     waitForDocument();
@@ -302,10 +311,7 @@ this.$ = function(id, doc)
         return doc.getElementById(id);
     else
     {
-        if (FBL.Application.isPersistentMode)
-            return document.getElementById(id);
-        else
-            return FBL.Firebug.chrome.document.getElementById(id);
+        return FBL.Firebug.chrome.document.getElementById(id);
     }
 };
 

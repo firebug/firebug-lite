@@ -89,7 +89,7 @@ var createChrome = function(options)
     
     var isChromeFrame = chrome.type == "frame";
     var isBookmarletMode = Application.isBookmarletMode;
-    var url = isBookmarletMode ? "" : Application.location.skin;
+    var url = isBookmarletMode ? "about:blank" : Application.location.skin;
     
     if (isChromeFrame)
     {
@@ -137,7 +137,6 @@ var createChrome = function(options)
             "popup", 
             options
           );
-
     }
     
     if (isBookmarletMode)
@@ -209,7 +208,9 @@ var getChromeTemplate = function()
     var r = [], i = -1;
     
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
-    r[++i] = '<head><style>';
+    r[++i] = '<head><title>';
+    r[++i] = Firebug.version;
+    r[++i] = '</title><style>';
     r[++i] = tpl.CSS;
     r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
     r[++i] = '</style>';
