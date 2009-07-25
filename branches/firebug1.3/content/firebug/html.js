@@ -20,9 +20,11 @@ Firebug.HTML = extend(Firebug.Module,
                 var uid = node[cacheID];
                 var child = node.childNodes;
                 var childLength = child.length;
-                var hasSingleTextChild = childLength == 1 && node.firstChild.nodeType == 3;
                 
                 var nodeName = node.nodeName.toLowerCase();
+                
+                var hasSingleTextChild = childLength == 1 && node.firstChild.nodeType == 3 &&
+                        nodeName != "script" && nodeName != "style";
                 
                 var nodeControl = !hasSingleTextChild && childLength > 0 ? 
                     ('<div class="nodeControl"></div>') : '';
@@ -120,9 +122,41 @@ Firebug.HTML = extend(Firebug.Module,
             } 
             else if (node.nodeType == 3)
             {
-                var value = node.nodeValue.replace(reTrim, '');
-                if (value)
-                    html.push('<div class="nodeText">', escapeHTML(value),'</div>');
+                if ( node.parentNode && ( node.parentNode.nodeName.toLowerCase() == "script" ||
+                     node.parentNode.nodeName.toLowerCase() == "style" ) )
+                {
+                    var value = node.nodeValue.replace(reTrim, '');
+                    
+                    if(document.all){
+                        var src = value+'\n';
+                       
+                    }else {
+                        var src = '\n'+value+'\n';
+                    }
+                    
+                    var match = src.match(/\n/g);
+                    var num = match ? match.length : 0;
+                    var s = [], sl = 0;
+                    
+                    for(var c=1; c<num; c++){
+                        s[sl++] = '<div line="'+c+'">' + c + '</div>';
+                    }
+                    
+                    html.push('<div class="nodeGroup"><div class="nodeChildren"><div class="lineNo">',
+                            s.join(''),
+                            '</div><pre class="nodeCode">',
+                            escapeHTML(src),
+                            '</pre>',
+                            '</div></div>'
+                        );
+                      
+                }
+                else
+                {
+                    var value = node.nodeValue.replace(reTrim, '');
+                    if (value)
+                        html.push('<div class="nodeText">', escapeHTML(value),'</div>');
+                }
             }
         }
     },

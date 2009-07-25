@@ -794,17 +794,18 @@ Firebug.Button.prototype = extend(Firebug.Controller,
         {
             if (this.state == "pressed")
             {
-                if (this.onPress)
-                    this.onPress.apply(this.owner);
-                
                 this.changeState("unpressed");
+                
+                if (this.onUnpress)
+                    this.onUnpress.apply(this.owner);
             }
             else
             {
-                if (this.onUnpress)
-                    this.onUnpress.apply(this.owner);
-                
                 this.changeState("pressed");
+                
+                if (this.onPress)
+                    this.onPress.apply(this.owner);
+                
             }
         }
     },

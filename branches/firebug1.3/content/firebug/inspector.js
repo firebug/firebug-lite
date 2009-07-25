@@ -18,7 +18,7 @@ Firebug.Inspector =
     
     onChromeReady: function()
     {
-        fbBtnInspect = $("fbBtnInspect");
+        //fbBtnInspect = $("fbBtnInspect");
     },    
   
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -34,8 +34,8 @@ Firebug.Inspector =
         fbInspectFrame.style.width = size.width + "px";
         fbInspectFrame.style.height = size.height + "px";
 
-        fbBtnInspect.href = "javascript:FB.stopInspecting(this)";
-        fbBtnInspect.className = "fbBtnInspectActive";
+        //fbBtnInspect.href = "javascript:FB.stopInspecting(this)";
+        //fbBtnInspect.className = "fbBtnInspectActive";
         
         addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
         addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
@@ -45,8 +45,9 @@ Firebug.Inspector =
     {
         destroyInspectorFrame();
         
-        fbBtnInspect.href = "javascript:FB.startInspecting(this)";
-        fbBtnInspect.className = "";
+        //fbBtnInspect.href = "javascript:FB.startInspecting(this)";
+        //fbBtnInspect.className = "";
+        Firebug.chrome.inspectButton.restore();
         
         if (outlineVisible) this.hideOutline();
         removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
@@ -520,7 +521,7 @@ var outlineStyle = {
 
 var lastInspecting = 0;
 var fbInspectFrame = null;
-var fbBtnInspect = null;
+//var fbBtnInspect = null;
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

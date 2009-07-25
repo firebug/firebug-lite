@@ -353,10 +353,18 @@ ConsolePanel.prototype = extend(Firebug.Panel,
 
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
+        
+        this.clearButton = new Firebug.Button({
+            node: $("fbConsole_btClear"),
+            owner: Firebug.Console,
+            onClick: Firebug.Console.clear
+        });
     },
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
+        
+        this.clearButton.initialize();
     }
     
 });

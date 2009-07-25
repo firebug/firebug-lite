@@ -361,12 +361,16 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
-        var toolButton = new Firebug.Button({
+        this.inspectButton = new Firebug.Button({
             type: "toggle",
-            panel: Firebug.chrome.panelMap.Console, 
-             module: Firebug.Console
+            node: $("fbChrome_btInspect"),
+            owner: Firebug.Inspector,
+            
+            onPress: Firebug.Inspector.startInspecting,
+            onUnpress: Firebug.Inspector.stopInspecting          
         });
-        toolButton.initialize();
+        
+        this.inspectButton.initialize();
         
         Firebug.Inspector.initialize();
         Firebug.Inspector.onChromeReady();
