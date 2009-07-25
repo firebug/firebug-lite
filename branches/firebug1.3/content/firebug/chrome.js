@@ -112,7 +112,6 @@ var createChrome = function(options)
         if (isFirefox)
             node.style.display = "none";
         
-        var isBookmarletMode = Application.isBookmarletMode;
         if (!isBookmarletMode)
             node.setAttribute("src", Application.location.skin);
         
@@ -121,7 +120,7 @@ var createChrome = function(options)
     else
     {
         // Create the Chrome Popup
-        var height = options.height;
+        var height = FirebugChrome.height || options.height;
         var options = [
                 "true,top=",
                 Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
@@ -148,6 +147,7 @@ var createChrome = function(options)
     }
     
     var win;
+    var waitDelay = !isBookmarletMode ? isChromeFrame ? 200 : 300 : 100;
     var waitForChrome = function()
     {
         if ( // Frame loaded... OR
@@ -165,7 +165,7 @@ var createChrome = function(options)
                 onChromeLoad(chrome);
         }
         else
-            setTimeout(waitForChrome, 10);
+            setTimeout(waitForChrome, waitDelay);
     }
     
     waitForChrome();
@@ -358,10 +358,10 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
-        var toolButton = new Firebug.ToolButton({
+        var toolButton = new Firebug.Button({
             type: "toggle",
             panel: Firebug.chrome.panelMap.Console, 
-            module: Firebug.Console
+             module: Firebug.Console
         });
         toolButton.initialize();
         
@@ -377,7 +377,7 @@ var ChromeBase = extend(ChromeBase, {
         
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        this.draw();
+        //this.draw();
     },
     
     shutdown: function()
@@ -434,12 +434,12 @@ var ChromeBase = extend(ChromeBase, {
     
     show: function()
     {
-        
+        // abstract
     },
     
     hide: function()
     {
-        
+        // abstract
     },
     
     toggle: function(forceOpen, popup)
@@ -511,7 +511,7 @@ var ChromeBase = extend(ChromeBase, {
     
     detach: function()
     {
-        
+        this.toggle(true, true);
     },
     
     reattach: function()
@@ -605,9 +605,15 @@ var ChromeFrameBase = extend(ChromeContext, {
         
         ChromeBase.initialize.call(this);
         
+        addGlobalEvent("keydown", onPressF12);
+        //addGlobalEvent("keydown", function(){alert(0)});
+        
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
-            [Firebug.browser.window, "unload", this.destroy]
+            [Firebug.browser.window, "unload", this.destroy],
+            
+            [$("fbChrome_btClose"), "click", this.hide],
+            [$("fbChrome_btDetach"), "click", this.detach]            
         );
         
         if (isIE6)
@@ -775,6 +781,20 @@ var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 
 
 // ************************************************************************************************
+// F12 Handler
+
+var onPressF12 = function onPressF12(event)
+{
+    if (event.keyCode == 123 /* F12 */ && 
+        (!isFirefox && !event.shiftKey || event.shiftKey && isFirefox))
+        {
+            Firebug.chrome.toggle(false, event.ctrlKey);
+            cancelEvent(event, true);
+        }
+};
+    
+
+// ************************************************************************************************
 // Horizontal Splitter Handling
 
 var onHSplitterMouseDown = function onHSplitterMouseDown(event)
@@ -856,6 +876,7 @@ var handleHSplitterMouseMove = function()
     var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
         chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
 
+    FirebugChrome.height = chromeHeight;
     chromeNode.style.height = chromeHeight + "px";
     
     if (isIE6)

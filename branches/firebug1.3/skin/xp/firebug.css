@@ -265,7 +265,7 @@ body {
 }
 
 
-#mainButtons {
+#fbChromeButtons {
     position: absolute;
     white-space: nowrap;
     right: 0;
@@ -392,7 +392,7 @@ div.fbFitHeight {
 
 /* fbToolbar buttons 
 *************************************************************************************************/
-#mainButtons a {
+#fbChromeButtons a {
     font-size: 1px;
     width: 16px;
     height: 16px;
@@ -403,19 +403,19 @@ div.fbFitHeight {
     cursor: default;
 }
 
-#close {
+#fbChrome_btClose {
     background: url(sprite.png) 0 -119px;
 }
 
-#close:hover {
+#fbChrome_btClose:hover {
     background: url(sprite.png) -16px -119px;
 }
 
-#detach {
+#fbChrome_btDetach {
     background: url(sprite.png) -32px -119px;
 }
 
-#detach:hover {
+#fbChrome_btDetach:hover {
     background: url(sprite.png) -48px -119px;
 }
 
@@ -790,7 +790,7 @@ div.objectBox-element {
     height: 100% !important;
 }
 
-.FirebugPopup #mainButtons {
+.FirebugPopup #fbChromeButtons {
     display: none !important;
 }
 

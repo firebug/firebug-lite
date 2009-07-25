@@ -105,7 +105,7 @@ OK  - problem with global events when in popup window
           
     ~~  - divide Chrome.initialize and Chrome.create. addPanel() should be added only in create()
         
-        - margin in HTML tree isn't being synchronized
+    ~~  - margin in HTML tree isn't being synchronized
         
         - selected element in HTML tree isn't being synchronized
     

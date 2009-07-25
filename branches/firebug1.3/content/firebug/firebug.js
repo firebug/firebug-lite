@@ -674,60 +674,58 @@ Firebug.PanelBar =
 };
 
 //************************************************************************************************
-// ToolButton
+// Button
 
-/*
-
-bt = new ToolButton({
-    parentNode: node,
-    context: Panel,
-    click: handler
-}):
-
-bt = new ToolButton({
-    type: "toggle",
-    parentNode: node,
-    context: Panel,
-    on: handler,
-    off: handler
-}):
- 
- */
-
-
-Firebug.ToolButton = function(options)
+Firebug.Button = function(options)
 {
-    this.module = options.module;
-    this.panel = options.panel;
-    this.container = this.panel.toolButtonsNode;
+    options = options || {};
     
-    this.caption = options.caption || "caption";
-    this.title = options.title || "title";
-    
-    this.type = options.type || "normal";
     this.state = "unpressed";
     this.display = "unpressed";
     
-    this.node = createElement("a", {
-        className: "fbHover",
-        title: this.title,
-        innerHTML: this.caption
-    });
+    this.type = options.type || "normal";
     
-    this.container.appendChild(this.node);
+    this.onClick = options.onClick;
+    this.onPress = options.onPress;
+    this.onUnpress = options.onUnpress;
+    
+    if (options.node)
+    {
+        this.node = options.node
+        this.owner = options.owner;
+        this.container = this.node.parentNode;
+    }
+    else
+    {
+        var caption = options.caption || "caption";
+        var title = options.title || "title";
+        
+        this.owner = this.module = options.module;
+        this.panel = options.panel;
+        this.container = this.panel.toolButtonsNode;
+    
+        this.node = createElement("a", {
+            className: "fbHover",
+            title: title,
+            innerHTML: caption
+        });
+        
+        this.container.appendChild(this.node);
+    }
 };
 
-Firebug.ToolButton.prototype = extend(Firebug.Controller,
+Firebug.Button.prototype = extend(Firebug.Controller,
 {
-    title: null,
-    caption: null,
+    type: null,
+    
+    node: null,
+    owner: null,
     
     module: null,
+    
     panel: null,
     container: null,
-    node: null,
     
-    type: null,
     state: null,
     display: null,
     
@@ -796,10 +794,16 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
         {
             if (this.state == "pressed")
             {
+                if (this.onPress)
+                    this.onPress.apply(this.owner);
+                
                 this.changeState("unpressed");
             }
             else
             {
+                if (this.onUnpress)
+                    this.onUnpress.apply(this.owner);
+                
                 this.changeState("pressed");
             }
         }
@@ -815,8 +819,8 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
     {
         if (this.type == "normal")
         {
-            if (this.click)
-                this.click.apply(this.module);
+            if (this.onClick)
+                this.onClick.apply(this.owner);
             
             this.changeState("unpressed");
         }
