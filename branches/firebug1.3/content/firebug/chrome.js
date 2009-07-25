@@ -60,6 +60,9 @@ var onPopupChromeLoad = function(chromeContext)
     }
     
     chrome.initialize();
+    
+    if(FirebugChrome.selectedElement)
+        Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
 };
    
 // ************************************************************************************************

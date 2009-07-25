@@ -107,7 +107,7 @@ OK  - problem with global events when in popup window
         
     ~~  - margin in HTML tree isn't being synchronized
         
-        - selected element in HTML tree isn't being synchronized
+    ~~  - selected element in HTML tree isn't being synchronized
     
     - popup chrome in Opera isn't being initialized when NOT in bookmarlet mode. 
       Maybe the best way to detect when the chrome is loaded is the Joe Hewitt old way putting 

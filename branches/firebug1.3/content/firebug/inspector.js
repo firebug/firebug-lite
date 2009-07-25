@@ -26,6 +26,7 @@ Firebug.Inspector =
     
     startInspecting: function()
     {
+        Firebug.chrome.selectPanel("HTML");
         createInspectorFrame();
         
         var size = this.getWindowScrollSize();

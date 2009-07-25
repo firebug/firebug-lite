@@ -10,12 +10,11 @@ Firebug.HTML = extend(Firebug.Module,
     appendTreeNode: function(nodeArray, html)
     {
         var reTrim = /^\s+|\s+$/g;
-      
+        
         if (!nodeArray.length) nodeArray = [nodeArray];
         
         for (var n=0, node; node=nodeArray[n]; n++)
         {
-        
             if (node.nodeType == 1)
             {
                 var uid = node[cacheID];
@@ -123,10 +122,8 @@ Firebug.HTML = extend(Firebug.Module,
             {
                 var value = node.nodeValue.replace(reTrim, '');
                 if (value)
-                    html.push('<div class="nodeText">', escapeHTML(value),
-                        '</div>');
+                    html.push('<div class="nodeText">', escapeHTML(value),'</div>');
             }
-          
         }
     },
     
@@ -208,7 +205,7 @@ Firebug.HTML = extend(Firebug.Module,
         
         selectElement(node);
         
-        //fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+        fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
     }
     
 });
@@ -255,15 +252,22 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
+        
+        fbPanel1 = $("fbPanel1");
     }
     
 });
 
 Firebug.registerPanel(HTMLPanel);
 
+// ************************************************************************************************
 
 var selectedElement = null
-function selectElement(e)
+var fbPanel1 = null;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+
+var selectElement= function selectElement(e)
 {
     if (e != selectedElement)
     {
@@ -279,12 +283,9 @@ function selectElement(e)
         else if (FBL.isSafari)
             e.style.WebkitBorderRadius = "2px";
         
-        /*
-        else if (FBL.isOpera)
-            e.style.background = "url(roundCorner.svg)";
-            /**/
-
         selectedElement = e;
+        
+        FirebugChrome.selectedElement = e.attributes[cacheID].value;
     }
 }
 
