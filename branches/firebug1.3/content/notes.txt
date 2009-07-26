@@ -3,18 +3,19 @@
 ###################################################################################################
     - put IE6CSS in injected chrome
     
-OK  - Popup window cannot use addGlobalEvent on Vertical Slipper (the position/size of the 
-      popup is different, so only the popup window should be listened)
-      
     - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
     
     - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
       the "open tag" node (<div>).
     
+    - remove events added in disableTextSelection
+    
+OK  - Popup window cannot use addGlobalEvent on Vertical Slipper (the position/size of the 
+      popup is different, so only the popup window should be listened)
+      
 1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
       and is getting hidden 
       
-    - remove events added in disableTextSelection
 
 
 ###################################################################################################
@@ -278,7 +279,7 @@ Core
     
     - custom Errors = throw new FirebugError("message")
     - better location detection to allow advanced settings via URL 
- ~~ - create/destroy, initialize/shutdown. rename functions to this pattern.
+ OK - create/destroy, initialize/shutdown. rename functions to this pattern.
  OK - context
  OK - library loading in different windows
  ~~ - persitent popups
@@ -322,8 +323,6 @@ CommandLine
 ###################################################################################################
 BUGS
 ###################################################################################################
-OK  - tabLStyle reference in Chrome
-
     - context.evaluate
     - context is not being properly handled in persistent mode, when using
       the autocomplete function in commandLine. It is using the wrong "window".
@@ -333,6 +332,8 @@ OK  - tabLStyle reference in Chrome
     
     - commandLine API should be place in console.firebuglite.commandLineAPI
     - commandLine API not well defined, when in persistent mode
+
+OK  - tabLStyle reference in Chrome
 
 OK  - commandLine API. Firebug.browser isn't avaiable when the library is initialized
     

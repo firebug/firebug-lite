@@ -1,5 +1,3 @@
-(function(){
-
 /*!
  * Firebug Lite - v1.3a
  *  Copyright 2009, Firebug Working Group
@@ -33,20 +31,22 @@ this.initialize = function()
     // initialize application
     
     FBTrace = FBL.FBTrace;
-    if (Application.isDebugMode) FBTrace.initialize();
+    if (FBL.Application.isDebugMode) FBTrace.initialize();
     
-    // persistent application
-    if (Application.isPersistentMode && typeof window.FirebugApplication == "object")
+    var isChromeContext = FBL.Application.isPersistentMode && 
+            typeof window.FirebugApplication == "object"; 
+    
+    if (isChromeContext) // persistent application
     {
-        Application = window.FirebugApplication;
-        Application.isChromeContext = true;
+        FBL.Application = window.FirebugApplication;
+        FBL.Application.isChromeContext = true;
+        FBL.FirebugChrome = FBL.Application.FirebugChrome;
     }
-    // non-persistent application
-    else
+    else // non-persistent application
     {
         // TODO: get preferences here...
-        Application.browser = window;
-        Application.destroy = destroyApplication;
+        FBL.Application.browser = window;
+        FBL.Application.destroy = destroyApplication;
     }    
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
@@ -64,6 +64,13 @@ this.initialize = function()
     if (FBTrace.DBG_INITIALIZE) {
         FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces END");
         FBTrace.sysout("FBL waitForDocument", "waiting document load");
+    }
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    
+    if (!isChromeContext)
+    {
+        FBL.Application.FirebugChrome = FBL.FirebugChrome;
     }
     
     waitForDocument();
@@ -87,7 +94,7 @@ var onDocumentLoad = function onDocumentLoad()
         fixIE6BackgroundImageCache();
         
     // persistent application - chrome document loaded
-    if (Application.isPersistentMode && Application.isChromeContext)
+    if (FBL.Application.isPersistentMode && FBL.Application.isChromeContext)
     {
         FBL.Firebug.initialize();
         
@@ -103,19 +110,17 @@ var onDocumentLoad = function onDocumentLoad()
     {
         findLocation();
         
-        var options = FBL.extend({}, WindowDefaultOptions);
-        
-        FBL.createChrome(Application.browser, options, onChromeLoad);
+        FBL.FirebugChrome.create();
     }    
 };
 
 // ************************************************************************************************
 // Application
 
-var Application = this.Application = {
+this.Application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
-    isBookmarletMode: true,
+    isBookmarletMode: false,
     isPersistentMode: false,
     isDebugMode: true,
     skin: "xp",
@@ -139,59 +144,6 @@ var destroyApplication = function destroyApplication()
     {
         FBL = null;
     }, 100);
-};
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// Chrome loading
-
-var onChromeLoad = function onChromeLoad(chrome)
-{
-    Application.chrome = chrome;
-    
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onChromeLoad", "chrome loaded");
-    
-    if (Application.isPersistentMode)
-    {
-        chrome.window.FirebugApplication = Application;
-    
-        if (Application.isDevelopmentMode)
-        {
-            FBDev.loadChromeApplication(chrome);
-        }
-        else
-        {
-            var doc = chrome.document;
-            var script = doc.createElement("script");
-            script.src = Application.location.app;
-            doc.getElementsByTagName("head")[0].appendChild(script);
-        }
-    }
-    else
-        // initialize the chrome application
-        setTimeout(function(){
-            FBL.Firebug.initialize();
-        },100);
-};
-
-
-// ************************************************************************************************
-// Application Chromes
-
-var WindowDefaultOptions = 
-{
-    type: "frame"
-};
-
-var FrameDefaultOptions = 
-{
-    id: "FirebugChrome",
-    height: 250
-};
-
-var PopupDefaultOptions = 
-{
-    id: "FirebugChromePopup",
-    height: 250
 };
 
 // ************************************************************************************************
@@ -259,14 +211,14 @@ var findLocation =  function findLocation()
     
     if (path && m)
     {
-        var loc = Application.location; 
+        var loc = FBL.Application.location; 
         loc.source = path;
         loc.base = path.substr(0, path.length - m[1].length - 1);
-        loc.skin = loc.base + "skin/" + Application.skin + "/firebug.html";
+        loc.skin = loc.base + "skin/" + FBL.Application.skin + "/firebug.html";
         loc.app = path + fileName;
         
         if (fileName == "firebug.dev.js")
-            Application.isDevelopmentMode = true;
+            FBL.Application.isDevelopmentMode = true;
 
         if (fileOptions)
         {
@@ -284,14 +236,12 @@ var findLocation =  function findLocation()
 
 this.extend = function(l, r)
 {
-    r = r || {};
     var newOb = {};
     for (var n in l)
         newOb[n] = l[n];
     for (var n in r)
         newOb[n] = r[n];
-
-    return newOb;
+    return newOb;    
 };
 
 
@@ -361,10 +311,7 @@ this.$ = function(id, doc)
         return doc.getElementById(id);
     else
     {
-        if (Application.isPersistentMode)
-            return document.getElementById(id);
-        else
-            return Application.chrome.document.getElementById(id);
+        return FBL.Firebug.chrome.document.getElementById(id);
     }
 };
 
@@ -447,6 +394,9 @@ this.addGlobalEvent = function(name, handler)
     var frames = FBL.Firebug.browser.window.frames;
     
     FBL.addEvent(doc, name, handler);
+    
+    if (FBL.Firebug.chrome.type == "popup")
+        FBL.addEvent(FBL.Firebug.chrome.document, name, handler);
   
     for (var i = 0, frame; frame = frames[i]; i++)
     {
@@ -467,6 +417,9 @@ this.removeGlobalEvent = function(name, handler)
     var frames = FBL.Firebug.browser.window.frames;
     
     FBL.removeEvent(doc, name, handler);
+    
+    if (FBL.Firebug.chrome.type == "popup")
+        FBL.removeEvent(FBL.Firebug.chrome.document, name, handler);
   
     for (var i = 0, frame; frame = frames[i]; i++)
     {
@@ -487,7 +440,8 @@ this.dispatch = function(listeners, name, args)
 {
     if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
     
-    try {
+    try
+    {
         for (var i = 0; i < listeners.length; ++i)
         {
             var listener = listeners[i];
@@ -549,6 +503,19 @@ this.toggleClass = function(object, name)
         this.addClass(object, name);
 };
 
+// ************************************************************************************************
+
+this.objectToString = function(object)
+{
+    try
+    {
+        return object+"";
+    }
+    catch (exc)
+    {
+        return null;
+    }
+};
 
 // ************************************************************************************************
 // Opera Tab Fix
@@ -767,7 +734,6 @@ this.Ajax =
 this.Ajax.initialize();
 
 
-
 // ************************************************************************************************
 // Cookie, from http://www.quirksmode.org/js/cookies.html
 
@@ -801,17 +767,20 @@ this.eraseCookie = function(name)
 };
 
 
-
 // ************************************************************************************************
 // http://www.mister-pixel.com/#Content__state=is_that_simple
 var fixIE6BackgroundImageCache = function(doc)
 {
     doc = doc || document;
-    try {
+    try
+    {
         doc.execCommand("BackgroundImageCache", false, true);
-    } catch(err) {}
+    } 
+    catch(E)
+    {
+        
+    }
 };
-
 
 
 // ************************************************************************************************
@@ -825,6 +794,7 @@ FBL.FBTrace = {};
 var traceOptions = {
     DBG_TIMESTAMP: 1,
     DBG_INITIALIZE: 1,
+    DBG_CHROME: 1,
     DBG_ERRORS: 1,
     DBG_DISPATCH: 1
 };
@@ -902,7 +872,7 @@ this.logRow = function(message, className)
 {
     var panel = this.getPanel();
     
-    if (panel && panel.panelNode)
+    if (panel && panel.panelContent)
         this.writeMessage(message, className);
     else
     {
@@ -926,13 +896,13 @@ this.writeMessage = function(message, className)
 
 this.appendRow = function(row)
 {
-    var container = this.getPanel().panelNode;
+    var container = this.getPanel().panelContent;
     container.appendChild(row);
 };
 
 this.writeRow = function(message, className)
 {
-    var row = this.getPanel().panelNode.ownerDocument.createElement("div");
+    var row = this.getPanel().panelContent.ownerDocument.createElement("div");
     row.className = "logRow" + (className ? " logRow-"+className : "");
     row.innerHTML = message.join("");
     this.appendRow(row);
@@ -1016,14 +986,21 @@ var panelTypeMap = {};
 FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "FirebugLite - 1.3.0a - $Revision: 3489 $",
+    version: "Firebug Lite 1.3.0a",
+    revision: "$Revision: 3713 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
+    chromeMap: {},
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
+    
+    initializeContext: function(chrome)
+    {
+        
+    },
     
     initialize: function()
     {
@@ -1032,10 +1009,10 @@ FBL.Firebug =
         Firebug.browser = new Context(Application.browser);
         Firebug.context = Firebug.browser;
         
+        // Document must be cached before chrome initialization
         Firebug.cacheDocument();
         
-        Firebug.chrome = new Chrome(Application.chrome);
-        Firebug.chrome.initialize();
+        FirebugChrome.initialize();
         
         dispatch(modules, "initialize", []);
     },
@@ -1089,12 +1066,12 @@ FBL.Firebug =
 
 Firebug.Controller = {
         
-    _controllers: null,
+    controllers: null,
+    controllerContext: null,
     
     initialize: function(context)
     {
-        this._controllers = [];
-        
+        this.controllers = [];
         this.controllerContext = context || Firebug.chrome;
     },
     
@@ -1121,7 +1098,7 @@ Firebug.Controller = {
             // look for it later, when removing a particular controller            
             arg[3] = handler;
             
-            this._controllers.push(arg);
+            this.controllers.push(arg);
             addEvent.apply(this, arg);
         }
     },
@@ -1130,7 +1107,7 @@ Firebug.Controller = {
     {
         for (var i=0, arg; arg=arguments[i]; i++)
         {
-            for (var j=0, c; c=this._controllers[j]; j++)
+            for (var j=0, c; c=this.controllers[j]; j++)
             {
                 if (arg[0] == c[0] && arg[1] == c[1] && arg[2] == c[3])
                     removeEvent.apply(this, c);
@@ -1140,7 +1117,7 @@ Firebug.Controller = {
     
     removeControllers: function()
     {
-        for (var i=0, c; c=this._controllers[i]; i++)
+        for (var i=0, c; c=this.controllers[i]; i++)
         {
             removeEvent.apply(this, c);
         }
@@ -1346,6 +1323,9 @@ Firebug.Panel =
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create ToolButtons
         }
+        
+        var panelContent = this.panelContent = createElement("div");
+        this.panelNode.appendChild(panelContent);
         
         this.panelContainer = this.panelNode.parentNode;
         
@@ -1569,22 +1549,37 @@ Firebug.PanelBar =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     selectedPanel: null,
     
-    panelBarNode: null,
-    context: null,
+    //panelBarNode: null,
+    //context: null,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
+    create: function()
+    {
+        this.panelMap = {};
+    },
+    
     initialize: function()
     {
-        this.panels = [];
-        this.panelMap = {};
-        
-        //this.panelBarNode = panelBarNode;    
+        for(var name in this.panelMap)
+        {
+            (function(self, name){
+                
+                // tab click handler
+                var onTabClick = function onTabClick()
+                { 
+                    self.selectPanel(name);
+                    return false;
+                };
+                
+                Firebug.chrome.addController([self.panelMap[name].tabNode, "mousedown", onTabClick]);
+                
+            })(this, name);
+        }
     },
     
     shutdown: function()
     {
-    
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1595,17 +1590,6 @@ Firebug.PanelBar =
         var panel = new PanelType();
         panel.create();
         
-        // tab click handler
-        var self = this;
-        var onTabClick = function onTabClick()
-        { 
-            self.selectPanel(panelName);
-            return false;
-        };
-        
-        Firebug.chrome.addController([panel.tabNode, "mousedown", onTabClick]);
-        
-        this.panels.push(panel);
         this.panelMap[panelName] = panel;
     },
     
@@ -1627,6 +1611,9 @@ Firebug.PanelBar =
                 selectedPanel.hide();
                 panel.shutdown();
             }
+            
+            if (!panel.parentPanel)
+                FirebugChrome.selectedPanel = panelName;
             
             this.selectedPanel = panel;
             
@@ -1651,60 +1638,58 @@ Firebug.PanelBar =
 };
 
 //************************************************************************************************
-// ToolButton
+// Button
 
-/*
-
-bt = new ToolButton({
-    parentNode: node,
-    context: Panel,
-    click: handler
-}):
-
-bt = new ToolButton({
-    type: "toggle",
-    parentNode: node,
-    context: Panel,
-    on: handler,
-    off: handler
-}):
- 
- */
-
-
-Firebug.ToolButton = function(options)
+Firebug.Button = function(options)
 {
-    this.module = options.module;
-    this.panel = options.panel;
-    this.container = this.panel.toolButtonsNode;
+    options = options || {};
     
-    this.caption = options.caption || "caption";
-    this.title = options.title || "title";
-    
-    this.type = options.type || "normal";
     this.state = "unpressed";
     this.display = "unpressed";
     
-    this.node = createElement("a", {
-        className: "fbHover",
-        title: this.title,
-        innerHTML: this.caption
-    });
+    this.type = options.type || "normal";
     
-    this.container.appendChild(this.node);
+    this.onClick = options.onClick;
+    this.onPress = options.onPress;
+    this.onUnpress = options.onUnpress;
+    
+    if (options.node)
+    {
+        this.node = options.node
+        this.owner = options.owner;
+        this.container = this.node.parentNode;
+    }
+    else
+    {
+        var caption = options.caption || "caption";
+        var title = options.title || "title";
+        
+        this.owner = this.module = options.module;
+        this.panel = options.panel;
+        this.container = this.panel.toolButtonsNode;
+    
+        this.node = createElement("a", {
+            className: "fbHover",
+            title: title,
+            innerHTML: caption
+        });
+        
+        this.container.appendChild(this.node);
+    }
 };
 
-Firebug.ToolButton.prototype = extend(Firebug.Controller,
+Firebug.Button.prototype = extend(Firebug.Controller,
 {
-    title: null,
-    caption: null,
+    type: null,
+    
+    node: null,
+    owner: null,
     
     module: null,
+    
     panel: null,
     container: null,
-    node: null,
     
-    type: null,
     state: null,
     display: null,
     
@@ -1732,7 +1717,7 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
     
     shutdown: function()
     {
-        this.removeControllers();
+        Firebug.Controller.shutdown.apply(this);
     },
     
     restore: function()
@@ -1774,10 +1759,17 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
             if (this.state == "pressed")
             {
                 this.changeState("unpressed");
+                
+                if (this.onUnpress)
+                    this.onUnpress.apply(this.owner);
             }
             else
             {
                 this.changeState("pressed");
+                
+                if (this.onPress)
+                    this.onPress.apply(this.owner);
+                
             }
         }
     },
@@ -1792,8 +1784,8 @@ Firebug.ToolButton.prototype = extend(Firebug.Controller,
     {
         if (this.type == "normal")
         {
-            if (this.click)
-                this.click.apply(this.module);
+            if (this.onClick)
+                this.onClick.apply(this.owner);
             
             this.changeState("unpressed");
         }
@@ -2520,9 +2512,76 @@ var calculatePixelsPerInch = function calculatePixelsPerInch()
 }});
 
 FBL.ns(function() { with (FBL) {
+
+    
+FBL.FirebugChrome = 
+{
+    commandLineVisible: true,
+    sidePanelVisible: false,
+    sidePanelWidth: 300,
+    selectedPanel: "Console",
+    
+    height: 250,
+    
+    isOpen: true,
+    
+    create: function()
+    {
+        createChrome({onChromeLoad: onChromeLoad});
+    },
+    
+    initialize: function()
+    {
+        var chrome = Firebug.chrome = new Chrome(Application.chrome);
+        Firebug.chromeMap[chrome.type] = chrome;
+        chrome.initialize();        
+    },
+    
+    detach: function()
+    {
+        
+    },
+    
+    reattach: function()
+    {
+        
+    }
+};
+    
 // ************************************************************************************************
-
-
+var onPopupChromeLoad = function(chromeContext)
+{
+    FBTrace.sysout("onPopupChromeLoad", "-------------------------");
+    
+    var frame = Firebug.chromeMap.frame;
+    
+    if (frame)
+    {
+        frame.close();
+    }
+    
+    FBL.FirebugChrome.commandLineVisible = true;
+    FBL.FirebugChrome.sidePanelVisible = false;
+       
+    
+    var popup = Firebug.chrome = new Chrome(chromeContext);
+    
+    // chrome synchronization
+    var framePanelMap = frame.panelMap;
+    var popupPanelMap = popup.panelMap;
+    for(var name in framePanelMap)
+    {
+        popupPanelMap[name].panelContent.innerHTML = framePanelMap[name].panelContent.innerHTML;
+    }
+    
+    popup.initialize();
+    
+    dispatch(Firebug.modules, "initialize", []);
+    
+    if(FirebugChrome.selectedElement)
+        Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+};
+   
 // ************************************************************************************************
 // Chrome Window Options
 
@@ -2536,10 +2595,13 @@ var ChromeDefaultOptions =
 // ************************************************************************************************
 // Chrome Window Creation
 
-FBL.createChrome = function(context, options, onChromeLoad)
+var createChrome = function(options)
 {
     options = options || {};
     options = extend(ChromeDefaultOptions, options);
+    
+    var context = options.context || Application.browser;
+    var onChromeLoad = options.onChromeLoad;
     
     var chrome = {};
     
@@ -2547,7 +2609,7 @@ FBL.createChrome = function(context, options, onChromeLoad)
     
     var isChromeFrame = chrome.type == "frame";
     var isBookmarletMode = Application.isBookmarletMode;
-    var url = isBookmarletMode ? "" : Application.location.skin;
+    var url = isBookmarletMode ? "about:blank" : Application.location.skin;
     
     if (isChromeFrame)
     {
@@ -2556,7 +2618,7 @@ FBL.createChrome = function(context, options, onChromeLoad)
         
         node.setAttribute("id", options.id);
         node.setAttribute("frameBorder", "0");
-        node.setAttribute("allowTransparency", "true");
+        //node.setAttribute("allowTransparency", "true"); // bug in IE in some pages
         node.style.border = "0";
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
@@ -2570,7 +2632,6 @@ FBL.createChrome = function(context, options, onChromeLoad)
         if (isFirefox)
             node.style.display = "none";
         
-        var isBookmarletMode = Application.isBookmarletMode;
         if (!isBookmarletMode)
             node.setAttribute("src", Application.location.skin);
         
@@ -2579,7 +2640,7 @@ FBL.createChrome = function(context, options, onChromeLoad)
     else
     {
         // Create the Chrome Popup
-        var height = options.height;
+        var height = FirebugChrome.height || options.height;
         var options = [
                 "true,top=",
                 Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
@@ -2595,18 +2656,6 @@ FBL.createChrome = function(context, options, onChromeLoad)
             "popup", 
             options
           );
-        
-        /*
-        if (node)
-        {
-            node.focus();
-        }
-        else
-        {
-            //Chrome.Popup.element = null;
-            alert("Disable the popup blocker to open the console in another window!")
-        }
-        /**/
     }
     
     if (isBookmarletMode)
@@ -2618,6 +2667,7 @@ FBL.createChrome = function(context, options, onChromeLoad)
     }
     
     var win;
+    var waitDelay = !isBookmarletMode ? isChromeFrame ? 200 : 300 : 100;
     var waitForChrome = function()
     {
         if ( // Frame loaded... OR
@@ -2635,25 +2685,58 @@ FBL.createChrome = function(context, options, onChromeLoad)
                 onChromeLoad(chrome);
         }
         else
-            setTimeout(waitForChrome, 10);
+            setTimeout(waitForChrome, waitDelay);
     }
     
     waitForChrome();
 };
 
+
+var onChromeLoad = function onChromeLoad(chrome)
+{
+    Application.chrome = chrome;
+    
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome loaded");
+    
+    if (Application.isPersistentMode)
+    {
+        chrome.window.FirebugApplication = Application;
+    
+        if (Application.isDevelopmentMode)
+        {
+            FBDev.loadChromeApplication(chrome);
+        }
+        else
+        {
+            var doc = chrome.document;
+            var script = doc.createElement("script");
+            script.src = Application.location.app;
+            doc.getElementsByTagName("head")[0].appendChild(script);
+        }
+    }
+    else
+        // initialize the chrome application
+        setTimeout(function(){
+            FBL.Firebug.initialize();
+        },100);
+};
+
+
 var getChromeTemplate = function()
 {
-    var tpl = Chrome.injected; 
+    var tpl = FirebugChrome.injected; 
     var r = [], i = -1;
     
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
-    r[++i] = '<head><style>';
+    r[++i] = '<html><head><title>';
+    r[++i] = Firebug.version;
+    r[++i] = '</title><style>';
     r[++i] = tpl.CSS;
     r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
     r[++i] = '</style>';
     r[++i] = '</head><body>';
     r[++i] = tpl.HTML;
-    r[++i] = '</body>';
+    r[++i] = '</body></html>';
     
     return r.join("");
 };
@@ -2661,12 +2744,18 @@ var getChromeTemplate = function()
 // ************************************************************************************************
 // Chrome Class
     
-FBL.Chrome = function(chrome)
+var Chrome = function Chrome(chrome)
 {
-    var Base = chrome.type == "frame" ? ChromeFrameBase : ChromePopupBase; 
+    var type = chrome.type;
+    var Base = type == "frame" ? ChromeFrameBase : ChromePopupBase; 
     
     append(this, chrome); // inherit chrome window properties
     append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
+    
+    Firebug.chromeMap[type] = this;
+    Firebug.chrome = this;
+
+    this.create();
     
     return this;
 };
@@ -2677,6 +2766,20 @@ FBL.Chrome = function(chrome)
 var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
 var ChromeBase = extend(ChromeBase, {
     
+    create: function()
+    {
+        Firebug.PanelBar.create.apply(this);
+        
+        var panelMap = Firebug.panelTypes;
+        for (var i=0, p; p=panelMap[i]; i++)
+        {
+            if (!p.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
+    },
+    
     destroy: function()
     {
         this.shutdown();
@@ -2684,7 +2787,19 @@ var ChromeBase = extend(ChromeBase, {
     
     initialize: function()
     {
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        Firebug.Console.flush();
+        
+        if (Firebug.Trace)
+            FBTrace.flush(Firebug.Trace);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome");
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // initialize inherited classes
+        Firebug.Controller.initialize.apply(this);
+        Firebug.PanelBar.initialize.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
@@ -2720,20 +2835,10 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
-        
         topHeight = fbTop.offsetHeight;
         topPartialHeight = fbToolbar.offsetHeight;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
-        commandLineVisible = true;
-        sidePanelVisible = false;
-        sidePanelWidth = 300;
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // initialize inherited classes
-        Firebug.Controller.initialize.apply(this);
-        Firebug.PanelBar.initialize.apply(this);
         
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
@@ -2741,43 +2846,6 @@ var ChromeBase = extend(ChromeBase, {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
         commandLine = new Firebug.CommandLine(fbCommandLine);
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // initialize all panels
-        var panels = Firebug.panelTypes;
-        for (var i=0, p; p=panels[i]; i++)
-        {
-            if (!p.parentPanel)
-            {
-                this.addPanel(p.prototype.name);
-            }
-        }
-        
-        // Select the first registered panel
-        this.selectPanel(panels[0].prototype.name);
-        
-        
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        var toolButton = new Firebug.ToolButton({
-            type: "toggle",
-            panel: Firebug.chrome.panels[0], 
-            module: Firebug.Console
-        });
-        toolButton.initialize();
-        
-        Firebug.Inspector.initialize();
-        Firebug.Inspector.onChromeReady();
-        
-        addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        addEvent(fbPanel1, 'mouseout', Firebug.HTML.onListMouseMove);
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
@@ -2791,12 +2859,49 @@ var ChromeBase = extend(ChromeBase, {
         }
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        Firebug.Console.flush();
+        // initialize all panels
+        /*
+        var panelMap = Firebug.panelTypes;
+        for (var i=0, p; p=panelMap[i]; i++)
+        {
+            if (!p.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
+        /**/
         
-        if (Firebug.Trace)
-            FBTrace.flush(Firebug.Trace);
+        // Select the first registered panel
+        this.selectPanel(FirebugChrome.selectedPanel);
         
-        this.draw();
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        this.inspectButton = new Firebug.Button({
+            type: "toggle",
+            node: $("fbChrome_btInspect"),
+            owner: Firebug.Inspector,
+            
+            onPress: Firebug.Inspector.startInspecting,
+            onUnpress: Firebug.Inspector.stopInspecting          
+        });
+        
+        this.inspectButton.initialize();
+        
+        Firebug.Inspector.initialize();
+        Firebug.Inspector.onChromeReady();
+        
+        addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
+        addEvent(fbPanel1, 'mouseout', Firebug.HTML.onListMouseMove);
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        //this.draw();
     },
     
     shutdown: function()
@@ -2840,12 +2945,6 @@ var ChromeBase = extend(ChromeBase, {
         topPartialHeight = null;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
-        commandLineVisible = null;
-        sidePanelVisible = null;
-        sidePanelWidth = 300;
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
         Firebug.Controller.shutdown.apply(this);
         Firebug.PanelBar.shutdown.apply(this);
@@ -2857,72 +2956,67 @@ var ChromeBase = extend(ChromeBase, {
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    show: function()
+    open: function()
     {
+        var node = this.node;
         
+        if(node.style.visibility != "visible")
+            node.style.visibility = "visible";
+        
+        node.style.height = FirebugChrome.height + "px";
+        node.style.width = "100%";
+        node.style.left = 0;
+        node.style.right = "";
+
+        if (isIE6)
+            this.fixIEPosition();
+        
+        var main = $("fbChrome");
+        main.style.display = "block";
+
+        this.document.body.style.backgroundColor = "#fff";
+        
+        var mini = $("fbMiniChrome");
+        mini.style.display = "none";
     },
     
-    hide: function()
+    close: function()
     {
+        var node = this.node;
+        node.style.height = "27px";
+        node.style.width = "30px";
+        node.style.left = "";        
+        node.style.right = 0;
+
+        if (isIE6)
+            this.fixIEPosition();
         
+        var main = $("fbChrome");
+        main.style.display = "none";
+
+        this.document.body.style.backgroundColor = "transparent";
+        
+        var mini = $("fbMiniChrome");
+        mini.style.display = "block";
     },
     
     toggle: function(forceOpen, popup)
     {
         if(popup)
         {
-            var context = Chrome.context = this.Popup;
-            
-            if(chromeReady)
-            {
-                if(!context.element)
-                {     
-                    if (this.Frame.element)
-                    {
-                        this.Frame.isVisible = false;
-                        frame.style.visibility = "hidden";
-                    }
-                    
-                    chromeReady = false;
-                    context.create();
-                    waitForChrome();
-                }
-            }
-            else
-                waitForDocument();
+            this.detach();
         }
         else
         {
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
             
-            var context = Firebug.chrome;
-            context.isVisible = forceOpen || !context.isVisible;
+            FirebugChrome.isOpen = forceOpen || !FirebugChrome.isOpen;
             
-            var chromeReady = true;
-            if(chromeReady)
-            { 
-                if(context.node)
-                {
-                    if(context.isVisible)
-                    {
-                        context.node.style.visibility = "visible";
-                        //waitForChrome();
-                        
-                    } else {
-                        context.node.style.visibility = "hidden";
-                    }
-                }
-                else
-                {
-                    context.create();
-                    waitForChrome();
-                }
-                    
-            }
+            if(FirebugChrome.isOpen)
+               this.open();
             else
-                waitForDocument();
-            
+               this.close();
         }       
     },
     
@@ -2930,7 +3024,10 @@ var ChromeBase = extend(ChromeBase, {
     
     detach: function()
     {
-        
+        if(!Firebug.chromeMap.popup)
+        {     
+            createChrome({type:"popup", onChromeLoad: onPopupChromeLoad});
+        }
     },
     
     reattach: function()
@@ -2947,7 +3044,7 @@ var ChromeBase = extend(ChromeBase, {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Height related drawings
         var chromeHeight = size.height;
-        var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
+        var commandLineHeight = FirebugChrome.commandLineVisible ? fbCommandLine.offsetHeight : 0;
         var fixedHeight = topHeight + commandLineHeight;
         var y = Math.max(chromeHeight, topHeight);
         
@@ -2968,12 +3065,12 @@ var ChromeBase = extend(ChromeBase, {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Width related drawings
         var chromeWidth = size.width /* window borders */;
-        var sideWidth = sidePanelVisible ? sidePanelWidth : 0;
+        var sideWidth = FirebugChrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0;
         
         fbPanelBox1Style.width = Math.max(chromeWidth - sideWidth, 0) + "px";
         fbPanel1Style.width = Math.max(chromeWidth - sideWidth, 0) + "px";                
         
-        if (sidePanelVisible)
+        if (FirebugChrome.sidePanelVisible)
         {
             fbPanelBox2Style.width = sideWidth + "px";
             fbPanelBar2BoxStyle.width = Math.max(sideWidth, 0) + "px";
@@ -2981,8 +3078,22 @@ var ChromeBase = extend(ChromeBase, {
         }
     },
     
+    resize: function()
+    {
+        var self = this;
+        // avoid partial resize when maximizing window
+        setTimeout(function(){
+            self.draw();
+            
+            if (isIE && self.type == "frame")
+                self.fixIEPosition();
+        }, 0);
+    },
+    
     layout: function(panel)
     {
+        if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
+        
         var options = panel.options;
         changeCommandLineVisibility(options.hasCommandLine);
         changeSidePanelVisibility(options.hasSidePanel);
@@ -3000,71 +3111,55 @@ var ChromeFrameBase = extend(ChromeContext, {
     
     initialize: function()
     {
+        // restore display for the anti-flicker trick
+        if (isFirefox)
+            this.node.style.display = "block";
+        
+        //this.node.style.visibility = "visible";
+        
+        if (FirebugChrome.isOpen)
+            this.open();
+            
         ChromeBase.initialize.call(this);
         
+        addGlobalEvent("keydown", onPressF12);
+        
         this.addController(
-            [Firebug.browser.window, "resize", this.draw],
-            [Firebug.browser.window, "unload", this.destroy]
+            [Firebug.browser.window, "resize", this.resize],
+            [Firebug.browser.window, "unload", this.destroy],
+            
+            [$("fbChrome_btClose"), "click", this.close],
+            [$("fbChrome_btDetach"), "click", this.detach]            
         );
         
         if (isIE6)
         {
             this.addController(
-                [Firebug.browser.window, "resize", this.fixPosition],
-                [Firebug.browser.window, "scroll", this.fixPosition]
+                [Firebug.browser.window, "scroll", this.fixIEPosition]
             );
         }
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
-        
-        // restore display for the anti-flicker trick
-        if (isFirefox)
-            this.node.style.display = "block";
-        
-        // TODO: Check visibility preferences here
-        this.isVisible = true;
-        this.node.style.visibility = "visible";
     },
     
     shutdown: function()
     {
-        ChromeBase.shutdown.apply(this);
+        fbVSplitter.onmousedown = null;
+        fbHSplitter.onmousedown = null;
+        
+        removeGlobalEvent("keydown", onPressF12);
+        
+        ChromeBase.shutdown.apply(this);        
     },
     
-    show: function()
-    {
-        
-    },
-    
-    hide: function()
-    {
-        var chrome = Firebug.chrome;
-        var node = chrome.node;
-        node.style.height = "27px";
-        node.style.width = "100px";
-        node.style.left = "";        
-        node.style.right = 0;
-
-        if (isIE6)
-            chrome.fixPosition();
-        
-        var main = $("fbChrome");
-        main.style.display = "none";
-
-        chrome.document.body.style.backgroundColor = "transparent";
-        
-        var mini = $("fbMiniChrome");
-        mini.style.display = "block";
-    },
-    
-    fixPosition: function()
+    fixIEPosition: function()
     {
         // fix IE problem with offset when not in fullscreen mode
         var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
         
-        var size = Firebug.Inspector.getWindowSize();
-        var scroll = Firebug.Inspector.getWindowScrollPosition();
+        var size = Firebug.browser.getWindowSize();
+        var scroll = Firebug.browser.getWindowScrollPosition();
         var maxHeight = size.height;
         var height = Firebug.chrome.node.offsetHeight;
         
@@ -3081,10 +3176,12 @@ var ChromePopupBase = extend(ChromeContext, {
     
     initialize: function()
     {
+        this.document.body.className = "FirebugPopup";
+        
         ChromeBase.initialize.call(this)
         
         this.addController(
-            [Firebug.chrome.window, "resize", this.draw],
+            [Firebug.chrome.window, "resize", this.resize],
             [Firebug.chrome.window, "unload", this.destroy]
         );
         
@@ -3145,13 +3242,9 @@ var fbCommandLine = null;
 var topHeight = null;
 var topPartialHeight = null;
 
-var commandLineVisible = true;
-var sidePanelVisible = false;
-var sidePanelWidth = 300;
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 25;
+var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 75;
 
 
 //************************************************************************************************
@@ -3159,27 +3252,41 @@ var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 25;
 
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
-    var last = commandLineVisible;
-    commandLineVisible = typeof visibility == "boolean" ? visibility : !commandLineVisible;
+    var last = FirebugChrome.commandLineVisible;
+    FirebugChrome.commandLineVisible = typeof visibility == "boolean" ? visibility : !FirebugChrome.commandLineVisible;
     
-    if (commandLineVisible != last)
+    if (FirebugChrome.commandLineVisible != last)
     {
-        fbBottom.className = commandLineVisible ? "" : "hide";
+        fbBottom.className = FirebugChrome.commandLineVisible ? "" : "hide";
     }
 };
 
 var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 {
-    var last = sidePanelVisible;
-    sidePanelVisible = typeof visibility == "boolean" ? visibility : !sidePanelVisible;
+    var last = FirebugChrome.sidePanelVisible;
+    FirebugChrome.sidePanelVisible = typeof visibility == "boolean" ? visibility : !FirebugChrome.sidePanelVisible;
     
-    if (sidePanelVisible != last)
+    if (FirebugChrome.sidePanelVisible != last)
     {
-        fbPanelBox2.className = sidePanelVisible ? "" : "hide"; 
-        fbPanelBar2Box.className = sidePanelVisible ? "" : "hide";
+        fbPanelBox2.className = FirebugChrome.sidePanelVisible ? "" : "hide"; 
+        fbPanelBar2Box.className = FirebugChrome.sidePanelVisible ? "" : "hide";
     }
 };
 
+
+// ************************************************************************************************
+// F12 Handler
+
+var onPressF12 = function onPressF12(event)
+{
+    if (event.keyCode == 123 /* F12 */ && 
+        (!isFirefox && !event.shiftKey || event.shiftKey && isFirefox))
+        {
+            Firebug.chrome.toggle(false, event.ctrlKey);
+            cancelEvent(event, true);
+        }
+};
+    
 
 // ************************************************************************************************
 // Horizontal Splitter Handling
@@ -3195,44 +3302,81 @@ var onHSplitterMouseDown = function onHSplitterMouseDown(event)
 };
 
 var lastHSplitterMouseMove = 0;
+var onHSplitterMouseMoveBuffer = null;
+var onHSplitterMouseMoveTimer = null;
 
 var onHSplitterMouseMove = function onHSplitterMouseMove(event)
 {
     cancelEvent(event, true);
     
-    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
+    var clientY = event.clientY;
+    var win = isIE
+        ? event.srcElement.ownerDocument.parentWindow
+        : event.target.ownerDocument && event.target.ownerDocument.defaultView;
+    
+    if (!win)
+        return;
+    
+    if (win != win.parent)
     {
-        var clientY = event.clientY;
-        var win = document.all
-            ? event.srcElement.ownerDocument.parentWindow
-            : event.target.ownerDocument && event.target.ownerDocument.defaultView;
-      
-        if (!win)
-            return;
-        
-        if (win != win.parent)
-            clientY += win.frameElement ? win.frameElement.offsetTop : 0;
-
-        var size = Firebug.browser.getWindowSize();
-        var chrome = Firebug.chrome.node;
-        var height = (isIE && win == top) ? size.height : chrome.offsetTop + chrome.clientHeight; 
-        
-        var commandLineHeight = commandLineVisible ? fbCommandLine.offsetHeight : 0;
-        var fixedHeight = topHeight + commandLineHeight + 1;
-        var y = Math.max(height - clientY + 7, fixedHeight);
-            y = Math.min(y, size.height);
-          
-        chrome.style.height = y + "px";
-        
-        if (isIE6)
-          Firebug.chrome.fixPosition();
-        
-        Firebug.chrome.draw();
-        
-        lastHSplitterMouseMove = new Date().getTime();
+        var frameElement = win.frameElement;
+        if (frameElement)
+        {
+            var framePos = Firebug.Inspector.getElementPosition(frameElement).top;
+            clientY += framePos;
+            
+            if (frameElement.style.position != "fixed")
+                clientY -= Firebug.browser.getWindowScrollPosition().top;
+        }
     }
     
+    onHSplitterMouseMoveBuffer = clientY; // buffer
+    
+    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
+    {
+        lastHSplitterMouseMove = new Date().getTime();
+        handleHSplitterMouseMove();
+    }
+    else
+        if (!onHSplitterMouseMoveTimer)
+            onHSplitterMouseMoveTimer = setTimeout(handleHSplitterMouseMove, chromeRedrawSkipRate);
+    
     return false;
+};
+
+var handleHSplitterMouseMove = function()
+{
+    if (onHSplitterMouseMoveTimer)
+    {
+        clearTimeout(onHSplitterMouseMoveTimer);
+        onHSplitterMouseMoveTimer = null;
+    }
+    
+    var clientY = onHSplitterMouseMoveBuffer;
+    
+    var windowSize = Firebug.browser.getWindowSize();
+    var scrollSize = Firebug.browser.getWindowScrollSize();
+    
+    // compute chrome fixed size (top bar and command line)
+    var commandLineHeight = FirebugChrome.commandLineVisible ? fbCommandLine.offsetHeight : 0;
+    var fixedHeight = topHeight + commandLineHeight;
+    var chromeNode = Firebug.chrome.node;
+    
+    var scrollbarSize = !isIE && (scrollSize.width > windowSize.width) ? 17 : 0;
+    
+    var height = isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height; 
+     
+    // compute the min and max size of the chrome
+    var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
+        chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
+
+    FirebugChrome.height = chromeHeight;
+    chromeNode.style.height = chromeHeight + "px";
+    
+    if (isIE6)
+        Firebug.chrome.fixIEPosition();
+    
+    Firebug.chrome.draw();
 };
 
 var onHSplitterMouseUp = function onHSplitterMouseUp(event)
@@ -3277,7 +3421,7 @@ var onVSplitterMouseMove = function onVSplitterMouseMove(event)
             var size = Firebug.chrome.getWindowSize();
             var x = Math.max(size.width - clientX + 3, 6);
             
-            sidePanelWidth = x;
+            FirebugChrome.sidePanelWidth = x;
             Firebug.chrome.draw();
         }
         
@@ -3306,10 +3450,10 @@ FBL.ns(function() { with (FBL) {
 //----------------------------------------------------------------------------
 // Injected Chrome
 //----------------------------------------------------------------------------
-Chrome.injected = 
+FirebugChrome.injected = 
 {
-    CSS: '.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 0 0 1px;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}.fbToolbarButtons{display:none;}#fbStatusBarBox{display:none;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;position:absolute;right:0;height:27px;width:99px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbMiniContent{position:absolute;right:0;top:1px;height:25px;width:99px;_width:98px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{position:absolute;top:6px;right:30px;}#fbMiniIcon{position:absolute;top:4px;right:5px;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{position:absolute;z-index:5;width:100%;top:0;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;overflow:hidden;}#fbPanelBarBox{top:27px;position:absolute;z-index:8;width:100%;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:4px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:4px 2px 0 5px;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{position:relative;top:5px;line-height:19px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:10px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#mainButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;_width:270px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:255px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;_position:absolute;}#mainButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#close{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#close:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#detach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#detach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;}div.lineNo{font:11px Monaco,monospace;float:left;display:inline;position:relative;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}pre.nodeCode{font:11px Monaco,monospace;margin:0;padding-left:10px;overflow:hidden;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_margin-left:-11px;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;}.nodeComment{color:DarkGreen;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #mainButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
-    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbHSplitter">&nbsp;</div><div id="mainButtons"><a id="close" class="fbHover" title="Minimize Firebug">&nbsp;</a><a id="detach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a><input type="text" id="fbToolbarSearch"/></div><div id="fbToolbar"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbBtnInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a></span><span id="fbHTMLButtons" class="fbToolbarButtons"><a id="fbHTML_btEdit" class="fbHover" title="Edit this HTML">Edit</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span><span id="fbHTMLStatusBar" class="fbStatusBar"><span><a class="fbHover"><b>body</b></a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div.class</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">body</a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div</a></span></span></span></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Style</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Layout</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div></div></div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div></td></tr><tr id="fbBottom"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table>'
+    CSS: '.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 0 0 1px;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}.fbToolbarButtons{display:none;}#fbStatusBarBox{display:none;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;position:absolute;right:0;height:27px;width:29px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbMiniContent{position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:none;position:absolute;top:6px;right:30px;}#fbMiniIcon{position:absolute;top:4px;right:5px;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{position:absolute;z-index:5;width:100%;top:0;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;overflow:hidden;}#fbPanelBarBox{top:27px;position:absolute;z-index:8;width:100%;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:4px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:4px 2px 0 5px;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{position:relative;top:5px;line-height:19px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:10px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#fbChromeButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;_width:270px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:255px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;_position:absolute;}#fbChromeButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#fbChrome_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#fbChrome_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#fbChrome_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#fbChrome_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;}div.lineNo{font:11px Monaco,monospace;float:left;display:inline;position:relative;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}pre.nodeCode{font:11px Monaco,monospace;margin:0;padding-left:10px;overflow:hidden;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_float:none;_margin-left:-11px;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;}.nodeComment{color:DarkGreen;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbChromeButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbHSplitter">&nbsp;</div><div id="fbChromeButtons"><a id="fbChrome_btClose" class="fbHover" title="Minimize Firebug">&nbsp;</a><a id="fbChrome_btDetach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a></div><div id="fbToolbar"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a></span><span id="fbHTMLButtons" class="fbToolbarButtons"><a id="fbHTML_btEdit" class="fbHover" title="Edit this HTML">Edit</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span><span id="fbHTMLStatusBar" class="fbStatusBar"><span><a class="fbHover"><b>body</b></a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div.class</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">body</a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div</a></span></span></span></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Style</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Layout</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div></div></div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div></td></tr><tr id="fbBottom"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table><div id="fbMiniChrome"><div id="fbMiniContent"><div id="fbMiniErrors" class="fbErrors">2 errors</div><div id="fbMiniIcon" title="Click to restore Firebug"></div></div></div>'
 };
 
 // ************************************************************************************************
@@ -3462,7 +3606,7 @@ var ConsoleAPI =
     
     clear: function()
     {
-        Firebug.Console.getPanel().panelNode.innerHTML = "";
+        Firebug.Console.getPanel().panelContent.innerHTML = "";
         return Firebug.Console.LOG_COMMAND;
     },
 
@@ -3491,19 +3635,10 @@ Firebug.Console = extend(ConsoleModule,
 {
     LOG_COMMAND: {},
     
-    create: function()
-    {
-        this.messageQueue = [];
-        this.groupStack = [];
-        this.timeMap = {};
+    messageQueue: [],
+    groupStack: [],
+    timeMap: {},
         
-        // Register console API
-        var alternateNS = "FB";
-        var consoleNS = "console";
-        var namespace = isFirefox ? alternateNS : consoleNS;
-        Application.browser[namespace] = ConsoleAPI;        
-    },
-    
     getPanel: function()
     {
         return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
@@ -3596,7 +3731,7 @@ Firebug.Console = extend(ConsoleModule,
     {
         var panel = this.getPanel();
         
-        if (panel && panel.panelNode)
+        if (panel && panel.panelContent)
             this.writeMessage(message, className, handler);
         else
         {
@@ -3626,14 +3761,14 @@ Firebug.Console = extend(ConsoleModule,
         if (this.groupStack.length > 0)
             var container = this.groupStack[this.groupStack.length-1];
         else
-            var container = this.getPanel().panelNode;
+            var container = this.getPanel().panelContent;
         
         container.appendChild(row);
     },
     
     writeRow: function(message, className)
     {
-        var row = this.getPanel().panelNode.ownerDocument.createElement("div");
+        var row = this.getPanel().panelContent.ownerDocument.createElement("div");
         row.className = "logRow" + (className ? " logRow-"+className : "");
         row.innerHTML = message.join("");
         this.appendRow(row);
@@ -3643,9 +3778,9 @@ Firebug.Console = extend(ConsoleModule,
     {
         this.logFormatted(message, className);
     
-        var groupRow = this.getPanel().panelNode.ownerDocument.createElement("div");
+        var groupRow = this.getPanel().panelContent.ownerDocument.createElement("div");
         groupRow.className = "logGroup";
-        var groupRowBox = this.getPanel().panelNode.ownerDocument.createElement("div");
+        var groupRowBox = this.getPanel().panelContent.ownerDocument.createElement("div");
         groupRowBox.className = "logGroupBox";
         groupRow.appendChild(groupRowBox);
         this.appendRow(groupRowBox);
@@ -3658,8 +3793,6 @@ Firebug.Console = extend(ConsoleModule,
     }
 
 });
-
-Firebug.Console.create();
 
 Firebug.registerModule(Firebug.Console);
 
@@ -3682,29 +3815,23 @@ ConsolePanel.prototype = extend(Firebug.Panel,
 
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
+        
+        this.clearButton = new Firebug.Button({
+            node: $("fbConsole_btClear"),
+            owner: Firebug.Console,
+            onClick: Firebug.Console.clear
+        });
     },
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
+        
+        this.clearButton.initialize();
     }
     
 });
 
 Firebug.registerPanel(ConsolePanel);
-
-// ************************************************************************************************
-
-FBL.objectToString = function(object)
-{
-    try
-    {
-        return object+"";
-    }
-    catch (exc)
-    {
-        return null;
-    }
-};
 
 // ************************************************************************************************
 
@@ -3722,6 +3849,16 @@ FBL.onError = function(msg, href, lineNo)
     
     Firebug.Console.logRow(html, "error");
 };
+
+
+// ************************************************************************************************
+// Register console namespace
+
+var alternateNS = "FB";
+var consoleNS = "console";
+var namespace = isFirefox ? alternateNS : consoleNS;
+Application.browser[namespace] = ConsoleAPI;        
+
 
 // ************************************************************************************************
 }});
@@ -4728,7 +4865,7 @@ Firebug.Inspector =
     
     onChromeReady: function()
     {
-        fbBtnInspect = $("fbBtnInspect");
+        //fbBtnInspect = $("fbBtnInspect");
     },    
   
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -4736,6 +4873,7 @@ Firebug.Inspector =
     
     startInspecting: function()
     {
+        Firebug.chrome.selectPanel("HTML");
         createInspectorFrame();
         
         var size = this.getWindowScrollSize();
@@ -4743,8 +4881,8 @@ Firebug.Inspector =
         fbInspectFrame.style.width = size.width + "px";
         fbInspectFrame.style.height = size.height + "px";
 
-        fbBtnInspect.href = "javascript:FB.stopInspecting(this)";
-        fbBtnInspect.className = "fbBtnInspectActive";
+        //fbBtnInspect.href = "javascript:FB.stopInspecting(this)";
+        //fbBtnInspect.className = "fbBtnInspectActive";
         
         addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
         addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
@@ -4754,8 +4892,9 @@ Firebug.Inspector =
     {
         destroyInspectorFrame();
         
-        fbBtnInspect.href = "javascript:FB.startInspecting(this)";
-        fbBtnInspect.className = "";
+        //fbBtnInspect.href = "javascript:FB.startInspecting(this)";
+        //fbBtnInspect.className = "";
+        Firebug.chrome.inspectButton.restore();
         
         if (outlineVisible) this.hideOutline();
         removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
@@ -4954,18 +5093,15 @@ Firebug.Inspector =
 
     getElementPosition: function(el)
     {
-        var left = 0
-        var top = 0;
+        var left = 0, top = 0;
         
-        if (el.offsetParent)
+        do
         {
-            do
-            {
-                left += el.offsetLeft;
-                top += el.offsetTop;
-            }
-            while (el = el.offsetParent);
+            left += el.offsetLeft;
+            top += el.offsetTop;
         }
+        while (el = el.offsetParent);
+    
         return {left:left, top:top};      
     },
     
@@ -5215,7 +5351,7 @@ var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 
 var inspectStyle = resetStyle + "z-index: 2147483500;";
 var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; background:url(http://pedrosimonetti.googlepages.com/pixel_transparent.gif);";
-//var inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.1; _filter: alpha(opacity=10);";
+var inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
 
 var inspectModelStyle = inspectStyle + "opacity:0.8; _filter:alpha(opacity=80);";
 var inspectMarginStyle = inspectStyle + "background: #EDFF64; height:100%; width:100%;";
@@ -5232,7 +5368,7 @@ var outlineStyle = {
 
 var lastInspecting = 0;
 var fbInspectFrame = null;
-var fbBtnInspect = null;
+//var fbBtnInspect = null;
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -5712,20 +5848,21 @@ Firebug.HTML = extend(Firebug.Module,
     appendTreeNode: function(nodeArray, html)
     {
         var reTrim = /^\s+|\s+$/g;
-      
+        
         if (!nodeArray.length) nodeArray = [nodeArray];
         
         for (var n=0, node; node=nodeArray[n]; n++)
         {
-        
             if (node.nodeType == 1)
             {
                 var uid = node[cacheID];
                 var child = node.childNodes;
                 var childLength = child.length;
-                var hasSingleTextChild = childLength == 1 && node.firstChild.nodeType == 3;
                 
                 var nodeName = node.nodeName.toLowerCase();
+                
+                var hasSingleTextChild = childLength == 1 && node.firstChild.nodeType == 3 &&
+                        nodeName != "script" && nodeName != "style";
                 
                 var nodeControl = !hasSingleTextChild && childLength > 0 ? 
                     ('<div class="nodeControl"></div>') : '';
@@ -5823,12 +5960,42 @@ Firebug.HTML = extend(Firebug.Module,
             } 
             else if (node.nodeType == 3)
             {
-                var value = node.nodeValue.replace(reTrim, '');
-                if (value)
-                    html.push('<div class="nodeText">', escapeHTML(value),
-                        '</div>');
+                if ( node.parentNode && ( node.parentNode.nodeName.toLowerCase() == "script" ||
+                     node.parentNode.nodeName.toLowerCase() == "style" ) )
+                {
+                    var value = node.nodeValue.replace(reTrim, '');
+                    
+                    if(document.all){
+                        var src = value+'\n';
+                       
+                    }else {
+                        var src = '\n'+value+'\n';
+                    }
+                    
+                    var match = src.match(/\n/g);
+                    var num = match ? match.length : 0;
+                    var s = [], sl = 0;
+                    
+                    for(var c=1; c<num; c++){
+                        s[sl++] = '<div line="'+c+'">' + c + '</div>';
+                    }
+                    
+                    html.push('<div class="nodeGroup"><div class="nodeChildren"><div class="lineNo">',
+                            s.join(''),
+                            '</div><pre class="nodeCode">',
+                            escapeHTML(src),
+                            '</pre>',
+                            '</div></div>'
+                        );
+                      
+                }
+                else
+                {
+                    var value = node.nodeValue.replace(reTrim, '');
+                    if (value)
+                        html.push('<div class="nodeText">', escapeHTML(value),'</div>');
+                }
             }
-          
         }
     },
     
@@ -5878,7 +6045,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     isTreeNodeVisible: function(id)
     {
-        return $U(id);
+        return $(id);
     },
     
     selectTreeNode: function(id)
@@ -5902,7 +6069,7 @@ Firebug.HTML = extend(Firebug.Module,
         while(stack.length > 0)
         {
             id = stack.pop();
-            node = $U(id);
+            node = $(id);
             
             if (stack.length > 0 && documentCache[id].childNodes.length > 0)
               this.appendTreeChildren(node);
@@ -5930,36 +6097,49 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     options: {
         hasSidePanel: true,
         hasToolButtons: true,
-        hasStatusBar: true,
+        //hasStatusBar: true,
         isPreRendered: true
     },
 
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
         
+        this.panelNode.style.padding = "4px 3px 1px 15px";
+        
+        if (Firebug.chrome.type != "popup")
+            this.createUI();
+    },
+    
+    createUI: function()
+    {
         var rootNode = Firebug.browser.document.documentElement;
         var html = [];
         Firebug.HTML.appendTreeNode(rootNode, html);
         
-        this.panelNode.style.padding = "4px 3px 1px 15px";
-        var d = Firebug.chrome.document.createElement("div");
+        var d = this.panelContent;
         d.innerHTML = html.join("");
         this.panelNode.appendChild(d);
-        
-        addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
     },
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
+        addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
+        
+        fbPanel1 = $("fbPanel1");
     }
     
 });
 
 Firebug.registerPanel(HTMLPanel);
 
+// ************************************************************************************************
 
 var selectedElement = null
-function selectElement(e)
+var fbPanel1 = null;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+
+var selectElement= function selectElement(e)
 {
     if (e != selectedElement)
     {
@@ -5975,12 +6155,9 @@ function selectElement(e)
         else if (FBL.isSafari)
             e.style.WebkitBorderRadius = "2px";
         
-        /*
-        else if (FBL.isOpera)
-            e.style.background = "url(roundCorner.svg)";
-            /**/
-
         selectedElement = e;
+        
+        FirebugChrome.selectedElement = e.attributes[cacheID].value;
     }
 }
 
@@ -6188,5 +6365,3 @@ Firebug.registerPanel(TracePanel);
 }});
 
 FBL.initialize();
-
-})();

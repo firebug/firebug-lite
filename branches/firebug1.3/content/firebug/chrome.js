@@ -49,8 +49,6 @@ var onPopupChromeLoad = function(chromeContext)
     
     FBL.FirebugChrome.commandLineVisible = true;
     FBL.FirebugChrome.sidePanelVisible = false;
-    
-    //dispatch(Firebug.modules, "initialize", []);
        
     
     var popup = Firebug.chrome = new Chrome(chromeContext);
