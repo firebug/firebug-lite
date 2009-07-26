@@ -8,6 +8,10 @@ FBL.FirebugChrome =
     sidePanelWidth: 300,
     selectedPanel: "Console",
     
+    height: 250,
+    
+    isOpen: true,
+    
     create: function()
     {
         createChrome({onChromeLoad: onChromeLoad});
@@ -38,8 +42,7 @@ var onPopupChromeLoad = function(chromeContext)
     
     if (Firebug.chromeMap.frame)
     {
-        Firebug.chromeMap.frame.isVisible = false;
-        Firebug.chromeMap.frame.node.style.visibility = "hidden";
+        Firebug.chromeMap.frame.close();
     }
     
     FBL.FirebugChrome.commandLineVisible = true;
@@ -49,7 +52,7 @@ var onPopupChromeLoad = function(chromeContext)
     
     //FBTrace.module = null;
     
-    var chrome = new Chrome(chromeContext);
+    var chrome = Firebug.chrome = new Chrome(chromeContext);
     
     // chrome synchronization
     var framePanelMap = Firebug.chromeMap.frame.panelMap;
@@ -439,78 +442,70 @@ var ChromeBase = extend(ChromeBase, {
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    show: function()
+    open: function()
     {
-        // abstract
+        var node = this.node;
+        
+        if(node.style.visibility != "visible")
+            node.style.visibility = "visible";
+        
+        node.style.height = FirebugChrome.height + "px";
+        node.style.width = "100%";
+        node.style.left = 0;
+        node.style.right = "";
+
+        if (isIE6)
+            this.fixIEPosition();
+        
+        var main = $("fbChrome");
+        main.style.display = "block";
+
+        this.document.body.style.backgroundColor = "#fff";
+        
+        var mini = $("fbMiniChrome");
+        mini.style.display = "none";
     },
     
-    hide: function()
+    close: function()
     {
-        // abstract
+        var node = this.node;
+        node.style.height = "27px";
+        node.style.width = "30px";
+        node.style.left = "";        
+        node.style.right = 0;
+
+        if (isIE6)
+            this.fixIEPosition();
+        
+        var main = $("fbChrome");
+        main.style.display = "none";
+
+        this.document.body.style.backgroundColor = "transparent";
+        
+        var mini = $("fbMiniChrome");
+        mini.style.display = "block";
     },
     
     toggle: function(forceOpen, popup)
     {
         if(popup)
         {
-            var context = Firebug.chrome = Firebug.chromeMap.popup;
-            
-            var chromeReady = true;
-            if(chromeReady)
-            {
-                if(!context)
-                {     
-                    /*
-                    if (Firebug.chromeMap.frame)
-                    {
-                        Firebug.chromeMap.frame.isVisible = false;
-                        Firebug.chromeMap.frame.node.style.visibility = "hidden";
-                    }
-                    
-                    chromeReady = false;
-                    FBTrace.module = null;
-                    /**/
-                    
-                    createChrome({type:"popup", onChromeLoad: onPopupChromeLoad});
-                    //context.create();
-                    //waitForChrome();
-                }
+            if(!Firebug.chromeMap.popup)
+            {     
+                createChrome({type:"popup", onChromeLoad: onPopupChromeLoad});
             }
-            //else
-            //    waitForDocument();
         }
         else
         {
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
             
-            var context = Firebug.chrome = Firebug.chromeMap.frame;
-            context.isVisible = forceOpen || !context.isVisible;
+            FirebugChrome.isOpen = forceOpen || !FirebugChrome.isOpen;
             
-            var chromeReady = true;
-            if(chromeReady)
-            { 
-                if(context.node)
-                {
-                    if(context.isVisible)
-                    {
-                        context.node.style.visibility = "visible";
-                        //waitForChrome();
-                        
-                    } else {
-                        context.node.style.visibility = "hidden";
-                    }
-                }
-                else
-                {
-                    //context.create();
-                    //waitForChrome();
-                }
-                    
-            }
-            //else
-            //    waitForDocument();
-            
+            if(FirebugChrome.isOpen)
+               this.open();
+            else
+               this.close();
         }       
     },
     
@@ -604,29 +599,28 @@ var ChromeFrameBase = extend(ChromeContext, {
     {
         // restore display for the anti-flicker trick
         if (isFirefox)
-            this.node.style.display = "block";        
+            this.node.style.display = "block";
         
-        // TODO: Check visibility preferences here
-        this.isVisible = true;
-        this.node.style.visibility = "visible";
+        //this.node.style.visibility = "visible";
         
+        if (FirebugChrome.isOpen)
+            this.open();
+            
         ChromeBase.initialize.call(this);
         
         addGlobalEvent("keydown", onPressF12);
-        //addGlobalEvent("keydown", function(){alert(0)});
         
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
             [Firebug.browser.window, "unload", this.destroy],
             
-            [$("fbChrome_btClose"), "click", this.hide],
+            [$("fbChrome_btClose"), "click", this.close],
             [$("fbChrome_btDetach"), "click", this.detach]            
         );
         
         if (isIE6)
         {
             this.addController(
-                //[Firebug.browser.window, "resize", this.fixIEPosition],
                 [Firebug.browser.window, "scroll", this.fixIEPosition]
             );
         }
@@ -637,33 +631,12 @@ var ChromeFrameBase = extend(ChromeContext, {
     
     shutdown: function()
     {
-        ChromeBase.shutdown.apply(this);
-    },
-    
-    show: function()
-    {
+        fbVSplitter.onmousedown = null;
+        fbHSplitter.onmousedown = null;
         
-    },
-    
-    hide: function()
-    {
-        var chrome = Firebug.chrome;
-        var node = chrome.node;
-        node.style.height = "27px";
-        node.style.width = "100px";
-        node.style.left = "";        
-        node.style.right = 0;
-
-        if (isIE6)
-            chrome.fixIEPosition();
+        removeGlobalEvent("keydown", onPressF12);
         
-        var main = $("fbChrome");
-        main.style.display = "none";
-
-        chrome.document.body.style.backgroundColor = "transparent";
-        
-        var mini = $("fbMiniChrome");
-        mini.style.display = "block";
+        ChromeBase.shutdown.apply(this);        
     },
     
     fixIEPosition: function()
