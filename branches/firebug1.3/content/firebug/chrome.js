@@ -40,29 +40,32 @@ var onPopupChromeLoad = function(chromeContext)
 {
     FBTrace.sysout("onPopupChromeLoad", "-------------------------");
     
-    if (Firebug.chromeMap.frame)
+    var frame = Firebug.chromeMap.frame;
+    
+    if (frame)
     {
-        Firebug.chromeMap.frame.close();
+        frame.close();
     }
     
     FBL.FirebugChrome.commandLineVisible = true;
     FBL.FirebugChrome.sidePanelVisible = false;
     
-    dispatch(Firebug.modules, "initialize", []);
+    //dispatch(Firebug.modules, "initialize", []);
+       
     
-    //FBTrace.module = null;
-    
-    var chrome = Firebug.chrome = new Chrome(chromeContext);
+    var popup = Firebug.chrome = new Chrome(chromeContext);
     
     // chrome synchronization
-    var framePanelMap = Firebug.chromeMap.frame.panelMap;
-    var popupPanelMap = Firebug.chromeMap.popup.panelMap;
+    var framePanelMap = frame.panelMap;
+    var popupPanelMap = popup.panelMap;
     for(var name in framePanelMap)
     {
         popupPanelMap[name].panelContent.innerHTML = framePanelMap[name].panelContent.innerHTML;
     }
     
-    chrome.initialize();
+    popup.initialize();
+    
+    dispatch(Firebug.modules, "initialize", []);
     
     if(FirebugChrome.selectedElement)
         Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
@@ -214,7 +217,7 @@ var getChromeTemplate = function()
     var r = [], i = -1;
     
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
-    r[++i] = '<head><title>';
+    r[++i] = '<html><head><title>';
     r[++i] = Firebug.version;
     r[++i] = '</title><style>';
     r[++i] = tpl.CSS;
@@ -222,7 +225,7 @@ var getChromeTemplate = function()
     r[++i] = '</style>';
     r[++i] = '</head><body>';
     r[++i] = tpl.HTML;
-    r[++i] = '</body>';
+    r[++i] = '</body></html>';
     
     return r.join("");
 };
@@ -490,10 +493,7 @@ var ChromeBase = extend(ChromeBase, {
     {
         if(popup)
         {
-            if(!Firebug.chromeMap.popup)
-            {     
-                createChrome({type:"popup", onChromeLoad: onPopupChromeLoad});
-            }
+            this.detach();
         }
         else
         {
@@ -513,7 +513,10 @@ var ChromeBase = extend(ChromeBase, {
     
     detach: function()
     {
-        this.toggle(true, true);
+        if(!Firebug.chromeMap.popup)
+        {     
+            createChrome({type:"popup", onChromeLoad: onPopupChromeLoad});
+        }
     },
     
     reattach: function()
