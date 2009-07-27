@@ -603,8 +603,6 @@ var ChromeFrameBase = extend(ChromeContext, {
         if (isFirefox)
             this.node.style.display = "block";
         
-        //this.node.style.visibility = "visible";
-        
         if (FirebugChrome.isOpen)
             this.open();
             
@@ -670,7 +668,8 @@ var ChromePopupBase = extend(ChromeContext, {
         
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
-            [Firebug.chrome.window, "unload", this.destroy]
+            [Firebug.chrome.window, "unload", this.destroy],
+            [Firebug.browser.window, "unload", this.close]
         );
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
@@ -679,6 +678,12 @@ var ChromePopupBase = extend(ChromeContext, {
     shutdown: function()
     {
         ChromeBase.shutdown.apply(this);
+    },
+    
+    close: function()
+    {
+        this.shutdown();
+        this.node.close();
     }
 
 });

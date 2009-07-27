@@ -44,7 +44,6 @@ TracePanel.prototype = extend(Firebug.Panel,
             caption: "Clear",
             title: "Clear FBTrace logs",            
             module: Firebug.Trace,
-            //panel: this,
             onClick: Firebug.Trace.clear
         });
     },

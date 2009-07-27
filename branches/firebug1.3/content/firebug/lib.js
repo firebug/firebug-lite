@@ -1,5 +1,4 @@
 /*!
- * Firebug Lite - v1.3a
  *  Copyright 2009, Firebug Working Group
  *  Released under BSD license.
  *  More information: http://getfirebug.com/lite.html
@@ -438,15 +437,29 @@ this.removeGlobalEvent = function(name, handler)
 
 this.dispatch = function(listeners, name, args)
 {
-    if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
-    
     try
     {
-        for (var i = 0; i < listeners.length; ++i)
+        if (typeof listeners.length != "undefined")
         {
-            var listener = listeners[i];
-            if ( listener.hasOwnProperty(name) )
-                listener[name].apply(listener, args);
+            if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
+    
+            for (var i = 0; i < listeners.length; ++i)
+            {
+                var listener = listeners[i];
+                if ( listener.hasOwnProperty(name) )
+                    listener[name].apply(listener, args);
+            }
+        }
+        else
+        {
+            if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to listeners of an object");
+            
+            for (var prop in listeners)
+            {
+                var listener = listeners[prop];
+                if ( listeners.hasOwnProperty(prop) && listener.hasOwnProperty(name) )
+                    listener[name].apply(listener, args);
+            }
         }
     }
     catch (exc)
