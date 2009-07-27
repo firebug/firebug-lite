@@ -10,7 +10,7 @@ FBL.FirebugChrome =
     
     height: 250,
     
-    isOpen: false,
+    isOpen: true,
     
     create: function()
     {
@@ -45,6 +45,9 @@ var onPopupChromeLoad = function(chromeContext)
     if (frame)
     {
         frame.close();
+        // TODO: handle inside chrome.close()
+        dispatch(Firebug.modules, "shutdown", []);
+        frame.shutdown();
     }
     
     FBL.FirebugChrome.commandLineVisible = true;
@@ -60,9 +63,6 @@ var onPopupChromeLoad = function(chromeContext)
     {
         popupPanelMap[name].contentNode.innerHTML = framePanelMap[name].contentNode.innerHTML;
     }
-    
-    dispatch(Firebug.modules, "shutdown", []);
-    frame.shutdown();
     
     popup.initialize();    
     dispatch(Firebug.modules, "initialize", []);

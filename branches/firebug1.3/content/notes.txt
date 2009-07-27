@@ -1,6 +1,8 @@
 ###################################################################################################
 
 ###################################################################################################
+    - change version number to 1.3a2 
+    
     - put IE6CSS in injected chrome
     
     - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
@@ -101,7 +103,13 @@ OK  - problem with global events when in popup window
 
     - Synchronize chromes
     
-        - Chrome Frame should have different states and handlers when in minichrome mode 
+        - Chrome Frame should have different states and handlers when in minichrome mode
+        
+        - mini-chrome should be "spans" and not "divs"
+        
+        - onPressF12 should not be disabled when chrome frame closes
+        
+        - dispatch detach and reattach methods to panels  
     
     ~~  - refactor panel. each panel should have a single panelContentNode that will be shared
           across Chrome windows.
@@ -120,11 +128,11 @@ OK  - problem with global events when in popup window
 ---------------------------------------------------------------------------------------------------
  Loading
 ---------------------------------------------------------------------------------------------------
-OK  - Console.create() is being called in the wrong time
-    
     - window onerror - wrong time 
     
     - Check the initializing order. 
+    
+OK  - Console.create() is being called in the wrong time
     
 OK  - Check create() and initialize() methods of Modules and Panels.
     OK  - HTML panel create() will be called twice (1 for frame and 1 for popup)
@@ -133,13 +141,6 @@ OK  - Check create() and initialize() methods of Modules and Panels.
 ---------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------
-    
-~~  - mouseover Inspect
-~~  - inspect
-  
-~~  - Panel controllers?
-        - controller context should be the module Firebug.ModuleName 
-        
     - Panel event delegation?
 
 
