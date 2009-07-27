@@ -101,6 +101,8 @@ OK  - problem with global events when in popup window
 
     - Synchronize chromes
     
+        - Chrome Frame should have different states and handlers when in minichrome mode 
+    
     ~~  - refactor panel. each panel should have a single panelContentNode that will be shared
           across Chrome windows.
           

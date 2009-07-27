@@ -665,9 +665,9 @@ var ChromeFrameBase = extend(ChromeContext, {
         var size = Firebug.browser.getWindowSize();
         var scroll = Firebug.browser.getWindowScrollPosition();
         var maxHeight = size.height;
-        var height = Firebug.chrome.node.offsetHeight;
+        var height = this.node.offsetHeight;
         
-        Firebug.chrome.node.style.top = maxHeight - height + scroll.top + "px";
+        this.node.style.top = maxHeight - height + scroll.top + "px";
     }
 
 });
