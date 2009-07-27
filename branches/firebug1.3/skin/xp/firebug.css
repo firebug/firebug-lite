@@ -143,6 +143,7 @@ body {
     width: 20px;
     float: right;    
     background: url(sprite.png) 0 -135px;
+    cursor: pointer;
 }
 
 

@@ -570,12 +570,16 @@ var ChromeFrameBase = extend(ChromeContext, {
         
         addGlobalEvent("keydown", onPressF12);
         
+        
+        
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
             [Firebug.browser.window, "unload", this.destroy],
             
             [$("fbChrome_btClose"), "click", this.close],
-            [$("fbChrome_btDetach"), "click", this.detach]            
+            [$("fbChrome_btDetach"), "click", this.detach],
+            
+            [$("fbMiniIcon"), "click", onMiniIconClick]            
         );
         
         if (isIE6)
@@ -793,6 +797,12 @@ var onPressF12 = function onPressF12(event)
             cancelEvent(event, true);
         }
 };
+
+var onMiniIconClick = function onMiniIconClick(event)
+{
+    Firebug.chrome.toggle(false, event.ctrlKey);
+    cancelEvent(event, true);
+}
     
 
 // ************************************************************************************************
