@@ -303,9 +303,9 @@ Firebug.Panel =
             this.tabNode = $(panelId + "Tab");
             this.tabNode.style.display = "block";
             
-            if (options.hasSidePanel)
+            if (options.hasToolButtons)
             {
-                //this.sidePanelNode = $(panelId + "StatusBar");
+                this.toolButtonsNode = $(panelId + "Buttons");
             }
             
             if (options.hasStatusBar)
@@ -314,11 +314,10 @@ Firebug.Panel =
                 this.statusBarNode = $(panelId + "StatusBar");
             }
             
-            if (options.hasToolButtons)
+            if (options.hasSidePanel)
             {
-                this.toolButtonsNode = $(panelId + "Buttons");
-            }
-            
+                //this.sidePanelNode = $(panelId + "StatusBar");
+            }        
         }
         else
         {
@@ -348,16 +347,26 @@ Firebug.Panel =
             }
             
             $("fbPanelBar1").appendChild(tabNode);
-            this.tabNode.style.display = "block";
+            tabNode.style.display = "block";
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create SidePanel
+            // create ToolButtons
+            if (options.hasToolButtons)
+            {
+                this.toolButtonsNode = createElement("span", {
+                    id: panelId + "Buttons",
+                    className: "fbToolbarButtons"
+                }); 
+            }
+            
+            $("fbToolbarButtons").appendChild(this.toolButtonsNode);
+            /**/
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create StatusBar
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create ToolButtons
+            // create SidePanel
         }
         
         var panelContent = this.panelContent = createElement("div");
@@ -623,10 +632,9 @@ Firebug.PanelBar =
     addPanel: function(panelName, parentPanel)
     {
         var PanelType = panelTypeMap[panelName];
-        var panel = new PanelType();
-        panel.create();
+        var panel = this.panelMap[panelName] = new PanelType();
         
-        this.panelMap[panelName] = panel;
+        panel.create();        
     },
     
     removePanel: function(panelName)
@@ -701,7 +709,7 @@ Firebug.Button = function(options)
         var title = options.title || "title";
         
         this.owner = this.module = options.module;
-        this.panel = options.panel;
+        this.panel = options.panel || this.module.getPanel();
         this.container = this.panel.toolButtonsNode;
     
         this.node = createElement("a", {

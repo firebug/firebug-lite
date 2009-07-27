@@ -120,7 +120,7 @@ var onDocumentLoad = function onDocumentLoad()
 this.Application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
-    isBookmarletMode: true,
+    isBookmarletMode: false,
     isPersistentMode: false,
     isDebugMode: true,
     skin: "xp",

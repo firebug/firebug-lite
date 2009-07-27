@@ -12,6 +12,11 @@ Firebug.Trace = extend(Firebug.Module,
     getPanel: function()
     {
         return Firebug.chrome ? Firebug.chrome.getPanel("Trace") : null;
+    },
+    
+    clear: function()
+    {
+        this.getPanel().panelContent.innerHTML = "";
     }
 });
 
@@ -29,12 +34,25 @@ TracePanel.prototype = extend(Firebug.Panel,
     title: "Trace",
     
     options: {
-        //hasSidePanel: true,
-        //hasCommandLine: true
+        hasToolButtons: true
+    },
+    
+    create: function(){
+        Firebug.Panel.create.apply(this, arguments);
+        
+        this.clearButton = new Firebug.Button({
+            caption: "Clear",
+            title: "Clear FBTrace logs",            
+            module: Firebug.Trace,
+            //panel: this,
+            onClick: Firebug.Trace.clear
+        });
     },
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
+        
+        this.clearButton.initialize();
     }
     
 });

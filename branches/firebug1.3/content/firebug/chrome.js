@@ -61,8 +61,10 @@ var onPopupChromeLoad = function(chromeContext)
         popupPanelMap[name].panelContent.innerHTML = framePanelMap[name].panelContent.innerHTML;
     }
     
-    popup.initialize();
+    dispatch(Firebug.modules, "shutdown", []);
+    frame.shutdown();
     
+    popup.initialize();    
     dispatch(Firebug.modules, "initialize", []);
     
     if(FirebugChrome.selectedElement)
@@ -256,7 +258,6 @@ var ChromeBase = extend(ChromeBase, {
     create: function()
     {
         Firebug.PanelBar.create.apply(this);
-        
         var panelMap = Firebug.panelTypes;
         for (var i=0, p; p=panelMap[i]; i++)
         {
