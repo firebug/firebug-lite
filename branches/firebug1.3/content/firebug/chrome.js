@@ -10,7 +10,7 @@ FBL.FirebugChrome =
     
     height: 250,
     
-    isOpen: true,
+    isOpen: false,
     
     create: function()
     {
@@ -107,7 +107,6 @@ var createChrome = function(options)
         
         node.setAttribute("id", options.id);
         node.setAttribute("frameBorder", "0");
-        //node.setAttribute("allowTransparency", "true"); // bug in IE in some pages
         node.style.border = "0";
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
@@ -444,54 +443,6 @@ var ChromeBase = extend(ChromeBase, {
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    open: function()
-    {
-        var node = this.node;
-        
-        if(node.style.visibility != "visible")
-            node.style.visibility = "visible";
-        
-        node.style.height = FirebugChrome.height + "px";
-        node.style.width = "100%";
-        node.style.left = 0;
-        node.style.right = "";
-
-        if (isIE6)
-            this.fixIEPosition();
-        
-        var main = $("fbChrome");
-        main.style.display = "block";
-
-        this.document.body.style.backgroundColor = "#fff";
-        
-        var mini = $("fbMiniChrome");
-        mini.style.display = "none";
-        
-        FirebugChrome.isOpen = true;
-    },
-    
-    close: function()
-    {
-        var node = this.node;
-        node.style.height = "27px";
-        node.style.width = "30px";
-        node.style.left = "";        
-        node.style.right = 0;
-
-        if (isIE6)
-            this.fixIEPosition();
-        
-        var main = $("fbChrome");
-        main.style.display = "none";
-
-        this.document.body.style.backgroundColor = "transparent";
-        
-        var mini = $("fbMiniChrome");
-        mini.style.display = "block";
-        
-        FirebugChrome.isOpen = false;
-    },
-    
     toggle: function(forceOpen, popup)
     {
         if(popup)
@@ -607,9 +558,14 @@ var ChromeFrameBase = extend(ChromeContext, {
         if (isFirefox)
             this.node.style.display = "block";
         
+        if (this.node.style.visibility != "visible")
+            this.node.style.visibility = "visible";
+        
         if (FirebugChrome.isOpen)
             this.open();
-            
+        else
+            this.close();
+        
         ChromeBase.initialize.call(this);
         
         addGlobalEvent("keydown", onPressF12);
@@ -641,6 +597,60 @@ var ChromeFrameBase = extend(ChromeContext, {
         removeGlobalEvent("keydown", onPressF12);
         
         ChromeBase.shutdown.apply(this);        
+    },
+    
+    open: function()
+    {
+        var node = this.node;
+        
+        node.style.height = FirebugChrome.height + "px";
+        node.style.width = "100%";
+        node.style.left = 0;
+        node.style.right = "";
+        node.style.visibility = "hidden"; // Avoid flickering
+        node.setAttribute("allowTransparency", "false");
+        
+        if (isIE6)
+            this.fixIEPosition();
+        
+        var main = $("fbChrome");
+        main.style.display = "block";
+
+        this.document.body.style.backgroundColor = "#fff";
+        
+        var mini = $("fbMiniChrome");
+        mini.style.display = "none";
+        
+        FirebugChrome.isOpen = true;
+        
+        var self = this;
+        setTimeout(function(){
+            self.draw();
+            node.style.visibility = "visible";
+        }, 10);
+    },
+    
+    close: function()
+    {
+        var node = this.node;
+        node.style.height = "27px";
+        node.style.width = "30px";
+        node.style.left = "";        
+        node.style.right = 0;
+        node.setAttribute("allowTransparency", "true");
+
+        if (isIE6)
+            this.fixIEPosition();
+        
+        var main = $("fbChrome");
+        main.style.display = "none";
+
+        this.document.body.style.backgroundColor = "transparent";
+                
+        var mini = $("fbMiniChrome");
+        mini.style.display = "block";
+        
+        FirebugChrome.isOpen = false;
     },
     
     fixIEPosition: function()
