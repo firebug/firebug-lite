@@ -58,7 +58,7 @@ var onPopupChromeLoad = function(chromeContext)
     var popupPanelMap = popup.panelMap;
     for(var name in framePanelMap)
     {
-        popupPanelMap[name].panelContent.innerHTML = framePanelMap[name].panelContent.innerHTML;
+        popupPanelMap[name].contentNode.innerHTML = framePanelMap[name].contentNode.innerHTML;
     }
     
     dispatch(Firebug.modules, "shutdown", []);
@@ -466,6 +466,8 @@ var ChromeBase = extend(ChromeBase, {
         
         var mini = $("fbMiniChrome");
         mini.style.display = "none";
+        
+        FirebugChrome.isOpen = true;
     },
     
     close: function()
@@ -486,6 +488,8 @@ var ChromeBase = extend(ChromeBase, {
         
         var mini = $("fbMiniChrome");
         mini.style.display = "block";
+        
+        FirebugChrome.isOpen = false;
     },
     
     toggle: function(forceOpen, popup)
@@ -499,9 +503,9 @@ var ChromeBase = extend(ChromeBase, {
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
             
-            FirebugChrome.isOpen = forceOpen || !FirebugChrome.isOpen;
+            var shouldOpen = forceOpen || !FirebugChrome.isOpen;
             
-            if(FirebugChrome.isOpen)
+            if(shouldOpen)
                this.open();
             else
                this.close();

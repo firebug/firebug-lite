@@ -278,7 +278,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         var html = [];
         Firebug.HTML.appendTreeNode(rootNode, html);
         
-        var d = this.panelContent;
+        var d = this.contentNode;
         d.innerHTML = html.join("");
         this.panelNode.appendChild(d);
     },

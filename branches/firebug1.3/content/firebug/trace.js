@@ -84,7 +84,7 @@ this.logRow = function(message, className)
 {
     var panel = this.getPanel();
     
-    if (panel && panel.panelContent)
+    if (panel && panel.contentNode)
         this.writeMessage(message, className);
     else
     {
@@ -96,7 +96,7 @@ this.logRow = function(message, className)
 
 this.writeMessage = function(message, className)
 {
-    var container = this.getPanel().panelContainer;
+    var container = this.getPanel().containerNode;
     var isScrolledToBottom =
         container.scrollTop + container.offsetHeight >= container.scrollHeight;
     
@@ -108,13 +108,13 @@ this.writeMessage = function(message, className)
 
 this.appendRow = function(row)
 {
-    var container = this.getPanel().panelContent;
+    var container = this.getPanel().contentNode;
     container.appendChild(row);
 };
 
 this.writeRow = function(message, className)
 {
-    var row = this.getPanel().panelContent.ownerDocument.createElement("div");
+    var row = this.getPanel().contentNode.ownerDocument.createElement("div");
     row.className = "logRow" + (className ? " logRow-"+className : "");
     row.innerHTML = message.join("");
     this.appendRow(row);

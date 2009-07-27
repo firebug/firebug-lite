@@ -369,10 +369,10 @@ Firebug.Panel =
             // create SidePanel
         }
         
-        var panelContent = this.panelContent = createElement("div");
-        this.panelNode.appendChild(panelContent);
+        var contentNode = this.contentNode = createElement("div");
+        this.panelNode.appendChild(contentNode);
         
-        this.panelContainer = this.panelNode.parentNode;
+        this.containerNode = this.panelNode.parentNode;
         
         if (FBTrace.DBG_INITIALIZE)
             FBTrace.sysout("Firebug.Panel.initialize", this.name);
@@ -431,7 +431,7 @@ Firebug.Panel =
             this.toolButtonsNode = $(panelId + "Buttons");
         }
             
-        this.panelContainer = this.panelNode.parentNode;
+        this.containerNode = this.panelNode.parentNode;
     },
     
     shutdown: function()

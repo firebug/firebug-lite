@@ -16,7 +16,7 @@ Firebug.Trace = extend(Firebug.Module,
     
     clear: function()
     {
-        this.getPanel().panelContent.innerHTML = "";
+        this.getPanel().contentNode.innerHTML = "";
     }
 });
 
