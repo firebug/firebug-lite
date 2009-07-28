@@ -10,7 +10,7 @@ FBL.FirebugChrome =
     
     height: 250,
     
-    isOpen: true,
+    isOpen: false,
     
     create: function()
     {
@@ -636,24 +636,29 @@ var ChromeFrameBase = extend(ChromeContext, {
     
     close: function()
     {
+        var main = $("fbChrome");
+        main.style.display = "none";
+
+        var mini = $("fbMiniChrome");
+        mini.style.display = "block";
+        
+        var width = $("fbMiniIcon").offsetWidth + 10;
+        var errors = $("fbMiniErrors");
+        if (errors.offsetWidth)
+            width += errors.offsetWidth + 10;
+        
         var node = this.node;
         node.style.height = "27px";
-        node.style.width = "30px";
-        node.style.left = "";        
+        node.style.width = width + "px";
+        node.style.left = "";
         node.style.right = 0;
         node.setAttribute("allowTransparency", "true");
 
         if (isIE6)
             this.fixIEPosition();
         
-        var main = $("fbChrome");
-        main.style.display = "none";
-
         this.document.body.style.backgroundColor = "transparent";
                 
-        var mini = $("fbMiniChrome");
-        mini.style.display = "block";
-        
         FirebugChrome.isOpen = false;
     },
     

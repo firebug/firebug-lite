@@ -82,16 +82,15 @@ body {
 *************************************************************************************************/
 #fbMiniChrome {
     display: none;
-    position: absolute;
     right: 0;
     height: 27px;
-    width: 29px;
     background: url(sprite.png) #f1f2ee 0 0;
+    margin-left: 1px;
 }
 
 #fbMiniContent {
-    position: absolute;
-    _position: relative;
+    display: block;
+    position: relative;
     left: -1px;
     right: 0;
     top: 1px;
@@ -129,16 +128,15 @@ body {
 }
 
 #fbMiniErrors {
+    display: inline;
     display: none;
-    position: absolute;
-    top: 6px;
-    right: 30px;
+    float: right;
+    margin: 5px 2px 0 5px;
 }
 
 #fbMiniIcon {
-    position: absolute;
-    top: 4px;
-    right: 5px;
+    float: right;
+    margin: 3px 4px 0;
     height: 20px;
     width: 20px;
     float: right;    
