@@ -14,24 +14,14 @@ FBL.FirebugChrome =
     
     create: function()
     {
-        createChrome({onChromeLoad: onChromeLoad});
+        createChrome({onLoad: onChromeLoad});
     },
     
     initialize: function()
     {
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chromeMap[chrome.type] = chrome;
-        chrome.initialize();        
-    },
-    
-    detach: function()
-    {
-        
-    },
-    
-    reattach: function()
-    {
-        
+        chrome.initialize();    
     }
 };
     
@@ -90,7 +80,7 @@ var createChrome = function(options)
     options = extend(ChromeDefaultOptions, options);
     
     var context = options.context || Application.browser;
-    var onChromeLoad = options.onChromeLoad;
+    var onLoad = options.onLoad;
     
     var chrome = {};
     
@@ -169,8 +159,11 @@ var createChrome = function(options)
             chrome.window = win.window;
             chrome.document = win.document;
             
-            if (onChromeLoad)
-                onChromeLoad(chrome);
+            if (isChromeFrame)
+                ChromeMini.create(chrome);            
+            
+            if (onLoad)
+                onLoad(chrome);
         }
         else
             setTimeout(waitForChrome, waitDelay);
@@ -469,7 +462,7 @@ var ChromeBase = extend(ChromeBase, {
     {
         if(!Firebug.chromeMap.popup)
         {     
-            createChrome({type:"popup", onChromeLoad: onPopupChromeLoad});
+            createChrome({type: "popup", onLoad: onPopupChromeLoad});
         }
     },
     
@@ -606,24 +599,12 @@ var ChromeFrameBase = extend(ChromeContext, {
     open: function()
     {
         var node = this.node;
-        
-        node.style.height = FirebugChrome.height + "px";
-        node.style.width = "100%";
-        node.style.left = 0;
-        node.style.right = "";
         node.style.visibility = "hidden"; // Avoid flickering
-        node.setAttribute("allowTransparency", "false");
         
-        if (isIE6)
-            this.fixIEPosition();
+        ChromeMini.shutdown();
         
         var main = $("fbChrome");
         main.style.display = "block";
-
-        this.document.body.style.backgroundColor = "#fff";
-        
-        var mini = $("fbMiniChrome");
-        mini.style.display = "none";
         
         FirebugChrome.isOpen = true;
         
@@ -638,7 +619,41 @@ var ChromeFrameBase = extend(ChromeContext, {
     {
         var main = $("fbChrome");
         main.style.display = "none";
+                
+        FirebugChrome.isOpen = false;
+        
+        //this.shutdown(); // TODO: shutdown here?        
+        ChromeMini.initialize();
+    },
+    
+    fixIEPosition: function()
+    {
+        // fix IE problem with offset when not in fullscreen mode
+        var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
+        
+        var size = Firebug.browser.getWindowSize();
+        var scroll = Firebug.browser.getWindowScrollPosition();
+        var maxHeight = size.height;
+        var height = this.node.offsetHeight;
+        
+        this.node.style.top = maxHeight - height + scroll.top + "px";
+    }
 
+});
+
+
+// ************************************************************************************************
+// ChromeMini
+
+var ChromeMini = extend(Firebug.Controller, 
+{
+    create: function(chrome)
+    {
+        append(this, chrome);
+    },
+    
+    initialize: function()
+    {
         var mini = $("fbMiniChrome");
         mini.style.display = "block";
         
@@ -657,24 +672,34 @@ var ChromeFrameBase = extend(ChromeContext, {
         if (isIE6)
             this.fixIEPosition();
         
-        this.document.body.style.backgroundColor = "transparent";
-                
-        FirebugChrome.isOpen = false;
+        this.document.body.style.backgroundColor = "transparent";    
     },
     
-    fixIEPosition: function()
+    shutdown: function()
     {
-        // fix IE problem with offset when not in fullscreen mode
-        var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
+        var node = this.node;
+        node.style.height = FirebugChrome.height + "px";
+        node.style.width = "100%";
+        node.style.left = 0;
+        node.style.right = "";
+        node.setAttribute("allowTransparency", "false");
         
-        var size = Firebug.browser.getWindowSize();
-        var scroll = Firebug.browser.getWindowScrollPosition();
-        var maxHeight = size.height;
-        var height = this.node.offsetHeight;
+        if (isIE6)
+            this.fixIEPosition();
         
-        this.node.style.top = maxHeight - height + scroll.top + "px";
-    }
-
+        this.document.body.style.backgroundColor = "#fff";
+        
+        var mini = $("fbMiniChrome");
+        mini.style.display = "none";
+    },
+    
+    draw: function()
+    {
+    
+    },
+    
+    fixIEPosition: ChromeFrameBase.fixIEPosition
+    
 });
 
 
@@ -710,6 +735,7 @@ var ChromePopupBase = extend(ChromeContext, {
     }
 
 });
+
 
 
 // ************************************************************************************************
