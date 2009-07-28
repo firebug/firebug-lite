@@ -1,6 +1,15 @@
 ###################################################################################################
 
 ###################################################################################################
+    - Bug in IE6 in HTML panel. HTML panel shutdown() method is not correct.
+        - 1) select a HTML node
+        - 2) move to console tab
+        - 3) move back to HTML tab
+        - 4) nodes aren't responding to clicks after that
+        
+        This happens in recent old revisions? Not in the old prototype.
+        
+
     - change version number to 1.3a2 
     
     - put IE6CSS in injected chrome
@@ -88,7 +97,7 @@ Missing
 ---------------------------------------------------------------------------------------------------
  Chrome context synchronize
 ---------------------------------------------------------------------------------------------------
-    - frame.isVisible --> isOpen?
+OK  - frame.isVisible --> isOpen?
 OK  - Firebug.chromeMap.frame & Firebug.chromeMap.popup
 
 ---------------------------------------------------------------------------------------------------
@@ -99,18 +108,18 @@ OK  - problem with global events when in popup window
       
     - Frame/Popup settings
     
-~~  - Detach method
-
     - Synchronize chromes
+        
+        - detach and reattach methods
+    
+        - dispatch detach and reattach methods to panels  
     
         - Chrome Frame should have different states and handlers when in minichrome mode
         
-        - mini-chrome should be "spans" and not "divs"
+    OK  - mini-chrome should be "spans" and not "divs"
         
-        - onPressF12 should not be disabled when chrome frame closes
+    ~~  - onPressF12 should not be disabled when chrome frame closes
         
-        - dispatch detach and reattach methods to panels  
-    
     ~~  - refactor panel. each panel should have a single panelContentNode that will be shared
           across Chrome windows.
           

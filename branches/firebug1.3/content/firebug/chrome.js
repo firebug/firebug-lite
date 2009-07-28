@@ -21,7 +21,7 @@ FBL.FirebugChrome =
     {
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chromeMap[chrome.type] = chrome;
-        chrome.initialize();    
+        //chrome.initialize();    
     }
 };
     
@@ -35,9 +35,6 @@ var onPopupChromeLoad = function(chromeContext)
     if (frame)
     {
         frame.close();
-        // TODO: handle inside chrome.close()
-        dispatch(Firebug.modules, "shutdown", []);
-        frame.shutdown();
     }
     
     FBL.FirebugChrome.commandLineVisible = true;
@@ -249,6 +246,8 @@ var ChromeBase = extend(ChromeBase, {
     
     create: function()
     {
+        addGlobalEvent("keydown", onPressF12);
+    
         Firebug.PanelBar.create.apply(this);
         var panelMap = Firebug.panelTypes;
         for (var i=0, p; p=panelMap[i]; i++)
@@ -543,36 +542,40 @@ var ChromeBase = extend(ChromeBase, {
 
 var ChromeContext = extend(ChromeBase, Context.prototype); 
 
-var ChromeFrameBase = extend(ChromeContext, {
-    
-    initialize: function()
+var ChromeFrameBase = extend(ChromeContext,
+{
+    create: function()
     {
+        ChromeBase.create.call(this);
+        
         // restore display for the anti-flicker trick
         if (isFirefox)
             this.node.style.display = "block";
         
-        if (this.node.style.visibility != "visible")
-            this.node.style.visibility = "visible";
-        
         if (FirebugChrome.isOpen)
             this.open();
         else
+        {
+            FirebugChrome.isOpen = true;
             this.close();
+        }
+        
+        if (this.node.style.visibility != "visible")
+            this.node.style.visibility = "visible";
+    },
+    
+    initialize: function()
+    {
+        //FBTrace.sysout("Frame", "initialize();")
         
         ChromeBase.initialize.call(this);
-        
-        addGlobalEvent("keydown", onPressF12);
-        
-        
         
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
             [Firebug.browser.window, "unload", this.destroy],
             
             [$("fbChrome_btClose"), "click", this.close],
-            [$("fbChrome_btDetach"), "click", this.detach],
-            
-            [$("fbMiniIcon"), "click", onMiniIconClick]            
+            [$("fbChrome_btDetach"), "click", this.detach]       
         );
         
         if (isIE6)
@@ -584,6 +587,8 @@ var ChromeFrameBase = extend(ChromeContext, {
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
+        
+        this.isInitialized = true;
     },
     
     shutdown: function()
@@ -591,39 +596,54 @@ var ChromeFrameBase = extend(ChromeContext, {
         fbVSplitter.onmousedown = null;
         fbHSplitter.onmousedown = null;
         
-        removeGlobalEvent("keydown", onPressF12);
-        
         ChromeBase.shutdown.apply(this);        
     },
     
     open: function()
     {
-        var node = this.node;
-        node.style.visibility = "hidden"; // Avoid flickering
-        
-        ChromeMini.shutdown();
-        
-        var main = $("fbChrome");
-        main.style.display = "block";
-        
-        FirebugChrome.isOpen = true;
-        
-        var self = this;
-        setTimeout(function(){
-            self.draw();
-            node.style.visibility = "visible";
-        }, 10);
+        //debugger;
+        if (!FirebugChrome.isOpen)
+        {
+            var node = this.node;
+            node.style.visibility = "hidden"; // Avoid flickering
+            
+            ChromeMini.shutdown();
+            
+            var main = $("fbChrome");
+            main.style.display = "block";
+            
+            FirebugChrome.isOpen = true;
+            
+            var self = this;
+            setTimeout(function(){
+                dispatch(Firebug.modules, "initialize", []);
+                self.initialize();
+                
+                self.draw();
+                node.style.visibility = "visible";            
+            }, 10);
+        }
     },
     
     close: function()
     {
-        var main = $("fbChrome");
-        main.style.display = "none";
-                
-        FirebugChrome.isOpen = false;
-        
-        //this.shutdown(); // TODO: shutdown here?        
-        ChromeMini.initialize();
+        //debugger;
+        if (FirebugChrome.isOpen)
+        {
+            var main = $("fbChrome");
+            main.style.display = "none";
+                    
+            FirebugChrome.isOpen = false;
+            
+            // TODO: handle inside chrome.close()
+            if (this.isInitialized)
+            {
+                dispatch(Firebug.modules, "shutdown", []);
+                this.shutdown();
+            }
+            
+            ChromeMini.initialize();
+        }
     },
     
     fixIEPosition: function()
@@ -654,6 +674,8 @@ var ChromeMini = extend(Firebug.Controller,
     
     initialize: function()
     {
+        Firebug.Controller.initialize.apply(this);
+        
         var mini = $("fbMiniChrome");
         mini.style.display = "block";
         
@@ -672,7 +694,19 @@ var ChromeMini = extend(Firebug.Controller,
         if (isIE6)
             this.fixIEPosition();
         
-        this.document.body.style.backgroundColor = "transparent";    
+        this.document.body.style.backgroundColor = "transparent";
+        
+        
+        this.addController(
+            [$("fbMiniIcon"), "click", onMiniIconClick]       
+        );
+        
+        if (isIE6)
+        {
+            this.addController(
+                [Firebug.browser.window, "scroll", this.fixIEPosition]
+            );
+        }        
     },
     
     shutdown: function()
@@ -691,6 +725,8 @@ var ChromeMini = extend(Firebug.Controller,
         
         var mini = $("fbMiniChrome");
         mini.style.display = "none";
+        
+        Firebug.Controller.shutdown.apply(this);
     },
     
     draw: function()
