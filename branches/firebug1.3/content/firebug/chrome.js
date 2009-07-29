@@ -21,7 +21,7 @@ FBL.FirebugChrome =
     {
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chromeMap[chrome.type] = chrome;
-        //chrome.initialize();    
+        //chrome.initialize();
     }
 };
     
@@ -57,7 +57,32 @@ var onPopupChromeLoad = function(chromeContext)
     if(FirebugChrome.selectedElement)
         Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
 };
-   
+
+var reattach = function()
+{
+    FBTrace.sysout("reattach", "-------------------------");
+    
+    FBL.FirebugChrome.commandLineVisible = true;
+    FBL.FirebugChrome.sidePanelVisible = false;
+    
+    var frame = Firebug.chromeMap.frame;
+    var popup = Firebug.chromeMap.popup;
+    
+    // chrome synchronization
+    var framePanelMap = frame.panelMap;
+    var popupPanelMap = popup.panelMap;
+    for(var name in framePanelMap)
+    {
+        framePanelMap[name].contentNode.innerHTML = popupPanelMap[name].contentNode.innerHTML;
+    }
+    
+    Firebug.chrome = frame;
+    Firebug.chromeMap.popup = null;
+    
+    if(FirebugChrome.selectedElement)
+        Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+};
+
 // ************************************************************************************************
 // Chrome Window Options
 
@@ -232,7 +257,7 @@ var Chrome = function Chrome(chrome)
     
     Firebug.chromeMap[type] = this;
     Firebug.chrome = this;
-
+    
     this.create();
     
     return this;
@@ -247,7 +272,7 @@ var ChromeBase = extend(ChromeBase, {
     create: function()
     {
         addGlobalEvent("keydown", onPressF12);
-    
+        
         Firebug.PanelBar.create.apply(this);
         var panelMap = Firebug.panelTypes;
         for (var i=0, p; p=panelMap[i]; i++)
@@ -459,6 +484,7 @@ var ChromeBase = extend(ChromeBase, {
     
     detach: function()
     {
+        //alert('detach');
         if(!Firebug.chromeMap.popup)
         {     
             createChrome({type: "popup", onLoad: onPopupChromeLoad});
@@ -596,12 +622,13 @@ var ChromeFrameBase = extend(ChromeContext,
         fbVSplitter.onmousedown = null;
         fbHSplitter.onmousedown = null;
         
-        ChromeBase.shutdown.apply(this);        
+        ChromeBase.shutdown.apply(this);
+        
+        this.isInitialized = false;
     },
     
     open: function()
     {
-        //debugger;
         if (!FirebugChrome.isOpen)
         {
             var node = this.node;
@@ -627,20 +654,18 @@ var ChromeFrameBase = extend(ChromeContext,
     
     close: function()
     {
-        //debugger;
         if (FirebugChrome.isOpen)
         {
-            var main = $("fbChrome");
-            main.style.display = "none";
-                    
-            FirebugChrome.isOpen = false;
-            
-            // TODO: handle inside chrome.close()
             if (this.isInitialized)
             {
                 dispatch(Firebug.modules, "shutdown", []);
                 this.shutdown();
             }
+            
+            var main = $("fbChrome");
+            main.style.display = "none";
+                    
+            FirebugChrome.isOpen = false;
             
             ChromeMini.initialize();
         }
@@ -759,9 +784,10 @@ var ChromePopupBase = extend(ChromeContext, {
         fbVSplitter.onmousedown = onVSplitterMouseDown;
     },
     
-    shutdown: function()
+    destroy: function()
     {
-        ChromeBase.shutdown.apply(this);
+        reattach();
+        ChromeBase.destroy.apply(this);
     },
     
     close: function()

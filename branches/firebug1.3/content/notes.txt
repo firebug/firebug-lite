@@ -6,9 +6,6 @@
         - 2) move to console tab
         - 3) move back to HTML tab
         - 4) nodes aren't responding to clicks after that
-        
-        This happens in recent old revisions? Not in the old prototype.
-        
 
     - change version number to 1.3a2 
     
