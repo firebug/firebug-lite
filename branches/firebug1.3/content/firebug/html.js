@@ -258,7 +258,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     
     options: {
         hasSidePanel: true,
-        hasToolButtons: true,
+        //hasToolButtons: true,
         //hasStatusBar: true,
         isPreRendered: true
     },
@@ -288,8 +288,13 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
         fbPanel1 = $("fbPanel1");
-    }
+    },
     
+    shutdown: function(){
+        removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
+        fbPanel1 = null;
+        Firebug.Panel.shutdown.apply(this, arguments);
+    }    
 });
 
 Firebug.registerPanel(HTMLPanel);

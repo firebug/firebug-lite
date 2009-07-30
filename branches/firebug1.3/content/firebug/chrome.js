@@ -62,9 +62,6 @@ var reattach = function()
 {
     FBTrace.sysout("reattach", "-------------------------");
     
-    FBL.FirebugChrome.commandLineVisible = true;
-    FBL.FirebugChrome.sidePanelVisible = false;
-    
     var frame = Firebug.chromeMap.frame;
     var popup = Firebug.chromeMap.popup;
     
