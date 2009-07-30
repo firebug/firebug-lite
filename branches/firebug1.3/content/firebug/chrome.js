@@ -10,7 +10,7 @@ FBL.FirebugChrome =
     
     height: 250,
     
-    isOpen: false,
+    isOpen: true,
     
     create: function()
     {
@@ -394,7 +394,8 @@ var ChromeBase = extend(ChromeBase, {
         Firebug.Inspector.onChromeReady();
         
         addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        addEvent(fbPanel1, 'mouseout', Firebug.HTML.onListMouseMove);
+        addEvent(fbContent, 'mouseout', Firebug.HTML.onListMouseMove);
+        addEvent(this.node, 'mouseout', Firebug.HTML.onListMouseMove);
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************

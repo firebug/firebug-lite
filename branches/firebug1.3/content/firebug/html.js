@@ -454,17 +454,14 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
         
         var el = FBL.documentCache[uid.value];
         
-        if (el.id == "FirebugChrome") return false;  
-    
         var nodeName = el.nodeName.toLowerCase();
-        
     
         if (FBL.isIE && " meta title script link ".indexOf(" "+nodeName+" ") != -1)
             return;
     
         if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " ")) return;
         
-        if (" html head body br script link ".indexOf(" "+nodeName+" ") != -1) { 
+        if (el.id == "FirebugChrome" || " html head body br script link iframe ".indexOf(" "+nodeName+" ") != -1) { 
             FBL.Firebug.Inspector.hideBoxModel();
             hoverElement = null;
             return;

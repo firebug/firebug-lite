@@ -189,15 +189,21 @@ Firebug.Inspector =
     },
   
     hideBoxModel: function()
-    {  
-        offlineFragment.appendChild(boxModel);
-        boxModelVisible = false;
+    {
+        if (boxModelVisible)
+        {
+            offlineFragment.appendChild(boxModel);
+            boxModelVisible = false;
+        }
     },
     
     showBoxModel: function()
     {
-        document.body.appendChild(boxModel);
-        boxModelVisible = true;
+        if (!boxModelVisible)
+        {
+            document.body.appendChild(boxModel);
+            boxModelVisible = true;
+        }
     },
      
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
