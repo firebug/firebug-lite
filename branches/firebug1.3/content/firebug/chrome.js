@@ -10,7 +10,7 @@ FBL.FirebugChrome =
     
     height: 250,
     
-    isOpen: true,
+    isOpen: false,
     
     create: function()
     {
@@ -576,7 +576,7 @@ var ChromeFrameBase = extend(ChromeContext,
         if (isFirefox)
             this.node.style.display = "block";
         
-        if (FirebugChrome.isOpen)
+        if (Application.openAtStartup)
             this.open();
         else
         {
@@ -632,7 +632,10 @@ var ChromeFrameBase = extend(ChromeContext,
             var node = this.node;
             node.style.visibility = "hidden"; // Avoid flickering
             
-            ChromeMini.shutdown();
+            if (ChromeMini.isInitialized)
+            {
+                ChromeMini.shutdown();
+            }
             
             var main = $("fbChrome");
             main.style.display = "block";
@@ -729,7 +732,9 @@ var ChromeMini = extend(Firebug.Controller,
             this.addController(
                 [Firebug.browser.window, "scroll", this.fixIEPosition]
             );
-        }        
+        }
+        
+        this.isInitialized = true;
     },
     
     shutdown: function()
@@ -750,6 +755,8 @@ var ChromeMini = extend(Firebug.Controller,
         mini.style.display = "none";
         
         Firebug.Controller.shutdown.apply(this);
+        
+        this.isInitialized = false;
     },
     
     draw: function()

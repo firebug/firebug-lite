@@ -119,6 +119,8 @@ var onDocumentLoad = function onDocumentLoad()
 this.Application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
+    openAtStartup: true,
+    
     isBookmarletMode: true,
     isPersistentMode: false,
     isDebugMode: true,
