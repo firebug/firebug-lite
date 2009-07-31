@@ -233,7 +233,7 @@ var getChromeTemplate = function()
     var tpl = FirebugChrome.injected; 
     var r = [], i = -1;
     
-    r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
+    r[++i] = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">';
     r[++i] = '<html><head><title>';
     r[++i] = Firebug.version;
     r[++i] = '</title><style>';
@@ -285,6 +285,15 @@ var ChromeBase = extend(ChromeBase, {
                 this.addPanel(p.prototype.name);
             }
         }
+        
+        this.inspectButton = new Firebug.Button({
+            type: "toggle",
+            node: $("fbChrome_btInspect"),
+            owner: Firebug.Inspector,
+            
+            onPress: Firebug.Inspector.startInspecting,
+            onUnpress: Firebug.Inspector.stopInspecting          
+        });
     },
     
     destroy: function()
@@ -386,19 +395,9 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
-        this.inspectButton = new Firebug.Button({
-            type: "toggle",
-            node: $("fbChrome_btInspect"),
-            owner: Firebug.Inspector,
-            
-            onPress: Firebug.Inspector.startInspecting,
-            onUnpress: Firebug.Inspector.stopInspecting          
-        });
+        Firebug.Inspector.initialize();
         
         this.inspectButton.initialize();
-        
-        Firebug.Inspector.initialize();
-        Firebug.Inspector.onChromeReady();
         
         addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
         addEvent(fbContent, 'mouseout', Firebug.HTML.onListMouseMove);
@@ -415,6 +414,21 @@ var ChromeBase = extend(ChromeBase, {
     
     shutdown: function()
     {
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        this.inspectButton.shutdown();
+        
+        removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
+        removeEvent(fbContent, 'mouseout', Firebug.HTML.onListMouseMove);
+        removeEvent(this.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Remove the interface elements cache
         
@@ -452,6 +466,7 @@ var ChromeBase = extend(ChromeBase, {
         
         topHeight = null;
         topPartialHeight = null;
+        
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
@@ -558,7 +573,7 @@ var ChromeBase = extend(ChromeBase, {
     
     layout: function(panel)
     {
-        //if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
+        if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
         
         var options = panel.options;
         changeCommandLineVisibility(options.hasCommandLine);
