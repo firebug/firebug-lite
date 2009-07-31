@@ -50,7 +50,7 @@ FBL.Firebug =
         
         FirebugChrome.initialize();
         
-        dispatch(modules, "initialize", []);
+        //dispatch(modules, "initialize", []);
     },
   
     shutdown: function()

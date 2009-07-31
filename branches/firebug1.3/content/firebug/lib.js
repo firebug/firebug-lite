@@ -121,10 +121,10 @@ this.Application = {
     // Application preferences
     openAtStartup: true,
     
-    isBookmarletMode: true,
+    isBookmarletMode: false,
     isPersistentMode: false,
     isDebugMode: true,
-    skin: "xp",
+    skin: "xpo",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application states

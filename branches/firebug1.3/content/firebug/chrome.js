@@ -379,6 +379,7 @@ var ChromeBase = extend(ChromeBase, {
         /**/
         
         // Select the first registered panel
+        // TODO: BUG IE7
         this.selectPanel(FirebugChrome.selectedPanel);
         
         // ************************************************************************************************
@@ -557,7 +558,7 @@ var ChromeBase = extend(ChromeBase, {
     
     layout: function(panel)
     {
-        if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
+        //if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
         
         var options = panel.options;
         changeCommandLineVisibility(options.hasCommandLine);
@@ -597,7 +598,6 @@ var ChromeFrameBase = extend(ChromeContext,
     initialize: function()
     {
         //FBTrace.sysout("Frame", "initialize();")
-        
         ChromeBase.initialize.call(this);
         
         this.addController(

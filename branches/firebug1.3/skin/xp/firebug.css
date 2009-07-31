@@ -179,6 +179,9 @@ body {
     width: 100%;
     background: url(sprite.png) #dbd9c9 0 -27px;
     height: 22px;
+    
+    /* IE7 & IE8 */
+    background: red;
 }
 
 #fbContent {
@@ -189,6 +192,9 @@ body {
 #fbBottom {
     height: 18px;
     background: #fff;
+    
+    /* IE7 & IE8 */
+    background: red;
 }
 
 /************************************************************************************************
@@ -272,10 +278,15 @@ body {
     right: 0;
     top: 0;
     height: 17px;
-    _width: 270px;
     padding: 5px 0 5px 5px;
     z-index: 6;
     background: url(sprite.png) #f1f2ee 0 0;
+    
+    _width: 270px;
+    
+    /* IE7 & IE8 */
+    width: 50px;
+    background: pink;
 }
 
 /* fbPanelBarBox
@@ -357,6 +368,9 @@ body {
     background: #fff;
     border: 0;
     border-top: 1px solid #ccc;
+    
+    /* IE7 & IE8 */
+    background: yellow;
 }
 
 #fbCommandIcon {
@@ -379,6 +393,9 @@ body {
     padding: 2px 0 2px 32px;
     font: 11px Monaco, monospace;
     z-index: 9;
+    
+    /* IE7 & IE8 */
+    display: none;
 }
 
 div.fbFitHeight {
