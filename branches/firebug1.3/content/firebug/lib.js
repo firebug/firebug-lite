@@ -124,7 +124,7 @@ this.Application = {
     isBookmarletMode: false,
     isPersistentMode: false,
     isDebugMode: true,
-    skin: "xpo",
+    skin: "xp",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application states
@@ -265,8 +265,10 @@ this.isIE      = userAgent.indexOf("MSIE") != -1;
 this.isOpera   = userAgent.indexOf("Opera") != -1;
 this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
-this.isIEQuiksMode = document.all ? document.compatMode == "BackCompat" : false;
-this.isIEStantandMode = document.all ? document.compatMode == "CSS1Compat" : false;
+this.isIEQuiksMode = this.isIE ? document.compatMode == "BackCompat" : false;
+this.isIEStantandMode = this.isIE ? document.compatMode == "CSS1Compat" : false;
+
+this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
 
 // ************************************************************************************************
 // Util

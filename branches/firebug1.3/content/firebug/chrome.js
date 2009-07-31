@@ -125,10 +125,10 @@ var createChrome = function(options)
         node.style.border = "0";
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
-        node.style.position = isIEQuiksMode ? "absolute" : "fixed";
+        node.style.position = noFixedPosition ? "absolute" : "fixed";
         node.style.width = "100%"; // "102%"; IE auto margin bug
         node.style.left = "0";
-        node.style.bottom = isIEQuiksMode ? "-1px" : "0";
+        node.style.bottom = noFixedPosition ? "-1px" : "0";
         node.style.height = options.height + "px";
         
          // avoid flickering during chrome rendering
@@ -238,7 +238,7 @@ var getChromeTemplate = function()
     r[++i] = Firebug.version;
     r[++i] = '</title><style>';
     r[++i] = tpl.CSS;
-    r[++i] = (isIEQuiksMode && tpl.IE6CSS) ? tpl.IE6CSS : '';
+    r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
     r[++i] = '</style>';
     r[++i] = '</head><body>';
     r[++i] = tpl.HTML;
@@ -551,7 +551,7 @@ var ChromeBase = extend(ChromeBase, {
         setTimeout(function(){
             self.draw();
             
-            if (isIE && self.type == "frame")
+            if (noFixedPosition && self.type == "frame")
                 self.fixIEPosition();
         }, 0);
     },
@@ -608,7 +608,7 @@ var ChromeFrameBase = extend(ChromeContext,
             [$("fbChrome_btDetach"), "click", this.detach]       
         );
         
-        if (isIEQuiksMode)
+        if (noFixedPosition)
         {
             this.addController(
                 [Firebug.browser.window, "scroll", this.fixIEPosition]
@@ -653,8 +653,12 @@ var ChromeFrameBase = extend(ChromeContext,
                 dispatch(Firebug.modules, "initialize", []);
                 self.initialize();
                 
+                if (noFixedPosition)
+                    self.fixIEPosition();
+                
                 self.draw();
-                node.style.visibility = "visible";            
+        
+                node.style.visibility = "visible";
             }, 10);
         }
     },
@@ -723,7 +727,7 @@ var ChromeMini = extend(Firebug.Controller,
         node.style.right = 0;
         node.setAttribute("allowTransparency", "true");
 
-        if (isIEQuiksMode)
+        if (noFixedPosition)
             this.fixIEPosition();
         
         this.document.body.style.backgroundColor = "transparent";
@@ -733,7 +737,7 @@ var ChromeMini = extend(Firebug.Controller,
             [$("fbMiniIcon"), "click", onMiniIconClick]       
         );
         
-        if (isIEQuiksMode)
+        if (noFixedPosition)
         {
             this.addController(
                 [Firebug.browser.window, "scroll", this.fixIEPosition]
@@ -752,7 +756,7 @@ var ChromeMini = extend(Firebug.Controller,
         node.style.right = "";
         node.setAttribute("allowTransparency", "false");
         
-        if (isIEQuiksMode)
+        if (noFixedPosition)
             this.fixIEPosition();
         
         this.document.body.style.backgroundColor = "#fff";
@@ -996,7 +1000,7 @@ var handleHSplitterMouseMove = function()
     FirebugChrome.height = chromeHeight;
     chromeNode.style.height = chromeHeight + "px";
     
-    if (isIEQuiksMode)
+    if (noFixedPosition)
         Firebug.chrome.fixIEPosition();
     
     Firebug.chrome.draw();
