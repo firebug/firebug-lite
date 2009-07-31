@@ -37,6 +37,7 @@ var onPopupChromeLoad = function(chromeContext)
         frame.close();
     }
     
+    // initial UI state
     FBL.FirebugChrome.commandLineVisible = true;
     FBL.FirebugChrome.sidePanelVisible = false;
        
@@ -64,6 +65,11 @@ var reattach = function()
     
     var frame = Firebug.chromeMap.frame;
     var popup = Firebug.chromeMap.popup;
+    
+    // last UI state
+    FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
+    FBL.FirebugChrome.sidePanelVisible = frame.sidePanelVisible;
+    
     
     // chrome synchronization
     var framePanelMap = frame.panelMap;
@@ -119,10 +125,10 @@ var createChrome = function(options)
         node.style.border = "0";
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
-        node.style.position = isIE6 ? "absolute" : "fixed";
+        node.style.position = isIEQuiksMode ? "absolute" : "fixed";
         node.style.width = "100%"; // "102%"; IE auto margin bug
         node.style.left = "0";
-        node.style.bottom = isIE6 ? "-1px" : "0";
+        node.style.bottom = isIEQuiksMode ? "-1px" : "0";
         node.style.height = options.height + "px";
         
          // avoid flickering during chrome rendering
@@ -232,7 +238,7 @@ var getChromeTemplate = function()
     r[++i] = Firebug.version;
     r[++i] = '</title><style>';
     r[++i] = tpl.CSS;
-    r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
+    r[++i] = (isIEQuiksMode && tpl.IE6CSS) ? tpl.IE6CSS : '';
     r[++i] = '</style>';
     r[++i] = '</head><body>';
     r[++i] = tpl.HTML;
@@ -602,7 +608,7 @@ var ChromeFrameBase = extend(ChromeContext,
             [$("fbChrome_btDetach"), "click", this.detach]       
         );
         
-        if (isIE6)
+        if (isIEQuiksMode)
         {
             this.addController(
                 [Firebug.browser.window, "scroll", this.fixIEPosition]
@@ -717,7 +723,7 @@ var ChromeMini = extend(Firebug.Controller,
         node.style.right = 0;
         node.setAttribute("allowTransparency", "true");
 
-        if (isIE6)
+        if (isIEQuiksMode)
             this.fixIEPosition();
         
         this.document.body.style.backgroundColor = "transparent";
@@ -727,7 +733,7 @@ var ChromeMini = extend(Firebug.Controller,
             [$("fbMiniIcon"), "click", onMiniIconClick]       
         );
         
-        if (isIE6)
+        if (isIEQuiksMode)
         {
             this.addController(
                 [Firebug.browser.window, "scroll", this.fixIEPosition]
@@ -746,7 +752,7 @@ var ChromeMini = extend(Firebug.Controller,
         node.style.right = "";
         node.setAttribute("allowTransparency", "false");
         
-        if (isIE6)
+        if (isIEQuiksMode)
             this.fixIEPosition();
         
         this.document.body.style.backgroundColor = "#fff";
@@ -862,7 +868,8 @@ var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 75;
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
     var last = FirebugChrome.commandLineVisible;
-    FirebugChrome.commandLineVisible = typeof visibility == "boolean" ? visibility : !FirebugChrome.commandLineVisible;
+    Firebug.chrome.commandLineVisible = FirebugChrome.commandLineVisible = 
+        typeof visibility == "boolean" ? visibility : !FirebugChrome.commandLineVisible;
     
     if (FirebugChrome.commandLineVisible != last)
     {
@@ -873,7 +880,8 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
 var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 {
     var last = FirebugChrome.sidePanelVisible;
-    FirebugChrome.sidePanelVisible = typeof visibility == "boolean" ? visibility : !FirebugChrome.sidePanelVisible;
+    Firebug.chrome.sidePanelVisible = FirebugChrome.sidePanelVisible = 
+        typeof visibility == "boolean" ? visibility : !FirebugChrome.sidePanelVisible;
     
     if (FirebugChrome.sidePanelVisible != last)
     {
@@ -988,7 +996,7 @@ var handleHSplitterMouseMove = function()
     FirebugChrome.height = chromeHeight;
     chromeNode.style.height = chromeHeight + "px";
     
-    if (isIE6)
+    if (isIEQuiksMode)
         Firebug.chrome.fixIEPosition();
     
     Firebug.chrome.draw();

@@ -1,6 +1,16 @@
 ###################################################################################################
 
 ###################################################################################################
+    - FBL.dispatch initialize called 2 times    
+
+OK  - Synchronization Bug
+        - 1) starts opened (on console panel)
+        - 2) open popup
+        - 3) switch to HTML panel
+        - 4) close popup
+        - 5) open minimized frame
+                command line is visible and not sidepanel (console setup, not HTML) 
+
 OK  - Bug in IE6 in HTML panel. HTML panel shutdown() method is not correct.
         - 1) select a HTML node
         - 2) move to console tab
