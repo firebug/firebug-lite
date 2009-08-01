@@ -21,6 +21,7 @@ FBL.FirebugChrome =
     {
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chromeMap[chrome.type] = chrome;
+        addGlobalEvent("keydown", onPressF12);
         //chrome.initialize();
     }
 };
@@ -274,8 +275,6 @@ var ChromeBase = extend(ChromeBase, {
     
     create: function()
     {
-        addGlobalEvent("keydown", onPressF12);
-        
         Firebug.PanelBar.create.apply(this);
         var panelMap = Firebug.panelTypes;
         for (var i=0, p; p=panelMap[i]; i++)
@@ -365,7 +364,7 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
-        if (isIE6)
+        if (isIE)
         {
            var as = $$(".fbHover");
            for (var i=0, a; a=as[i]; i++)
@@ -606,8 +605,8 @@ var ChromeFrameBase = extend(ChromeContext,
             this.close();
         }
         
-        if (this.node.style.visibility != "visible")
-            this.node.style.visibility = "visible";
+        //if (this.node.style.visibility != "visible")
+        //    this.node.style.visibility = "visible";
     },
     
     initialize: function()
@@ -700,14 +699,23 @@ var ChromeFrameBase = extend(ChromeContext,
     fixIEPosition: function()
     {
         // fix IE problem with offset when not in fullscreen mode
-        var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
+        var doc = this.document;
+        var offset = isIE ? doc.body.clientTop || doc.documentElement.clientTop: 0;
         
         var size = Firebug.browser.getWindowSize();
         var scroll = Firebug.browser.getWindowScrollPosition();
         var maxHeight = size.height;
         var height = this.node.offsetHeight;
         
+        var bodyStyle = doc.body.currentStyle;
+        
         this.node.style.top = maxHeight - height + scroll.top + "px";
+        
+        
+        if (this.type == "frame" && (bodyStyle.marginLeft || bodyStyle.marginRight))
+        {
+            this.node.style.width = size.width + "px";
+        }
     }
 
 });
@@ -721,6 +729,7 @@ var ChromeMini = extend(Firebug.Controller,
     create: function(chrome)
     {
         append(this, chrome);
+        this.type = "mini";
     },
     
     initialize: function()
