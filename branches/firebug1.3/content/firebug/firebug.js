@@ -337,7 +337,7 @@ Firebug.Panel =
             
             var tabNode = this.tabNode = createElement("a", {
                 id: panelId + "Tab",
-                className: "fbTab",
+                className: "fbTab" + (isIE ? " fbHover" : ""),
                 innerHTML: tabHTML
             });
             
