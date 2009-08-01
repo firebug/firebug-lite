@@ -57,9 +57,9 @@ Firebug.Inspector =
     
     onInspectingClick: function(e)
     {
-        fbInspectFrame.style.display = "none";    
+        fbInspectFrame.style.display = "none";
         var targ = Firebug.Inspector.getElementFromPoint(e.clientX, e.clientY);
-        fbInspectFrame.style.display = "block";    
+        fbInspectFrame.style.display = "block";
 
         // Avoid inspecting the outline, and the FirebugChrome
         var id = targ.id;
@@ -79,7 +79,7 @@ Firebug.Inspector =
         {
             fbInspectFrame.style.display = "none";
             var targ = Firebug.Inspector.getElementFromPoint(e.clientX, e.clientY);
-            fbInspectFrame.style.display = "block";    
+            fbInspectFrame.style.display = "block";
     
             // Avoid inspecting the outline, and the FirebugChrome
             var id = targ.id;
@@ -261,7 +261,7 @@ Firebug.Inspector =
         }
         while (el = el.offsetParent);
     
-        return {left:left, top:top};      
+        return {left:left, top:top};
     },
     
     getWindowSize: function()

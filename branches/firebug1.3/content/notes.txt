@@ -1,7 +1,16 @@
 ###################################################################################################
 
 ###################################################################################################
-    - FBL.dispatch initialize called 2 times    
+    - put IE6CSS in injected chrome
+    
+    - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
+    
+    - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
+      the "open tag" node (<div>).
+    
+    - remove events added in disableTextSelection
+    
+OK  - FBL.dispatch initialize called 2 times    
 
 OK  - Synchronization Bug
         - 1) starts opened (on console panel)
@@ -17,16 +26,7 @@ OK  - Bug in IE6 in HTML panel. HTML panel shutdown() method is not correct.
         - 3) move back to HTML tab
         - 4) nodes aren't responding to clicks after that
 
-    - change version number to 1.3a2 
-    
-    - put IE6CSS in injected chrome
-    
-    - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
-    
-    - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
-      the "open tag" node (<div>).
-    
-    - remove events added in disableTextSelection
+OK  - change version number to 1.3a2 
     
 OK  - Popup window cannot use addGlobalEvent on Vertical Slipper (the position/size of the 
       popup is different, so only the popup window should be listened)
@@ -121,13 +121,13 @@ OK  - problem with global events when in popup window
     
         - dispatch detach and reattach methods to panels  
     
-        - Chrome Frame should have different states and handlers when in minichrome mode
+    OK  - Chrome Frame should have different states and handlers when in minichrome mode
         
     OK  - mini-chrome should be "spans" and not "divs"
         
-    ~~  - onPressF12 should not be disabled when chrome frame closes
+    OK  - onPressF12 should not be disabled when chrome frame closes
         
-    ~~  - refactor panel. each panel should have a single panelContentNode that will be shared
+    OK  - refactor panel. each panel should have a single panelContentNode that will be shared
           across Chrome windows.
           
     ~~  - divide Chrome.initialize and Chrome.create. addPanel() should be added only in create()
