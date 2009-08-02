@@ -681,6 +681,9 @@ var ChromeFrameBase = extend(ChromeContext,
     {
         if (FirebugChrome.isOpen)
         {
+            var node = this.node;
+            node.style.visibility = "hidden"; // Avoid flickering
+            
             if (this.isInitialized)
             {
                 dispatch(Firebug.modules, "shutdown", []);
@@ -693,6 +696,8 @@ var ChromeFrameBase = extend(ChromeContext,
             FirebugChrome.isOpen = false;
             
             ChromeMini.initialize();
+            
+            node.style.visibility = "visible";
         }
     },
     
