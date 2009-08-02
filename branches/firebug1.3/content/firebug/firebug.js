@@ -791,8 +791,10 @@ Firebug.Button.prototype = extend(Firebug.Controller,
         }
     },
     
-    handlePress: function()
+    handlePress: function(event)
     {
+        cancelEvent(event, true);
+        
         if (this.type == "normal")
         {
             this.changeDisplay("pressed");
@@ -816,16 +818,24 @@ Firebug.Button.prototype = extend(Firebug.Controller,
                 
             }
         }
+        
+        return false;
     },
     
     handleUnpress: function()
     {
+        cancelEvent(event, true);
+        
         if (this.beforeClick)
             this.changeDisplay("unpressed");
+        
+        return false;
     },
     
-    handleClick: function()
+    handleClick: function(event)
     {
+        cancelEvent(event, true);
+        
         if (this.type == "normal")
         {
             if (this.onClick)
@@ -835,6 +845,8 @@ Firebug.Button.prototype = extend(Firebug.Controller,
         }
         
         this.beforeClick = false;
+        
+        return false;
     },
     
     // should be place inside module
