@@ -450,15 +450,15 @@ div.fbFitHeight {
     padding: 4px 1px 0;
 }
 
-.fbTab:hover {
+a.fbTab:hover {
     background: url(sprite.png) 0 -73px;
 }
 
-.fbTab:hover .fbTabL {
+a.fbTab:hover .fbTabL {
     background: url(sprite.png) -16px -96px;
 }
 
-.fbTab:hover .fbTabR {
+a.fbTab:hover .fbTabR {
     background: url(sprite.png) -24px -96px;
 }
 

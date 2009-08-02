@@ -759,7 +759,10 @@ var ChromeMini = extend(Firebug.Controller,
         var mini = $("fbMiniChrome");
         mini.style.display = "block";
         
-        var width = $("fbMiniIcon").offsetWidth + 10;
+        var miniIcon = $("fbMiniIcon");
+        var width = miniIcon.offsetWidth + 10;
+        miniIcon.title = "Open " + Firebug.version;
+        
         var errors = $("fbMiniErrors");
         if (errors.offsetWidth)
             width += errors.offsetWidth + 10;

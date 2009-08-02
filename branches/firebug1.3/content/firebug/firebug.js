@@ -337,7 +337,7 @@ Firebug.Panel =
             
             var tabNode = this.tabNode = createElement("a", {
                 id: panelId + "Tab",
-                className: "fbTab" + (isIE ? " fbHover" : ""),
+                className: "fbTab fbHover",
                 innerHTML: tabHTML
             });
             
@@ -822,7 +822,7 @@ Firebug.Button.prototype = extend(Firebug.Controller,
         return false;
     },
     
-    handleUnpress: function()
+    handleUnpress: function(event)
     {
         cancelEvent(event, true);
         

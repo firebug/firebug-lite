@@ -24,7 +24,9 @@ Core Changes
 User Interface Changes
 -------------------------------------------------------------------------------
     - skin
-    - browser compatibility
+    
+    - HTML and CSS revised to render properly in different browsers, running
+      on different compatibility modes (quirks mode, standards mode).
     
 
 -------------------------------------------------------------------------------
