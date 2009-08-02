@@ -892,7 +892,7 @@ var topPartialHeight = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 50 : 75;
+var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 75 : 75;
 
 
 //************************************************************************************************
@@ -986,6 +986,18 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
         }
     }
     
+    if (isOpera && isQuiksMode && win.frameElement.id == "FirebugChrome")
+    {
+        clientY = Firebug.browser.getWindowSize().height - win.frameElement.offsetHeight + clientY;
+    }
+    /*
+    console.log(
+            typeof win.FBL != "undefined" ? "no-Chrome" : "Chrome",
+            //win.frameElement.id,
+            event.target,
+            clientY
+        );/**/
+    
     onHSplitterMouseMoveBuffer = clientY; // buffer
     
     if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
@@ -1020,8 +1032,9 @@ var handleHSplitterMouseMove = function()
     
     var scrollbarSize = !isIE && (scrollSize.width > windowSize.width) ? 17 : 0;
     
-    var height = isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height; 
-     
+    //var height = !isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height;
+    var height =  windowSize.height;
+    
     // compute the min and max size of the chrome
     var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
         chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
