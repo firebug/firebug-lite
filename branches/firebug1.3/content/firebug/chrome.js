@@ -892,7 +892,7 @@ var topPartialHeight = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 75 : 75;
+var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 80 : 75;
 
 
 //************************************************************************************************
