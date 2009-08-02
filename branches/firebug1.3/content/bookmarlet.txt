@@ -1,0 +1,74 @@
+//*************************************************************************************************
+
+(function(d){
+var e=d.createElement('div');
+e.id='FirebugLoadIndicator';
+e.style.cssText='position:fixed;top:0;left:0;background:#ff0;padding:2px 5px;margin:0;z-index:2147483647;';
+e.innerHTML='Loading Firebug Lite...';
+d.body.appendChild(e);
+})(document);
+
+
+//*************************************************************************************************
+
+
+(function(F,B,L){
+L=F.createElement('script');
+L.src=B;
+F.getElementsByTagName('head')[0].appendChild(L);
+})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
+
+
+//*************************************************************************************************
+
+
+(function(F,B,L){
+L=F.createElement('div');
+L.id='FirebugLoadIndicator';
+L.style.cssText='position:fixed;top:0;left:0;background:#ff0;padding:2px 5px;margin:0;z-index:2147483647;';
+L.innerHTML='Loading Firebug Lite...';
+F.body.appendChild(L);
+
+L=F.createElement('script');
+L.src=B;
+F.getElementsByTagName('head')[0].appendChild(L);
+})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
+
+
+//*************************************************************************************************
+
+
+(function(F,B,L,i,t,e){
+
+i=/msie 6/i.test(B.appVersion)||B.userAgent.indexOf('MSIE')!=-1&&F.compatMode=='BackCompat';
+t=i?'absolute':'fixed';
+
+e=F.createElement('div');
+e.id='FirebugLoadIndicator';
+e.style.cssText='position:'+t+';top:0;right:0;background:#ff0;padding:5px;margin:0;z-index:2147483647;';
+e.innerHTML='Loading Firebug Lite...';
+F.body.appendChild(e);
+
+e=F.createElement('script');
+e.src=L;
+F.getElementsByTagName('head')[0].appendChild(e);
+        
+})(document,navigator,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
+
+
+//*************************************************************************************************
+
+
+(function(D,N){
+    (function(B,E,I,i){
+        var F=i||I&&D.compatMode=='BackCompat';     
+        var t=D&&D.scrollTop||E&&E.scrollTop;
+    
+        var e=d.createElement('div');
+        e.id='FirebugLoadIndicator';
+        e.style.cssText='position:absolute;top:0;left:0;background:#ff0;padding:2px 5px;margin:0;z-index:2147483647;';
+        e.innerHTML='Loading Firebug Lite...';
+        d.body.appendChild(e);
+        
+    })(D.body,D.documentElement,N.userAgent.indexOf('MSIE')!=-1,/msie 6/i.test(N.appVersion));
+})(document,navigator);

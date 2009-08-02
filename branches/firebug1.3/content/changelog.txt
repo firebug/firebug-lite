@@ -1,17 +1,52 @@
+###################################################################################################
+ 1.3.0a2
+###################################################################################################
+
 -------------------------------------------------------------------------------
 Core Changes
 -------------------------------------------------------------------------------
-    - Context Class
-    - library initialization reimplemented to support future persistent applications
-    - FBTrace - internal logging system
+    - Context Class implemented to allow inspect different windows (contexts)
+    
     - better settings handling: 
-        - modes: BookmarletMode, PersistentMode, DebugMode
+        - modes: BookmarletMode, PersistentMode, TraceMode, DevelopmentMode
         - skin: xp, classic, light
 
+    - all components were revised to better handling memory consumption. 
+      create()/destroy() methods (called when something is created) and 
+      initialize()/shutdown() when something is activated, or made visible.
+
+    - console.log calls are now captured even when the UI is not loaded
+    - better location detection
+    - library initialization reimplemented to support future persistent applications
     
+    
+-------------------------------------------------------------------------------
+User Interface Changes
+-------------------------------------------------------------------------------
+    - skin
+    - browser compatibility
+    
+
+-------------------------------------------------------------------------------
+Chrome Changes
+-------------------------------------------------------------------------------
+    - better positioning calculation
+    
+    - better window size, scrollSize and scollPosition calculations
+    
+    - element:hover now works also in IE7 & IE8 when in quirks mode.
+    
+    - resize chrome performance (buffered frame-skip technique) 
+    
+    - mini-chrome
+
+
+
 -------------------------------------------------------------------------------
 Core Additions
 -------------------------------------------------------------------------------
+    - FBTrace - internal logging system
+    
     - DOM methods:
         - createElement()
         
@@ -28,16 +63,26 @@ Core Additions
         - removeClass()
         - hasClass()
         - toggleClass() 
-    
+
+
 -------------------------------------------------------------------------------
-Chrome
+Chrome Additions
 -------------------------------------------------------------------------------
     - Controller Class
     - Module Class
     - Panel Class
     - PanelBar Class
-    - ToolButton Class
+    - Button Class
+    
+    - FBTrace Panel
 
+
+
+
+
+###################################################################################################
+ 1.3.0a1
+###################################################################################################
 
 -------------------------------------------------------------------------------
 Inspector
@@ -121,3 +166,11 @@ commandLine
 FIXED: better handling of scope of commandLine.eval(), if you type "this" it will
       refer to the CommandLine module, and it should refer to "window" instead
 
+
+
+
+###################################################################################################
+ 1.3.0a0
+###################################################################################################
+
+1.3.0 prototype

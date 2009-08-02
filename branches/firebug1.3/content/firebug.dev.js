@@ -28,6 +28,8 @@ window.FBDev =
         // Application Panels
         "firebug/html.js",
         
+        //"firebug/dom.js",
+        
         "firebug/tracePanel.js",
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Bootstrap

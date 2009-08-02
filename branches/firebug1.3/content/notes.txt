@@ -195,6 +195,18 @@ OK  - it has, on a giving time, one of 2 states (pressed, and unpressed)
           need to check the z-indexes of the overall interface.
 
  
+ 
+---------------------------------------------------------------------------------------------------
+ DOM
+---------------------------------------------------------------------------------------------------
+ 
+Sorting Order:
+    First letter uppercase
+    underscore followed by uppercase letter
+    underscore followed by lowercase letter
+    First letter lowercase
+
+
 ###################################################################################################
 User Interface
 ###################################################################################################
