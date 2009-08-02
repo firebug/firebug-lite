@@ -97,12 +97,15 @@ var onDocumentLoad = function onDocumentLoad()
     {
         FBL.Firebug.initialize();
         
-        window.FirebugApplication.destroy();
+        if (!FBL.Application.isDevelopmentMode)
+        {
+            window.FirebugApplication.destroy();
         
-        if (FBL.isIE)
-            window.FirebugApplication = null;
-        else
-            delete window.FirebugApplication;
+            if (FBL.isIE)
+                window.FirebugApplication = null;
+            else
+                delete window.FirebugApplication;
+        }
     }
     // main document loaded
     else
