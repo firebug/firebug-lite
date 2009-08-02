@@ -23,11 +23,16 @@ Firebug.HTML = extend(Firebug.Module,
                 
                 var nodeName = node.nodeName.toLowerCase();
                 
+                var nodeVisible = node.style.visibility != "hidden" &&
+                        node.style.display != "none";
+                
                 var hasSingleTextChild = childLength == 1 && node.firstChild.nodeType == 3 &&
                         nodeName != "script" && nodeName != "style";
                 
                 var nodeControl = !hasSingleTextChild && childLength > 0 ? 
                     ('<div class="nodeControl"></div>') : '';
+                
+                var isIE = false;
 
                 if(isIE && nodeControl)
                     html.push(nodeControl);
@@ -39,14 +44,16 @@ Firebug.HTML = extend(Firebug.Module,
                         '" id="', uid,                                                                                        
                         '">',
                         !isIE && nodeControl ? nodeControl: "",                        
-                        '&lt;<span class="nodeTag">', nodeName, '</span>'
-                      );
+                        '<span class="nodeBox',
+                        nodeVisible ? "" : " nodeHidden",
+                        '">&lt;<span class="nodeTag">', nodeName, '</span>'
+                    );
                 else
                     html.push(
-                        '<div class="objectBox-element">&lt;<span class="nodeTag">', 
+                        '<div class="objectBox-element"><span class="nodeBox">&lt;<span class="nodeTag">', 
                         nodeName, '</span>'
-                      );
-            
+                    );
+                
                 for (var i = 0; i < node.attributes.length; ++i)
                 {
                     var attr = node.attributes[i];
@@ -105,19 +112,19 @@ Firebug.HTML = extend(Firebug.Module,
                                 escapeHTML(value),
                                 '</span>&lt;/<span class="nodeTag">',
                                 nodeName,
-                                '</span>&gt;</div>'
+                                '</span>&gt;</span></div>'
                             );
                     }
                     else
-                      html.push('/&gt;</div>'); // blank text, print as childless node
+                      html.push('/&gt;</span></div>'); // blank text, print as childless node
                 
                 }
                 else if (childLength > 0)
                 {
-                    html.push('&gt;</div>');
+                    html.push('&gt;</span></div>');
                 }
                 else 
-                    html.push('/&gt;</div>');
+                    html.push('/&gt;</span></div>');
           
             } 
             else if (node.nodeType == 3)
@@ -173,6 +180,7 @@ Firebug.HTML = extend(Firebug.Module,
         var treeNext = treeNode.nextSibling;
         var treeParent = treeNode.parentNode;
         
+        var isIE = false;
         var control = isIE ? treeNode.previousSibling : treeNode.firstChild;
         control.className = 'nodeControl nodeMaximized';
         
@@ -198,6 +206,7 @@ Firebug.HTML = extend(Firebug.Module,
         var children = treeNode.nextSibling;
         var closeTag = children.nextSibling;
         
+        var isIE = false;
         var control = isIE ? treeNode.previousSibling : treeNode.firstChild;
         control.className = 'nodeControl';
         
@@ -345,12 +354,14 @@ Firebug.HTML.onTreeClick = function (e)
     
     if (targ.className.indexOf('nodeControl') != -1 || targ.className == 'nodeTag')
     {
+        var isIE = false;
+        
         if(targ.className == 'nodeTag')
         {
-            var control = FBL.isIE ? (targ.parentNode.previousSibling || targ) :
-                          (targ.previousSibling.previousSibling || targ);
+            var control = isIE ? (targ.parentNode.previousSibling || targ) :
+                          (targ.parentNode.previousSibling || targ);
 
-            selectElement(targ.parentNode);
+            selectElement(targ.parentNode.parentNode);
             
             if (control.className.indexOf('nodeControl') == -1)
                 return;
@@ -360,7 +371,7 @@ Firebug.HTML.onTreeClick = function (e)
         
         FBL.cancelEvent(e);
         
-        var treeNode = FBL.isIE ? control.nextSibling : control.parentNode;
+        var treeNode = isIE ? control.nextSibling : control.parentNode;
         
         //FBL.Firebug.Console.log(treeNode);
         
@@ -411,7 +422,7 @@ function onListMouseOut(e)
     if (targ.nodeType == 3) // defeat Safari bug
       targ = targ.parentNode;
         
-      if (targ.id == "fbConsole") {
+      if (hasClass(targ, "fbPanel")) {
           FBL.Firebug.Inspector.hideBoxModel();
           hoverElement = null;        
       }
