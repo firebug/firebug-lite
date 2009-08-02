@@ -254,12 +254,12 @@ Firebug.Inspector =
     {
         var left = 0, top = 0;
         
-        do
-        {
+        //do
+        //{
             left += el.offsetLeft;
             top += el.offsetTop;
-        }
-        while (el = el.offsetParent);
+        //}
+        //while (el = el.offsetParent);
     
         return {left:left, top:top};
     },

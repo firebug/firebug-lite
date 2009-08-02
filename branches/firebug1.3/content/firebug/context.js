@@ -169,15 +169,15 @@ FBL.Context.prototype =
         var left = 0
         var top = 0;
         
-        if (el.offsetParent)
-        {
+        //if (el.offsetParent)
+        //{
             do
             {
                 left += el.offsetLeft;
                 top += el.offsetTop;
             }
             while (el = el.offsetParent);
-        }
+        //}
         return {left:left, top:top};      
     },
     
