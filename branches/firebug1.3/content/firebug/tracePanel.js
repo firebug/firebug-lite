@@ -2,7 +2,7 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
 // If application isn't in debug mode, the FBTrace panel won't be loaded
-if (!Application.isDebugMode) return;
+if (!Application.isTraceMode) return;
 
 // ************************************************************************************************
 // FBTrace Module

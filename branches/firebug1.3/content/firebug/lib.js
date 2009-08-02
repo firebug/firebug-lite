@@ -30,7 +30,7 @@ this.initialize = function()
     // initialize application
     
     FBTrace = FBL.FBTrace;
-    if (FBL.Application.isDebugMode) FBTrace.initialize();
+    if (FBL.Application.isTraceMode) FBTrace.initialize();
     
     var isChromeContext = FBL.Application.isPersistentMode && 
             typeof window.FirebugApplication == "object"; 
@@ -123,7 +123,7 @@ this.Application = {
     
     isBookmarletMode: true,
     isPersistentMode: false,
-    isDebugMode: true,
+    isTraceMode: true,
     skin: "xp",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
@@ -545,7 +545,7 @@ function onOperaTabBlur(e)
 
 function onOperaTabKeyDown(e)
 {
-  this.lastKey = e.keyCode;
+    this.lastKey = e.keyCode;
 };
 
 function onOperaTabFocus(e)
