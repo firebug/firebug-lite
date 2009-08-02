@@ -278,7 +278,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         this.panelNode.style.padding = "4px 3px 1px 15px";
         
-        if (Firebug.chrome.type != "popup")
+        if (Application.isPersistentMode || Firebug.chrome.type != "popup")
             this.createUI();
     },
     
@@ -293,14 +293,16 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         this.panelNode.appendChild(d);
     },
     
-    initialize: function(){
+    initialize: function()
+    {
         Firebug.Panel.initialize.apply(this, arguments);
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
         fbPanel1 = $("fbPanel1");
     },
     
-    shutdown: function(){
+    shutdown: function()
+    {
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         fbPanel1 = null;
         Firebug.Panel.shutdown.apply(this, arguments);

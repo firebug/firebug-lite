@@ -169,15 +169,13 @@ FBL.Context.prototype =
         var left = 0
         var top = 0;
         
-        //if (el.offsetParent)
-        //{
-            do
-            {
-                left += el.offsetLeft;
-                top += el.offsetTop;
-            }
-            while (el = el.offsetParent);
-        //}
+        do
+        {
+            left += el.offsetLeft;
+            top += el.offsetTop;
+        }
+        while (el = el.offsetParent);
+            
         return {left:left, top:top};      
     },
     
@@ -221,6 +219,7 @@ FBL.Context.prototype =
         var result = {value: 0, unit: "px"};
         
         var cssValue = this.getCSS(el, name);
+        
         if (!cssValue) return result;
         if (cssValue.toLowerCase() == "auto") return result;
         
@@ -358,7 +357,7 @@ FBL.Context.prototype =
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    getCSS: this.isIE ? function(el, name)
+    getCSS: isIE ? function(el, name)
     {
         return el.currentStyle[name] || el.style[name] || undefined;
     }
@@ -375,6 +374,10 @@ FBL.Context.prototype =
 
 var evalError = "___firebug_evaluation_error___";
 var pixelsPerInch;
+
+var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
+var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
+
 
 // ************************************************************************************************
 // Measurement Functions
