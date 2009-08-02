@@ -19,49 +19,20 @@ FBL.FirebugChrome =
     
     initialize: function()
     {
-        if (document.documentElement.getAttribute("debug") == "true")
+        if (Application.chrome.type == "frame")
+            ChromeMini.create(Application.chrome);
+            
+        if (Application.browser.document.documentElement.getAttribute("debug") == "true")
             Application.openAtStartup = true;
 
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chromeMap[chrome.type] = chrome;
         
         addGlobalEvent("keydown", onPressF12);
-        //chrome.initialize();
+        
+        if (Application.isPersistentMode && chrome.type == "popup")
+            chrome.initialize();
     }
-};
-
-// ************************************************************************************************
-var onPopupChromeLoad = function(chrome)
-{
-    FBTrace.sysout("onPopupChromeLoad", "-------------------------");
-    
-    var frame = Firebug.chromeMap.frame;
-    
-    if (frame)
-    {
-        frame.close();
-    }
-    
-    // initial UI state
-    FBL.FirebugChrome.commandLineVisible = true;
-    FBL.FirebugChrome.sidePanelVisible = false;
-       
-    
-    var popup = Firebug.chrome = new Chrome(chrome);
-    
-    // chrome synchronization
-    var framePanelMap = frame.panelMap;
-    var popupPanelMap = popup.panelMap;
-    for(var name in framePanelMap)
-    {
-        popupPanelMap[name].contentNode.innerHTML = framePanelMap[name].contentNode.innerHTML;
-    }
-    
-    popup.initialize();    
-    dispatch(Firebug.modules, "initialize", []);
-    
-    if(FirebugChrome.selectedElement)
-        Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
 };
 
 var reattach = function()
@@ -189,8 +160,10 @@ var createChrome = function(options)
             chrome.window = win.window;
             chrome.document = win.document;
             
+            /*
             if (isChromeFrame)
-                ChromeMini.create(chrome);            
+                ChromeMini.create(chrome);
+            /**/
             
             if (onLoad)
                 onLoad(chrome);
@@ -215,7 +188,7 @@ var onChromeLoad = function onChromeLoad(chrome)
     
         if (Application.isDevelopmentMode)
         {
-            FBDev.loadChromeApplication(chrome);
+            Application.browser.window.FBDev.loadChromeApplication(chrome);
         }
         else
         {
@@ -226,10 +199,48 @@ var onChromeLoad = function onChromeLoad(chrome)
         }
     }
     else
-        // initialize the chrome application
-        setTimeout(function(){
-            FBL.Firebug.initialize();
-        },100);
+    {
+        if (chrome.type == "frame")
+        {
+            // initialize the chrome application
+            setTimeout(function(){
+                FBL.Firebug.initialize();
+            },100);
+        }
+        else if (chrome.type == "popup")
+        {
+            FBTrace.sysout("onPopupChromeLoad", "-------------------------");
+            
+            var frame = Firebug.chromeMap.frame;
+            
+            if (frame)
+            {
+                frame.close();
+            }
+            
+            // initial UI state
+            FBL.FirebugChrome.commandLineVisible = true;
+            FBL.FirebugChrome.sidePanelVisible = false;
+               
+            
+            var popup = Firebug.chrome = new Chrome(chrome);
+            
+            // chrome synchronization
+            var framePanelMap = frame.panelMap;
+            var popupPanelMap = popup.panelMap;
+            for(var name in framePanelMap)
+            {
+                popupPanelMap[name].contentNode.innerHTML = framePanelMap[name].contentNode.innerHTML;
+            }
+            
+            popup.initialize();    
+            dispatch(Firebug.modules, "initialize", []);
+            
+            if(FirebugChrome.selectedElement)
+                Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+        }
+    
+    }
 };
 
 
@@ -510,7 +521,7 @@ var ChromeBase = extend(ChromeBase, {
         //alert('detach');
         if(!Firebug.chromeMap.popup)
         {     
-            createChrome({type: "popup", onLoad: onPopupChromeLoad});
+            createChrome({type: "popup", onLoad: onChromeLoad});
         }
     },
     
