@@ -547,7 +547,6 @@ pre.nodeCode {
     cursor: default;
     background: url(tree_open.gif);
     _float: none;
-    _margin-left: -11px;    
     _display: inline;
     _position: absolute;
 }
@@ -738,11 +737,31 @@ div.objectBox-element {
 
 .nodeText {
     color: #333333;
+    font-family: Monaco, monospace;
 }
 
 .nodeComment {
     color: DarkGreen;
 }
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+.nodeHidden, .nodeHidden * {
+    color: #888888;
+}
+
+.nodeHidden .nodeTag {
+    color: #5F82D9;
+}
+
+.nodeHidden .nodeValue {
+    color: #D86060;
+}
+
+.selectedElement .nodeHidden, .selectedElement .nodeHidden * {
+    color: SkyBlue !important;
+}
+
 
 /************************************************************************************************/
 .log-object {
