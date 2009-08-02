@@ -110,7 +110,7 @@ Firebug.Reps = {
             for (var i = 0; i < node.attributes.length; ++i)
             {
                 var attr = node.attributes[i];
-                if (!attr.specified)
+                if (!attr.specified || attr.nodeName == cacheID)
                     continue;
                 
                 html.push('&nbsp;<span class="nodeName">', attr.nodeName.toLowerCase(),
