@@ -19,15 +19,19 @@ FBL.FirebugChrome =
     
     initialize: function()
     {
+        if (document.documentElement.getAttribute("debug") == "true")
+            Application.openAtStartup = true;
+
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
         Firebug.chromeMap[chrome.type] = chrome;
+        
         addGlobalEvent("keydown", onPressF12);
         //chrome.initialize();
     }
 };
-    
+
 // ************************************************************************************************
-var onPopupChromeLoad = function(chromeContext)
+var onPopupChromeLoad = function(chrome)
 {
     FBTrace.sysout("onPopupChromeLoad", "-------------------------");
     
@@ -43,7 +47,7 @@ var onPopupChromeLoad = function(chromeContext)
     FBL.FirebugChrome.sidePanelVisible = false;
        
     
-    var popup = Firebug.chrome = new Chrome(chromeContext);
+    var popup = Firebug.chrome = new Chrome(chrome);
     
     // chrome synchronization
     var framePanelMap = frame.panelMap;
