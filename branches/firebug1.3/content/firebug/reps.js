@@ -104,7 +104,8 @@ Firebug.Reps = {
             
             html.push(
                 '<div class="objectBox-element"', uidString, '">',
-                    '&lt;<span class="nodeTag">', node.nodeName.toLowerCase(), '</span>');
+                '<span ', cacheID, '="', uid, '" class="nodeBox">',
+                '&lt;<span class="nodeTag">', node.nodeName.toLowerCase(), '</span>');
     
             for (var i = 0; i < node.attributes.length; ++i)
             {
@@ -125,10 +126,10 @@ Firebug.Reps = {
                     this.appendNode(child, html);
                     
                 html.push('</div><div class="objectBox-element">&lt;/<span class="nodeTag">', 
-                    node.nodeName.toLowerCase(), '&gt;</span></div>');
+                    node.nodeName.toLowerCase(), '&gt;</span></span></div>');
             }
             else
-                html.push('/&gt;</div>');
+                html.push('/&gt;</span></div>');
         }
         else if (node.nodeType == 3)
         {

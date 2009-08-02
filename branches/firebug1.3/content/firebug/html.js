@@ -40,11 +40,13 @@ Firebug.HTML = extend(Firebug.Module,
                 if (typeof uid != 'undefined')
                     html.push(
                         '<div class="objectBox-element" ',
-                        cacheID, '="', uid,
-                        '" id="', uid,                                                                                        
+                        'id="', uid,                                                                                        
                         '">',
                         !isIE && nodeControl ? nodeControl: "",                        
-                        '<span class="nodeBox',
+                        '<span ',
+                        cacheID, 
+                        '="', uid,
+                        '"  class="nodeBox',
                         nodeVisible ? "" : " nodeHidden",
                         '">&lt;<span class="nodeTag">', nodeName, '</span>'
                     );
@@ -171,8 +173,7 @@ Firebug.HTML = extend(Firebug.Module,
     appendTreeChildren: function(treeNode)
     {
         var doc = Firebug.chrome.document;
-        
-        var uid = treeNode.attributes[cacheID].value;
+        var uid = treeNode.id;
         var parentNode = documentCache[uid];
         
         if (parentNode.childNodes.length == 0) return;
@@ -333,7 +334,7 @@ var selectElement= function selectElement(e)
         
         selectedElement = e;
         
-        FirebugChrome.selectedElement = e.attributes[cacheID].value;
+        FirebugChrome.selectedElement = e.id;
     }
 }
 
@@ -445,7 +446,7 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
             
         var found = false;
         while (targ && !found) {
-            if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " "))
+            if (!/\snodeBox\s|\sobjectBox-selector\s/.test(" " + targ.className + " "))
                 targ = targ.parentNode;
             else
                 found = true;
@@ -457,6 +458,13 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
             hoverElement = null;
             return;
         }
+        
+        /*
+        if (typeof targ.attributes[FBL.cacheID] == 'undefined') return;
+        
+        var uid = targ.attributes[FBL.cacheID];
+        if (!uid) return;
+        /**/
         
         if (typeof targ.attributes[FBL.cacheID] == 'undefined') return;
         
@@ -470,7 +478,7 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
         if (FBL.isIE && " meta title script link ".indexOf(" "+nodeName+" ") != -1)
             return;
     
-        if (!/\sobjectBox-element\s|\sobjectBox-selector\s/.test(" " + targ.className + " ")) return;
+        if (!/\snodeBox\s|\sobjectBox-selector\s/.test(" " + targ.className + " ")) return;
         
         if (el.id == "FirebugChrome" || " html head body br script link iframe ".indexOf(" "+nodeName+" ") != -1) { 
             FBL.Firebug.Inspector.hideBoxModel();
