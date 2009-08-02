@@ -1,3 +1,12 @@
+.fbBtnPressed {
+    background: #ECEBE3;
+    padding: 3px 6px 2px 7px !important;
+    margin: 1px 0 0 1px;
+    _margin: 1px -1px 0 1px;
+    border: 1px solid #ACA899 !important;
+    border-color: #ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;
+}
+
 .fbToolbarButtons {
     display: none;
 }
@@ -73,20 +82,19 @@ body {
 *************************************************************************************************/
 #fbMiniChrome {
     display: none;
-    position: absolute;
     right: 0;
     height: 27px;
-    width: 99px;
     background: url(sprite.png) #f1f2ee 0 0;
+    margin-left: 1px;
 }
 
 #fbMiniContent {
-    position: absolute;
+    display: block;
+    position: relative;
+    left: -1px;
     right: 0;
     top: 1px;
     height: 25px;
-    width: 99px;
-    _width: 98px;
     border-left: 1px solid #aca899;
 }
 
@@ -120,19 +128,20 @@ body {
 }
 
 #fbMiniErrors {
-    position: absolute;
-    top: 6px;
-    right: 30px;
+    display: inline;
+    display: none;
+    float: right;
+    margin: 5px 2px 0 5px;
 }
 
 #fbMiniIcon {
-    position: absolute;
-    top: 4px;
-    right: 5px;
+    float: right;
+    margin: 3px 4px 0;
     height: 20px;
     width: 20px;
     float: right;    
     background: url(sprite.png) 0 -135px;
+    cursor: pointer;
 }
 
 
@@ -257,13 +266,13 @@ body {
 }
 
 
-#mainButtons {
+#fbChromeButtons {
     position: absolute;
     white-space: nowrap;
     right: 0;
     top: 0;
     height: 17px;
-    _width: 270px;
+    _width: 50px;
     padding: 7px 0 4px 5px;
     z-index: 6;
     background: url(sprite.png) #eee 0 0;
@@ -319,11 +328,6 @@ body {
     background: #fff;
 }
 
-/* TODO: REVISE IN IE6 */
-* html #fbPanel1 {
-    position: absolute;
-}
-
 #fbPanel2 {
     padding-left: 6px;
     background: #fff;
@@ -353,9 +357,6 @@ body {
     background: #fff;
     border: 0;
     border-top: 1px solid #ccc;
-    /*
-    _height: 18px;
-    /**/
 }
 
 #fbCommandIcon {
@@ -380,23 +381,9 @@ body {
     z-index: 9;
 }
 
-#fbBottom[fixFirefox] {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 10;
-}
-
-#fbBottom[fixFirefox] #fbCommand {
-    display: block;
-}
-
 div.fbFitHeight {
-    padding: 0 1px;
-    max-height: inherit;
-    height: 100%;
     overflow: auto;
+    _position: absolute;
 }
 
 
@@ -406,7 +393,7 @@ div.fbFitHeight {
 
 /* fbToolbar buttons 
 *************************************************************************************************/
-#mainButtons a {
+#fbChromeButtons a {
     font-size: 1px;
     width: 16px;
     height: 16px;
@@ -417,19 +404,19 @@ div.fbFitHeight {
     cursor: default;
 }
 
-#close {
+#fbChrome_btClose {
     background: url(sprite.png) 0 -119px;
 }
 
-#close:hover {
+#fbChrome_btClose:hover {
     background: url(sprite.png) -16px -119px;
 }
 
-#detach {
+#fbChrome_btDetach {
     background: url(sprite.png) -32px -119px;
 }
 
-#detach:hover {
+#fbChrome_btDetach:hover {
     background: url(sprite.png) -48px -119px;
 }
 
@@ -521,9 +508,7 @@ div.fbFitHeight {
     position: absolute;
     height: 100%;
     top: 27px;
-    /*
     _width: 6px;
-    /**/
 }
 
 /************************************************************************************************/
@@ -560,10 +545,10 @@ pre.nodeCode {
     overflow: hidden;
     cursor: default;
     background: url(tree_open.gif);
-    /*
+    _float: none;
+    _margin-left: -11px;    
+    _display: inline;
     _position: absolute;
-    _margin-left: -11px;
-    /**/
 }
 
 div.nodeMaximized {
@@ -579,6 +564,7 @@ div.objectBox-element {
 
 .selectedElement{
     background: highlight;
+    /* background: url(roundCorner.svg); Opera */
     color: #fff !important;
 }
 .selectedElement span{
@@ -802,7 +788,7 @@ div.objectBox-element {
     height: 100% !important;
 }
 
-.FirebugPopup #mainButtons {
+.FirebugPopup #fbChromeButtons {
     display: none !important;
 }
 
