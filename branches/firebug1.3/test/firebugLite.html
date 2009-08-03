@@ -7,11 +7,13 @@
 <script type="text/javascript">
 (function(){
 var console = window.console && window.console.firebug ? FB : window.console;
-console.log("Yo!");
-console.warn("well...");
-console.error("Oops!");
+
+console.log("This is a test call to console.log()");
+console.info("This is a test call to console.info()");
+console.warn("This is a test call to console.warn()");
+console.error("This is a test call to console.error()");
+
 })();
-/**/
 </script>
 <style type="text/css">
 body {
@@ -81,15 +83,15 @@ li {
     <div class="note block">
       Use the "build" function to generate the full uncompressed js file,
       and the "compress" functions to compress the HTML and CSS of the
-      User Interface files, to be used in the <a href="../content/firebug/chrome/injected.js">injected.js</a>
+      User Interface files, to be used in the <a href="../content/firebug/injected.chrome.js">injected.js</a>
       file, when in bookmarlet mode. 
     </div>
     <div id="ui" class="block">
       <h2>User interface files</h2>
       <ul>
-        <li><a href="../skin/classic/firebug.html">HTML</a></li>
-        <li><a href="../skin/classic/firebug.css">CSS</a></li>
-        <li><a href="../skin/classic/sprite.png">Sprite</a></li>
+        <li><a href="../skin/xp/firebug.html">HTML</a></li>
+        <li><a href="../skin/xp/firebug.css">CSS</a></li>
+        <li><a href="../skin/xp/sprite.png">Sprite</a></li>
       </ul>
     </div>
     <div id="lorem" class="block">

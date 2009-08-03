@@ -19,7 +19,7 @@ var panelTypeMap = {};
 // ************************************************************************************************
 // Firebug
 
-Firebug = FBL.Firebug =  
+Application.browser.window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",

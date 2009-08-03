@@ -1,3 +1,5 @@
+(function(){
+
 /*!
  *  Copyright 2009, Firebug Working Group
  *  Released under BSD license.
@@ -168,47 +170,57 @@ var findLocation =  function findLocation()
     var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
-    //var head = document.getElementsByTagName("head")[0];
     var path = null;
+    var doc = document;
     
-    //for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
-    for(var i=0, c=document.getElementsByTagName("script"), ci; ci=c[i]; i++)
+    var script = doc.getElementById("FirebugLite");
+    
+    if (script)
     {
-        var file = null;
-        
-        if ( ci.nodeName.toLowerCase() == "script" && 
-             (file = reFirebugFile.exec(ci.src)) )
+        file = reFirebugFile.exec(script.src);
+    }
+    else
+    {
+        for(var i=0, s=doc.getElementsByTagName("script"), si; si=s[i]; i++)
         {
-            var fileName = file[1];
-            var fileOptions = file[2];
-            
-            
-            if (reProtocol.test(ci.src)) {
-                // absolute path
-                path = rePath.exec(ci.src)[1];
-              
-            }
-            else
+            var file = null;
+            if ( si.nodeName.toLowerCase() == "script" && (file = reFirebugFile.exec(si.src)) )
             {
-                // relative path
-                var r = rePath.exec(ci.src);
-                var src = r ? r[1] : ci.src;
-                var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
-                var lastFolder = /^(.*\/)[^\/]+\/$/;
-                path = rePath.exec(location.href)[1];
-                
-                if (rel)
-                {
-                    var j = rel[1].length/3;
-                    var p;
-                    while (j-- > 0)
-                        path = lastFolder.exec(path)[1];
-
-                    path += rel[2];
-                }
+                script = si;
+                break;
             }
+        }
+    }
+
+    if (file)
+    {
+        var fileName = file[1];
+        var fileOptions = file[2];
+        
+        
+        if (reProtocol.test(script.src)) {
+            // absolute path
+            path = rePath.exec(script.src)[1];
+          
+        }
+        else
+        {
+            // relative path
+            var r = rePath.exec(script.src);
+            var src = r ? r[1] : script.src;
+            var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
+            var lastFolder = /^(.*\/)[^\/]+\/$/;
+            path = rePath.exec(location.href)[1];
             
-            break;
+            if (rel)
+            {
+                var j = rel[1].length/3;
+                var p;
+                while (j-- > 0)
+                    path = lastFolder.exec(path)[1];
+
+                path += rel[2];
+            }
         }
     }
     
@@ -244,7 +256,7 @@ var findLocation =  function findLocation()
                 App.isPersistentMode = true;
         }
         
-        var innerOptions = FBL.trim(ci.innerHTML);
+        var innerOptions = FBL.trim(script.innerHTML);
         
         if(innerOptions)
         {
@@ -298,6 +310,8 @@ this.isIEQuiksMode = this.isIE && this.isQuiksMode;
 this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+
+this.NS = document.getElementsByTagName("html")[0].getAttribute("xmlns")
 
 // ************************************************************************************************
 // Util
@@ -369,6 +383,27 @@ this.createElement = function(tagName, properties)
         if (name != "document")
         {
             element[name] = properties[name];
+        }
+    }
+    
+    return element;
+};
+
+this.createGlobalElement = function(tagName, properties)
+{
+    properties = properties || {};
+    var doc = FBL.Application.browser.document;
+    
+    var element = FBL.isIE ? doc.createElement(tagName) : doc.createElementNS(FBL.NS, tagName);
+    for(var name in properties)
+    {
+        var propname = name;
+        if (FBL.isIE && name == "class") propname = "className";
+        if (FBL.isIE && name == "style") propname = "cssText";
+        
+        if (name != "document")
+        {
+            element.setAttribute[propname] = properties[name];
         }
     }
     
@@ -1029,24 +1064,18 @@ var panelTypeMap = {};
 // ************************************************************************************************
 // Firebug
 
-FBL.Firebug =  
+Application.browser.window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
-    revision: "$Revision: 3837 $",
+    revision: "$Revision: 3846 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
-    chromeMap: {},
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
-    
-    initializeContext: function(chrome)
-    {
-        
-    },
     
     initialize: function()
     {
@@ -1056,7 +1085,7 @@ FBL.Firebug =
         Firebug.context = Firebug.browser;
         
         // Document must be cached before chrome initialization
-        Firebug.cacheDocument();
+        cacheDocument();
         
         FirebugChrome.initialize();
         
@@ -1090,20 +1119,21 @@ FBL.Firebug =
         if (FBTrace.DBG_INITIALIZE)
             for (var i = 0; i < arguments.length; ++i)
                 FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
-    },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Other methods
-    
-    cacheDocument: function()
+    }
+};
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Other methods
+
+var cacheDocument = function cacheDocument()
+{
+    var els = Firebug.browser.document.getElementsByTagName("*");
+    for (var i=0, l=els.length, el; i<l; i++)
     {
-        var els = Firebug.browser.document.getElementsByTagName("*");
-        for (var i=0, l=els.length, el; i<l; i++)
-        {
-            el = els[i];
-            el[cacheID] = i;
-            documentCache[i] = el;
-        }
+        el = els[i];
+        el[cacheID] = i;
+        documentCache[i] = el;
     }
 };
 
@@ -2583,7 +2613,9 @@ var calculatePixelsPerInch = function calculatePixelsPerInch()
 
 FBL.ns(function() { with (FBL) {
 
-    
+
+FBL.chromeMap = {};
+
 FBL.FirebugChrome = 
 {
     commandLineVisible: true,
@@ -2609,7 +2641,7 @@ FBL.FirebugChrome =
             Application.openAtStartup = true;
 
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
-        Firebug.chromeMap[chrome.type] = chrome;
+        chromeMap[chrome.type] = chrome;
         
         addGlobalEvent("keydown", onPressF12);
         
@@ -2622,8 +2654,8 @@ var reattach = function()
 {
     FBTrace.sysout("reattach", "-------------------------");
     
-    var frame = Firebug.chromeMap.frame;
-    var popup = Firebug.chromeMap.popup;
+    var frame = chromeMap.frame;
+    var popup = chromeMap.popup;
     
     // last UI state
     FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
@@ -2639,7 +2671,7 @@ var reattach = function()
     }
     
     Firebug.chrome = frame;
-    Firebug.chromeMap.popup = null;
+    chromeMap.popup = null;
     
     if(FirebugChrome.selectedElement)
         Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
@@ -2677,6 +2709,26 @@ var createChrome = function(options)
     if (isChromeFrame)
     {
         // Create the Chrome Frame
+        
+        /*
+        var style = [
+                'border:0;visibility:hidden;z-index:2147483647;position:',
+                noFixedPosition ? "absolute" : "fixed",
+                ';width:100%;left:0;bottom:',
+                noFixedPosition ? "-1px" : "0",
+                ';height:',
+                options.height,
+                'px;'
+            ].join("");
+        
+        var node = chrome.node = createGlobalElement("iframe",
+                {
+                    id: options.id,
+                    frameBorder: 0,
+                    style: style
+                });
+        /**/
+        
         var node = chrome.node = context.document.createElement("iframe");
         
         node.setAttribute("id", options.id);
@@ -2690,7 +2742,7 @@ var createChrome = function(options)
         node.style.bottom = noFixedPosition ? "-1px" : "0";
         node.style.height = options.height + "px";
         
-         // avoid flickering during chrome rendering
+        // avoid flickering during chrome rendering
         if (isFirefox)
             node.style.display = "none";
         
@@ -2743,11 +2795,6 @@ var createChrome = function(options)
             chrome.window = win.window;
             chrome.document = win.document;
             
-            /*
-            if (isChromeFrame)
-                ChromeMini.create(chrome);
-            /**/
-            
             if (onLoad)
                 onLoad(chrome);
         }
@@ -2794,7 +2841,7 @@ var onChromeLoad = function onChromeLoad(chrome)
         {
             FBTrace.sysout("onPopupChromeLoad", "-------------------------");
             
-            var frame = Firebug.chromeMap.frame;
+            var frame = chromeMap.frame;
             
             if (frame)
             {
@@ -2857,7 +2904,7 @@ var Chrome = function Chrome(chrome)
     append(this, chrome); // inherit chrome window properties
     append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
     
-    Firebug.chromeMap[type] = this;
+    chromeMap[type] = this;
     Firebug.chrome = this;
     
     this.create();
@@ -3102,7 +3149,7 @@ var ChromeBase = extend(ChromeBase, {
     detach: function()
     {
         //alert('detach');
-        if(!Firebug.chromeMap.popup)
+        if(!chromeMap.popup)
         {     
             createChrome({type: "popup", onLoad: onChromeLoad});
         }
@@ -4124,10 +4171,8 @@ FBL.onError = function(msg, href, lineNo)
 // ************************************************************************************************
 // Register console namespace
 
-var alternateNS = "FB";
-var consoleNS = "console";
-var namespace = isFirefox ? alternateNS : consoleNS;
-Application.browser[namespace] = ConsoleAPI;        
+if (!isFirefox)
+    Application.browser.window.console = ConsoleAPI;        
 
 
 // ************************************************************************************************
@@ -5555,7 +5600,7 @@ Firebug.CommandLine.prototype =
     evaluate: function(expr)
     {
         // TODO: need to register the API in console.firebug.commandLineAPI
-        var api = "FBL.Firebug.CommandLine.API"
+        var api = "Firebug.CommandLine.API"
             
         //Firebug.context = Firebug.chrome;
         //api = null;
@@ -6386,3 +6431,5 @@ Firebug.registerPanel(TracePanel);
 }});
 
 FBL.initialize();
+
+})();
