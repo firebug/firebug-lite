@@ -299,6 +299,8 @@ this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
 
+this.NS = document.getElementsByTagName("html")[0].getAttribute("xmlns")
+
 // ************************************************************************************************
 // Util
 
@@ -369,6 +371,27 @@ this.createElement = function(tagName, properties)
         if (name != "document")
         {
             element[name] = properties[name];
+        }
+    }
+    
+    return element;
+};
+
+this.createGlobalElement = function(tagName, properties)
+{
+    properties = properties || {};
+    var doc = FBL.Application.browser.document;
+    
+    var element = FBL.isIE ? doc.createElement(tagName) : doc.createElementNS(FBL.NS, tagName);
+    for(var name in properties)
+    {
+        var propname = name;
+        if (FBL.isIE && name == "class") propname = "className";
+        if (FBL.isIE && name == "style") propname = "cssText";
+        
+        if (name != "document")
+        {
+            element.setAttribute[propname] = properties[name];
         }
     }
     

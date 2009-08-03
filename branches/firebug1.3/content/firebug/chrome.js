@@ -94,6 +94,26 @@ var createChrome = function(options)
     if (isChromeFrame)
     {
         // Create the Chrome Frame
+        
+        /*
+        var style = [
+                'border:0;visibility:hidden;z-index:2147483647;position:',
+                noFixedPosition ? "absolute" : "fixed",
+                ';width:100%;left:0;bottom:',
+                noFixedPosition ? "-1px" : "0",
+                ';height:',
+                options.height,
+                'px;'
+            ].join("");
+        
+        var node = chrome.node = createGlobalElement("iframe",
+                {
+                    id: options.id,
+                    frameBorder: 0,
+                    style: style
+                });
+        /**/
+        
         var node = chrome.node = context.document.createElement("iframe");
         
         node.setAttribute("id", options.id);
@@ -107,7 +127,7 @@ var createChrome = function(options)
         node.style.bottom = noFixedPosition ? "-1px" : "0";
         node.style.height = options.height + "px";
         
-         // avoid flickering during chrome rendering
+        // avoid flickering during chrome rendering
         if (isFirefox)
             node.style.display = "none";
         
@@ -159,11 +179,6 @@ var createChrome = function(options)
         {
             chrome.window = win.window;
             chrome.document = win.document;
-            
-            /*
-            if (isChromeFrame)
-                ChromeMini.create(chrome);
-            /**/
             
             if (onLoad)
                 onLoad(chrome);
