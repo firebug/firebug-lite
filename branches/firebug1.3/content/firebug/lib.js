@@ -168,47 +168,57 @@ var findLocation =  function findLocation()
     var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
-    //var head = document.getElementsByTagName("head")[0];
     var path = null;
+    var doc = document;
     
-    //for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
-    for(var i=0, c=document.getElementsByTagName("script"), ci; ci=c[i]; i++)
+    var script = doc.getElementById("FirebugLite");
+    
+    if (script)
     {
-        var file = null;
-        
-        if ( ci.nodeName.toLowerCase() == "script" && 
-             (file = reFirebugFile.exec(ci.src)) )
+        file = reFirebugFile.exec(script.src);
+    }
+    else
+    {
+        for(var i=0, s=doc.getElementsByTagName("script"), si; si=s[i]; i++)
         {
-            var fileName = file[1];
-            var fileOptions = file[2];
-            
-            
-            if (reProtocol.test(ci.src)) {
-                // absolute path
-                path = rePath.exec(ci.src)[1];
-              
-            }
-            else
+            var file = null;
+            if ( si.nodeName.toLowerCase() == "script" && (file = reFirebugFile.exec(si.src)) )
             {
-                // relative path
-                var r = rePath.exec(ci.src);
-                var src = r ? r[1] : ci.src;
-                var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
-                var lastFolder = /^(.*\/)[^\/]+\/$/;
-                path = rePath.exec(location.href)[1];
-                
-                if (rel)
-                {
-                    var j = rel[1].length/3;
-                    var p;
-                    while (j-- > 0)
-                        path = lastFolder.exec(path)[1];
-
-                    path += rel[2];
-                }
+                script = si;
+                break;
             }
+        }
+    }
+
+    if (file)
+    {
+        var fileName = file[1];
+        var fileOptions = file[2];
+        
+        
+        if (reProtocol.test(script.src)) {
+            // absolute path
+            path = rePath.exec(script.src)[1];
+          
+        }
+        else
+        {
+            // relative path
+            var r = rePath.exec(script.src);
+            var src = r ? r[1] : script.src;
+            var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
+            var lastFolder = /^(.*\/)[^\/]+\/$/;
+            path = rePath.exec(location.href)[1];
             
-            break;
+            if (rel)
+            {
+                var j = rel[1].length/3;
+                var p;
+                while (j-- > 0)
+                    path = lastFolder.exec(path)[1];
+
+                path += rel[2];
+            }
         }
     }
     
@@ -244,7 +254,7 @@ var findLocation =  function findLocation()
                 App.isPersistentMode = true;
         }
         
-        var innerOptions = FBL.trim(ci.innerHTML);
+        var innerOptions = FBL.trim(script.innerHTML);
         
         if(innerOptions)
         {
