@@ -1,6 +1,9 @@
 ###################################################################################################
 
 ###################################################################################################
+
+    - bookmarlet fail in getfirebug.com/lite.html
+     
     - put IE6CSS in injected chrome
     
     - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)

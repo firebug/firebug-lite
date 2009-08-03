@@ -14,9 +14,13 @@ d.body.appendChild(e);
 
 (function(F,B,L){
 L=F.createElement('script');
+L.id='FirebugLite';
 L.src=B;
 F.getElementsByTagName('head')[0].appendChild(L);
-})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
+})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js#remote');
+
+javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js#remote');
+javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'http://firebug.local:8740/firebug1.3/build/firebug.full.js#remote');
 
 
 //*************************************************************************************************

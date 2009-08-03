@@ -59,8 +59,12 @@ window.FBDev =
     
     buildSource: function(callback)
     {
+        var useClosure = true;
         var source = [];
         var last = FBDev.modules.length-1;
+        
+        if (useClosure)
+            source.push("(function(){\n\n");
     
         for (var i=0, module; module=FBDev.modules[i]; i++)
         {
@@ -71,7 +75,12 @@ window.FBDev =
                     source.push(r);
                     
                     if (o.i == last)
+                    {
+                        if (useClosure)
+                            source.push("\n})();");
+
                         callback(source.join(""));
+                    }
                     else
                         source.push("\n\n");
                 }
@@ -213,11 +222,6 @@ function findLocation()
         baseURL = path.substr(0, path.length - m[1].length - 1);
         skinURL = baseURL + "skin/xp/";
         fullURL = path + fileName;
-        
-        /*        
-        if (fileOptions == "#app")
-            isApplicationContext = true;
-            /**/
     }
     else
     {

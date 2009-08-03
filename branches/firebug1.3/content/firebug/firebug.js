@@ -19,7 +19,7 @@ var panelTypeMap = {};
 // ************************************************************************************************
 // Firebug
 
-FBL.Firebug =  
+Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
@@ -28,15 +28,9 @@ FBL.Firebug =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
-    chromeMap: {},
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
-    
-    initializeContext: function(chrome)
-    {
-        
-    },
     
     initialize: function()
     {
@@ -46,7 +40,7 @@ FBL.Firebug =
         Firebug.context = Firebug.browser;
         
         // Document must be cached before chrome initialization
-        Firebug.cacheDocument();
+        cacheDocument();
         
         FirebugChrome.initialize();
         
@@ -80,20 +74,21 @@ FBL.Firebug =
         if (FBTrace.DBG_INITIALIZE)
             for (var i = 0; i < arguments.length; ++i)
                 FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
-    },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Other methods
-    
-    cacheDocument: function()
+    }
+};
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Other methods
+
+var cacheDocument = function cacheDocument()
+{
+    var els = Firebug.browser.document.getElementsByTagName("*");
+    for (var i=0, l=els.length, el; i<l; i++)
     {
-        var els = Firebug.browser.document.getElementsByTagName("*");
-        for (var i=0, l=els.length, el; i<l; i++)
-        {
-            el = els[i];
-            el[cacheID] = i;
-            documentCache[i] = el;
-        }
+        el = els[i];
+        el[cacheID] = i;
+        documentCache[i] = el;
     }
 };
 

@@ -105,7 +105,7 @@ Firebug.CommandLine.prototype =
     evaluate: function(expr)
     {
         // TODO: need to register the API in console.firebug.commandLineAPI
-        var api = "FBL.Firebug.CommandLine.API"
+        var api = "Firebug.CommandLine.API"
             
         //Firebug.context = Firebug.chrome;
         //api = null;

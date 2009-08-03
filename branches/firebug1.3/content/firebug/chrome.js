@@ -1,6 +1,8 @@
 FBL.ns(function() { with (FBL) {
 
-    
+
+FBL.chromeMap = {};
+
 FBL.FirebugChrome = 
 {
     commandLineVisible: true,
@@ -26,7 +28,7 @@ FBL.FirebugChrome =
             Application.openAtStartup = true;
 
         var chrome = Firebug.chrome = new Chrome(Application.chrome);
-        Firebug.chromeMap[chrome.type] = chrome;
+        chromeMap[chrome.type] = chrome;
         
         addGlobalEvent("keydown", onPressF12);
         
@@ -39,8 +41,8 @@ var reattach = function()
 {
     FBTrace.sysout("reattach", "-------------------------");
     
-    var frame = Firebug.chromeMap.frame;
-    var popup = Firebug.chromeMap.popup;
+    var frame = chromeMap.frame;
+    var popup = chromeMap.popup;
     
     // last UI state
     FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
@@ -56,7 +58,7 @@ var reattach = function()
     }
     
     Firebug.chrome = frame;
-    Firebug.chromeMap.popup = null;
+    chromeMap.popup = null;
     
     if(FirebugChrome.selectedElement)
         Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
@@ -226,7 +228,7 @@ var onChromeLoad = function onChromeLoad(chrome)
         {
             FBTrace.sysout("onPopupChromeLoad", "-------------------------");
             
-            var frame = Firebug.chromeMap.frame;
+            var frame = chromeMap.frame;
             
             if (frame)
             {
@@ -289,7 +291,7 @@ var Chrome = function Chrome(chrome)
     append(this, chrome); // inherit chrome window properties
     append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
     
-    Firebug.chromeMap[type] = this;
+    chromeMap[type] = this;
     Firebug.chrome = this;
     
     this.create();
@@ -534,7 +536,7 @@ var ChromeBase = extend(ChromeBase, {
     detach: function()
     {
         //alert('detach');
-        if(!Firebug.chromeMap.popup)
+        if(!chromeMap.popup)
         {     
             createChrome({type: "popup", onLoad: onChromeLoad});
         }

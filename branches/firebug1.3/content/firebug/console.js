@@ -392,10 +392,8 @@ FBL.onError = function(msg, href, lineNo)
 // ************************************************************************************************
 // Register console namespace
 
-var alternateNS = "FB";
-var consoleNS = "console";
-var namespace = isFirefox ? alternateNS : consoleNS;
-Application.browser[namespace] = ConsoleAPI;        
+if (!isFirefox)
+    Application.browser.window.console = ConsoleAPI;        
 
 
 // ************************************************************************************************
