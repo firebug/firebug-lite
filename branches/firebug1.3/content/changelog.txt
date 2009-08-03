@@ -23,7 +23,8 @@ Core Changes
 -------------------------------------------------------------------------------
 User Interface Changes
 -------------------------------------------------------------------------------
-    - skin
+    - Created "xp" and "classic" skins. The old skin was based in a Firefox 
+      non-default theme.     
     
     - HTML and CSS revised to render properly in different browsers, running
       on different compatibility modes (quirks mode, standards mode).
@@ -40,7 +41,7 @@ Chrome Changes
     
     - resize chrome performance (buffered frame-skip technique) 
     
-    - mini-chrome
+    - mini-chrome implemented
 
 
 
