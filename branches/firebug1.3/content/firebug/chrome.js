@@ -996,7 +996,7 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
         var frameElement = win.frameElement;
         if (frameElement)
         {
-            var framePos = Firebug.Inspector.getElementPosition(frameElement).top;
+            var framePos = Firebug.browser.getElementPosition(frameElement).top;
             clientY += framePos;
             
             if (frameElement.style.position != "fixed")

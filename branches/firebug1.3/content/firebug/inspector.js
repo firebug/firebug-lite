@@ -235,8 +235,7 @@ var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 var inspectStyle = resetStyle + "z-index: 2147483500;";
 var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; background:url(http://pedrosimonetti.googlepages.com/pixel_transparent.gif);";
 
-if (Application.isTraceMode)
-    inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
+//if (Application.isTraceMode) inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
 
 var inspectModelStyle = inspectStyle + "opacity:0.8; _filter:alpha(opacity=80);";
 var inspectMarginStyle = inspectStyle + "background: #EDFF64; height:100%; width:100%;";
