@@ -1068,7 +1068,7 @@ Application.browser.window.Firebug = FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
-    revision: "$Revision: 3846 $",
+    revision: "$Revision: 3847 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -2770,6 +2770,24 @@ var createChrome = function(options)
             "popup", 
             options
           );
+        
+        if (node)
+        {
+            try
+            {
+                node.focus();
+            }
+            catch(E)
+            {
+                alert("Firebug Error: Firebug popup was blocked.");
+                return;
+            }
+        }
+        else
+        {
+            alert("Firebug Error: Firebug popup was blocked.");
+            return;
+        }
     }
     
     if (isBookmarletMode)

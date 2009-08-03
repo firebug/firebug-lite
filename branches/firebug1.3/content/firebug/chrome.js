@@ -157,6 +157,24 @@ var createChrome = function(options)
             "popup", 
             options
           );
+        
+        if (node)
+        {
+            try
+            {
+                node.focus();
+            }
+            catch(E)
+            {
+                alert("Firebug Error: Firebug popup was blocked.");
+                return;
+            }
+        }
+        else
+        {
+            alert("Firebug Error: Firebug popup was blocked.");
+            return;
+        }
     }
     
     if (isBookmarletMode)
