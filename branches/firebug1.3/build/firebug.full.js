@@ -28,12 +28,15 @@ this.initialize = function()
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize application
+    var isChromeContext = typeof window.FirebugApplication == "object";
+    
+    if (!isChromeContext)
+    {
+        findLocation();
+    }
     
     FBTrace = FBL.FBTrace;
     if (FBL.Application.isTraceMode) FBTrace.initialize();
-    
-    var isChromeContext = FBL.Application.isPersistentMode && 
-            typeof window.FirebugApplication == "object"; 
     
     if (isChromeContext) // persistent application
     {
@@ -110,8 +113,6 @@ var onDocumentLoad = function onDocumentLoad()
     // main document loaded
     else
     {
-        findLocation();
-        
         FBL.FirebugChrome.create();
     }    
 };
@@ -122,11 +123,11 @@ var onDocumentLoad = function onDocumentLoad()
 this.Application = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Application preferences
-    openAtStartup: true,
+    openAtStartup: false,
     
-    isBookmarletMode: true,
+    isBookmarletMode: false,
     isPersistentMode: false,
-    isTraceMode: true,
+    isTraceMode: false,
     skin: "xp",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
@@ -215,19 +216,42 @@ var findLocation =  function findLocation()
     
     if (path && m)
     {
-        var loc = FBL.Application.location; 
+        var App = FBL.Application;
+        var loc = App.location; 
         loc.source = path;
         loc.base = path.substr(0, path.length - m[1].length - 1);
-        loc.skin = loc.base + "skin/" + FBL.Application.skin + "/firebug.html";
+        loc.skin = loc.base + "skin/" + App.skin + "/firebug.html";
         loc.app = path + fileName;
         
         if (fileName == "firebug.dev.js")
-            FBL.Application.isDevelopmentMode = true;
-
+            App.isDevelopmentMode = true;
+        
         if (fileOptions)
         {
+            if (fileOptions.indexOf("open") != -1)
+                App.openAtStartup = true;
+            
+            if (fileOptions.indexOf("remote") != -1)
+            {
+                App.isBookmarletMode = true;
+                App.openAtStartup = true;
+            }
+            
+            if (fileOptions.indexOf("trace") != -1)
+                App.isTraceMode = true;
+            
+            if (fileOptions.indexOf("persist") != -1)
+                App.isPersistentMode = true;
+        }
+        
+        var innerOptions = FBL.trim(ci.innerHTML);
+        
+        if(innerOptions)
+        {
+            var innerOptionsObject = eval(innerOptions);
             // TODO:
-        }        
+        }
+                
     }
     else
     {
@@ -3555,7 +3579,7 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
         var frameElement = win.frameElement;
         if (frameElement)
         {
-            var framePos = Firebug.Inspector.getElementPosition(frameElement).top;
+            var framePos = Firebug.browser.getElementPosition(frameElement).top;
             clientY += framePos;
             
             if (frameElement.style.position != "fixed")
@@ -5328,8 +5352,7 @@ var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 var inspectStyle = resetStyle + "z-index: 2147483500;";
 var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; background:url(http://pedrosimonetti.googlepages.com/pixel_transparent.gif);";
 
-if (Application.isTraceMode)
-    inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
+//if (Application.isTraceMode) inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
 
 var inspectModelStyle = inspectStyle + "opacity:0.8; _filter:alpha(opacity=80);";
 var inspectMarginStyle = inspectStyle + "background: #EDFF64; height:100%; width:100%;";

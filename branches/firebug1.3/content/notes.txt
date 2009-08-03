@@ -21,24 +21,26 @@ Preferences Brainstorm
     ------------------
     chrome
     ------------------
-    - debug         open on startup
-    - hide          minimize to screen corner (hiddenable)
-
-    - popup         type (frame or popup)
+    - debug
+    - popup
     
-    - height
-    - width (popup only)
-    - top (popup only)
-    - left (popup only)
+    - frame
+        - height
+        
+    - popup
+        - height
+        - width (popup only)
+        - top (popup only)
+        - left (popup only)
+
     - skin
     
-    - override console
+    - override
 
     ------------------
     modes
     ------------------
     - trace
-    - local
     - persist
 
 
