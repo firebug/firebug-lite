@@ -6,7 +6,7 @@
 <script type="text/javascript" src="../build/firebug.min.js"></script>
 <script type="text/javascript">
 (function(){
-var console = window.console && window.console.firebug ? FB : window.console;
+var console = Firebug.Console;
 
 console.log("This is a test call to console.log()");
 console.info("This is a test call to console.info()");
@@ -70,15 +70,12 @@ li {
     <div id="build" class="block">
       <h2>Bookmarlets</h2>
       <ul>
-        <li><a href="javascript:FBL.dev.build();">Normal application</a></li>
-        <li><a href="javascript:FBL.dev.compressSkinHTML();">Application with trace enabled</a></li>
+        <li><a href="javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js#remote');">Normal application</a></li>
+        <li><a href="javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js#remote,trace');">Application with trace enabled</a></li>
       </ul>
     </div>
     <div class="note">
-      Use the "build" function to generate the full uncompressed js file,
-      and the "compress" functions to compress the HTML and CSS of the
-      User Interface files, to be used in the <a href="../content/firebug/chrome.injected.js">injected.js</a>
-      file, when in bookmarlet mode. 
+      Copy the bookmarlets above to test the Firebug Lite in remote pages.
     </div>
     <div id="ui" class="block">
       <h2>User interface files</h2>
