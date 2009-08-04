@@ -33,9 +33,11 @@ User Interface Changes
 -------------------------------------------------------------------------------
 Chrome Changes
 -------------------------------------------------------------------------------
-    - better positioning calculation
+    - better positioning calculation, when running on different compatibility 
+      modes (quirks mode, standards mode).
     
-    - better window size, scrollSize and scollPosition calculations
+    - better window size, scrollSize and scollPosition calculations, when 
+      running on different compatibility modes (quirks mode, standards mode).
     
     - element:hover now works also in IE7 & IE8 when in quirks mode.
     
@@ -52,6 +54,7 @@ Core Additions
     
     - DOM methods:
         - createElement()
+        - createGlobalElement()
         
     - Event methods:
         - bind()
@@ -65,7 +68,7 @@ Core Additions
         - addClass()
         - removeClass()
         - hasClass()
-        - toggleClass() 
+        - toggleClass()
 
 
 -------------------------------------------------------------------------------
@@ -75,7 +78,7 @@ Chrome Additions
     - Module Class
     - Panel Class
     - PanelBar Class
-    - Button Class
+    - Button Class (normal and toggle buttons)
     
     - FBTrace Panel
 
