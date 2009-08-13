@@ -15,6 +15,7 @@ var panelTypes = [];
 
 var panelTypeMap = {};
 
+var reps = [];
 
 // ************************************************************************************************
 // Firebug
@@ -28,6 +29,7 @@ Application.browser.window.Firebug = FBL.Firebug =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
+    reps: reps,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
@@ -74,8 +76,168 @@ Application.browser.window.Firebug = FBL.Firebug =
         if (FBTrace.DBG_INITIALIZE)
             for (var i = 0; i < arguments.length; ++i)
                 FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
+    },
+    
+    registerRep: function()
+    {
+        reps.push.apply(reps, arguments);
+    },
+
+    unregisterRep: function()
+    {
+        for (var i = 0; i < arguments.length; ++i)
+            remove(reps, arguments[i]);
+    },
+
+    setDefaultReps: function(funcRep, rep)
+    {
+        defaultRep = rep;
+        defaultFuncRep = funcRep;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Reps
+
+    getRep: function(object)
+    {
+        var type = typeof(object);
+        for (var i = 0; i < reps.length; ++i)
+        {
+            var rep = reps[i];
+            try
+            {
+                if (rep.supportsObject(object, type))
+                {
+                    if (FBTrace.DBG_DOM)
+                        FBTrace.sysout("getRep type: "+type+" object: "+object, rep);
+                    return rep;
+                }
+            }
+            catch (exc)
+            {
+                if (FBTrace.DBG_ERRORS)
+                {
+                    FBTrace.sysout("firebug.getRep FAILS: "+ exc, exc);
+                    FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: "+(typeof(reps[i])), reps[i]);
+                }
+            }
+        }
+
+        return (type == 'function')?defaultFuncRep:defaultRep;
+    },
+
+    getRepObject: function(node)
+    {
+        var target = null;
+        for (var child = node; child; child = child.parentNode)
+        {
+            if (hasClass(child, "repTarget"))
+                target = child;
+
+            if (child.repObject)
+            {
+                if (!target && hasClass(child, "repIgnore"))
+                    break;
+                else
+                    return child.repObject;
+            }
+        }
+    },
+
+    getRepNode: function(node)
+    {
+        for (var child = node; child; child = child.parentNode)
+        {
+            if (child.repObject)
+                return child;
+        }
+    },
+
+    getElementByRepObject: function(element, object)
+    {
+        for (var child = element.firstChild; child; child = child.nextSibling)
+        {
+            if (child.repObject == object)
+                return child;
+        }
     }
+
 };
+
+// ************************************************************************************************
+
+Firebug.Rep = domplate(
+{
+    className: "",
+    inspectable: true,
+
+    supportsObject: function(object, type)
+    {
+        return false;
+    },
+
+    inspectObject: function(object, context)
+    {
+        Firebug.chrome.select(object);
+    },
+
+    browseObject: function(object, context)
+    {
+    },
+
+    persistObject: function(object, context)
+    {
+    },
+
+    getRealObject: function(object, context)
+    {
+        return object;
+    },
+
+    getTitle: function(object)
+    {
+        var label = safeToString(object);
+
+        var re = /\[object (.*?)\]/;
+        var m = re.exec(label);
+        return m ? m[1] : label;
+    },
+
+    getTooltip: function(object)
+    {
+        return null;
+    },
+
+    getContextMenuItems: function(object, target, context)
+    {
+        return [];
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Convenience for domplates
+
+    STR: function(name)
+    {
+        return $STR(name);
+    },
+
+    cropString: function(text)
+    {
+        return cropString(text);
+    },
+
+    toLowerCase: function(text)
+    {
+        return text ? text.toLowerCase() : text;
+    },
+
+    plural: function(n)
+    {
+        return n == 1 ? "" : "s";
+    }
+});
+
+// ************************************************************************************************
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -656,7 +818,7 @@ Firebug.PanelBar =
             
             this.selectedPanel = panel;
             
-            addClass(panel.tabNode, "fbSelectedTab");
+            setClass(panel.tabNode, "fbSelectedTab");
             panel.initialize();
             panel.show();
         }
@@ -776,7 +938,7 @@ Firebug.Button.prototype = extend(Firebug.Controller,
         {
             if (display == "pressed")
             {
-                addClass(this.node, "fbBtnPressed");
+                setClass(this.node, "fbBtnPressed");
             }
             else if (display == "unpressed")
             {
