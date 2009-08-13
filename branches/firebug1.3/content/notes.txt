@@ -2,7 +2,21 @@
 
 ###################################################################################################
 
+Firebug 1.3a2 - Revision: 3847
+
+
+Domplate (crossport to FB) Fixed accidental global variable declaration in the compiled string.
+
+
+    - rename the id "FirebugChrome" to "FirebugFrame" or "FirebugChromeFrame" or "FirebugWindow"
+    
+    - IE6 and problem with CSS. Selected element in HTML Tree.
+    
+    - window.onerror is being turned off when UI is minimized (and should not)
+    
     - bookmarlet fail in getfirebug.com/lite.html
+    
+    - reference to wrong URL in var inspectFrameStyle in Inspector module.
      
     - put IE6CSS in injected chrome
     
