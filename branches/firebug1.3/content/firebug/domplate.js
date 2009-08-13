@@ -913,10 +913,10 @@ var Renderer =
         var html = this.renderHTML(args, outputs, self);
 
         var doc = before.ownerDocument;
-        var table = doc.createElement("table");
-        table.innerHTML = html;
+        var div = doc.createElement("div");
+        div.innerHTML = "<table><tbody>"+html+"</tbody></table>";
 
-        var tbody = table.firstChild;
+        var tbody = div.firstChild.firstChild
         var parent = before.tagName == "TR" ? before.parentNode : before;
         var after = before.tagName == "TR" ? before.nextSibling : null;
 
