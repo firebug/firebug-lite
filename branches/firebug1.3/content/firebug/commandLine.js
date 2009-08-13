@@ -15,7 +15,7 @@ Firebug.CommandLine = function(element)
     if (isOpera)
       fixOperaTabKey(this.element);
     
-    this.onKeyDown = bind(this, this.onKeyDown);
+    this.onKeyDown = bind(this.onKeyDown, this);
     addEvent(this.element, "keydown", this.onKeyDown);
     
     //Application.browser.onerror = this.onError;

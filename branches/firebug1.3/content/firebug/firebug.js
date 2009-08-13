@@ -286,7 +286,7 @@ Firebug.Controller = {
             
             // bind the handler to the proper context
             var handler = arg[2];
-            arg[2] = bind(this, handler);
+            arg[2] = bind(handler, this);
             // save the original handler as an extra-argument, so we can
             // look for it later, when removing a particular controller            
             arg[3] = handler;
