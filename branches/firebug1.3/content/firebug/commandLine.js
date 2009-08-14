@@ -343,9 +343,10 @@ var CommandLineAPI =
         return Firebug.browser.document.getElementById(id)
     },
 
-    $$: function(selector)
+    $$: function(selector, context)
     {
-        return Firebug.Selector(selector, Firebug.browser.document)
+        context = context || Firebug.browser.document;
+        return Firebug.Selector(selector, context)
     },
     
     dir: Firebug.Console.dir,
