@@ -559,33 +559,10 @@ DOMPanel.prototype = extend(Firebug.Panel,
         var target = this.contentNode;
         var template = DirTablePlate;
         
-        var Class = function(){};
-        Class.prototype = {some: function(){}, prop: "val"};
-        
         var panel = {};
         var toggles = {};
-        /*
-        window.myObj = {
-                a:"oi",
-                b:"hi",
-                c: 108,
-                d: function(){},
-                e: function(){},
-                f: {
-                        x:"ko",
-                        f: function(){},
-                        a: 87
-                    },
-                win: window,
-                array: [1,2,3],
-                Alo: "text",
-                //domNode: document.body,
-                MyClass: Class
-        };
-        /**/
         
         template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
-
         
         //Firebug.reps[5].tag.replace({}, target);
     },
