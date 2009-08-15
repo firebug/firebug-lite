@@ -253,6 +253,10 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
         else
             var insecureObject = object;
 
+        // IE function prototype is not listed in (for..in)
+        if (isIE && typeof object == "function")
+            addMember("user", userProps, "prototype", object.prototype, level);            
+            
         for (var name in insecureObject)  // enumeration is safe
         {
             if (ignoreVars[name] == 1)  // javascript.options.strict says ignoreVars is undefined.
@@ -314,7 +318,6 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
         //throw exc;
         //if (FBTrace.DBG_ERRORS && FBTrace.DBG_DOM)
         //    FBTrace.sysout("dom.getMembers FAILS: ", exc);
-        alert(exc.message);
         throw exc;
     }
 
@@ -418,6 +421,10 @@ function hasProperties(ob)
         for (var name in ob)
             return true;
     } catch (exc) {}
+    
+    // IE function prototype is not listed in (for..in)
+    if (typeof ob == "function") return true;
+    
     return false;
 }
 
