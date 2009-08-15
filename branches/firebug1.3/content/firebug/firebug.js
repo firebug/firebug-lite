@@ -101,6 +101,9 @@ Application.browser.window.Firebug = FBL.Firebug =
     getRep: function(object)
     {
         var type = typeof(object);
+        if (isIE && isFunction(object))
+            type = "function";
+        
         for (var i = 0; i < reps.length; ++i)
         {
             var rep = reps[i];
@@ -117,13 +120,13 @@ Application.browser.window.Firebug = FBL.Firebug =
             {
                 if (FBTrace.DBG_ERRORS)
                 {
-                    FBTrace.sysout("firebug.getRep FAILS: "+ exc, exc);
-                    FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: "+(typeof(reps[i])), reps[i]);
+                    FBTrace.sysout("firebug.getRep FAILS: ", exc.message || exc);
+                    FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: Rep="+reps[i].className);
                 }
             }
         }
 
-        return (type == 'function')?defaultFuncRep:defaultRep;
+        return (type == 'function') ? defaultFuncRep : defaultRep;
     },
 
     getRepObject: function(node)

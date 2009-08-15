@@ -1,3 +1,5 @@
+javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.body.appendChild(L);})(document,'http://firebug.local:8740/firebug1.3/build/firebug.full.js#remote');
+
 //*************************************************************************************************
 
 (function(d){

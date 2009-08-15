@@ -370,10 +370,11 @@ this.Arr = domplate(Firebug.Rep,
                 TAG("$item.tag", {object: "$item.object"}),
                 SPAN({"class": "arrayComma", role : "presentation"}, "$item.delim")
             ),
-            FOR("prop", "$object|shortPropIterator",
-                    " $prop.name=",
-                    SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
-            ),
+            // TODO: xxxpedro - confirm this on Firebug
+            //FOR("prop", "$object|shortPropIterator",
+            //        " $prop.name=",
+            //        SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
+            //),
             SPAN({"class": "arrayRightBracket"}, "]")
         ),
 
@@ -443,7 +444,7 @@ this.Arr = domplate(Firebug.Rep,
             //TODO: xxxpedro
             //else if (obj instanceof Ci.nsIDOMHistory) // do this first to avoid security 1000 errors?
             //    return false;
-            else if (isIE && isFinite(obj.length))
+            else if (isIE && typeof obj == "object" && isFinite(obj.length) && obj.nodeType != 8)
                 return true;
             else if (isFinite(obj.length) && typeof obj.splice === 'function')
                 return true;
@@ -541,9 +542,9 @@ this.Element = domplate(Firebug.Rep,
     tag:
         OBJECTLINK(
             "&lt;",
-            SPAN({"class": "nodeTag"}, "$object.localName|toLowerCase"),
+            SPAN({"class": "nodeTag"}, "$object.tagName|toLowerCase"),
             FOR("attr", "$object|attrIterator",
-                "&nbsp;$attr.localName=&quot;", SPAN({"class": "nodeValue"}, "$attr.nodeValue"), "&quot;"
+                "&nbsp;$attr.tagName=&quot;", SPAN({"class": "nodeValue"}, "$attr.nodeValue"), "&quot;"
             ),
             "&gt;"
          ),
@@ -565,7 +566,7 @@ this.Element = domplate(Firebug.Rep,
 
      getSelectorTag: function(elt)
      {
-         return elt.localName.toLowerCase();
+         return elt.tagName.toLowerCase();
      },
 
      getSelectorId: function(elt)
@@ -575,6 +576,8 @@ this.Element = domplate(Firebug.Rep,
 
      getSelectorClass: function(elt)
      {
+         // TODO: xxxpedro
+         return "";
          return elt.getAttribute("class")
              ? ("." + elt.getAttribute("class").split(" ")[0])
              : "";
@@ -582,19 +585,21 @@ this.Element = domplate(Firebug.Rep,
 
      getValue: function(elt)
      {
+         // TODO: xxxpedro
+         return "";
          var value;
          if (elt instanceof HTMLImageElement)
-            value = getFileName(elt.src);
-        else if (elt instanceof HTMLAnchorElement)
-            value = getFileName(elt.href);
-        else if (elt instanceof HTMLInputElement)
-            value = elt.value;
-        else if (elt instanceof HTMLFormElement)
-            value = getFileName(elt.action);
-        else if (elt instanceof HTMLScriptElement)
-            value = getFileName(elt.src);
+             value = getFileName(elt.src);
+         else if (elt instanceof HTMLAnchorElement)
+             value = getFileName(elt.href);
+         else if (elt instanceof HTMLInputElement)
+             value = elt.value;
+         else if (elt instanceof HTMLFormElement)
+             value = getFileName(elt.action);
+         else if (elt instanceof HTMLScriptElement)
+             value = getFileName(elt.src);
 
-        return value ? " " + cropString(value, 20) : "";
+         return value ? " " + cropString(value, 20) : "";
      },
 
      attrIterator: function(elt)
@@ -606,11 +611,11 @@ this.Element = domplate(Firebug.Rep,
              for (var i = 0; i < elt.attributes.length; ++i)
              {
                  var attr = elt.attributes[i];
-                 if (attr.localName.indexOf("firebug-") != -1)
+                 if (attr.tagName && attr.tagName.indexOf("firebug-") != -1)
                     continue;
-                 else if (attr.localName == "id")
+                 else if (attr.tagName == "id")
                      idAttr = attr;
-                else if (attr.localName == "class")
+                else if (attr.tagName == "class")
                     classAttr = attr;
                  else
                      attrs.push(attr);
@@ -618,8 +623,9 @@ this.Element = domplate(Firebug.Rep,
          }
          if (classAttr)
             attrs.splice(0, 0, classAttr);
-        if (idAttr)
-           attrs.splice(0, 0, idAttr);
+         if (idAttr)
+            attrs.splice(0, 0, idAttr);
+         
          return attrs;
      },
 
@@ -631,7 +637,7 @@ this.Element = domplate(Firebug.Rep,
              for (var i = 0; i < elt.attributes.length; ++i)
              {
                  var attr = elt.attributes[i];
-                 if (attr.localName == "id" || attr.localName == "class")
+                 if (attr.tagName == "id" || attr.tagName == "class")
                      attrs.push(attr);
              }
          }
@@ -692,12 +698,13 @@ this.Element = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
-        return object instanceof Element;
+        //return object instanceof Element || object.nodeType == 1 && typeof object.nodeName == "string";
+        return instanceOf(object, "Element");
     },
 
     browseObject: function(elt, context)
     {
-        var tag = elt.localName.toLowerCase();
+        var tag = elt.tagName.toLowerCase();
         if (tag == "script")
             openNewTab(elt.src);
         else if (tag == "link")
@@ -782,9 +789,10 @@ this.Document = domplate(Firebug.Rep,
 
     className: "object",
 
-    supportsObject: function(object)
+    supportsObject: function(object, type)
     {
-        return object instanceof Document || object instanceof XMLDocument;
+        //return object instanceof Document || object instanceof XMLDocument;
+        return type == "object" && instanceOf(object, "Document");
     },
 
     browseObject: function(doc, context)
@@ -904,7 +912,7 @@ this.Window = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
-        return object instanceof Window;
+        return instanceOf(object, "Window");
     },
 
     browseObject: function(win, context)
@@ -1601,26 +1609,26 @@ this.Storage = domplate(Firebug.Rep,
 
 // ************************************************************************************************
 Firebug.registerRep(
-    this.nsIDOMHistory, // make this early to avoid exceptions
+    //this.nsIDOMHistory, // make this early to avoid exceptions
     this.Undefined,
     this.Null,
     this.Number,
     this.String,
     this.Window,
-    this.ApplicationCache, // must come before Arr (array) else exceptions.
-    this.ErrorMessage,
+    //this.ApplicationCache, // must come before Arr (array) else exceptions.
+    //this.ErrorMessage,
     this.Element,
-    this.TextNode,
+    //this.TextNode,
     this.Document,
     this.StyleSheet,
     this.Event,
-    this.SourceLink,
-    this.SourceFile,
-    this.StackTrace,
-    this.StackFrame,
-    this.jsdStackFrame,
-    this.jsdScript,
-    this.NetFile,
+    //this.SourceLink,
+    //this.SourceFile,
+    //this.StackTrace,
+    //this.StackFrame,
+    //this.jsdStackFrame,
+    //this.jsdScript,
+    //this.NetFile,
     this.Property,
     this.Except,
     this.Arr
