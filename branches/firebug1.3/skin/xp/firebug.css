@@ -669,6 +669,7 @@
 .domTable {
     font-size: 11px;
     width: 100%;
+    table-layout: fixed;
 }
 
 .memberLabelCell {
