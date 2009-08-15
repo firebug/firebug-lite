@@ -406,7 +406,6 @@ function arrayInsert(array, index, other)
 }
 
 
-
 // ************************************************************************************************
 // Browser detection
 
@@ -425,6 +424,7 @@ this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
 
 this.NS = document.getElementsByTagName("html")[0].getAttribute("xmlns")
+
 
 // ************************************************************************************************
 // String Util
@@ -543,36 +543,6 @@ this.emptyFn = function(){};
 
 
 // ************************************************************************************************
-// class Names
-/*
-this.hasClass = function(object, name)
-{
-    return (' '+object.className+' ').indexOf(' '+name+' ') != -1;
-};
-
-this.addClass = function(object, name)
-{
-    if ((' '+object.className+' ').indexOf(' '+name+' ') == -1)
-        object.className = object.className ? object.className + ' ' + name : name; 
-};
-
-this.removeClass = function(object, name)
-{
-    object.className = (' ' + object.className + ' ').
-        replace(new RegExp('(\\S*)\\s+'+name+'\\s+(\\S*)', 'g'), '$1 $2').
-        replace(/^\s*|\s*$/g, '');
-};
-
-this.toggleClass = function(object, name)
-{
-    if ((' '+object.className+' ').indexOf(' '+name+' ') >= 0)
-        this.removeClass(object, name)
-    else
-        this.addClass(object, name);
-};
-/**/
-
-// ************************************************************************************************
 // Visibility
 
 this.isVisible = function(elt)
@@ -584,7 +554,7 @@ this.isVisible = function(elt)
         return (!elt.hidden && !elt.collapsed);
     }
     /**/
-    return elt.offsetWidth > 0 || elt.offsetHeight > 0 || elt.localName in invisibleTags
+    return elt.offsetWidth > 0 || elt.offsetHeight > 0 || elt.tagName in invisibleTags
         || elt.namespaceURI == "http://www.w3.org/2000/svg"
         || elt.namespaceURI == "http://www.w3.org/1998/Math/MathML";
 };
@@ -642,7 +612,7 @@ this.getRootWindow = function(win)
 {
     for (; win; win = win.parent)
     {
-        if (!win.parent || win == win.parent || !(win.parent instanceof Window) )
+        if (!win.parent || win == win.parent || !this.instanceOf(win.parent, "Window"))
             return win;
     }
     return null;
@@ -874,11 +844,6 @@ this.isControlShift = function(event)
 this.isShift = function(event)
 {
     return event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
-};
-
-this.bind = function(object, fn)
-{
-    return function(){return fn.apply(object, arguments);};
 };
 
 this.addEvent = function(object, name, handler)
@@ -1145,7 +1110,7 @@ this.isSystemPage = function(win)
         ERROR("tabWatcher.isSystemPage document not ready:"+ exc);
         return false;
     }
-}
+};
 
 this.getURIHost = function(uri)
 {
@@ -1160,7 +1125,7 @@ this.getURIHost = function(uri)
     {
         return "";
     }
-}
+};
 
 this.isLocalURL = function(url)
 {
@@ -1255,7 +1220,7 @@ this.absoluteURLWithDots = function(url, baseURL)
         var parts = tail.split("/");
         return head + parts.slice(0, parts.length-1).join("/") + "/" + url;
     }
-}
+};
 
 this.normalizeURL = function(url)  // this gets called a lot, any performance improvement welcome
 {
@@ -1475,16 +1440,188 @@ this.fixOperaTabKey = function(el)
     el.onkeydown = onOperaTabKeyDown;
 };
 
-// ************************************************************************************************
-// 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-this.isInstanceOfWindow = function(object)
+this.Property = function(object, name)
 {
-    if ("window" in object && "document" in object && "setTimeout" in object)
-        return true;
-    
-    return false;
+    this.object = object;
+    this.name = name;
+
+    this.getObject = function()
+    {
+        return object[name];
+    };
 };
+
+this.ErrorCopy = function(message)
+{
+    this.message = message;
+};
+
+function EventCopy(event)
+{
+    // Because event objects are destroyed arbitrarily by Gecko, we must make a copy of them to
+    // represent them long term in the inspector.
+    for (var name in event)
+    {
+        try {
+            this[name] = event[name];
+        } catch (exc) { }
+    }
+}
+
+this.EventCopy = EventCopy;
+
+
+// ************************************************************************************************
+// Type Checking
+
+var toString = Object.prototype.toString;
+var reFunction = /^\s*function(\s+[\w_$][\w\d_$]*)?\s*\(/; 
+
+this.isArray = function(object) {
+    return toString.call(object) === '[object Array]'; 
+};
+
+this.isArrayLike = function(object) {
+    // TODO:
+    //return instanceOf(object, "Array");
+};
+
+this.isFunction = function(object) {
+    return toString.call(object) === "[object Function]" || 
+            this.isIE && typeof object != "string" && reFunction.test(""+object);
+};
+    
+
+// ************************************************************************************************
+// Instance Checking
+
+this.instanceOf = function(object, className)
+{
+    if (!object || typeof object != "object")
+        return false;
+    
+    var cache = instanceCheckMap[className];
+    if (!cache)
+        return false;
+
+    for(var n in cache)
+    {
+        var obj = cache[n];
+        var type = typeof obj;
+        obj = type == "object" ? obj : [obj];
+        
+        for(var name in obj)
+        {
+            var value = obj[name];
+            
+            if( n == "property" && !(value in object) ||
+                n == "method" && !this.isFunction(object[value]) ||
+                n == "value" && (""+object[name]).toLowerCase() != ""+value )
+                    return false;
+        }
+    }
+    
+    return true;
+};
+
+var instanceCheckMap = 
+{
+    // DuckTypeCheck:
+    // {
+    //     property: ["window", "document"],
+    //     method: "setTimeout",
+    //     value: {nodeType: 1}
+    // },
+    
+    Window:
+    {
+        property: ["window", "document"],
+        method: "setTimeout"
+    },
+    
+    Document:
+    {
+        property: ["body", "cookie"],
+        method: "getElementById"
+    },
+    
+    Node:
+    {
+        property: "ownerDocument",
+        method: "appendChild"
+    },
+    
+    Element:
+    {
+        property: "tagName",
+        value: {nodeType: 1}
+    },
+    
+    Location:
+    {
+        property: ["hostname", "protocol"],
+        method: "assign"
+    },
+    
+    HTMLImageElement:
+    {
+        property: "useMap",
+        value:
+        {
+            nodeType: 1,
+            tagName: "img"
+        }
+    },
+    
+    HTMLAnchorElement:
+    {
+        property: "hreflang",
+        value:
+        {
+            nodeType: 1,
+            tagName: "a"
+        }
+    },
+    
+    HTMLInputElement:
+    {
+        property: "form",
+        value:
+        {
+            nodeType: 1,
+            tagName: "input"
+        }
+    },
+    
+    HTMLButtonElement:
+    {
+        // ?        
+    },
+    
+    HTMLFormElement:
+    {
+        method: "submit",
+        value:
+        {
+            nodeType: 1,
+            tagName: "form"
+        }
+    },
+    
+    HTMLBodyElement:
+    {
+        
+    },
+    
+    HTMLHtmlElement:
+    {
+        
+    }
+    
+};
+
 
 // ************************************************************************************************
 // DOM Constants
@@ -1507,7 +1644,7 @@ this.getDOMMembers = function(object)
     
     try
     {
-        if (this.isInstanceOfWindow(object))
+        if (this.instanceOf(object, "Window"))
             { return domMemberCache.Window; }
         else if (object instanceof Document || object instanceof XMLDocument)
             { return domMemberCache.Document; }
@@ -3382,28 +3519,28 @@ this.Ajax =
     
     
     /**
-     * Realiza uma requisi√ß√£o ajax.
+     * Realiza uma requisiÁ„o ajax.
      * 
      * @name request
      * @param {Object}   options               Request options
      * @param {String}   options.url           URL to be requested
      * @param {String}   options.type          Request type ("get" ou "post"). Default is "get".
-     * @param {Boolean}  options.async         Indica se a requisi√ß√£o √© ass√≠ncrona. O padr√£o √© "true".   
-     * @param {String}   options.dataType      Dado requisitado ("text", "html", "xml" ou "json"). O padr√£o √© "text".
-     * @param {String}   options.contentType   ContentType a ser usado. O padr√£o √© "application/x-www-form-urlencoded".  
-     * @param {Function} options.onLoading     Fun√ß√£o a ser executada antes da requisi√ß√£o ser enviada.
-     * @param {Function} options.onLoaded      Fun√ß√£o a ser executada logo que a requisi√ß√£o for enviada.
-     * @param {Function} options.onInteractive Fun√ß√£o a ser executada durante o recebimento da requisi√ß√£o.
-     * @param {Function} options.onComplete    Fun√ß√£o a ser executada ao completar a requisi√ß√£o.
-     * @param {Function} options.onUpdate      Fun√ß√£o a ser executada ap√≥s completar a requisi√ß√£o.
-     * @param {Function} options.onSuccess     Fun√ß√£o a ser executada ao completar a requisi√ß√£o com sucesso.
-     * @param {Function} options.onError       Fun√ß√£o a ser executada ao completar a requisi√ß√£o com erro.
+     * @param {Boolean}  options.async         Indica se a requisiÁ„o È assÌncrona. O padr„o È "true".   
+     * @param {String}   options.dataType      Dado requisitado ("text", "html", "xml" ou "json"). O padr„o È "text".
+     * @param {String}   options.contentType   ContentType a ser usado. O padr„o È "application/x-www-form-urlencoded".  
+     * @param {Function} options.onLoading     FunÁ„o a ser executada antes da requisiÁ„o ser enviada.
+     * @param {Function} options.onLoaded      FunÁ„o a ser executada logo que a requisiÁ„o for enviada.
+     * @param {Function} options.onInteractive FunÁ„o a ser executada durante o recebimento da requisiÁ„o.
+     * @param {Function} options.onComplete    FunÁ„o a ser executada ao completar a requisiÁ„o.
+     * @param {Function} options.onUpdate      FunÁ„o a ser executada apÛs completar a requisiÁ„o.
+     * @param {Function} options.onSuccess     FunÁ„o a ser executada ao completar a requisiÁ„o com sucesso.
+     * @param {Function} options.onError       FunÁ„o a ser executada ao completar a requisiÁ„o com erro.
      */      
     request: function(options)
     {
         var o = options || {};
     
-        // Configura as op√ß√µes que n√£o foram definidas para o seu valor padr√£o
+        // Configura as opÁıes que n„o foram definidas para o seu valor padr„o
         o.type = o.type && o.type.toLowerCase() || "get";
         o.async = o.async || true;
         o.dataType = o.dataType || "text"; 
@@ -3451,7 +3588,7 @@ this.Ajax =
     
         //setRequestHeaders();
     
-        // Registra o objeto para que o servidor saiba que √© uma requisi√ß√£o AJAX
+        // Registra o objeto para que o servidor saiba que È uma requisiÁ„o AJAX
         t.setRequestHeader("X-Requested-With", "XMLHttpRequest");
     
         // Caso tenha sido informado algum dado
@@ -3459,18 +3596,18 @@ this.Ajax =
           t.setRequestHeader("Content-Type", r.contentType);
     
         /** @ignore */
-        // Tratamento de evento de mudan√ßa de estado
+        // Tratamento de evento de mudanÁa de estado
         t.onreadystatechange = function()
         { 
             FBL.Ajax.onStateChange(r); 
         }; 
     
-        // Envia a requisi√ß√£o
+        // Envia a requisiÁ„o
         t.send(data);
     },
   
     /**
-     * Fun√ß√£o de tratamento da mudan√ßa de estado da requisi√ß√£o ajax.
+     * FunÁ„o de tratamento da mudanÁa de estado da requisiÁ„o ajax.
      */     
     onStateChange: function(options)
     {
@@ -3511,7 +3648,7 @@ this.Ajax =
     },
   
     /**
-     * Retorna o atual estado da requisi√ß√£o ajax.
+     * Retorna o atual estado da requisiÁ„o ajax.
      */     
     getState: function()
     {
@@ -3777,7 +3914,7 @@ Application.browser.window.Firebug = FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
-    revision: "$Revision: 3847 $",
+    revision: "$Revision: 3953 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -3854,6 +3991,9 @@ Application.browser.window.Firebug = FBL.Firebug =
     getRep: function(object)
     {
         var type = typeof(object);
+        if (isIE && isFunction(object))
+            type = "function";
+        
         for (var i = 0; i < reps.length; ++i)
         {
             var rep = reps[i];
@@ -3870,13 +4010,13 @@ Application.browser.window.Firebug = FBL.Firebug =
             {
                 if (FBTrace.DBG_ERRORS)
                 {
-                    FBTrace.sysout("firebug.getRep FAILS: "+ exc, exc);
-                    FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: "+(typeof(reps[i])), reps[i]);
+                    FBTrace.sysout("firebug.getRep FAILS: ", exc.message || exc);
+                    FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: Rep="+reps[i].className);
                 }
             }
         }
 
-        return (type == 'function')?defaultFuncRep:defaultRep;
+        return (type == 'function') ? defaultFuncRep : defaultRep;
     },
 
     getRepObject: function(node)
@@ -4039,7 +4179,7 @@ Firebug.Controller = {
             
             // bind the handler to the proper context
             var handler = arg[2];
-            arg[2] = bind(this, handler);
+            arg[2] = bind(handler, this);
             // save the original handler as an extra-argument, so we can
             // look for it later, when removing a particular controller            
             arg[3] = handler;
@@ -5739,47 +5879,6 @@ var Renderer =
         this.tag.renderMarkup.apply(self ? self : this.tag.subject, markupArgs);
         return code.join("");
     },
-    /*
-    insertRows: function(args, before, self)
-    {
-        this.tag.compile();
-
-        var outputs = [];
-        var html = this.renderHTML(args, outputs, self);
-
-        var doc = before.ownerDocument;
-        var table = doc.createElement("table");
-        table.innerHTML = html;
-
-        var tbody = table.firstChild;
-        var parent = before.tagName == "TR" ? before.parentNode : before;
-        var after = before.tagName == "TR" ? before.nextSibling : null;
-
-        var firstRow = tbody.firstChild, lastRow;
-        while (tbody.firstChild)
-        {
-            lastRow = tbody.firstChild;
-            if (after)
-                parent.insertBefore(lastRow, after);
-            else
-                parent.appendChild(lastRow);
-        }
-
-        var offset = 0;
-        if (before.tagName == "TR")
-        {
-            var node = firstRow.parentNode.firstChild;
-            for (; node && node != firstRow; node = node.nextSibling)
-                ++offset;
-        }
-
-        var domArgs = [firstRow, this.tag.context, offset];
-        domArgs.push.apply(domArgs, this.tag.domArgs);
-        domArgs.push.apply(domArgs, outputs);
-
-        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
-        return [firstRow, lastRow];
-    },/**/
 
     insertRows: function(args, before, self)
     {
@@ -5791,13 +5890,7 @@ var Renderer =
         var doc = before.ownerDocument;
         var div = doc.createElement("div");
         div.innerHTML = "<table><tbody>"+html+"</tbody></table>";
-        
-        //debugger;
-        
-        //var table = doc.createElement("table");
-        //table.innerHTML = html;
-        //var tbody = table.firstChild;
-        
+
         var tbody = div.firstChild.firstChild
         var parent = before.tagName == "TR" ? before.parentNode : before;
         var after = before.tagName == "TR" ? before.nextSibling : null;
@@ -5827,7 +5920,7 @@ var Renderer =
         this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
         return [firstRow, lastRow];
     },
-    
+
     insertAfter: function(args, before, self)
     {
         this.tag.compile();
@@ -6560,10 +6653,10 @@ this.Arr = domplate(Firebug.Rep,
                 TAG("$item.tag", {object: "$item.object"}),
                 SPAN({"class": "arrayComma", role : "presentation"}, "$item.delim")
             ),
-            FOR("prop", "$object|shortPropIterator",
-                    " $prop.name=",
-                    SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
-            ),
+            //FOR("prop", "$object|shortPropIterator",
+            //        " $prop.name=",
+            //        SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
+            //),
             SPAN({"class": "arrayRightBracket"}, "]")
         ),
 
@@ -6633,7 +6726,7 @@ this.Arr = domplate(Firebug.Rep,
             //TODO: xxxpedro
             //else if (obj instanceof Ci.nsIDOMHistory) // do this first to avoid security 1000 errors?
             //    return false;
-            else if (isIE && isFinite(obj.length))
+            else if (isIE && typeof obj == "object" && isFinite(obj.length) && obj.nodeType != 8)
                 return true;
             else if (isFinite(obj.length) && typeof obj.splice === 'function')
                 return true;
@@ -6731,9 +6824,9 @@ this.Element = domplate(Firebug.Rep,
     tag:
         OBJECTLINK(
             "&lt;",
-            SPAN({"class": "nodeTag"}, "$object.localName|toLowerCase"),
+            SPAN({"class": "nodeTag"}, "$object.tagName|toLowerCase"),
             FOR("attr", "$object|attrIterator",
-                "&nbsp;$attr.localName=&quot;", SPAN({"class": "nodeValue"}, "$attr.nodeValue"), "&quot;"
+                "&nbsp;$attr.tagName=&quot;", SPAN({"class": "nodeValue"}, "$attr.nodeValue"), "&quot;"
             ),
             "&gt;"
          ),
@@ -6755,7 +6848,7 @@ this.Element = domplate(Firebug.Rep,
 
      getSelectorTag: function(elt)
      {
-         return elt.localName.toLowerCase();
+         return elt.tagName.toLowerCase();
      },
 
      getSelectorId: function(elt)
@@ -6765,6 +6858,8 @@ this.Element = domplate(Firebug.Rep,
 
      getSelectorClass: function(elt)
      {
+         // TODO: xxxpedro
+         return "";
          return elt.getAttribute("class")
              ? ("." + elt.getAttribute("class").split(" ")[0])
              : "";
@@ -6772,19 +6867,21 @@ this.Element = domplate(Firebug.Rep,
 
      getValue: function(elt)
      {
+         // TODO: xxxpedro
+         return "";
          var value;
          if (elt instanceof HTMLImageElement)
-            value = getFileName(elt.src);
-        else if (elt instanceof HTMLAnchorElement)
-            value = getFileName(elt.href);
-        else if (elt instanceof HTMLInputElement)
-            value = elt.value;
-        else if (elt instanceof HTMLFormElement)
-            value = getFileName(elt.action);
-        else if (elt instanceof HTMLScriptElement)
-            value = getFileName(elt.src);
+             value = getFileName(elt.src);
+         else if (elt instanceof HTMLAnchorElement)
+             value = getFileName(elt.href);
+         else if (elt instanceof HTMLInputElement)
+             value = elt.value;
+         else if (elt instanceof HTMLFormElement)
+             value = getFileName(elt.action);
+         else if (elt instanceof HTMLScriptElement)
+             value = getFileName(elt.src);
 
-        return value ? " " + cropString(value, 20) : "";
+         return value ? " " + cropString(value, 20) : "";
      },
 
      attrIterator: function(elt)
@@ -6796,11 +6893,11 @@ this.Element = domplate(Firebug.Rep,
              for (var i = 0; i < elt.attributes.length; ++i)
              {
                  var attr = elt.attributes[i];
-                 if (attr.localName.indexOf("firebug-") != -1)
+                 if (attr.tagName && attr.tagName.indexOf("firebug-") != -1)
                     continue;
-                 else if (attr.localName == "id")
+                 else if (attr.tagName == "id")
                      idAttr = attr;
-                else if (attr.localName == "class")
+                else if (attr.tagName == "class")
                     classAttr = attr;
                  else
                      attrs.push(attr);
@@ -6808,8 +6905,9 @@ this.Element = domplate(Firebug.Rep,
          }
          if (classAttr)
             attrs.splice(0, 0, classAttr);
-        if (idAttr)
-           attrs.splice(0, 0, idAttr);
+         if (idAttr)
+            attrs.splice(0, 0, idAttr);
+         
          return attrs;
      },
 
@@ -6821,7 +6919,7 @@ this.Element = domplate(Firebug.Rep,
              for (var i = 0; i < elt.attributes.length; ++i)
              {
                  var attr = elt.attributes[i];
-                 if (attr.localName == "id" || attr.localName == "class")
+                 if (attr.tagName == "id" || attr.tagName == "class")
                      attrs.push(attr);
              }
          }
@@ -6882,12 +6980,13 @@ this.Element = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
-        return object instanceof Element;
+        //return object instanceof Element || object.nodeType == 1 && typeof object.nodeName == "string";
+        return instanceOf(object, "Element");
     },
 
     browseObject: function(elt, context)
     {
-        var tag = elt.localName.toLowerCase();
+        var tag = elt.tagName.toLowerCase();
         if (tag == "script")
             openNewTab(elt.src);
         else if (tag == "link")
@@ -6972,9 +7071,10 @@ this.Document = domplate(Firebug.Rep,
 
     className: "object",
 
-    supportsObject: function(object)
+    supportsObject: function(object, type)
     {
-        return object instanceof Document || object instanceof XMLDocument;
+        //return object instanceof Document || object instanceof XMLDocument;
+        return type == "object" && instanceOf(object, "Document");
     },
 
     browseObject: function(doc, context)
@@ -7094,7 +7194,7 @@ this.Window = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
-        return object instanceof Window;
+        return instanceOf(object, "Window");
     },
 
     browseObject: function(win, context)
@@ -7791,26 +7891,26 @@ this.Storage = domplate(Firebug.Rep,
 
 // ************************************************************************************************
 Firebug.registerRep(
-    this.nsIDOMHistory, // make this early to avoid exceptions
+    //this.nsIDOMHistory, // make this early to avoid exceptions
     this.Undefined,
     this.Null,
     this.Number,
     this.String,
     this.Window,
-    this.ApplicationCache, // must come before Arr (array) else exceptions.
-    this.ErrorMessage,
+    //this.ApplicationCache, // must come before Arr (array) else exceptions.
+    //this.ErrorMessage,
     this.Element,
-    this.TextNode,
+    //this.TextNode,
     this.Document,
     this.StyleSheet,
     this.Event,
-    this.SourceLink,
-    this.SourceFile,
-    this.StackTrace,
-    this.StackFrame,
-    this.jsdStackFrame,
-    this.jsdScript,
-    this.NetFile,
+    //this.SourceLink,
+    //this.SourceFile,
+    //this.StackTrace,
+    //this.StackFrame,
+    //this.jsdStackFrame,
+    //this.jsdScript,
+    //this.NetFile,
     this.Property,
     this.Except,
     this.Arr
@@ -11179,7 +11279,7 @@ Firebug.CommandLine = function(element)
     if (isOpera)
       fixOperaTabKey(this.element);
     
-    this.onKeyDown = bind(this, this.onKeyDown);
+    this.onKeyDown = bind(this.onKeyDown, this);
     addEvent(this.element, "keydown", this.onKeyDown);
     
     //Application.browser.onerror = this.onError;
@@ -11249,7 +11349,7 @@ Firebug.CommandLine.prototype =
             
             var result = this.evaluate(command);
             // evita que seja repetido o log, caso o comando executado
-            // jÔøΩ seja um log via linha de comando
+            // j? seja um log via linha de comando
             if (result != Console.LOG_COMMAND)
             {
                 var html = [];
@@ -11507,9 +11607,10 @@ var CommandLineAPI =
         return Firebug.browser.document.getElementById(id)
     },
 
-    $$: function(selector)
+    $$: function(selector, context)
     {
-        return Firebug.Selector(selector, Firebug.browser.document)
+        context = context || Firebug.browser.document;
+        return Firebug.Selector(selector, context)
     },
     
     dir: Firebug.Console.dir,
@@ -12597,33 +12698,10 @@ DOMPanel.prototype = extend(Firebug.Panel,
         var target = this.contentNode;
         var template = DirTablePlate;
         
-        var Class = function(){};
-        Class.prototype = {some: function(){}, prop: "val"};
-        
         var panel = {};
         var toggles = {};
-        /*
-        window.myObj = {
-                a:"oi",
-                b:"hi",
-                c: 108,
-                d: function(){},
-                e: function(){},
-                f: {
-                        x:"ko",
-                        f: function(){},
-                        a: 87
-                    },
-                win: window,
-                array: [1,2,3],
-                Alo: "text",
-                //domNode: document.body,
-                MyClass: Class
-        };
-        /**/
         
         template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
-
         
         //Firebug.reps[5].tag.replace({}, target);
     },

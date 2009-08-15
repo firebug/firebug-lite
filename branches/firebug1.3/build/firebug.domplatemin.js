@@ -188,7 +188,7 @@ this.safeToString=function(ob){try{if(ob&&"toString" in ob&&typeof ob.toString==
 }}catch(exc){return"[an object with no toString() function]"
 }};
 this.emptyFn=function(){};
-this.isVisible=function(elt){return elt.offsetWidth>0||elt.offsetHeight>0||elt.localName in invisibleTags||elt.namespaceURI=="http://www.w3.org/2000/svg"||elt.namespaceURI=="http://www.w3.org/1998/Math/MathML"
+this.isVisible=function(elt){return elt.offsetWidth>0||elt.offsetHeight>0||elt.tagName in invisibleTags||elt.namespaceURI=="http://www.w3.org/2000/svg"||elt.namespaceURI=="http://www.w3.org/1998/Math/MathML"
 };
 this.collapse=function(elt,collapsed){elt.setAttribute("collapsed",collapsed?"true":"false")
 };
@@ -211,7 +211,7 @@ if(subWin!=win){this.iterateWindows(subWin,handler)
 }}};
 this.getRootWindow=function(win){for(;
 win;
-win=win.parent){if(!win.parent||win==win.parent||!(win.parent instanceof Window)){return win
+win=win.parent){if(!win.parent||win==win.parent||!this.instanceOf(win.parent,"Window")){return win
 }}return null
 };
 this.hasClass=function(node,name){if(!node||node.nodeType!=1){return false
@@ -300,9 +300,6 @@ this.isControl=function(event){return(event.metaKey||event.ctrlKey)&&!event.shif
 this.isControlShift=function(event){return(event.metaKey||event.ctrlKey)&&event.shiftKey&&!event.altKey
 };
 this.isShift=function(event){return event.shiftKey&&!event.metaKey&&!event.ctrlKey&&!event.altKey
-};
-this.bind=function(object,fn){return function(){return fn.apply(object,arguments)
-}
 };
 this.addEvent=function(object,name,handler){if(document.all){object.attachEvent("on"+name,handler)
 }else{object.addEventListener(name,handler,false)
@@ -529,16 +526,40 @@ function onOperaTabBlur(e){if(this.lastKey==9){this.focus()
 el.onblur=onOperaTabBlur;
 el.onkeydown=onOperaTabKeyDown
 };
-this.isInstanceOfWindow=function(object){if("window" in object&&"document" in object&&"setTimeout" in object){return true
-}return false
+this.Property=function(object,name){this.object=object;
+this.name=name;
+this.getObject=function(){return object[name]
+}
 };
+this.ErrorCopy=function(message){this.message=message
+};
+function EventCopy(event){for(var name in event){try{this[name]=event[name]
+}catch(exc){}}}this.EventCopy=EventCopy;
+var toString=Object.prototype.toString;
+var reFunction=/^\s*function(\s+[\w_$][\w\d_$]*)?\s*\(/;
+this.isArray=function(object){return toString.call(object)==="[object Array]"
+};
+this.isArrayLike=function(object){};
+this.isFunction=function(object){return toString.call(object)==="[object Function]"||this.isIE&&typeof object!="string"&&reFunction.test(""+object)
+};
+this.instanceOf=function(object,className){if(!object||typeof object!="object"){return false
+}var cache=instanceCheckMap[className];
+if(!cache){return false
+}for(var n in cache){var obj=cache[n];
+var type=typeof obj;
+obj=type=="object"?obj:[obj];
+for(var name in obj){var value=obj[name];
+if(n=="property"&&!(value in object)||n=="method"&&!this.isFunction(object[value])||n=="value"&&(""+object[name]).toLowerCase()!=""+value){return false
+}}}return true
+};
+var instanceCheckMap={Window:{property:["window","document"],method:"setTimeout"},Document:{property:["body","cookie"],method:"getElementById"},Node:{property:"ownerDocument",method:"appendChild"},Element:{property:"tagName",value:{nodeType:1}},Location:{property:["hostname","protocol"],method:"assign"},HTMLImageElement:{property:"useMap",value:{nodeType:1,tagName:"img"}},HTMLAnchorElement:{property:"hreflang",value:{nodeType:1,tagName:"a"}},HTMLInputElement:{property:"form",value:{nodeType:1,tagName:"input"}},HTMLButtonElement:{},HTMLFormElement:{method:"submit",value:{nodeType:1,tagName:"form"}},HTMLBodyElement:{},HTMLHtmlElement:{}};
 this.getDOMMembers=function(object){if(!domMemberCache){domMemberCache={};
 for(var name in domMemberMap){var builtins=domMemberMap[name];
 var cache=domMemberCache[name]={};
 for(var i=0;
 i<builtins.length;
 ++i){cache[builtins[i]]=i
-}}}try{if(this.isInstanceOfWindow(object)){return domMemberCache.Window
+}}}try{if(this.instanceOf(object,"Window")){return domMemberCache.Window
 }else{if(object instanceof Document||object instanceof XMLDocument){return domMemberCache.Document
 }else{if(object instanceof Location){return domMemberCache.Location
 }else{if(object instanceof HTMLImageElement){return domMemberCache.HTMLImageElement
@@ -741,7 +762,7 @@ var modules=[];
 var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
-Application.browser.window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0a2",revision:"$Revision: 3847 $",modules:modules,panelTypes:panelTypes,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+Application.browser.window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0a2",revision:"$Revision: 3953 $",modules:modules,panelTypes:panelTypes,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Application.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -764,13 +785,14 @@ i<arguments.length;
 }},setDefaultReps:function(funcRep,rep){defaultRep=rep;
 defaultFuncRep=funcRep
 },getRep:function(object){var type=typeof(object);
-for(var i=0;
+if(isIE&&isFunction(object)){type="function"
+}for(var i=0;
 i<reps.length;
 ++i){var rep=reps[i];
 try{if(rep.supportsObject(object,type)){if(FBTrace.DBG_DOM){FBTrace.sysout("getRep type: "+type+" object: "+object,rep)
 }return rep
-}}catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.sysout("firebug.getRep FAILS: "+exc,exc);
-FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: "+(typeof(reps[i])),reps[i])
+}}catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.sysout("firebug.getRep FAILS: ",exc.message||exc);
+FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: Rep="+reps[i].className)
 }}}return(type=="function")?defaultFuncRep:defaultRep
 },getRepObject:function(node){var target=null;
 for(var child=node;
@@ -813,7 +835,7 @@ this.controllerContext=context||Firebug.chrome
 arg=arguments[i];
 i++){if(typeof arg[0]=="string"){arg[0]=$$(arg[0],this.controllerContext)
 }var handler=arg[2];
-arg[2]=bind(this,handler);
+arg[2]=bind(handler,this);
 arg[3]=handler;
 this.controllers.push(arg);
 addEvent.apply(this,arg)
@@ -1540,7 +1562,7 @@ if(len<50){props.push({name:name,value:title})
 }}}}catch(exc){}return props
 },className:"object",supportsObject:function(object,type){return true
 }});
-this.Arr=domplate(Firebug.Rep,{tag:OBJECTBOX({_repObject:"$object"},SPAN({"class":"arrayLeftBracket",role:"presentation"},"["),FOR("item","$object|arrayIterator",TAG("$item.tag",{object:"$item.object"}),SPAN({"class":"arrayComma",role:"presentation"},"$item.delim")),SPAN({"class":"arrayRightBracket",role:"presentation"},"]")),shortTag:OBJECTBOX({_repObject:"$object"},SPAN({"class":"arrayLeftBracket",role:"presentation"},"["),FOR("item","$object|shortArrayIterator",TAG("$item.tag",{object:"$item.object"}),SPAN({"class":"arrayComma",role:"presentation"},"$item.delim")),FOR("prop","$object|shortPropIterator"," $prop.name=",SPAN({"class":"objectPropValue"},"$prop.value|cropString")),SPAN({"class":"arrayRightBracket"},"]")),arrayIterator:function(array){var items=[];
+this.Arr=domplate(Firebug.Rep,{tag:OBJECTBOX({_repObject:"$object"},SPAN({"class":"arrayLeftBracket",role:"presentation"},"["),FOR("item","$object|arrayIterator",TAG("$item.tag",{object:"$item.object"}),SPAN({"class":"arrayComma",role:"presentation"},"$item.delim")),SPAN({"class":"arrayRightBracket",role:"presentation"},"]")),shortTag:OBJECTBOX({_repObject:"$object"},SPAN({"class":"arrayLeftBracket",role:"presentation"},"["),FOR("item","$object|shortArrayIterator",TAG("$item.tag",{object:"$item.object"}),SPAN({"class":"arrayComma",role:"presentation"},"$item.delim")),SPAN({"class":"arrayRightBracket"},"]")),arrayIterator:function(array){var items=[];
 for(var i=0;
 i<array.length;
 ++i){var value=array[i];
@@ -1566,7 +1588,7 @@ child=child.previousSibling){if(child.repObject){++arrayIndex
 }}return arrayIndex
 },className:"array",supportsObject:function(object){return this.isArray(object)
 },isArray:function(obj){try{if(!obj){return false
-}else{if(isIE&&isFinite(obj.length)){return true
+}else{if(isIE&&typeof obj=="object"&&isFinite(obj.length)&&obj.nodeType!=8){return true
 }else{if(isFinite(obj.length)&&typeof obj.splice==="function"){return true
 }else{if(isFinite(obj.length)&&typeof obj.callee==="function"){return true
 }else{if(obj instanceof HTMLCollection){return true
@@ -1588,11 +1610,13 @@ return true
 }});
 this.Except=domplate(Firebug.Rep,{tag:OBJECTBOX({_repObject:"$object"},"$object.message"),className:"exception",supportsObject:function(object){return object instanceof ErrorCopy
 }});
-this.Element=domplate(Firebug.Rep,{tag:OBJECTLINK("&lt;",SPAN({"class":"nodeTag"},"$object.localName|toLowerCase"),FOR("attr","$object|attrIterator","&nbsp;$attr.localName=&quot;",SPAN({"class":"nodeValue"},"$attr.nodeValue"),"&quot;"),"&gt;"),shortTag:OBJECTLINK(SPAN({"class":"$object|getVisible"},SPAN({"class":"selectorTag"},"$object|getSelectorTag"),SPAN({"class":"selectorId"},"$object|getSelectorId"),SPAN({"class":"selectorClass"},"$object|getSelectorClass"),SPAN({"class":"selectorValue"},"$object|getValue"))),getVisible:function(elt){return isVisible(elt)?"":"selectorHidden"
-},getSelectorTag:function(elt){return elt.localName.toLowerCase()
+this.Element=domplate(Firebug.Rep,{tag:OBJECTLINK("&lt;",SPAN({"class":"nodeTag"},"$object.tagName|toLowerCase"),FOR("attr","$object|attrIterator","&nbsp;$attr.tagName=&quot;",SPAN({"class":"nodeValue"},"$attr.nodeValue"),"&quot;"),"&gt;"),shortTag:OBJECTLINK(SPAN({"class":"$object|getVisible"},SPAN({"class":"selectorTag"},"$object|getSelectorTag"),SPAN({"class":"selectorId"},"$object|getSelectorId"),SPAN({"class":"selectorClass"},"$object|getSelectorClass"),SPAN({"class":"selectorValue"},"$object|getValue"))),getVisible:function(elt){return isVisible(elt)?"":"selectorHidden"
+},getSelectorTag:function(elt){return elt.tagName.toLowerCase()
 },getSelectorId:function(elt){return elt.id?("#"+elt.id):""
-},getSelectorClass:function(elt){return elt.getAttribute("class")?("."+elt.getAttribute("class").split(" ")[0]):""
-},getValue:function(elt){var value;
+},getSelectorClass:function(elt){return"";
+return elt.getAttribute("class")?("."+elt.getAttribute("class").split(" ")[0]):""
+},getValue:function(elt){return"";
+var value;
 if(elt instanceof HTMLImageElement){value=getFileName(elt.src)
 }else{if(elt instanceof HTMLAnchorElement){value=getFileName(elt.href)
 }else{if(elt instanceof HTMLInputElement){value=elt.value
@@ -1604,9 +1628,9 @@ var idAttr,classAttr;
 if(elt.attributes){for(var i=0;
 i<elt.attributes.length;
 ++i){var attr=elt.attributes[i];
-if(attr.localName.indexOf("firebug-")!=-1){continue
-}else{if(attr.localName=="id"){idAttr=attr
-}else{if(attr.localName=="class"){classAttr=attr
+if(attr.tagName&&attr.tagName.indexOf("firebug-")!=-1){continue
+}else{if(attr.tagName=="id"){idAttr=attr
+}else{if(attr.tagName=="class"){classAttr=attr
 }else{attrs.push(attr)
 }}}}}if(classAttr){attrs.splice(0,0,classAttr)
 }if(idAttr){attrs.splice(0,0,idAttr)
@@ -1615,7 +1639,7 @@ if(attr.localName.indexOf("firebug-")!=-1){continue
 if(elt.attributes){for(var i=0;
 i<elt.attributes.length;
 ++i){var attr=elt.attributes[i];
-if(attr.localName=="id"||attr.localName=="class"){attrs.push(attr)
+if(attr.tagName=="id"||attr.tagName=="class"){attrs.push(attr)
 }}}return attrs
 },getHidden:function(elt){return isVisible(elt)?"":"nodeHidden"
 },getXPath:function(elt){return getElementTreeXPath(elt)
@@ -1629,8 +1653,8 @@ copyToClipboard(html)
 copyToClipboard(xpath)
 },persistor:function(context,xpath){var elts=xpath?getElementsByXPath(context.window.document,xpath):null;
 return elts&&elts.length?elts[0]:null
-},className:"element",supportsObject:function(object){return object instanceof Element
-},browseObject:function(elt,context){var tag=elt.localName.toLowerCase();
+},className:"element",supportsObject:function(object){return instanceOf(object,"Element")
+},browseObject:function(elt,context){var tag=elt.tagName.toLowerCase();
 if(tag=="script"){openNewTab(elt.src)
 }else{if(tag=="link"){openNewTab(elt.href)
 }else{if(tag=="a"){openNewTab(elt.href)
@@ -1646,7 +1670,7 @@ return[{label:"CopyHTML",command:bindFixed(this.copyHTML,this,elt)},{label:"Copy
 this.TextNode=domplate(Firebug.Rep,{tag:OBJECTLINK("&lt;",SPAN({"class":"nodeTag"},"TextNode"),"&nbsp;textContent=&quot;",SPAN({"class":"nodeValue"},"$object.textContent|cropString"),"&quot;","&gt;"),className:"textNode",supportsObject:function(object){return object instanceof Text
 }});
 this.Document=domplate(Firebug.Rep,{tag:OBJECTLINK("Document ",SPAN({"class":"objectPropValue"},"$object|getLocation")),getLocation:function(doc){return doc.location?getFileName(doc.location.href):""
-},className:"object",supportsObject:function(object){return object instanceof Document||object instanceof XMLDocument
+},className:"object",supportsObject:function(object,type){return type=="object"&&instanceOf(object,"Document")
 },browseObject:function(doc,context){openNewTab(doc.location.href);
 return true
 },persistObject:function(doc,context){return this.persistor
@@ -1667,7 +1691,7 @@ return true
 }});
 this.Window=domplate(Firebug.Rep,{tag:OBJECTLINK("Window ",SPAN({"class":"objectPropValue"},"$object|getLocation")),getLocation:function(win){try{return(win&&win.location&&!win.closed)?getFileName(win.location.href):""
 }catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.sysout("reps.Window window closed?")
-}}},className:"object",supportsObject:function(object){return object instanceof Window
+}}},className:"object",supportsObject:function(object){return instanceOf(object,"Window")
 },browseObject:function(win,context){openNewTab(win.location.href);
 return true
 },persistObject:function(win,context){return this.persistor
@@ -1818,7 +1842,7 @@ this.Storage=domplate(Firebug.Rep,{tag:OBJECTBOX({onclick:"$show"},OBJECTLINK("$
 },show:function(storage){openNewTab("http://dev.w3.org/html5/webstorage/#storage-0")
 },className:"Storage",supportsObject:function(object,type){return(object instanceof Storage)
 }});
-Firebug.registerRep(this.nsIDOMHistory,this.Undefined,this.Null,this.Number,this.String,this.Window,this.ApplicationCache,this.ErrorMessage,this.Element,this.TextNode,this.Document,this.StyleSheet,this.Event,this.SourceLink,this.SourceFile,this.StackTrace,this.StackFrame,this.jsdStackFrame,this.jsdScript,this.NetFile,this.Property,this.Except,this.Arr);
+Firebug.registerRep(this.Undefined,this.Null,this.Number,this.String,this.Window,this.Element,this.Document,this.StyleSheet,this.Event,this.Property,this.Except,this.Arr);
 Firebug.setDefaultReps(this.Func,this.Obj)
 }});
 FBL.ns(function(){with(FBL){FBL.Context=function(win){this.window=win.window;
@@ -2997,7 +3021,7 @@ offlineFragment.appendChild(boxModel)
 FBL.ns(function(){with(FBL){var Console=Firebug.Console;
 Firebug.CommandLine=function(element){this.element=element;
 if(isOpera){fixOperaTabKey(this.element)
-}this.onKeyDown=bind(this,this.onKeyDown);
+}this.onKeyDown=bind(this.onKeyDown,this);
 addEvent(this.element,"keydown",this.onKeyDown);
 var self=this;
 Application.browser.onerror=function(){self.onError.apply(self,arguments)
@@ -3102,7 +3126,8 @@ if((c==","||c==";"||c==" ")&&!bracketCount){break
 }}else{if(reCloseBracket.test(c)){++bracketCount
 }}}return start+1
 }var CommandLineAPI={$:function(id){return Firebug.browser.document.getElementById(id)
-},$$:function(selector){return Firebug.Selector(selector,Firebug.browser.document)
+},$$:function(selector,context){context=context||Firebug.browser.document;
+return Firebug.Selector(selector,context)
 },dir:Firebug.Console.dir,dirxml:Firebug.Console.dirxml};
 Firebug.CommandLine.API={};
 var initializeCommandLineAPI=function initializeCommandLineAPI(){for(var m in CommandLineAPI){if(!Firebug.browser.window[m]){Firebug.CommandLine.API[m]=CommandLineAPI[m]
@@ -3437,8 +3462,6 @@ function DOMPanel(){}DOMPanel.prototype=extend(Firebug.Panel,{name:"DOM",title:"
 this.panelNode.style.padding="0 1px";
 var target=this.contentNode;
 var template=DirTablePlate;
-var Class=function(){};
-Class.prototype={some:function(){},prop:"val"};
 var panel={};
 var toggles={};
 template.tag.replace({domPanel:panel,toggles:toggles,object:window},target)
