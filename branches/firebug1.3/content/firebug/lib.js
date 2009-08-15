@@ -554,7 +554,7 @@ this.isVisible = function(elt)
         return (!elt.hidden && !elt.collapsed);
     }
     /**/
-    return elt.offsetWidth > 0 || elt.offsetHeight > 0 || elt.localName in invisibleTags
+    return elt.offsetWidth > 0 || elt.offsetHeight > 0 || elt.tagName in invisibleTags
         || elt.namespaceURI == "http://www.w3.org/2000/svg"
         || elt.namespaceURI == "http://www.w3.org/1998/Math/MathML";
 };
@@ -612,7 +612,7 @@ this.getRootWindow = function(win)
 {
     for (; win; win = win.parent)
     {
-        if (!win.parent || win == win.parent || !(win.parent instanceof Window) )
+        if (!win.parent || win == win.parent || !this.instanceOf(win.parent, "Window"))
             return win;
     }
     return null;
@@ -1440,16 +1440,188 @@ this.fixOperaTabKey = function(el)
     el.onkeydown = onOperaTabKeyDown;
 };
 
-// ************************************************************************************************
-// 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-this.isInstanceOfWindow = function(object)
+this.Property = function(object, name)
 {
-    if ("window" in object && "document" in object && "setTimeout" in object)
-        return true;
-    
-    return false;
+    this.object = object;
+    this.name = name;
+
+    this.getObject = function()
+    {
+        return object[name];
+    };
 };
+
+this.ErrorCopy = function(message)
+{
+    this.message = message;
+};
+
+function EventCopy(event)
+{
+    // Because event objects are destroyed arbitrarily by Gecko, we must make a copy of them to
+    // represent them long term in the inspector.
+    for (var name in event)
+    {
+        try {
+            this[name] = event[name];
+        } catch (exc) { }
+    }
+}
+
+this.EventCopy = EventCopy;
+
+
+// ************************************************************************************************
+// Type Checking
+
+var toString = Object.prototype.toString;
+var reFunction = /^\s*function(\s+[\w_$][\w\d_$]*)?\s*\(/; 
+
+this.isArray = function(object) {
+    return toString.call(object) === '[object Array]'; 
+};
+
+this.isArrayLike = function(object) {
+    // TODO:
+    //return instanceOf(object, "Array");
+};
+
+this.isFunction = function(object) {
+    return toString.call(object) === "[object Function]" || 
+            this.isIE && typeof object != "string" && reFunction.test(""+object);
+};
+    
+
+// ************************************************************************************************
+// Instance Checking
+
+this.instanceOf = function(object, className)
+{
+    if (!object || typeof object != "object")
+        return false;
+    
+    var cache = instanceCheckMap[className];
+    if (!cache)
+        return false;
+
+    for(var n in cache)
+    {
+        var obj = cache[n];
+        var type = typeof obj;
+        obj = type == "object" ? obj : [obj];
+        
+        for(var name in obj)
+        {
+            var value = obj[name];
+            
+            if( n == "property" && !(value in object) ||
+                n == "method" && !this.isFunction(object[value]) ||
+                n == "value" && (""+object[name]).toLowerCase() != ""+value )
+                    return false;
+        }
+    }
+    
+    return true;
+};
+
+var instanceCheckMap = 
+{
+    // DuckTypeCheck:
+    // {
+    //     property: ["window", "document"],
+    //     method: "setTimeout",
+    //     value: {nodeType: 1}
+    // },
+    
+    Window:
+    {
+        property: ["window", "document"],
+        method: "setTimeout"
+    },
+    
+    Document:
+    {
+        property: ["body", "cookie"],
+        method: "getElementById"
+    },
+    
+    Node:
+    {
+        property: "ownerDocument",
+        method: "appendChild"
+    },
+    
+    Element:
+    {
+        property: "tagName",
+        value: {nodeType: 1}
+    },
+    
+    Location:
+    {
+        property: ["hostname", "protocol"],
+        method: "assign"
+    },
+    
+    HTMLImageElement:
+    {
+        property: "useMap",
+        value:
+        {
+            nodeType: 1,
+            tagName: "img"
+        }
+    },
+    
+    HTMLAnchorElement:
+    {
+        property: "hreflang",
+        value:
+        {
+            nodeType: 1,
+            tagName: "a"
+        }
+    },
+    
+    HTMLInputElement:
+    {
+        property: "form",
+        value:
+        {
+            nodeType: 1,
+            tagName: "input"
+        }
+    },
+    
+    HTMLButtonElement:
+    {
+        // ?        
+    },
+    
+    HTMLFormElement:
+    {
+        method: "submit",
+        value:
+        {
+            nodeType: 1,
+            tagName: "form"
+        }
+    },
+    
+    HTMLBodyElement:
+    {
+        
+    },
+    
+    HTMLHtmlElement:
+    {
+        
+    }
+    
+};
+
 
 // ************************************************************************************************
 // DOM Constants
@@ -1472,7 +1644,7 @@ this.getDOMMembers = function(object)
     
     try
     {
-        if (this.isInstanceOfWindow(object))
+        if (this.instanceOf(object, "Window"))
             { return domMemberCache.Window; }
         else if (object instanceof Document || object instanceof XMLDocument)
             { return domMemberCache.Document; }
