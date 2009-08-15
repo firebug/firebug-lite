@@ -8647,7 +8647,7 @@ var getChromeTemplate = function()
     var tpl = FirebugChrome.injected; 
     var r = [], i = -1;
     
-    r[++i] = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">';
+    r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
     r[++i] = '<html><head><title>';
     r[++i] = Firebug.version;
     r[++i] = '</title><style>';
