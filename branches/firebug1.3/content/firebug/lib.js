@@ -173,7 +173,7 @@ this.Application.location =
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
+    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.jgz)?)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
