@@ -18,6 +18,80 @@ var OBJECTLINK = this.OBJECTLINK =
         _repObject: "$object"
     });
 
+
+// ************************************************************************************************
+
+Firebug.Rep = domplate(
+{
+    className: "",
+    inspectable: true,
+
+    supportsObject: function(object, type)
+    {
+        return false;
+    },
+
+    inspectObject: function(object, context)
+    {
+        Firebug.chrome.select(object);
+    },
+
+    browseObject: function(object, context)
+    {
+    },
+
+    persistObject: function(object, context)
+    {
+    },
+
+    getRealObject: function(object, context)
+    {
+        return object;
+    },
+
+    getTitle: function(object)
+    {
+        var label = safeToString(object);
+
+        var re = /\[object (.*?)\]/;
+        var m = re.exec(label);
+        return m ? m[1] : label;
+    },
+
+    getTooltip: function(object)
+    {
+        return null;
+    },
+
+    getContextMenuItems: function(object, target, context)
+    {
+        return [];
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Convenience for domplates
+
+    STR: function(name)
+    {
+        return $STR(name);
+    },
+
+    cropString: function(text)
+    {
+        return cropString(text);
+    },
+
+    toLowerCase: function(text)
+    {
+        return text ? text.toLowerCase() : text;
+    },
+
+    plural: function(n)
+    {
+        return n == 1 ? "" : "s";
+    }
+});
+
 // ************************************************************************************************
 
 this.Undefined = domplate(Firebug.Rep,

@@ -13,9 +13,9 @@ window.FBDev =
         "firebug/lib.js",
         "firebug/trace.js",
         "firebug/firebug.js",
-        "firebug/domplate.js", // not used yet
+        //"firebug/domplate.js", // not used yet
         "firebug/reps.js",
-        "firebug/reps2.js",  // experimental
+        //"firebug/reps2.js",  // experimental
         "firebug/context.js",
         "firebug/chrome.js",
         "firebug/chrome.injected2.js",
@@ -30,7 +30,6 @@ window.FBDev =
         "firebug/html.js",
         
         //"firebug/dom.js",
-        "firebug/dom2.js",
         
         "firebug/tracePanel.js",
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
