@@ -789,10 +789,10 @@ this.Document = domplate(Firebug.Rep,
 
     className: "object",
 
-    supportsObject: function(object, type)
+    supportsObject: function(object)
     {
         //return object instanceof Document || object instanceof XMLDocument;
-        return type == "object" && instanceOf(object, "Document");
+        return instanceOf(object, "Document");
     },
 
     browseObject: function(doc, context)
