@@ -441,10 +441,11 @@ Firebug.Panel =
                 this.toolButtonsNode = createElement("span", {
                     id: panelId + "Buttons",
                     className: "fbToolbarButtons"
-                }); 
+                });
+                
+                $("fbToolbarButtons").appendChild(this.toolButtonsNode);
             }
             
-            $("fbToolbarButtons").appendChild(this.toolButtonsNode);
             /**/
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
