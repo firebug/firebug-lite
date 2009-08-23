@@ -12,6 +12,7 @@ var FBL = {};
 // ************************************************************************************************
 // Constants
     
+var reNotWhitespace = /[^\s]/;
 var reSplitFile = /:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
 
 // ************************************************************************************************
@@ -423,7 +424,7 @@ this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
 
-this.NS = document.getElementsByTagName("html")[0].getAttribute("xmlns")
+this.NS = document.getElementsByTagName("html")[0].getAttribute("xmlns");
 
 
 // ************************************************************************************************
@@ -519,6 +520,12 @@ this.cropString = function(text, limit)
     else
         return this.escapeNewLines(text);
 };
+
+this.isWhitespace = function(text)
+{
+    return !reNotWhitespace.exec(text);
+};
+
 
 // ************************************************************************************************
 
@@ -782,7 +789,10 @@ this.createGlobalElement = function(tagName, properties)
     properties = properties || {};
     var doc = FBL.Application.browser.document;
     
-    var element = FBL.isIE ? doc.createElement(tagName) : doc.createElementNS(FBL.NS, tagName);
+    var element = !this.NS || this.isIE ? 
+            doc.createElement(tagName) : 
+            doc.createElementNS(FBL.NS, tagName);
+            
     for(var name in properties)
     {
         var propname = name;
