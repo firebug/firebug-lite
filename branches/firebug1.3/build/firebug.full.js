@@ -239,7 +239,7 @@ var findLocation =  function findLocation()
             App.isDevelopmentMode = true;
         
         if (fileOptions)
-        {
+        {alert(fileOptions);
             if (fileOptions.indexOf("open") != -1)
                 App.openAtStartup = true;
             
