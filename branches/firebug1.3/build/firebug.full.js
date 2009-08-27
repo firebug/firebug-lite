@@ -127,7 +127,7 @@ this.Application = {
     // Application preferences
     openAtStartup: false,
     
-    isBookmarletMode: false,
+    isBookmarletMode: true,
     isPersistentMode: false,
     isTraceMode: false,
     skin: "xp",
