@@ -127,7 +127,7 @@ this.Application = {
     // Application preferences
     openAtStartup: false,
     
-    isBookmarletMode: true,
+    isBookmarletMode: false,
     isPersistentMode: false,
     isTraceMode: false,
     skin: "xp",
@@ -239,7 +239,7 @@ var findLocation =  function findLocation()
             App.isDevelopmentMode = true;
         
         if (fileOptions)
-        {alert(fileOptions);
+        {
             if (fileOptions.indexOf("open") != -1)
                 App.openAtStartup = true;
             
