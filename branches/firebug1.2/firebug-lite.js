@@ -1418,7 +1418,7 @@ var firebug = {
             } 
             var item = element.childNodes[i];
 
-            if (item.nodeType != Node.TEXT_NODE && !item.getAttribute('firebugIgnore')){
+            if (item.nodeType == Node.ELEMENT_NODE && !item.getAttribute('firebugIgnore')){
               var container = new lib.element().attribute.addClass("Block").insert(parent), 
                   link = new lib.element("A").attribute.addClass("Link").insert(container), 
                   spacer = new lib.element("SPAN").attribute.addClass("Spacer").update("&nbsp;").insert(link),
@@ -1426,10 +1426,6 @@ var firebug = {
                   subContainer = new lib.element("DIV").attribute.addClass("SubContainer").insert(container),
                   view;
 
-              if(item.nodeType == Node.COMMENT_NODE) {
-                continue;
-              }
-              
               view = lib.util.Element.getView(item);
               link.event.addListener("click", lib.util.Curry(d.html.openHtmlTree, window, item, subContainer, false));
               link.event.addListener("mouseover", lib.util.Curry(d.html.highlight, window, item, false));
