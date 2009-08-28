@@ -1418,7 +1418,7 @@ var firebug = {
             } 
             var item = element.childNodes[i];
 
-            if (item.nodeType == Node.ELEMENT_NODE && !item.getAttribute('firebugIgnore')){
+            if (item.nodeType == 1 && !item.getAttribute('firebugIgnore')){
               var container = new lib.element().attribute.addClass("Block").insert(parent), 
                   link = new lib.element("A").attribute.addClass("Link").insert(container), 
                   spacer = new lib.element("SPAN").attribute.addClass("Spacer").update("&nbsp;").insert(link),
