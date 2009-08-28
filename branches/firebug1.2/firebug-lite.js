@@ -1831,27 +1831,36 @@ var firebug = {
     },
     mouse:function(_event){
       with(firebug){
-        var target;
-        
-        if(document.elementFromPoint) {
-          target = document.elementFromPoint(_event.clientX, _event.clientY);
-        } else {
-          if(lib.env.ie) {
-            target = _event.srcElement;
+      
+        // TODO: xxxpedro
+        if(d.inspector.enabled){
+          var target;
+          var borderInspector = el.borderInspector.environment.getElement();
+          var display = el.borderInspector.environment.getStyle("display");
+          
+          borderInspector.style.display = "none";
+          if(document.elementFromPoint) {
+            target = document.elementFromPoint(_event.clientX, _event.clientY);
           } else {
-            target = _event.explicitOriginalTarget || _event.target;
+            if(lib.env.ie) {
+              target = _event.srcElement;
+            } else {
+              target = _event.explicitOriginalTarget || _event.target;
+            }
+          }
+          borderInspector.style.display = display;
+          
+          if(target!=document.body&&
+            target!=document.firstChild&&
+            target!=document.childNodes[1]&&
+            target!=borderInspector&&
+            target!=el.main.environment.getElement()&&
+            target.offsetParent!=el.main.environment.getElement() ) {
+              d.inspector.inspect(target);
+              //d.html.inspect(target);
           }
         }
-        
-        if( d.inspector.enabled&&
-          target!=document.body&&
-          target!=document.firstChild&&
-          target!=document.childNodes[1]&&
-          target!=el.borderInspector.environment.getElement()&&
-          target!=el.main.environment.getElement()&&
-          target.offsetParent!=el.main.environment.getElement() ) {
-            d.inspector.inspect(target);
-        }
+      
       }
     },
     runMultiline:function(){

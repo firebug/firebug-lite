@@ -1,4 +1,14 @@
 == Firebug Lite Change Log ==
+2009-08-28 Pedro Simonetti <pedrosimonetti@gmail.com>
+  * firebug-lite.js: Fixed problem with selection of elements in HTML panel. 
+                     It was trying to access getAttribute() function of comment 
+                     nodes, and this was causing an error.
+                     
+                     Fixed problem with the "outline inspector". It was not 
+                     possible to inspect child nodes of the currently inspected 
+                     element, for example, if you are inspecting a UL element, 
+                     you won't be able to select the LI elements inside of it.
+
 2009-05-08 Azer Koculu <azer@kodfabrik.com>
   * deploy: A shell script that copies source files whose names starts
   with "firebug" to getfirebug.com's repo.
