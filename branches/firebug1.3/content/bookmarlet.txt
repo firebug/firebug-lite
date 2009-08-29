@@ -1,3 +1,5 @@
+javascript:var firebug=document.createElement('script');firebug.setAttribute('src','http://fbug.googlecode.com/svn/lite/branches/firebug1.2/firebug-lite-compressed.js');document.body.appendChild(firebug);(function(){if(window.firebug.version){firebug.init();}else{setTimeout(arguments.callee);}})();void(firebug);
+
 javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.body.appendChild(L);})(document,'http://firebug.local:8740/firebug1.3/build/firebug.full.js#remote');
 
 //*************************************************************************************************

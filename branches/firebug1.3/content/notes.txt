@@ -2,10 +2,55 @@
 
 ###################################################################################################
 
+Reps - r1088 - Array
+http://code.google.com/p/fbug/source/browse/branches/firebug1.3/content/firebug/reps.js?spec=svn1222&r=1088
+
+Global:
+http://code.google.com/p/fbug/issues/detail?id=1017&q=DOM&colspec=ID%20Type%20Status%20Owner%20Test%20Summary
+
+Gmail:
+http://code.google.com/p/fbug/issues/detail?id=1977&q=DOM&colspec=ID%20Type%20Status%20Owner%20Test%20Summary
+
+Form freak:
+http://code.google.com/p/fbug/issues/detail?id=534&q=array&colspec=ID%20Type%20Status%20Owner%20Test%20Summary
+
+
+
+
+MSIE Script Debugger Sample
+http://msdn.microsoft.com/en-us/magazine/cc301316.aspx
+
+###################################################################################################
+Inherited Styles
+###################################################################################################
+
+    Some of that functionality is built into DOM Inspector, but you can look at 
+    the parts that Firebug does itself.
+
+    In lib.js there is a list of properties ("inheritedStyleNames") that can 
+    be automatically inherited, so for a given element it looks for such 
+    properties in the rules being applied to each ancestor. 
+    (That list doesn't include the special print or aural properties.)
+
+    The table here (http://www.w3.org/TR/CSS21/propidx.html) shows 
+    which properties are inherited by default.
+
+    "updateCascadeView" in css.js will also be of interest.
+
+    Via http://code.google.com/p/fbug/source/browse/ you can look at the files:
+
+    branches/firebug1.2/content/firebug/css.js
+    branches/firebug1.2/content/firebug/lib.js
+    
+    ----------------------------------------------------------------------------
+
+    Full CSS property table
+    http://www.w3.org/TR/CSS21/propidx.html
+
+
+
+
 Firebug 1.3a2 - Revision: 3847
-
-
-Domplate (crossport to FB) Fixed accidental global variable declaration in the compiled string.
 
 
     - rename the id "FirebugChrome" to "FirebugFrame" or "FirebugChromeFrame" or "FirebugWindow"
@@ -29,6 +74,28 @@ Domplate (crossport to FB) Fixed accidental global variable declaration in the c
 
 1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
       and is getting hidden 
+
+
+
+
+###################################################################################################
+Firebug
+###################################################################################################
+Domplate (crossport to FB) Fixed accidental global variable declaration in the compiled string.
+
+
+
+###################################################################################################
+Domplate/Reps
+###################################################################################################
+
+    IE6:
+        - create special rules to IE6 in a separated file
+
+    Opera:
+        - native function: "prototype" in fn == true && listed in for..in
+        - user function: "prototype" in fn == true && not listed in for..in
+
       
 
 ###################################################################################################
