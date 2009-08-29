@@ -47,7 +47,7 @@ var destroyApplication=function destroyApplication(){setTimeout(function(){FBL=n
 },100)
 };
 this.Application.location={sourceDir:null,baseDir:null,skinDir:null,skin:null,app:null};
-var findLocation=function findLocation(){var reFirebugFile=/(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
+var findLocation=function findLocation(){var reFirebugFile=/(firebug(?:\.\w+)?\.js(?:\.jgz)?)(#.+)?$/;
 var rePath=/^(.*\/)/;
 var reProtocol=/^\w+:\/\//;
 var path=null;
@@ -762,7 +762,7 @@ var modules=[];
 var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
-Application.browser.window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0a2",revision:"$Revision: 3953 $",modules:modules,panelTypes:panelTypes,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+Application.browser.window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0a2",revision:"$Revision: 4001 $",modules:modules,panelTypes:panelTypes,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Application.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -1670,7 +1670,7 @@ return[{label:"CopyHTML",command:bindFixed(this.copyHTML,this,elt)},{label:"Copy
 this.TextNode=domplate(Firebug.Rep,{tag:OBJECTLINK("&lt;",SPAN({"class":"nodeTag"},"TextNode"),"&nbsp;textContent=&quot;",SPAN({"class":"nodeValue"},"$object.textContent|cropString"),"&quot;","&gt;"),className:"textNode",supportsObject:function(object){return object instanceof Text
 }});
 this.Document=domplate(Firebug.Rep,{tag:OBJECTLINK("Document ",SPAN({"class":"objectPropValue"},"$object|getLocation")),getLocation:function(doc){return doc.location?getFileName(doc.location.href):""
-},className:"object",supportsObject:function(object,type){return type=="object"&&instanceOf(object,"Document")
+},className:"object",supportsObject:function(object){return instanceOf(object,"Document")
 },browseObject:function(doc,context){openNewTab(doc.location.href);
 return true
 },persistObject:function(doc,context){return this.persistor
@@ -3367,6 +3367,7 @@ var getMembers=function getMembers(object,level){if(!level){level=0
 try{var domMembers=getDOMMembers(object);
 if(object.wrappedJSObject){var insecureObject=object.wrappedJSObject
 }else{var insecureObject=object
+}if(isIE&&typeof object=="function"){addMember("user",userProps,"prototype",object.prototype,level)
 }for(var name in insecureObject){if(ignoreVars[name]==1){continue
 }var val;
 try{val=insecureObject[name]
@@ -3380,8 +3381,7 @@ if(ordinal||ordinal==0){addMember("ordinal",ordinals,name,val,level)
 if(name in domMembers){addMember("dom",domProps,(prefix+name),val,level,domMembers[name])
 }else{if(name in domConstantMap){addMember("dom",domConstants,(prefix+name),val,level)
 }else{addMember("user",userProps,(prefix+name),val,level)
-}}}}}}catch(exc){alert(exc.message);
-throw exc
+}}}}}}catch(exc){throw exc
 }function sortName(a,b){return a.name>b.name?1:-1
 }function sortOrder(a,b){return a.order>b.order?1:-1
 }var members=[];
@@ -3424,7 +3424,8 @@ i+=newMembers.length+expandMembers(members,toggles[member.name],i+1,level+1)
 }function isClassFunction(fn){try{for(var name in fn.prototype){return true
 }}catch(exc){}return false
 }function hasProperties(ob){try{for(var name in ob){return true
-}}catch(exc){}return false
+}}catch(exc){}if(typeof ob=="function"){return true
+}return false
 }FBL.ErrorCopy=function(message){this.message=message
 };
 function addMember(type,props,name,value,level,order){var rep=Firebug.getRep(value);

@@ -173,7 +173,7 @@ this.Application.location =
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
+    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.jgz)?)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
@@ -3914,7 +3914,7 @@ Application.browser.window.Firebug = FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
-    revision: "$Revision: 3953 $",
+    revision: "$Revision: 4001 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -6653,6 +6653,7 @@ this.Arr = domplate(Firebug.Rep,
                 TAG("$item.tag", {object: "$item.object"}),
                 SPAN({"class": "arrayComma", role : "presentation"}, "$item.delim")
             ),
+            // TODO: xxxpedro - confirm this on Firebug
             //FOR("prop", "$object|shortPropIterator",
             //        " $prop.name=",
             //        SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
@@ -7071,10 +7072,10 @@ this.Document = domplate(Firebug.Rep,
 
     className: "object",
 
-    supportsObject: function(object, type)
+    supportsObject: function(object)
     {
         //return object instanceof Document || object instanceof XMLDocument;
-        return type == "object" && instanceOf(object, "Document");
+        return instanceOf(object, "Document");
     },
 
     browseObject: function(doc, context)
@@ -12392,6 +12393,10 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
         else
             var insecureObject = object;
 
+        // IE function prototype is not listed in (for..in)
+        if (isIE && typeof object == "function")
+            addMember("user", userProps, "prototype", object.prototype, level);            
+            
         for (var name in insecureObject)  // enumeration is safe
         {
             if (ignoreVars[name] == 1)  // javascript.options.strict says ignoreVars is undefined.
@@ -12453,7 +12458,6 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
         //throw exc;
         //if (FBTrace.DBG_ERRORS && FBTrace.DBG_DOM)
         //    FBTrace.sysout("dom.getMembers FAILS: ", exc);
-        alert(exc.message);
         throw exc;
     }
 
@@ -12557,6 +12561,10 @@ function hasProperties(ob)
         for (var name in ob)
             return true;
     } catch (exc) {}
+    
+    // IE function prototype is not listed in (for..in)
+    if (typeof ob == "function") return true;
+    
     return false;
 }
 
