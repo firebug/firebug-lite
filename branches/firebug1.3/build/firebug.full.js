@@ -5677,7 +5677,7 @@ var createChrome = function(options)
             node.setAttribute("src", Application.location.skin);
         
         // document.body not available in XML+XSL documents in Firefox
-        context.document.getElementsByTagName("body").item(0).appendChild(node);
+        context.document.getElementsByTagName("body")[0].appendChild(node);
     }
     else
     {
@@ -8119,19 +8119,10 @@ Firebug.Inspector =
     {
         offlineFragment = Firebug.browser.document.createDocumentFragment();
         
-        // TODO: xxxpedro use createGlobalElement 
-        if (!this.NS)
-        {
-            createBoxModelInspector();
-            createOutlineInspector();
-        }
+        createBoxModelInspector();
+        createOutlineInspector();
     },
     
-    onChromeReady: function()
-    {
-        //fbBtnInspect = $("fbBtnInspect");
-    },    
-  
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Inspect functions
     
@@ -8145,9 +8136,6 @@ Firebug.Inspector =
         fbInspectFrame.style.width = size.width + "px";
         fbInspectFrame.style.height = size.height + "px";
 
-        //fbBtnInspect.href = "javascript:FB.stopInspecting(this)";
-        //fbBtnInspect.className = "fbBtnInspectActive";
-        
         addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
         addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
     },
@@ -8156,8 +8144,6 @@ Firebug.Inspector =
     {
         destroyInspectorFrame();
         
-        //fbBtnInspect.href = "javascript:FB.startInspecting(this)";
-        //fbBtnInspect.className = "";
         Firebug.chrome.inspectButton.restore();
         
         if (outlineVisible) this.hideOutline();
@@ -8261,7 +8247,7 @@ Firebug.Inspector =
         if (outlineVisible) return;
         
         for (var name in outline)
-            Firebug.browser.document.body.appendChild(outlineElements[name]);
+            Firebug.browser.document.getElementsByTagName("body")[0].appendChild(outlineElements[name]);
         
         outlineVisible = true;
     },
@@ -8312,7 +8298,7 @@ Firebug.Inspector =
     {
         if (!boxModelVisible)
         {
-            Firebug.browser.document.body.appendChild(boxModel);
+            Firebug.browser.document.getElementsByTagName("body")[0].appendChild(boxModel);
             boxModelVisible = true;
         }
     }
@@ -8382,22 +8368,22 @@ var outline = {
 
 var createInspectorFrame = function createInspectorFrame()
 {
-    fbInspectFrame = Firebug.browser.document.createElement("div");
+    fbInspectFrame = createGlobalElement("div");
     fbInspectFrame.id = "fbInspectFrame";
     fbInspectFrame.style.cssText = inspectFrameStyle;
-    Firebug.browser.document.body.appendChild(fbInspectFrame);
+    Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectFrame);
 }
 
 var destroyInspectorFrame = function createInspectorFrame()
 {
-    Firebug.browser.document.body.removeChild(fbInspectFrame);
+    Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
 }
 
 var createOutlineInspector = function createOutlineInspector()
 {
     for (var name in outline)
     {
-        var el = outlineElements[name] = Firebug.browser.document.createElement("div");
+        var el = outlineElements[name] = createGlobalElement("div");
         el.id = name;
         el.style.cssText = inspectStyle + outlineStyle[outline[name]];
         offlineFragment.appendChild(el);
@@ -8406,24 +8392,24 @@ var createOutlineInspector = function createOutlineInspector()
 
 var createBoxModelInspector = function createBoxModelInspector()
 {
-    boxModel = Firebug.browser.document.createElement("div");
+    boxModel = createGlobalElement("div");
     boxModel.id = "fbBoxModel";
     boxModelStyle = boxModel.style;
     boxModelStyle.cssText = inspectModelStyle;
     
-    boxMargin = Firebug.browser.document.createElement("div");
+    boxMargin = createGlobalElement("div");
     boxMargin.id = "fbBoxMargin";
     boxMarginStyle = boxMargin.style;
     boxMarginStyle.cssText = inspectMarginStyle;
     boxModel.appendChild(boxMargin);
     
-    boxPadding = Firebug.browser.document.createElement("div");
+    boxPadding = createGlobalElement("div");
     boxPadding.id = "fbBoxPadding";
     boxPaddingStyle = boxPadding.style;
     boxPaddingStyle.cssText = inspectPaddingStyle;
     boxModel.appendChild(boxPadding);
     
-    boxContent = Firebug.browser.document.createElement("div");
+    boxContent = createGlobalElement("div");
     boxContent.id = "fbBoxContent";
     boxContentStyle = boxContent.style;
     boxContentStyle.cssText = inspectContentStyle;
@@ -9214,7 +9200,7 @@ Firebug.HTML.onTreeClick = function (e)
 
 var OLD_chromeLoad = function OLD_chromeLoad(doc)
 {
-    Firebug.Inspector.onChromeReady();
+    //Firebug.Inspector.onChromeReady();
     
     var rootNode = document.documentElement;
     
