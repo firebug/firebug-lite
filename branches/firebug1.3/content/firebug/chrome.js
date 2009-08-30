@@ -96,27 +96,7 @@ var createChrome = function(options)
     if (isChromeFrame)
     {
         // Create the Chrome Frame
-        
-        /*
-        var style = [
-                'border:0;visibility:hidden;z-index:2147483647;position:',
-                noFixedPosition ? "absolute" : "fixed",
-                ';width:100%;left:0;bottom:',
-                noFixedPosition ? "-1px" : "0",
-                ';height:',
-                options.height,
-                'px;'
-            ].join("");
-        
-        var node = chrome.node = createGlobalElement("iframe",
-                {
-                    id: options.id,
-                    frameBorder: 0,
-                    style: style
-                });
-        /**/
-        
-        var node = chrome.node = context.document.createElement("iframe");
+        var node = chrome.node = createGlobalElement("iframe");
         
         node.setAttribute("id", options.id);
         node.setAttribute("frameBorder", "0");
@@ -136,7 +116,8 @@ var createChrome = function(options)
         if (!isBookmarletMode)
             node.setAttribute("src", Application.location.skin);
         
-        context.document.body.appendChild(node);
+        // document.body not available in XML+XSL documents in Firefox
+        context.document.getElementsByTagName("body").item(0).appendChild(node);
     }
     else
     {
