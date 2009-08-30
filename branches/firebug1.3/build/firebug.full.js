@@ -1,5 +1,3 @@
-(function(){
-
 /*!
  *  Copyright 2009, Firebug Working Group
  *  Released under BSD license.
@@ -12,10 +10,15 @@ var FBL = {};
 // ************************************************************************************************
 
 // ************************************************************************************************
+// Constants
+    
+var reNotWhitespace = /[^\s]/;
+var reSplitFile = /:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
+
+// ************************************************************************************************
 // Namespaces
 
 var namespaces = [];
-var FBTrace = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -25,6 +28,8 @@ this.ns = function(fn)
     namespaces.push(fn, ns);
     return ns;
 };
+
+var FBTrace = null;
 
 this.initialize = function()
 {
@@ -49,6 +54,7 @@ this.initialize = function()
     else // non-persistent application
     {
         // TODO: get preferences here...
+        FBL.NS = document.documentElement.namespaceURI;
         FBL.Application.browser = window;
         FBL.Application.destroy = destroyApplication;
     }    
@@ -82,7 +88,8 @@ this.initialize = function()
 
 var waitForDocument = function waitForDocument()
 {
-    if (document.body)
+    // document.body not available in XML+XSL documents in Firefox
+    if (document.getElementsByTagName("body").length > 0)
     {
         onDocumentLoad();
     }
@@ -156,9 +163,11 @@ var destroyApplication = function destroyApplication()
 // ************************************************************************************************
 // Library location
 
-this.Application.location = {
-    source: null,
-    base: null,
+this.Application.location =
+{
+    sourceDir: null,
+    baseDir: null,
+    skinDir: null,
     skin: null,
     app: null
 };
@@ -167,7 +176,7 @@ this.Application.location = {
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.gz)?)(#.+)?$/;
+    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.jgz)?)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
@@ -230,9 +239,10 @@ var findLocation =  function findLocation()
     {
         var App = FBL.Application;
         var loc = App.location; 
-        loc.source = path;
-        loc.base = path.substr(0, path.length - m[1].length - 1);
-        loc.skin = loc.base + "skin/" + App.skin + "/firebug.html";
+        loc.sourceDir = path;
+        loc.baseDir = path.substr(0, path.length - m[1].length - 1);
+        loc.skinDir = loc.baseDir + "skin/" + App.skin + "/"; 
+        loc.skin = loc.skinDir + "firebug.html";
         loc.app = path + fileName;
         
         if (fileName == "firebug.dev.js")
@@ -274,6 +284,12 @@ var findLocation =  function findLocation()
 // ************************************************************************************************
 // Basics
 
+this.bind = function()  // fn, thisObject, args => thisObject.fn(args, arguments);
+{
+   var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
+   return function() { return fn.apply(object, arrayInsert(cloneArray(args), 0, arguments)); }
+};
+
 this.extend = function(l, r)
 {
     var newOb = {};
@@ -281,9 +297,8 @@ this.extend = function(l, r)
         newOb[n] = l[n];
     for (var n in r)
         newOb[n] = r[n];
-    return newOb;    
+    return newOb;
 };
-
 
 this.append = function(l, r)
 {
@@ -292,6 +307,106 @@ this.append = function(l, r)
         
     return l;
 };
+
+this.keys = function(map)  // At least sometimes the keys will be on user-level window objects
+{
+    var keys = [];
+    try
+    {
+        for (var name in map)  // enumeration is safe
+            keys.push(name);   // name is string, safe
+    }
+    catch (exc)
+    {
+        // Sometimes we get exceptions trying to iterate properties
+    }
+
+    return keys;  // return is safe
+};
+
+this.values = function(map)
+{
+    var values = [];
+    try
+    {
+        for (var name in map)
+        {
+            try
+            {
+                values.push(map[name]);
+            }
+            catch (exc)
+            {
+                // Sometimes we get exceptions trying to access properties
+                if (FBTrace.DBG_ERRORS)
+                    FBTrace.dumpPropreties("lib.values FAILED ", exc);
+            }
+
+        }
+    }
+    catch (exc)
+    {
+        // Sometimes we get exceptions trying to iterate properties
+        if (FBTrace.DBG_ERRORS)
+            FBTrace.dumpPropreties("lib.values FAILED ", exc);
+    }
+
+    return values;
+};
+
+this.remove = function(list, item)
+{
+    for (var i = 0; i < list.length; ++i)
+    {
+        if (list[i] == item)
+        {
+            list.splice(i, 1);
+            break;
+        }
+    }
+};
+
+this.sliceArray = function(array, index)
+{
+    var slice = [];
+    for (var i = index; i < array.length; ++i)
+        slice.push(array[i]);
+
+    return slice;
+};
+
+function cloneArray(array, fn)
+{
+   var newArray = [];
+
+   if (fn)
+       for (var i = 0; i < array.length; ++i)
+           newArray.push(fn(array[i]));
+   else
+       for (var i = 0; i < array.length; ++i)
+           newArray.push(array[i]);
+
+   return newArray;
+}
+
+function extendArray(array, array2)
+{
+   var newArray = [];
+   newArray.push.apply(newArray, array);
+   newArray.push.apply(newArray, array2);
+   return newArray;
+}
+
+this.extendArray = extendArray;
+this.cloneArray = cloneArray;
+
+function arrayInsert(array, index, other)
+{
+   for (var i = 0; i < other.length; ++i)
+       array.splice(i+index, 0, other[i]);
+
+   return array;
+}
 
 
 // ************************************************************************************************
@@ -311,34 +426,122 @@ this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
 
-this.NS = document.getElementsByTagName("html")[0].getAttribute("xmlns")
+this.NS = null;
+
 
 // ************************************************************************************************
-// Util
-
-var HTMLtoEntity =
-{
-    "<": "&lt;",
-    ">": "&gt;",
-    "&": "&amp;",
-    "'": "&#39;",
-    '"': "&quot;"
-};
-
-function replaceChars(ch)
-{
-    return HTMLtoEntity[ch];
-};
-
-this.escapeHTML = function(value)
-{
-    return (value+"").replace(/[<>&"']/g, replaceChars);
-};
+// String Util
 
 var reTrim = /^\s+|\s+$/g;
 this.trim = function(s)
 {
     return s.replace(reTrim, "");
+};
+
+
+// ************************************************************************************************
+// String escaping
+
+this.escapeNewLines = function(value)
+{
+    return value.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+};
+
+this.stripNewLines = function(value)
+{
+    return typeof(value) == "string" ? value.replace(/[\r\n]/g, " ") : value;
+};
+
+this.escapeJS = function(value)
+{
+    return value.replace(/\r/g, "\\r").replace(/\n/g, "\\n").replace('"', '\\"', "g");
+};
+
+function escapeHTMLAttribute(value)
+{
+    function replaceChars(ch)
+    {
+        switch (ch)
+        {
+            case "&":
+                return "&amp;";
+            case "'":
+                return apos;
+            case '"':
+                return quot;
+        }
+        return "?";
+    };
+    var apos = "&#39;", quot = "&quot;", around = '"';
+    if( value.indexOf('"') == -1 ) {
+        quot = '"';
+        apos = "'";
+    } else if( value.indexOf("'") == -1 ) {
+        quot = '"';
+        around = "'";
+    }
+    return around + (String(value).replace(/[&'"]/g, replaceChars)) + around;
+}
+
+
+function escapeHTML(value)
+{
+    function replaceChars(ch)
+    {
+        switch (ch)
+        {
+            case "<":
+                return "&lt;";
+            case ">":
+                return "&gt;";
+            case "&":
+                return "&amp;";
+            case "'":
+                return "&#39;";
+            case '"':
+                return "&quot;";
+        }
+        return "?";
+    };
+    return String(value).replace(/[<>&"']/g, replaceChars);
+}
+
+this.escapeHTML = escapeHTML;
+
+this.cropString = function(text, limit)
+{
+    text = text + "";
+
+    if (!limit)
+        var halfLimit = 50;
+    else
+        var halfLimit = limit / 2;
+
+    if (text.length > limit)
+        return this.escapeNewLines(text.substr(0, halfLimit) + "..." + text.substr(text.length-halfLimit));
+    else
+        return this.escapeNewLines(text);
+};
+
+this.isWhitespace = function(text)
+{
+    return !reNotWhitespace.exec(text);
+};
+
+
+// ************************************************************************************************
+
+this.safeToString = function(ob)
+{
+    try
+    {
+        if (ob && "toString" in ob && typeof ob.toString == "function")
+            return ob.toString();
+    }
+    catch (exc)
+    {
+        return "[an object with no toString() function]";
+    }
 };
 
 // ************************************************************************************************
@@ -349,7 +552,167 @@ this.emptyFn = function(){};
 
 
 // ************************************************************************************************
-// DOM
+// Visibility
+
+this.isVisible = function(elt)
+{
+    /*
+    if (elt instanceof XULElement)
+    {
+        //FBTrace.sysout("isVisible elt.offsetWidth: "+elt.offsetWidth+" offsetHeight:"+ elt.offsetHeight+" localName:"+ elt.localName+" nameSpace:"+elt.nameSpaceURI+"\n");
+        return (!elt.hidden && !elt.collapsed);
+    }
+    /**/
+    return elt.offsetWidth > 0 || elt.offsetHeight > 0 || elt.tagName in invisibleTags
+        || elt.namespaceURI == "http://www.w3.org/2000/svg"
+        || elt.namespaceURI == "http://www.w3.org/1998/Math/MathML";
+};
+
+this.collapse = function(elt, collapsed)
+{
+    elt.setAttribute("collapsed", collapsed ? "true" : "false");
+};
+
+this.obscure = function(elt, obscured)
+{
+    if (obscured)
+        this.setClass(elt, "obscured");
+    else
+        this.removeClass(elt, "obscured");
+};
+
+this.hide = function(elt, hidden)
+{
+    elt.style.visibility = hidden ? "hidden" : "visible";
+};
+
+this.clearNode = function(node)
+{
+    node.innerHTML = "";
+};
+
+this.eraseNode = function(node)
+{
+    while (node.lastChild)
+        node.removeChild(node.lastChild);
+};
+
+// ************************************************************************************************
+// Window iteration
+
+this.iterateWindows = function(win, handler)
+{
+    if (!win || !win.document)
+        return;
+
+    handler(win);
+
+    if (win == top || !win.frames) return; // XXXjjb hack for chromeBug
+
+    for (var i = 0; i < win.frames.length; ++i)
+    {
+        var subWin = win.frames[i];
+        if (subWin != win)
+            this.iterateWindows(subWin, handler);
+    }
+};
+
+this.getRootWindow = function(win)
+{
+    for (; win; win = win.parent)
+    {
+        if (!win.parent || win == win.parent || !this.instanceOf(win.parent, "Window"))
+            return win;
+    }
+    return null;
+};
+
+// ************************************************************************************************
+// CSS classes
+
+this.hasClass = function(node, name) // className, className, ...
+{
+    if (!node || node.nodeType != 1)
+        return false;
+    else
+    {
+        for (var i=1; i<arguments.length; ++i)
+        {
+            var name = arguments[i];
+            var re = new RegExp("(^|\\s)"+name+"($|\\s)");
+            if (!re.exec(node.className))
+                return false;
+        }
+
+        return true;
+    }
+};
+
+this.setClass = function(node, name)
+{
+    if (node && !this.hasClass(node, name))
+        node.className += " " + name;
+};
+
+this.getClassValue = function(node, name)
+{
+    var re = new RegExp(name+"-([^ ]+)");
+    var m = re.exec(node.className);
+    return m ? m[1] : "";
+};
+
+this.removeClass = function(node, name)
+{
+    if (node && node.className)
+    {
+        var index = node.className.indexOf(name);
+        if (index >= 0)
+        {
+            var size = name.length;
+            node.className = node.className.substr(0,index-1) + node.className.substr(index+size);
+        }
+    }
+};
+
+this.toggleClass = function(elt, name)
+{
+    if (this.hasClass(elt, name))
+        this.removeClass(elt, name);
+    else
+        this.setClass(elt, name);
+};
+
+this.setClassTimed = function(elt, name, context, timeout)
+{
+    if (!timeout)
+        timeout = 1300;
+
+    if (elt.__setClassTimeout)
+        context.clearTimeout(elt.__setClassTimeout);
+    else
+        this.setClass(elt, name);
+
+    elt.__setClassTimeout = context.setTimeout(function()
+    {
+        delete elt.__setClassTimeout;
+
+        FBL.removeClass(elt, name);
+    }, timeout);
+};
+
+this.cancelClassTimed = function(elt, name, context)
+{
+    if (elt.__setClassTimeout)
+    {
+        FBL.removeClass(elt, name);
+        context.clearTimeout(elt.__setClassTimeout);
+        delete elt.__setClassTimeout;
+    }
+};
+
+
+// ************************************************************************************************
+// DOM queries
 
 this.$ = function(id, doc)
 {
@@ -370,6 +733,40 @@ this.$$ = function(selector, doc)
         return FBL.Firebug.Selector(selector, FBL.Firebug.chrome.document)
     }
 };
+
+this.getChildByClass = function(node) // ,classname, classname, classname...
+{
+    for (var i = 1; i < arguments.length; ++i)
+    {
+        var className = arguments[i];
+        var child = node.firstChild;
+        node = null;
+        for (; child; child = child.nextSibling)
+        {
+            if (this.hasClass(child, className))
+            {
+                node = child;
+                break;
+            }
+        }
+    }
+
+    return node;
+};
+
+this.getAncestorByClass = function(node, className)
+{
+    for (var parent = node; parent; parent = parent.parentNode)
+    {
+        if (this.hasClass(parent, className))
+            return parent;
+    }
+
+    return null;
+};
+
+// ************************************************************************************************
+// DOM creation
 
 this.createElement = function(tagName, properties)
 {
@@ -394,16 +791,18 @@ this.createGlobalElement = function(tagName, properties)
     properties = properties || {};
     var doc = FBL.Application.browser.document;
     
-    var element = FBL.isIE ? doc.createElement(tagName) : doc.createElementNS(FBL.NS, tagName);
+    var element = this.NS && doc.createElementNS ? 
+            doc.createElementNS(FBL.NS, tagName) :
+            doc.createElement(tagName); 
+            
     for(var name in properties)
     {
         var propname = name;
         if (FBL.isIE && name == "class") propname = "className";
-        if (FBL.isIE && name == "style") propname = "cssText";
         
         if (name != "document")
         {
-            element.setAttribute[propname] = properties[name];
+            element.setAttribute(propname, properties[name]);
         }
     }
     
@@ -411,11 +810,51 @@ this.createGlobalElement = function(tagName, properties)
 };
 
 // ************************************************************************************************
-// Event
+// Events
 
-this.bind = function(object, fn)
+this.isLeftClick = function(event)
 {
-    return function(){return fn.apply(object, arguments);};
+    return event.button == 0 && this.noKeyModifiers(event);
+};
+
+this.isMiddleClick = function(event)
+{
+    return event.button == 1 && this.noKeyModifiers(event);
+};
+
+this.isRightClick = function(event)
+{
+    return event.button == 2 && this.noKeyModifiers(event);
+};
+
+this.noKeyModifiers = function(event)
+{
+    return !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey;
+};
+
+this.isControlClick = function(event)
+{
+    return event.button == 0 && this.isControl(event);
+};
+
+this.isShiftClick = function(event)
+{
+    return event.button == 0 && this.isShift(event);
+};
+
+this.isControl = function(event)
+{
+    return (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey;
+};
+
+this.isControlShift = function(event)
+{
+    return (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey;
+};
+
+this.isShift = function(event)
+{
+    return event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
 };
 
 this.addEvent = function(object, name, handler)
@@ -556,32 +995,420 @@ this.disableTextSelection = function(e)
 };
 
 // ************************************************************************************************
-// class Names
+// URLs
 
-this.hasClass = function(object, name)
+this.getFileName = function(url)
 {
-    return (' '+object.className+' ').indexOf(' '+name+' ') != -1;
+    var split = this.splitURLBase(url);
+    return split.name;
 };
 
-this.addClass = function(object, name)
+this.splitURLBase = function(url)
 {
-    if ((' '+object.className+' ').indexOf(' '+name+' ') == -1)
-        object.className = object.className ? object.className + ' ' + name : name; 
+    if (this.isDataURL(url))
+        return this.splitDataURL(url);
+    return this.splitURLTrue(url);
 };
 
-this.removeClass = function(object, name)
+this.splitDataURL = function(url)
 {
-    object.className = (' ' + object.className + ' ').
-        replace(new RegExp('(\\S*)\\s+'+name+'\\s+(\\S*)', 'g'), '$1 $2').
-        replace(/^\s*|\s*$/g, '');
-};
+    var mark = url.indexOf(':', 3);
+    if (mark != 4)
+        return false;   //  the first 5 chars must be 'data:'
 
-this.toggleClass = function(object, name)
-{
-    if ((' '+object.className+' ').indexOf(' '+name+' ') >= 0)
-        this.removeClass(object, name)
+    var point = url.indexOf(',', mark+1);
+    if (point < mark)
+        return false; // syntax error
+
+    var props = { encodedContent: url.substr(point+1) };
+
+    var metadataBuffer = url.substr(mark+1, point);
+    var metadata = metadataBuffer.split(';');
+    for (var i = 0; i < metadata.length; i++)
+    {
+        var nv = metadata[i].split('=');
+        if (nv.length == 2)
+            props[nv[0]] = nv[1];
+    }
+
+    // Additional Firebug-specific properties
+    if (props.hasOwnProperty('fileName'))
+    {
+         var caller_URL = decodeURIComponent(props['fileName']);
+         var caller_split = this.splitURLTrue(caller_URL);
+
+        if (props.hasOwnProperty('baseLineNumber'))  // this means it's probably an eval()
+        {
+            props['path'] = caller_split.path;
+            props['line'] = props['baseLineNumber'];
+            var hint = decodeURIComponent(props['encodedContent'].substr(0,200)).replace(/\s*$/, "");
+            props['name'] =  'eval->'+hint;
+        }
+        else
+        {
+            props['name'] = caller_split.name;
+            props['path'] = caller_split.path;
+        }
+    }
     else
-        this.addClass(object, name);
+    {
+        if (!props.hasOwnProperty('path'))
+            props['path'] = "data:";
+        if (!props.hasOwnProperty('name'))
+            props['name'] =  decodeURIComponent(props['encodedContent'].substr(0,200)).replace(/\s*$/, "");
+    }
+
+    return props;
+};
+
+this.splitURLTrue = function(url)
+{
+    var m = reSplitFile.exec(url);
+    if (!m)
+        return {name: url, path: url};
+    else if (!m[2])
+        return {path: m[1], name: m[1]};
+    else
+        return {path: m[1], name: m[2]+m[3]};
+};
+
+this.getFileExtension = function(url)
+{
+    var lastDot = url.lastIndexOf(".");
+    return url.substr(lastDot+1);
+};
+
+this.isSystemURL = function(url)
+{
+    if (!url) return true;
+    if (url.length == 0) return true;
+    if (url[0] == 'h') return false;
+    if (url.substr(0, 9) == "resource:")
+        return true;
+    else if (url.substr(0, 16) == "chrome://firebug")
+        return true;
+    else if (url  == "XPCSafeJSObjectWrapper.cpp")
+        return true;
+    else if (url.substr(0, 6) == "about:")
+        return true;
+    else if (url.indexOf("firebug-service.js") != -1)
+        return true;
+    else
+        return false;
+};
+
+this.isSystemPage = function(win)
+{
+    try
+    {
+        var doc = win.document;
+        if (!doc)
+            return false;
+
+        // Detect pages for pretty printed XML
+        if ((doc.styleSheets.length && doc.styleSheets[0].href
+                == "chrome://global/content/xml/XMLPrettyPrint.css")
+            || (doc.styleSheets.length > 1 && doc.styleSheets[1].href
+                == "chrome://browser/skin/feeds/subscribe.css"))
+            return true;
+
+        return FBL.isSystemURL(win.location.href);
+    }
+    catch (exc)
+    {
+        // Sometimes documents just aren't ready to be manipulated here, but don't let that
+        // gum up the works
+        ERROR("tabWatcher.isSystemPage document not ready:"+ exc);
+        return false;
+    }
+};
+
+this.getURIHost = function(uri)
+{
+    try
+    {
+        if (uri)
+            return uri.host;
+        else
+            return "";
+    }
+    catch (exc)
+    {
+        return "";
+    }
+};
+
+this.isLocalURL = function(url)
+{
+    if (url.substr(0, 5) == "file:")
+        return true;
+    else if (url.substr(0, 8) == "wyciwyg:")
+        return true;
+    else
+        return false;
+};
+
+this.isDataURL = function(url)
+{
+    return (url && url.substr(0,5) == "data:");
+};
+
+this.getLocalPath = function(url)
+{
+    if (this.isLocalURL(url))
+    {
+        var fileHandler = ioService.getProtocolHandler("file").QueryInterface(Ci.nsIFileProtocolHandler);
+        var file = fileHandler.getFileFromURLSpec(url);
+        return file.path;
+    }
+};
+
+this.getURLFromLocalFile = function(file)
+{
+    var fileHandler = ioService.getProtocolHandler("file").QueryInterface(Ci.nsIFileProtocolHandler);
+    var URL = fileHandler.getURLSpecFromFile(file);
+    return URL;
+};
+
+this.getDataURLForContent = function(content, url)
+{
+    // data:text/javascript;fileName=x%2Cy.js;baseLineNumber=10,<the-url-encoded-data>
+    var uri = "data:text/html;";
+    uri += "fileName="+encodeURIComponent(url)+ ","
+    uri += encodeURIComponent(content);
+    return uri;
+},
+
+this.getDomain = function(url)
+{
+    var m = /[^:]+:\/{1,3}([^\/]+)/.exec(url);
+    return m ? m[1] : "";
+};
+
+this.getURLPath = function(url)
+{
+    var m = /[^:]+:\/{1,3}[^\/]+(\/.*?)$/.exec(url);
+    return m ? m[1] : "";
+};
+
+this.getPrettyDomain = function(url)
+{
+    var m = /[^:]+:\/{1,3}(www\.)?([^\/]+)/.exec(url);
+    return m ? m[2] : "";
+};
+
+this.absoluteURL = function(url, baseURL)
+{
+    return this.absoluteURLWithDots(url, baseURL).replace("/./", "/", "g");
+};
+
+this.absoluteURLWithDots = function(url, baseURL)
+{
+    if (url[0] == "?")
+        return baseURL + url;
+
+    var reURL = /(([^:]+:)\/{1,2}[^\/]*)(.*?)$/;
+    var m = reURL.exec(url);
+    if (m)
+        return url;
+
+    var m = reURL.exec(baseURL);
+    if (!m)
+        return "";
+
+    var head = m[1];
+    var tail = m[3];
+    if (url.substr(0, 2) == "//")
+        return m[2] + url;
+    else if (url[0] == "/")
+    {
+        return head + url;
+    }
+    else if (tail[tail.length-1] == "/")
+        return baseURL + url;
+    else
+    {
+        var parts = tail.split("/");
+        return head + parts.slice(0, parts.length-1).join("/") + "/" + url;
+    }
+};
+
+this.normalizeURL = function(url)  // this gets called a lot, any performance improvement welcome
+{
+    if (!url)
+        return "";
+    // Replace one or more characters that are not forward-slash followed by /.., by space.
+    if (url.length < 255) // guard against monsters.
+    {
+        // Replace one or more characters that are not forward-slash followed by /.., by space.
+        url = url.replace(/[^/]+\/\.\.\//, "", "g");
+        // Issue 1496, avoid #
+        url = url.replace(/#.*/,"");
+        // For some reason, JSDS reports file URLs like "file:/" instead of "file:///", so they
+        // don't match up with the URLs we get back from the DOM
+        url = url.replace(/file:\/([^/])/g, "file:///$1");
+        if (url.indexOf('chrome:')==0)
+        {
+            var m = reChromeCase.exec(url);  // 1 is package name, 2 is path
+            if (m)
+            {
+                url = "chrome://"+m[1].toLowerCase()+"/"+m[2];
+            }
+        }
+    }
+    return url;
+};
+
+this.denormalizeURL = function(url)
+{
+    return url.replace(/file:\/\/\//g, "file:/");
+};
+
+this.parseURLParams = function(url)
+{
+    var q = url ? url.indexOf("?") : -1;
+    if (q == -1)
+        return [];
+
+    var search = url.substr(q+1);
+    var h = search.lastIndexOf("#");
+    if (h != -1)
+        search = search.substr(0, h);
+
+    if (!search)
+        return [];
+
+    return this.parseURLEncodedText(search);
+};
+
+this.parseURLEncodedText = function(text)
+{
+    var maxValueLength = 25000;
+
+    var params = [];
+
+    // Unescape '+' characters that are used to encode a space.
+    // See section 2.2.in RFC 3986: http://www.ietf.org/rfc/rfc3986.txt
+    text = text.replace(/\+/g, " ");
+
+    var args = text.split("&");
+    for (var i = 0; i < args.length; ++i)
+    {
+        try {
+            var parts = args[i].split("=");
+            if (parts.length == 2)
+            {
+                if (parts[1].length > maxValueLength)
+                    parts[1] = this.$STR("LargeData");
+
+                params.push({name: decodeURIComponent(parts[0]), value: decodeURIComponent(parts[1])});
+            }
+            else
+                params.push({name: decodeURIComponent(parts[0]), value: ""});
+        }
+        catch (e)
+        {
+            if (FBTrace.DBG_ERRORS)
+            {
+                FBTrace.sysout("parseURLEncodedText EXCEPTION ", e);
+                FBTrace.sysout("parseURLEncodedText EXCEPTION URI", args[i]);
+            }
+        }
+    }
+
+    params.sort(function(a, b) { return a.name <= b.name ? -1 : 1; });
+
+    return params;
+};
+
+this.reEncodeURL= function(file, text)
+{
+    var lines = text.split("\n");
+    var params = this.parseURLEncodedText(lines[lines.length-1]);
+
+    var args = [];
+    for (var i = 0; i < params.length; ++i)
+        args.push(encodeURIComponent(params[i].name)+"="+encodeURIComponent(params[i].value));
+
+    var url = file.href;
+    url += (url.indexOf("?") == -1 ? "?" : "&") + args.join("&");
+
+    return url;
+};
+
+this.getResource = function(aURL)
+{
+    try
+    {
+        var channel=ioService.newChannel(aURL,null,null);
+        var input=channel.open();
+        return FBL.readFromStream(input);
+    }
+    catch (e)
+    {
+        if (FBTrace.DBG_ERRORS)
+            FBTrace.sysout("lib.getResource FAILS for "+aURL, e);
+    }
+};
+
+this.parseJSONString = function(jsonString, originURL)
+{
+    // See if this is a Prototype style *-secure request.
+    var regex = new RegExp(/^\/\*-secure-([\s\S]*)\*\/\s*$/);
+    var matches = regex.exec(jsonString);
+
+    if (matches)
+    {
+        jsonString = matches[1];
+
+        if (jsonString[0] == "\\" && jsonString[1] == "n")
+            jsonString = jsonString.substr(2);
+
+        if (jsonString[jsonString.length-2] == "\\" && jsonString[jsonString.length-1] == "n")
+            jsonString = jsonString.substr(0, jsonString.length-2);
+    }
+
+    if (jsonString.indexOf("&&&START&&&"))
+    {
+        regex = new RegExp(/&&&START&&& (.+) &&&END&&&/);
+        matches = regex.exec(jsonString);
+        if (matches)
+            jsonString = matches[1];
+    }
+
+    // throw on the extra parentheses
+    jsonString = "(" + jsonString + ")";
+
+    var s = Components.utils.Sandbox(originURL);
+    var jsonObject = null;
+
+    try
+    {
+        jsonObject = Components.utils.evalInSandbox(jsonString, s);
+    }
+    catch(e)
+    {
+        if (e.message.indexOf("is not defined"))
+        {
+            var parts = e.message.split(" ");
+            s[parts[0]] = function(str){ return str; };
+            try {
+                jsonObject = Components.utils.evalInSandbox(jsonString, s);
+            } catch(ex) {
+                if (FBTrace.DBG_ERRORS || FBTrace.DBG_JSONVIEWER)
+                    FBTrace.sysout("jsonviewer.parseJSON EXCEPTION", e);
+                return null;
+            }
+        }
+        else
+        {
+            if (FBTrace.DBG_ERRORS || FBTrace.DBG_JSONVIEWER)
+                FBTrace.sysout("jsonviewer.parseJSON EXCEPTION", e);
+            return null;
+        }
+    }
+
+    return jsonObject;
 };
 
 // ************************************************************************************************
@@ -622,6 +1449,2035 @@ this.fixOperaTabKey = function(el)
     el.onfocus = onOperaTabFocus;
     el.onblur = onOperaTabBlur;
     el.onkeydown = onOperaTabKeyDown;
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+this.Property = function(object, name)
+{
+    this.object = object;
+    this.name = name;
+
+    this.getObject = function()
+    {
+        return object[name];
+    };
+};
+
+this.ErrorCopy = function(message)
+{
+    this.message = message;
+};
+
+function EventCopy(event)
+{
+    // Because event objects are destroyed arbitrarily by Gecko, we must make a copy of them to
+    // represent them long term in the inspector.
+    for (var name in event)
+    {
+        try {
+            this[name] = event[name];
+        } catch (exc) { }
+    }
+}
+
+this.EventCopy = EventCopy;
+
+
+// ************************************************************************************************
+// Type Checking
+
+var toString = Object.prototype.toString;
+var reFunction = /^\s*function(\s+[\w_$][\w\d_$]*)?\s*\(/; 
+
+this.isArray = function(object) {
+    return toString.call(object) === '[object Array]'; 
+};
+
+this.isArrayLike = function(object) {
+    // TODO:
+    //return instanceOf(object, "Array");
+};
+
+this.isFunction = function(object) {
+    return toString.call(object) === "[object Function]" || 
+            this.isIE && typeof object != "string" && reFunction.test(""+object);
+};
+    
+
+// ************************************************************************************************
+// Instance Checking
+
+this.instanceOf = function(object, className)
+{
+    if (!object || typeof object != "object")
+        return false;
+    
+    var cache = instanceCheckMap[className];
+    if (!cache)
+        return false;
+
+    for(var n in cache)
+    {
+        var obj = cache[n];
+        var type = typeof obj;
+        obj = type == "object" ? obj : [obj];
+        
+        for(var name in obj)
+        {
+            var value = obj[name];
+            
+            if( n == "property" && !(value in object) ||
+                n == "method" && !this.isFunction(object[value]) ||
+                n == "value" && (""+object[name]).toLowerCase() != ""+value )
+                    return false;
+        }
+    }
+    
+    return true;
+};
+
+var instanceCheckMap = 
+{
+    // DuckTypeCheck:
+    // {
+    //     property: ["window", "document"],
+    //     method: "setTimeout",
+    //     value: {nodeType: 1}
+    // },
+    
+    Window:
+    {
+        property: ["window", "document"],
+        method: "setTimeout"
+    },
+    
+    Document:
+    {
+        property: ["body", "cookie"],
+        method: "getElementById"
+    },
+    
+    Node:
+    {
+        property: "ownerDocument",
+        method: "appendChild"
+    },
+    
+    Element:
+    {
+        property: "tagName",
+        value: {nodeType: 1}
+    },
+    
+    Location:
+    {
+        property: ["hostname", "protocol"],
+        method: "assign"
+    },
+    
+    HTMLImageElement:
+    {
+        property: "useMap",
+        value:
+        {
+            nodeType: 1,
+            tagName: "img"
+        }
+    },
+    
+    HTMLAnchorElement:
+    {
+        property: "hreflang",
+        value:
+        {
+            nodeType: 1,
+            tagName: "a"
+        }
+    },
+    
+    HTMLInputElement:
+    {
+        property: "form",
+        value:
+        {
+            nodeType: 1,
+            tagName: "input"
+        }
+    },
+    
+    HTMLButtonElement:
+    {
+        // ?        
+    },
+    
+    HTMLFormElement:
+    {
+        method: "submit",
+        value:
+        {
+            nodeType: 1,
+            tagName: "form"
+        }
+    },
+    
+    HTMLBodyElement:
+    {
+        
+    },
+    
+    HTMLHtmlElement:
+    {
+        
+    }
+    
+};
+
+
+// ************************************************************************************************
+// DOM Constants
+
+this.getDOMMembers = function(object)
+{
+    if (!domMemberCache)
+    {
+        domMemberCache = {};
+        
+        for (var name in domMemberMap)
+        {
+            var builtins = domMemberMap[name];
+            var cache = domMemberCache[name] = {};
+
+            for (var i = 0; i < builtins.length; ++i)
+                cache[builtins[i]] = i;
+        }
+    }
+    
+    try
+    {
+        if (this.instanceOf(object, "Window"))
+            { return domMemberCache.Window; }
+        else if (object instanceof Document || object instanceof XMLDocument)
+            { return domMemberCache.Document; }
+        else if (object instanceof Location)
+            { return domMemberCache.Location; }
+        else if (object instanceof HTMLImageElement)
+            { return domMemberCache.HTMLImageElement; }
+        else if (object instanceof HTMLAnchorElement)
+            { return domMemberCache.HTMLAnchorElement; }
+        else if (object instanceof HTMLInputElement)
+            { return domMemberCache.HTMLInputElement; }
+        else if (object instanceof HTMLButtonElement)
+            { return domMemberCache.HTMLButtonElement; }
+        else if (object instanceof HTMLFormElement)
+            { return domMemberCache.HTMLFormElement; }
+        else if (object instanceof HTMLBodyElement)
+            { return domMemberCache.HTMLBodyElement; }
+        else if (object instanceof HTMLHtmlElement)
+            { return domMemberCache.HTMLHtmlElement; }
+        else if (object instanceof HTMLScriptElement)
+            { return domMemberCache.HTMLScriptElement; }
+        else if (object instanceof HTMLTableElement)
+            { return domMemberCache.HTMLTableElement; }
+        else if (object instanceof HTMLTableRowElement)
+            { return domMemberCache.HTMLTableRowElement; }
+        else if (object instanceof HTMLTableCellElement)
+            { return domMemberCache.HTMLTableCellElement; }
+        else if (object instanceof HTMLIFrameElement)
+            { return domMemberCache.HTMLIFrameElement; }
+        else if (object instanceof SVGSVGElement)
+            { return domMemberCache.SVGSVGElement; }
+        else if (object instanceof SVGElement)
+            { return domMemberCache.SVGElement; }
+        else if (object instanceof Element)
+            { return domMemberCache.Element; }
+        else if (object instanceof Text || object instanceof CDATASection)
+            { return domMemberCache.Text; }
+        else if (object instanceof Attr)
+            { return domMemberCache.Attr; }
+        else if (object instanceof Node)
+            { return domMemberCache.Node; }
+        else if (object instanceof Event || object instanceof EventCopy)
+            { return domMemberCache.Event; }
+        else
+            return {};
+    }
+    catch(E)
+    {
+        return {};
+    }
+};
+
+this.isDOMMember = function(object, propName)
+{
+    var members = this.getDOMMembers(object);
+    return members && propName in members;
+};
+
+var domMemberCache = null;
+var domMemberMap = {};
+
+domMemberMap.Window =
+[
+    "document",
+    "frameElement",
+
+    "innerWidth",
+    "innerHeight",
+    "outerWidth",
+    "outerHeight",
+    "screenX",
+    "screenY",
+    "pageXOffset",
+    "pageYOffset",
+    "scrollX",
+    "scrollY",
+    "scrollMaxX",
+    "scrollMaxY",
+
+    "status",
+    "defaultStatus",
+
+    "parent",
+    "opener",
+    "top",
+    "window",
+    "content",
+    "self",
+
+    "location",
+    "history",
+    "frames",
+    "navigator",
+    "screen",
+    "menubar",
+    "toolbar",
+    "locationbar",
+    "personalbar",
+    "statusbar",
+    "directories",
+    "scrollbars",
+    "fullScreen",
+    "netscape",
+    "java",
+    "console",
+    "Components",
+    "controllers",
+    "closed",
+    "crypto",
+    "pkcs11",
+
+    "name",
+    "property",
+    "length",
+
+    "sessionStorage",
+    "globalStorage",
+
+    "setTimeout",
+    "setInterval",
+    "clearTimeout",
+    "clearInterval",
+    "addEventListener",
+    "removeEventListener",
+    "dispatchEvent",
+    "getComputedStyle",
+    "captureEvents",
+    "releaseEvents",
+    "routeEvent",
+    "enableExternalCapture",
+    "disableExternalCapture",
+    "moveTo",
+    "moveBy",
+    "resizeTo",
+    "resizeBy",
+    "scroll",
+    "scrollTo",
+    "scrollBy",
+    "scrollByLines",
+    "scrollByPages",
+    "sizeToContent",
+    "setResizable",
+    "getSelection",
+    "open",
+    "openDialog",
+    "close",
+    "alert",
+    "confirm",
+    "prompt",
+    "dump",
+    "focus",
+    "blur",
+    "find",
+    "back",
+    "forward",
+    "home",
+    "stop",
+    "print",
+    "atob",
+    "btoa",
+    "updateCommands",
+    "XPCNativeWrapper",
+    "GeckoActiveXObject",
+    "applicationCache"      // FF3
+];
+
+domMemberMap.Location =
+[
+    "href",
+    "protocol",
+    "host",
+    "hostname",
+    "port",
+    "pathname",
+    "search",
+    "hash",
+
+    "assign",
+    "reload",
+    "replace"
+];
+
+domMemberMap.Node =
+[
+    "id",
+    "className",
+
+    "nodeType",
+    "tagName",
+    "nodeName",
+    "localName",
+    "prefix",
+    "namespaceURI",
+    "nodeValue",
+
+    "ownerDocument",
+    "parentNode",
+    "offsetParent",
+    "nextSibling",
+    "previousSibling",
+    "firstChild",
+    "lastChild",
+    "childNodes",
+    "attributes",
+
+    "dir",
+    "baseURI",
+    "textContent",
+    "innerHTML",
+
+    "addEventListener",
+    "removeEventListener",
+    "dispatchEvent",
+    "cloneNode",
+    "appendChild",
+    "insertBefore",
+    "replaceChild",
+    "removeChild",
+    "compareDocumentPosition",
+    "hasAttributes",
+    "hasChildNodes",
+    "lookupNamespaceURI",
+    "lookupPrefix",
+    "normalize",
+    "isDefaultNamespace",
+    "isEqualNode",
+    "isSameNode",
+    "isSupported",
+    "getFeature",
+    "getUserData",
+    "setUserData"
+];
+
+domMemberMap.Document = extendArray(domMemberMap.Node,
+[
+    "documentElement",
+    "body",
+    "title",
+    "location",
+    "referrer",
+    "cookie",
+    "contentType",
+    "lastModified",
+    "characterSet",
+    "inputEncoding",
+    "xmlEncoding",
+    "xmlStandalone",
+    "xmlVersion",
+    "strictErrorChecking",
+    "documentURI",
+    "URL",
+
+    "defaultView",
+    "doctype",
+    "implementation",
+    "styleSheets",
+    "images",
+    "links",
+    "forms",
+    "anchors",
+    "embeds",
+    "plugins",
+    "applets",
+
+    "width",
+    "height",
+
+    "designMode",
+    "compatMode",
+    "async",
+    "preferredStylesheetSet",
+
+    "alinkColor",
+    "linkColor",
+    "vlinkColor",
+    "bgColor",
+    "fgColor",
+    "domain",
+
+    "addEventListener",
+    "removeEventListener",
+    "dispatchEvent",
+    "captureEvents",
+    "releaseEvents",
+    "routeEvent",
+    "clear",
+    "open",
+    "close",
+    "execCommand",
+    "execCommandShowHelp",
+    "getElementsByName",
+    "getSelection",
+    "queryCommandEnabled",
+    "queryCommandIndeterm",
+    "queryCommandState",
+    "queryCommandSupported",
+    "queryCommandText",
+    "queryCommandValue",
+    "write",
+    "writeln",
+    "adoptNode",
+    "appendChild",
+    "removeChild",
+    "renameNode",
+    "cloneNode",
+    "compareDocumentPosition",
+    "createAttribute",
+    "createAttributeNS",
+    "createCDATASection",
+    "createComment",
+    "createDocumentFragment",
+    "createElement",
+    "createElementNS",
+    "createEntityReference",
+    "createEvent",
+    "createExpression",
+    "createNSResolver",
+    "createNodeIterator",
+    "createProcessingInstruction",
+    "createRange",
+    "createTextNode",
+    "createTreeWalker",
+    "domConfig",
+    "evaluate",
+    "evaluateFIXptr",
+    "evaluateXPointer",
+    "getAnonymousElementByAttribute",
+    "getAnonymousNodes",
+    "addBinding",
+    "removeBinding",
+    "getBindingParent",
+    "getBoxObjectFor",
+    "setBoxObjectFor",
+    "getElementById",
+    "getElementsByTagName",
+    "getElementsByTagNameNS",
+    "hasAttributes",
+    "hasChildNodes",
+    "importNode",
+    "insertBefore",
+    "isDefaultNamespace",
+    "isEqualNode",
+    "isSameNode",
+    "isSupported",
+    "load",
+    "loadBindingDocument",
+    "lookupNamespaceURI",
+    "lookupPrefix",
+    "normalize",
+    "normalizeDocument",
+    "getFeature",
+    "getUserData",
+    "setUserData"
+]);
+
+domMemberMap.Element = extendArray(domMemberMap.Node,
+[
+    "clientWidth",
+    "clientHeight",
+    "offsetLeft",
+    "offsetTop",
+    "offsetWidth",
+    "offsetHeight",
+    "scrollLeft",
+    "scrollTop",
+    "scrollWidth",
+    "scrollHeight",
+
+    "style",
+
+    "tabIndex",
+    "title",
+    "lang",
+    "align",
+    "spellcheck",
+
+    "addEventListener",
+    "removeEventListener",
+    "dispatchEvent",
+    "focus",
+    "blur",
+    "cloneNode",
+    "appendChild",
+    "insertBefore",
+    "replaceChild",
+    "removeChild",
+    "compareDocumentPosition",
+    "getElementsByTagName",
+    "getElementsByTagNameNS",
+    "getAttribute",
+    "getAttributeNS",
+    "getAttributeNode",
+    "getAttributeNodeNS",
+    "setAttribute",
+    "setAttributeNS",
+    "setAttributeNode",
+    "setAttributeNodeNS",
+    "removeAttribute",
+    "removeAttributeNS",
+    "removeAttributeNode",
+    "hasAttribute",
+    "hasAttributeNS",
+    "hasAttributes",
+    "hasChildNodes",
+    "lookupNamespaceURI",
+    "lookupPrefix",
+    "normalize",
+    "isDefaultNamespace",
+    "isEqualNode",
+    "isSameNode",
+    "isSupported",
+    "getFeature",
+    "getUserData",
+    "setUserData"
+]);
+
+domMemberMap.SVGElement = extendArray(domMemberMap.Element,
+[
+    "x",
+    "y",
+    "width",
+    "height",
+    "rx",
+    "ry",
+    "transform",
+    "href",
+
+    "ownerSVGElement",
+    "viewportElement",
+    "farthestViewportElement",
+    "nearestViewportElement",
+
+    "getBBox",
+    "getCTM",
+    "getScreenCTM",
+    "getTransformToElement",
+    "getPresentationAttribute",
+    "preserveAspectRatio"
+]);
+
+domMemberMap.SVGSVGElement = extendArray(domMemberMap.Element,
+[
+    "x",
+    "y",
+    "width",
+    "height",
+    "rx",
+    "ry",
+    "transform",
+
+    "viewBox",
+    "viewport",
+    "currentView",
+    "useCurrentView",
+    "pixelUnitToMillimeterX",
+    "pixelUnitToMillimeterY",
+    "screenPixelToMillimeterX",
+    "screenPixelToMillimeterY",
+    "currentScale",
+    "currentTranslate",
+    "zoomAndPan",
+
+    "ownerSVGElement",
+    "viewportElement",
+    "farthestViewportElement",
+    "nearestViewportElement",
+    "contentScriptType",
+    "contentStyleType",
+
+    "getBBox",
+    "getCTM",
+    "getScreenCTM",
+    "getTransformToElement",
+    "getEnclosureList",
+    "getIntersectionList",
+    "getViewboxToViewportTransform",
+    "getPresentationAttribute",
+    "getElementById",
+    "checkEnclosure",
+    "checkIntersection",
+    "createSVGAngle",
+    "createSVGLength",
+    "createSVGMatrix",
+    "createSVGNumber",
+    "createSVGPoint",
+    "createSVGRect",
+    "createSVGString",
+    "createSVGTransform",
+    "createSVGTransformFromMatrix",
+    "deSelectAll",
+    "preserveAspectRatio",
+    "forceRedraw",
+    "suspendRedraw",
+    "unsuspendRedraw",
+    "unsuspendRedrawAll",
+    "getCurrentTime",
+    "setCurrentTime",
+    "animationsPaused",
+    "pauseAnimations",
+    "unpauseAnimations"
+]);
+
+domMemberMap.HTMLImageElement = extendArray(domMemberMap.Element,
+[
+    "src",
+    "naturalWidth",
+    "naturalHeight",
+    "width",
+    "height",
+    "x",
+    "y",
+    "name",
+    "alt",
+    "longDesc",
+    "lowsrc",
+    "border",
+    "complete",
+    "hspace",
+    "vspace",
+    "isMap",
+    "useMap",
+]);
+
+domMemberMap.HTMLAnchorElement = extendArray(domMemberMap.Element,
+[
+    "name",
+    "target",
+    "accessKey",
+    "href",
+    "protocol",
+    "host",
+    "hostname",
+    "port",
+    "pathname",
+    "search",
+    "hash",
+    "hreflang",
+    "coords",
+    "shape",
+    "text",
+    "type",
+    "rel",
+    "rev",
+    "charset"
+]);
+
+domMemberMap.HTMLIFrameElement = extendArray(domMemberMap.Element,
+[
+    "contentDocument",
+    "contentWindow",
+    "frameBorder",
+    "height",
+    "longDesc",
+    "marginHeight",
+    "marginWidth",
+    "name",
+    "scrolling",
+    "src",
+    "width"
+]);
+
+domMemberMap.HTMLTableElement = extendArray(domMemberMap.Element,
+[
+    "bgColor",
+    "border",
+    "caption",
+    "cellPadding",
+    "cellSpacing",
+    "frame",
+    "rows",
+    "rules",
+    "summary",
+    "tBodies",
+    "tFoot",
+    "tHead",
+    "width",
+
+    "createCaption",
+    "createTFoot",
+    "createTHead",
+    "deleteCaption",
+    "deleteRow",
+    "deleteTFoot",
+    "deleteTHead",
+    "insertRow"
+]);
+
+domMemberMap.HTMLTableRowElement = extendArray(domMemberMap.Element,
+[
+    "bgColor",
+    "cells",
+    "ch",
+    "chOff",
+    "rowIndex",
+    "sectionRowIndex",
+    "vAlign",
+
+    "deleteCell",
+    "insertCell"
+]);
+
+domMemberMap.HTMLTableCellElement = extendArray(domMemberMap.Element,
+[
+    "abbr",
+    "axis",
+    "bgColor",
+    "cellIndex",
+    "ch",
+    "chOff",
+    "colSpan",
+    "headers",
+    "height",
+    "noWrap",
+    "rowSpan",
+    "scope",
+    "vAlign",
+    "width"
+
+]);
+
+domMemberMap.HTMLScriptElement = extendArray(domMemberMap.Element,
+[
+    "src"
+]);
+
+domMemberMap.HTMLButtonElement = extendArray(domMemberMap.Element,
+[
+    "accessKey",
+    "disabled",
+    "form",
+    "name",
+    "type",
+    "value",
+
+    "click"
+]);
+
+domMemberMap.HTMLInputElement = extendArray(domMemberMap.Element,
+[
+    "type",
+    "value",
+    "checked",
+    "accept",
+    "accessKey",
+    "alt",
+    "controllers",
+    "defaultChecked",
+    "defaultValue",
+    "disabled",
+    "form",
+    "maxLength",
+    "name",
+    "readOnly",
+    "selectionEnd",
+    "selectionStart",
+    "size",
+    "src",
+    "textLength",
+    "useMap",
+
+    "click",
+    "select",
+    "setSelectionRange"
+]);
+
+domMemberMap.HTMLFormElement = extendArray(domMemberMap.Element,
+[
+    "acceptCharset",
+    "action",
+    "author",
+    "elements",
+    "encoding",
+    "enctype",
+    "entry_id",
+    "length",
+    "method",
+    "name",
+    "post",
+    "target",
+    "text",
+    "url",
+
+    "reset",
+    "submit"
+]);
+
+domMemberMap.HTMLBodyElement = extendArray(domMemberMap.Element,
+[
+    "aLink",
+    "background",
+    "bgColor",
+    "link",
+    "text",
+    "vLink"
+]);
+
+domMemberMap.HTMLHtmlElement = extendArray(domMemberMap.Element,
+[
+    "version"
+]);
+
+domMemberMap.Text = extendArray(domMemberMap.Node,
+[
+    "data",
+    "length",
+
+    "appendData",
+    "deleteData",
+    "insertData",
+    "replaceData",
+    "splitText",
+    "substringData"
+]);
+
+domMemberMap.Attr = extendArray(domMemberMap.Node,
+[
+    "name",
+    "value",
+    "specified",
+    "ownerElement"
+]);
+
+domMemberMap.Event =
+[
+    "type",
+    "target",
+    "currentTarget",
+    "originalTarget",
+    "explicitOriginalTarget",
+    "relatedTarget",
+    "rangeParent",
+    "rangeOffset",
+    "view",
+
+    "keyCode",
+    "charCode",
+    "screenX",
+    "screenY",
+    "clientX",
+    "clientY",
+    "layerX",
+    "layerY",
+    "pageX",
+    "pageY",
+
+    "detail",
+    "button",
+    "which",
+    "ctrlKey",
+    "shiftKey",
+    "altKey",
+    "metaKey",
+
+    "eventPhase",
+    "timeStamp",
+    "bubbles",
+    "cancelable",
+    "cancelBubble",
+
+    "isTrusted",
+    "isChar",
+
+    "getPreventDefault",
+    "initEvent",
+    "initMouseEvent",
+    "initKeyEvent",
+    "initUIEvent",
+    "preventBubble",
+    "preventCapture",
+    "preventDefault",
+    "stopPropagation"
+];
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+this.domConstantMap =
+{
+    "ELEMENT_NODE": 1,
+    "ATTRIBUTE_NODE": 1,
+    "TEXT_NODE": 1,
+    "CDATA_SECTION_NODE": 1,
+    "ENTITY_REFERENCE_NODE": 1,
+    "ENTITY_NODE": 1,
+    "PROCESSING_INSTRUCTION_NODE": 1,
+    "COMMENT_NODE": 1,
+    "DOCUMENT_NODE": 1,
+    "DOCUMENT_TYPE_NODE": 1,
+    "DOCUMENT_FRAGMENT_NODE": 1,
+    "NOTATION_NODE": 1,
+
+    "DOCUMENT_POSITION_DISCONNECTED": 1,
+    "DOCUMENT_POSITION_PRECEDING": 1,
+    "DOCUMENT_POSITION_FOLLOWING": 1,
+    "DOCUMENT_POSITION_CONTAINS": 1,
+    "DOCUMENT_POSITION_CONTAINED_BY": 1,
+    "DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC": 1,
+
+    "UNKNOWN_RULE": 1,
+    "STYLE_RULE": 1,
+    "CHARSET_RULE": 1,
+    "IMPORT_RULE": 1,
+    "MEDIA_RULE": 1,
+    "FONT_FACE_RULE": 1,
+    "PAGE_RULE": 1,
+
+    "CAPTURING_PHASE": 1,
+    "AT_TARGET": 1,
+    "BUBBLING_PHASE": 1,
+
+    "SCROLL_PAGE_UP": 1,
+    "SCROLL_PAGE_DOWN": 1,
+
+    "MOUSEUP": 1,
+    "MOUSEDOWN": 1,
+    "MOUSEOVER": 1,
+    "MOUSEOUT": 1,
+    "MOUSEMOVE": 1,
+    "MOUSEDRAG": 1,
+    "CLICK": 1,
+    "DBLCLICK": 1,
+    "KEYDOWN": 1,
+    "KEYUP": 1,
+    "KEYPRESS": 1,
+    "DRAGDROP": 1,
+    "FOCUS": 1,
+    "BLUR": 1,
+    "SELECT": 1,
+    "CHANGE": 1,
+    "RESET": 1,
+    "SUBMIT": 1,
+    "SCROLL": 1,
+    "LOAD": 1,
+    "UNLOAD": 1,
+    "XFER_DONE": 1,
+    "ABORT": 1,
+    "ERROR": 1,
+    "LOCATE": 1,
+    "MOVE": 1,
+    "RESIZE": 1,
+    "FORWARD": 1,
+    "HELP": 1,
+    "BACK": 1,
+    "TEXT": 1,
+
+    "ALT_MASK": 1,
+    "CONTROL_MASK": 1,
+    "SHIFT_MASK": 1,
+    "META_MASK": 1,
+
+    "DOM_VK_TAB": 1,
+    "DOM_VK_PAGE_UP": 1,
+    "DOM_VK_PAGE_DOWN": 1,
+    "DOM_VK_UP": 1,
+    "DOM_VK_DOWN": 1,
+    "DOM_VK_LEFT": 1,
+    "DOM_VK_RIGHT": 1,
+    "DOM_VK_CANCEL": 1,
+    "DOM_VK_HELP": 1,
+    "DOM_VK_BACK_SPACE": 1,
+    "DOM_VK_CLEAR": 1,
+    "DOM_VK_RETURN": 1,
+    "DOM_VK_ENTER": 1,
+    "DOM_VK_SHIFT": 1,
+    "DOM_VK_CONTROL": 1,
+    "DOM_VK_ALT": 1,
+    "DOM_VK_PAUSE": 1,
+    "DOM_VK_CAPS_LOCK": 1,
+    "DOM_VK_ESCAPE": 1,
+    "DOM_VK_SPACE": 1,
+    "DOM_VK_END": 1,
+    "DOM_VK_HOME": 1,
+    "DOM_VK_PRINTSCREEN": 1,
+    "DOM_VK_INSERT": 1,
+    "DOM_VK_DELETE": 1,
+    "DOM_VK_0": 1,
+    "DOM_VK_1": 1,
+    "DOM_VK_2": 1,
+    "DOM_VK_3": 1,
+    "DOM_VK_4": 1,
+    "DOM_VK_5": 1,
+    "DOM_VK_6": 1,
+    "DOM_VK_7": 1,
+    "DOM_VK_8": 1,
+    "DOM_VK_9": 1,
+    "DOM_VK_SEMICOLON": 1,
+    "DOM_VK_EQUALS": 1,
+    "DOM_VK_A": 1,
+    "DOM_VK_B": 1,
+    "DOM_VK_C": 1,
+    "DOM_VK_D": 1,
+    "DOM_VK_E": 1,
+    "DOM_VK_F": 1,
+    "DOM_VK_G": 1,
+    "DOM_VK_H": 1,
+    "DOM_VK_I": 1,
+    "DOM_VK_J": 1,
+    "DOM_VK_K": 1,
+    "DOM_VK_L": 1,
+    "DOM_VK_M": 1,
+    "DOM_VK_N": 1,
+    "DOM_VK_O": 1,
+    "DOM_VK_P": 1,
+    "DOM_VK_Q": 1,
+    "DOM_VK_R": 1,
+    "DOM_VK_S": 1,
+    "DOM_VK_T": 1,
+    "DOM_VK_U": 1,
+    "DOM_VK_V": 1,
+    "DOM_VK_W": 1,
+    "DOM_VK_X": 1,
+    "DOM_VK_Y": 1,
+    "DOM_VK_Z": 1,
+    "DOM_VK_CONTEXT_MENU": 1,
+    "DOM_VK_NUMPAD0": 1,
+    "DOM_VK_NUMPAD1": 1,
+    "DOM_VK_NUMPAD2": 1,
+    "DOM_VK_NUMPAD3": 1,
+    "DOM_VK_NUMPAD4": 1,
+    "DOM_VK_NUMPAD5": 1,
+    "DOM_VK_NUMPAD6": 1,
+    "DOM_VK_NUMPAD7": 1,
+    "DOM_VK_NUMPAD8": 1,
+    "DOM_VK_NUMPAD9": 1,
+    "DOM_VK_MULTIPLY": 1,
+    "DOM_VK_ADD": 1,
+    "DOM_VK_SEPARATOR": 1,
+    "DOM_VK_SUBTRACT": 1,
+    "DOM_VK_DECIMAL": 1,
+    "DOM_VK_DIVIDE": 1,
+    "DOM_VK_F1": 1,
+    "DOM_VK_F2": 1,
+    "DOM_VK_F3": 1,
+    "DOM_VK_F4": 1,
+    "DOM_VK_F5": 1,
+    "DOM_VK_F6": 1,
+    "DOM_VK_F7": 1,
+    "DOM_VK_F8": 1,
+    "DOM_VK_F9": 1,
+    "DOM_VK_F10": 1,
+    "DOM_VK_F11": 1,
+    "DOM_VK_F12": 1,
+    "DOM_VK_F13": 1,
+    "DOM_VK_F14": 1,
+    "DOM_VK_F15": 1,
+    "DOM_VK_F16": 1,
+    "DOM_VK_F17": 1,
+    "DOM_VK_F18": 1,
+    "DOM_VK_F19": 1,
+    "DOM_VK_F20": 1,
+    "DOM_VK_F21": 1,
+    "DOM_VK_F22": 1,
+    "DOM_VK_F23": 1,
+    "DOM_VK_F24": 1,
+    "DOM_VK_NUM_LOCK": 1,
+    "DOM_VK_SCROLL_LOCK": 1,
+    "DOM_VK_COMMA": 1,
+    "DOM_VK_PERIOD": 1,
+    "DOM_VK_SLASH": 1,
+    "DOM_VK_BACK_QUOTE": 1,
+    "DOM_VK_OPEN_BRACKET": 1,
+    "DOM_VK_BACK_SLASH": 1,
+    "DOM_VK_CLOSE_BRACKET": 1,
+    "DOM_VK_QUOTE": 1,
+    "DOM_VK_META": 1,
+
+    "SVG_ZOOMANDPAN_DISABLE": 1,
+    "SVG_ZOOMANDPAN_MAGNIFY": 1,
+    "SVG_ZOOMANDPAN_UNKNOWN": 1
+};
+
+this.cssInfo =
+{
+    "background": ["bgRepeat", "bgAttachment", "bgPosition", "color", "systemColor", "none"],
+    "background-attachment": ["bgAttachment"],
+    "background-color": ["color", "systemColor"],
+    "background-image": ["none"],
+    "background-position": ["bgPosition"],
+    "background-repeat": ["bgRepeat"],
+
+    "border": ["borderStyle", "thickness", "color", "systemColor", "none"],
+    "border-top": ["borderStyle", "borderCollapse", "color", "systemColor", "none"],
+    "border-right": ["borderStyle", "borderCollapse", "color", "systemColor", "none"],
+    "border-bottom": ["borderStyle", "borderCollapse", "color", "systemColor", "none"],
+    "border-left": ["borderStyle", "borderCollapse", "color", "systemColor", "none"],
+    "border-collapse": ["borderCollapse"],
+    "border-color": ["color", "systemColor"],
+    "border-top-color": ["color", "systemColor"],
+    "border-right-color": ["color", "systemColor"],
+    "border-bottom-color": ["color", "systemColor"],
+    "border-left-color": ["color", "systemColor"],
+    "border-spacing": [],
+    "border-style": ["borderStyle"],
+    "border-top-style": ["borderStyle"],
+    "border-right-style": ["borderStyle"],
+    "border-bottom-style": ["borderStyle"],
+    "border-left-style": ["borderStyle"],
+    "border-width": ["thickness"],
+    "border-top-width": ["thickness"],
+    "border-right-width": ["thickness"],
+    "border-bottom-width": ["thickness"],
+    "border-left-width": ["thickness"],
+
+    "bottom": ["auto"],
+    "caption-side": ["captionSide"],
+    "clear": ["clear", "none"],
+    "clip": ["auto"],
+    "color": ["color", "systemColor"],
+    "content": ["content"],
+    "counter-increment": ["none"],
+    "counter-reset": ["none"],
+    "cursor": ["cursor", "none"],
+    "direction": ["direction"],
+    "display": ["display", "none"],
+    "empty-cells": [],
+    "float": ["float", "none"],
+    "font": ["fontStyle", "fontVariant", "fontWeight", "fontFamily"],
+
+    "font-family": ["fontFamily"],
+    "font-size": ["fontSize"],
+    "font-size-adjust": [],
+    "font-stretch": [],
+    "font-style": ["fontStyle"],
+    "font-variant": ["fontVariant"],
+    "font-weight": ["fontWeight"],
+
+    "height": ["auto"],
+    "left": ["auto"],
+    "letter-spacing": [],
+    "line-height": [],
+
+    "list-style": ["listStyleType", "listStylePosition", "none"],
+    "list-style-image": ["none"],
+    "list-style-position": ["listStylePosition"],
+    "list-style-type": ["listStyleType", "none"],
+
+    "margin": [],
+    "margin-top": [],
+    "margin-right": [],
+    "margin-bottom": [],
+    "margin-left": [],
+
+    "marker-offset": ["auto"],
+    "min-height": ["none"],
+    "max-height": ["none"],
+    "min-width": ["none"],
+    "max-width": ["none"],
+
+    "outline": ["borderStyle", "color", "systemColor", "none"],
+    "outline-color": ["color", "systemColor"],
+    "outline-style": ["borderStyle"],
+    "outline-width": [],
+
+    "overflow": ["overflow", "auto"],
+    "overflow-x": ["overflow", "auto"],
+    "overflow-y": ["overflow", "auto"],
+
+    "padding": [],
+    "padding-top": [],
+    "padding-right": [],
+    "padding-bottom": [],
+    "padding-left": [],
+
+    "position": ["position"],
+    "quotes": ["none"],
+    "right": ["auto"],
+    "table-layout": ["tableLayout", "auto"],
+    "text-align": ["textAlign"],
+    "text-decoration": ["textDecoration", "none"],
+    "text-indent": [],
+    "text-shadow": [],
+    "text-transform": ["textTransform", "none"],
+    "top": ["auto"],
+    "unicode-bidi": [],
+    "vertical-align": ["verticalAlign"],
+    "white-space": ["whiteSpace"],
+    "width": ["auto"],
+    "word-spacing": [],
+    "z-index": [],
+
+    "-moz-appearance": ["mozAppearance"],
+    "-moz-border-radius": [],
+    "-moz-border-radius-bottomleft": [],
+    "-moz-border-radius-bottomright": [],
+    "-moz-border-radius-topleft": [],
+    "-moz-border-radius-topright": [],
+    "-moz-border-top-colors": ["color", "systemColor"],
+    "-moz-border-right-colors": ["color", "systemColor"],
+    "-moz-border-bottom-colors": ["color", "systemColor"],
+    "-moz-border-left-colors": ["color", "systemColor"],
+    "-moz-box-align": ["mozBoxAlign"],
+    "-moz-box-direction": ["mozBoxDirection"],
+    "-moz-box-flex": [],
+    "-moz-box-ordinal-group": [],
+    "-moz-box-orient": ["mozBoxOrient"],
+    "-moz-box-pack": ["mozBoxPack"],
+    "-moz-box-sizing": ["mozBoxSizing"],
+    "-moz-opacity": [],
+    "-moz-user-focus": ["userFocus", "none"],
+    "-moz-user-input": ["userInput"],
+    "-moz-user-modify": [],
+    "-moz-user-select": ["userSelect", "none"],
+    "-moz-background-clip": [],
+    "-moz-background-inline-policy": [],
+    "-moz-background-origin": [],
+    "-moz-binding": [],
+    "-moz-column-count": [],
+    "-moz-column-gap": [],
+    "-moz-column-width": [],
+    "-moz-image-region": []
+};
+
+this.inheritedStyleNames =
+{
+    "border-collapse": 1,
+    "border-spacing": 1,
+    "border-style": 1,
+    "caption-side": 1,
+    "color": 1,
+    "cursor": 1,
+    "direction": 1,
+    "empty-cells": 1,
+    "font": 1,
+    "font-family": 1,
+    "font-size-adjust": 1,
+    "font-size": 1,
+    "font-style": 1,
+    "font-variant": 1,
+    "font-weight": 1,
+    "letter-spacing": 1,
+    "line-height": 1,
+    "list-style": 1,
+    "list-style-image": 1,
+    "list-style-position": 1,
+    "list-style-type": 1,
+    "quotes": 1,
+    "text-align": 1,
+    "text-decoration": 1,
+    "text-indent": 1,
+    "text-shadow": 1,
+    "text-transform": 1,
+    "white-space": 1,
+    "word-spacing": 1
+};
+
+this.cssKeywords =
+{
+    "appearance":
+    [
+        "button",
+        "button-small",
+        "checkbox",
+        "checkbox-container",
+        "checkbox-small",
+        "dialog",
+        "listbox",
+        "menuitem",
+        "menulist",
+        "menulist-button",
+        "menulist-textfield",
+        "menupopup",
+        "progressbar",
+        "radio",
+        "radio-container",
+        "radio-small",
+        "resizer",
+        "scrollbar",
+        "scrollbarbutton-down",
+        "scrollbarbutton-left",
+        "scrollbarbutton-right",
+        "scrollbarbutton-up",
+        "scrollbartrack-horizontal",
+        "scrollbartrack-vertical",
+        "separator",
+        "statusbar",
+        "tab",
+        "tab-left-edge",
+        "tabpanels",
+        "textfield",
+        "toolbar",
+        "toolbarbutton",
+        "toolbox",
+        "tooltip",
+        "treeheadercell",
+        "treeheadersortarrow",
+        "treeitem",
+        "treetwisty",
+        "treetwistyopen",
+        "treeview",
+        "window"
+    ],
+
+    "systemColor":
+    [
+        "ActiveBorder",
+        "ActiveCaption",
+        "AppWorkspace",
+        "Background",
+        "ButtonFace",
+        "ButtonHighlight",
+        "ButtonShadow",
+        "ButtonText",
+        "CaptionText",
+        "GrayText",
+        "Highlight",
+        "HighlightText",
+        "InactiveBorder",
+        "InactiveCaption",
+        "InactiveCaptionText",
+        "InfoBackground",
+        "InfoText",
+        "Menu",
+        "MenuText",
+        "Scrollbar",
+        "ThreeDDarkShadow",
+        "ThreeDFace",
+        "ThreeDHighlight",
+        "ThreeDLightShadow",
+        "ThreeDShadow",
+        "Window",
+        "WindowFrame",
+        "WindowText",
+        "-moz-field",
+        "-moz-fieldtext",
+        "-moz-workspace",
+        "-moz-visitedhyperlinktext",
+        "-moz-use-text-color"
+    ],
+
+    "color":
+    [
+        "AliceBlue",
+        "AntiqueWhite",
+        "Aqua",
+        "Aquamarine",
+        "Azure",
+        "Beige",
+        "Bisque",
+        "Black",
+        "BlanchedAlmond",
+        "Blue",
+        "BlueViolet",
+        "Brown",
+        "BurlyWood",
+        "CadetBlue",
+        "Chartreuse",
+        "Chocolate",
+        "Coral",
+        "CornflowerBlue",
+        "Cornsilk",
+        "Crimson",
+        "Cyan",
+        "DarkBlue",
+        "DarkCyan",
+        "DarkGoldenRod",
+        "DarkGray",
+        "DarkGreen",
+        "DarkKhaki",
+        "DarkMagenta",
+        "DarkOliveGreen",
+        "DarkOrange",
+        "DarkOrchid",
+        "DarkRed",
+        "DarkSalmon",
+        "DarkSeaGreen",
+        "DarkSlateBlue",
+        "DarkSlateGray",
+        "DarkTurquoise",
+        "DarkViolet",
+        "DeepPink",
+        "DarkSkyBlue",
+        "DimGray",
+        "DodgerBlue",
+        "Feldspar",
+        "FireBrick",
+        "FloralWhite",
+        "ForestGreen",
+        "Fuchsia",
+        "Gainsboro",
+        "GhostWhite",
+        "Gold",
+        "GoldenRod",
+        "Gray",
+        "Green",
+        "GreenYellow",
+        "HoneyDew",
+        "HotPink",
+        "IndianRed",
+        "Indigo",
+        "Ivory",
+        "Khaki",
+        "Lavender",
+        "LavenderBlush",
+        "LawnGreen",
+        "LemonChiffon",
+        "LightBlue",
+        "LightCoral",
+        "LightCyan",
+        "LightGoldenRodYellow",
+        "LightGrey",
+        "LightGreen",
+        "LightPink",
+        "LightSalmon",
+        "LightSeaGreen",
+        "LightSkyBlue",
+        "LightSlateBlue",
+        "LightSlateGray",
+        "LightSteelBlue",
+        "LightYellow",
+        "Lime",
+        "LimeGreen",
+        "Linen",
+        "Magenta",
+        "Maroon",
+        "MediumAquaMarine",
+        "MediumBlue",
+        "MediumOrchid",
+        "MediumPurple",
+        "MediumSeaGreen",
+        "MediumSlateBlue",
+        "MediumSpringGreen",
+        "MediumTurquoise",
+        "MediumVioletRed",
+        "MidnightBlue",
+        "MintCream",
+        "MistyRose",
+        "Moccasin",
+        "NavajoWhite",
+        "Navy",
+        "OldLace",
+        "Olive",
+        "OliveDrab",
+        "Orange",
+        "OrangeRed",
+        "Orchid",
+        "PaleGoldenRod",
+        "PaleGreen",
+        "PaleTurquoise",
+        "PaleVioletRed",
+        "PapayaWhip",
+        "PeachPuff",
+        "Peru",
+        "Pink",
+        "Plum",
+        "PowderBlue",
+        "Purple",
+        "Red",
+        "RosyBrown",
+        "RoyalBlue",
+        "SaddleBrown",
+        "Salmon",
+        "SandyBrown",
+        "SeaGreen",
+        "SeaShell",
+        "Sienna",
+        "Silver",
+        "SkyBlue",
+        "SlateBlue",
+        "SlateGray",
+        "Snow",
+        "SpringGreen",
+        "SteelBlue",
+        "Tan",
+        "Teal",
+        "Thistle",
+        "Tomato",
+        "Turquoise",
+        "Violet",
+        "VioletRed",
+        "Wheat",
+        "White",
+        "WhiteSmoke",
+        "Yellow",
+        "YellowGreen",
+        "transparent",
+        "invert"
+    ],
+
+    "auto":
+    [
+        "auto"
+    ],
+
+    "none":
+    [
+        "none"
+    ],
+
+    "captionSide":
+    [
+        "top",
+        "bottom",
+        "left",
+        "right"
+    ],
+
+    "clear":
+    [
+        "left",
+        "right",
+        "both"
+    ],
+
+    "cursor":
+    [
+        "auto",
+        "cell",
+        "context-menu",
+        "crosshair",
+        "default",
+        "help",
+        "pointer",
+        "progress",
+        "move",
+        "e-resize",
+        "all-scroll",
+        "ne-resize",
+        "nw-resize",
+        "n-resize",
+        "se-resize",
+        "sw-resize",
+        "s-resize",
+        "w-resize",
+        "ew-resize",
+        "ns-resize",
+        "nesw-resize",
+        "nwse-resize",
+        "col-resize",
+        "row-resize",
+        "text",
+        "vertical-text",
+        "wait",
+        "alias",
+        "copy",
+        "move",
+        "no-drop",
+        "not-allowed",
+        "-moz-alias",
+        "-moz-cell",
+        "-moz-copy",
+        "-moz-grab",
+        "-moz-grabbing",
+        "-moz-contextmenu",
+        "-moz-zoom-in",
+        "-moz-zoom-out",
+        "-moz-spinning"
+    ],
+
+    "direction":
+    [
+        "ltr",
+        "rtl"
+    ],
+
+    "bgAttachment":
+    [
+        "scroll",
+        "fixed"
+    ],
+
+    "bgPosition":
+    [
+        "top",
+        "center",
+        "bottom",
+        "left",
+        "right"
+    ],
+
+    "bgRepeat":
+    [
+        "repeat",
+        "repeat-x",
+        "repeat-y",
+        "no-repeat"
+    ],
+
+    "borderStyle":
+    [
+        "hidden",
+        "dotted",
+        "dashed",
+        "solid",
+        "double",
+        "groove",
+        "ridge",
+        "inset",
+        "outset",
+        "-moz-bg-inset",
+        "-moz-bg-outset",
+        "-moz-bg-solid"
+    ],
+
+    "borderCollapse":
+    [
+        "collapse",
+        "separate"
+    ],
+
+    "overflow":
+    [
+        "visible",
+        "hidden",
+        "scroll",
+        "-moz-scrollbars-horizontal",
+        "-moz-scrollbars-none",
+        "-moz-scrollbars-vertical"
+    ],
+
+    "listStyleType":
+    [
+        "disc",
+        "circle",
+        "square",
+        "decimal",
+        "decimal-leading-zero",
+        "lower-roman",
+        "upper-roman",
+        "lower-greek",
+        "lower-alpha",
+        "lower-latin",
+        "upper-alpha",
+        "upper-latin",
+        "hebrew",
+        "armenian",
+        "georgian",
+        "cjk-ideographic",
+        "hiragana",
+        "katakana",
+        "hiragana-iroha",
+        "katakana-iroha",
+        "inherit"
+    ],
+
+    "listStylePosition":
+    [
+        "inside",
+        "outside"
+    ],
+
+    "content":
+    [
+        "open-quote",
+        "close-quote",
+        "no-open-quote",
+        "no-close-quote",
+        "inherit"
+    ],
+
+    "fontStyle":
+    [
+        "normal",
+        "italic",
+        "oblique",
+        "inherit"
+    ],
+
+    "fontVariant":
+    [
+        "normal",
+        "small-caps",
+        "inherit"
+    ],
+
+    "fontWeight":
+    [
+        "normal",
+        "bold",
+        "bolder",
+        "lighter",
+        "inherit"
+    ],
+
+    "fontSize":
+    [
+        "xx-small",
+        "x-small",
+        "small",
+        "medium",
+        "large",
+        "x-large",
+        "xx-large",
+        "smaller",
+        "larger"
+    ],
+
+    "fontFamily":
+    [
+        "Arial",
+        "Comic Sans MS",
+        "Georgia",
+        "Tahoma",
+        "Verdana",
+        "Times New Roman",
+        "Trebuchet MS",
+        "Lucida Grande",
+        "Helvetica",
+        "serif",
+        "sans-serif",
+        "cursive",
+        "fantasy",
+        "monospace",
+        "caption",
+        "icon",
+        "menu",
+        "message-box",
+        "small-caption",
+        "status-bar",
+        "inherit"
+    ],
+
+    "display":
+    [
+        "block",
+        "inline",
+        "inline-block",
+        "list-item",
+        "marker",
+        "run-in",
+        "compact",
+        "table",
+        "inline-table",
+        "table-row-group",
+        "table-column",
+        "table-column-group",
+        "table-header-group",
+        "table-footer-group",
+        "table-row",
+        "table-cell",
+        "table-caption",
+        "-moz-box",
+        "-moz-compact",
+        "-moz-deck",
+        "-moz-grid",
+        "-moz-grid-group",
+        "-moz-grid-line",
+        "-moz-groupbox",
+        "-moz-inline-block",
+        "-moz-inline-box",
+        "-moz-inline-grid",
+        "-moz-inline-stack",
+        "-moz-inline-table",
+        "-moz-marker",
+        "-moz-popup",
+        "-moz-runin",
+        "-moz-stack"
+    ],
+
+    "position":
+    [
+        "static",
+        "relative",
+        "absolute",
+        "fixed",
+        "inherit"
+    ],
+
+    "float":
+    [
+        "left",
+        "right"
+    ],
+
+    "textAlign":
+    [
+        "left",
+        "right",
+        "center",
+        "justify"
+    ],
+
+    "tableLayout":
+    [
+        "fixed"
+    ],
+
+    "textDecoration":
+    [
+        "underline",
+        "overline",
+        "line-through",
+        "blink"
+    ],
+
+    "textTransform":
+    [
+        "capitalize",
+        "lowercase",
+        "uppercase",
+        "inherit"
+    ],
+
+    "unicodeBidi":
+    [
+        "normal",
+        "embed",
+        "bidi-override"
+    ],
+
+    "whiteSpace":
+    [
+        "normal",
+        "pre",
+        "nowrap"
+    ],
+
+    "verticalAlign":
+    [
+        "baseline",
+        "sub",
+        "super",
+        "top",
+        "text-top",
+        "middle",
+        "bottom",
+        "text-bottom",
+        "inherit"
+    ],
+
+    "thickness":
+    [
+        "thin",
+        "medium",
+        "thick"
+    ],
+
+    "userFocus":
+    [
+        "ignore",
+        "normal"
+    ],
+
+    "userInput":
+    [
+        "disabled",
+        "enabled"
+    ],
+
+    "userSelect":
+    [
+        "normal"
+    ],
+
+    "mozBoxSizing":
+    [
+        "content-box",
+        "padding-box",
+        "border-box"
+    ],
+
+    "mozBoxAlign":
+    [
+        "start",
+        "center",
+        "end",
+        "baseline",
+        "stretch"
+    ],
+
+    "mozBoxDirection":
+    [
+        "normal",
+        "reverse"
+    ],
+
+    "mozBoxOrient":
+    [
+        "horizontal",
+        "vertical"
+    ],
+
+    "mozBoxPack":
+    [
+        "start",
+        "center",
+        "end"
+    ]
+};
+
+this.nonEditableTags =
+{
+    "HTML": 1,
+    "HEAD": 1,
+    "html": 1,
+    "head": 1
+};
+
+this.innerEditableTags =
+{
+    "BODY": 1,
+    "body": 1
+};
+
+var invisibleTags = this.invisibleTags =
+{
+    "HTML": 1,
+    "HEAD": 1,
+    "TITLE": 1,
+    "META": 1,
+    "LINK": 1,
+    "STYLE": 1,
+    "SCRIPT": 1,
+    "NOSCRIPT": 1,
+    "BR": 1,
+
+    "html": 1,
+    "head": 1,
+    "title": 1,
+    "meta": 1,
+    "link": 1,
+    "style": 1,
+    "script": 1,
+    "noscript": 1,
+    "br": 1/*,
+    "window": 1,
+    "browser": 1,
+    "frame": 1,
+    "tabbrowser": 1,
+    "WINDOW": 1,
+    "BROWSER": 1,
+    "FRAME": 1,
+    "TABBROWSER": 1,
+    */
 };
 
 
@@ -674,28 +3530,28 @@ this.Ajax =
     
     
     /**
-     * Realiza uma requisiÃ§Ã£o ajax.
+     * Realiza uma requisição ajax.
      * 
      * @name request
      * @param {Object}   options               Request options
      * @param {String}   options.url           URL to be requested
      * @param {String}   options.type          Request type ("get" ou "post"). Default is "get".
-     * @param {Boolean}  options.async         Indica se a requisiÃ§Ã£o Ã© assÃ­ncrona. O padrÃ£o Ã© "true".   
-     * @param {String}   options.dataType      Dado requisitado ("text", "html", "xml" ou "json"). O padrÃ£o Ã© "text".
-     * @param {String}   options.contentType   ContentType a ser usado. O padrÃ£o Ã© "application/x-www-form-urlencoded".  
-     * @param {Function} options.onLoading     FunÃ§Ã£o a ser executada antes da requisiÃ§Ã£o ser enviada.
-     * @param {Function} options.onLoaded      FunÃ§Ã£o a ser executada logo que a requisiÃ§Ã£o for enviada.
-     * @param {Function} options.onInteractive FunÃ§Ã£o a ser executada durante o recebimento da requisiÃ§Ã£o.
-     * @param {Function} options.onComplete    FunÃ§Ã£o a ser executada ao completar a requisiÃ§Ã£o.
-     * @param {Function} options.onUpdate      FunÃ§Ã£o a ser executada apÃ³s completar a requisiÃ§Ã£o.
-     * @param {Function} options.onSuccess     FunÃ§Ã£o a ser executada ao completar a requisiÃ§Ã£o com sucesso.
-     * @param {Function} options.onError       FunÃ§Ã£o a ser executada ao completar a requisiÃ§Ã£o com erro.
+     * @param {Boolean}  options.async         Indica se a requisição é assíncrona. O padrão é "true".   
+     * @param {String}   options.dataType      Dado requisitado ("text", "html", "xml" ou "json"). O padrão é "text".
+     * @param {String}   options.contentType   ContentType a ser usado. O padrão é "application/x-www-form-urlencoded".  
+     * @param {Function} options.onLoading     Função a ser executada antes da requisição ser enviada.
+     * @param {Function} options.onLoaded      Função a ser executada logo que a requisição for enviada.
+     * @param {Function} options.onInteractive Função a ser executada durante o recebimento da requisição.
+     * @param {Function} options.onComplete    Função a ser executada ao completar a requisição.
+     * @param {Function} options.onUpdate      Função a ser executada após completar a requisição.
+     * @param {Function} options.onSuccess     Função a ser executada ao completar a requisição com sucesso.
+     * @param {Function} options.onError       Função a ser executada ao completar a requisição com erro.
      */      
     request: function(options)
     {
         var o = options || {};
     
-        // Configura as opÃ§Ãµes que nÃ£o foram definidas para o seu valor padrÃ£o
+        // Configura as opções que não foram definidas para o seu valor padrão
         o.type = o.type && o.type.toLowerCase() || "get";
         o.async = o.async || true;
         o.dataType = o.dataType || "text"; 
@@ -743,7 +3599,7 @@ this.Ajax =
     
         //setRequestHeaders();
     
-        // Registra o objeto para que o servidor saiba que Ã© uma requisiÃ§Ã£o AJAX
+        // Registra o objeto para que o servidor saiba que é uma requisição AJAX
         t.setRequestHeader("X-Requested-With", "XMLHttpRequest");
     
         // Caso tenha sido informado algum dado
@@ -751,18 +3607,18 @@ this.Ajax =
           t.setRequestHeader("Content-Type", r.contentType);
     
         /** @ignore */
-        // Tratamento de evento de mudanÃ§a de estado
+        // Tratamento de evento de mudança de estado
         t.onreadystatechange = function()
         { 
             FBL.Ajax.onStateChange(r); 
         }; 
     
-        // Envia a requisiÃ§Ã£o
+        // Envia a requisição
         t.send(data);
     },
   
     /**
-     * FunÃ§Ã£o de tratamento da mudanÃ§a de estado da requisiÃ§Ã£o ajax.
+     * Função de tratamento da mudança de estado da requisição ajax.
      */     
     onStateChange: function(options)
     {
@@ -803,7 +3659,7 @@ this.Ajax =
     },
   
     /**
-     * Retorna o atual estado da requisiÃ§Ã£o ajax.
+     * Retorna o atual estado da requisição ajax.
      */     
     getState: function()
     {
@@ -1060,6 +3916,7 @@ var panelTypes = [];
 
 var panelTypeMap = {};
 
+var reps = [];
 
 // ************************************************************************************************
 // Firebug
@@ -1068,11 +3925,12 @@ Application.browser.window.Firebug = FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
-    revision: "$Revision: 3847 $",
+    revision: "$Revision: 4071 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
+    reps: reps,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
@@ -1119,7 +3977,95 @@ Application.browser.window.Firebug = FBL.Firebug =
         if (FBTrace.DBG_INITIALIZE)
             for (var i = 0; i < arguments.length; ++i)
                 FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
+    },
+    
+    registerRep: function()
+    {
+        reps.push.apply(reps, arguments);
+    },
+
+    unregisterRep: function()
+    {
+        for (var i = 0; i < arguments.length; ++i)
+            remove(reps, arguments[i]);
+    },
+
+    setDefaultReps: function(funcRep, rep)
+    {
+        defaultRep = rep;
+        defaultFuncRep = funcRep;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Reps
+
+    getRep: function(object)
+    {
+        var type = typeof(object);
+        if (isIE && isFunction(object))
+            type = "function";
+        
+        for (var i = 0; i < reps.length; ++i)
+        {
+            var rep = reps[i];
+            try
+            {
+                if (rep.supportsObject(object, type))
+                {
+                    if (FBTrace.DBG_DOM)
+                        FBTrace.sysout("getRep type: "+type+" object: "+object, rep);
+                    return rep;
+                }
+            }
+            catch (exc)
+            {
+                if (FBTrace.DBG_ERRORS)
+                {
+                    FBTrace.sysout("firebug.getRep FAILS: ", exc.message || exc);
+                    FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: Rep="+reps[i].className);
+                }
+            }
+        }
+
+        return (type == 'function') ? defaultFuncRep : defaultRep;
+    },
+
+    getRepObject: function(node)
+    {
+        var target = null;
+        for (var child = node; child; child = child.parentNode)
+        {
+            if (hasClass(child, "repTarget"))
+                target = child;
+
+            if (child.repObject)
+            {
+                if (!target && hasClass(child, "repIgnore"))
+                    break;
+                else
+                    return child.repObject;
+            }
+        }
+    },
+
+    getRepNode: function(node)
+    {
+        for (var child = node; child; child = child.parentNode)
+        {
+            if (child.repObject)
+                return child;
+        }
+    },
+
+    getElementByRepObject: function(element, object)
+    {
+        for (var child = element.firstChild; child; child = child.nextSibling)
+        {
+            if (child.repObject == object)
+                return child;
+        }
     }
+
 };
 
 
@@ -1169,7 +4115,7 @@ Firebug.Controller = {
             
             // bind the handler to the proper context
             var handler = arg[2];
-            arg[2] = bind(this, handler);
+            arg[2] = bind(handler, this);
             // save the original handler as an extra-argument, so we can
             // look for it later, when removing a particular controller            
             arg[3] = handler;
@@ -1396,10 +4342,11 @@ Firebug.Panel =
                 this.toolButtonsNode = createElement("span", {
                     id: panelId + "Buttons",
                     className: "fbToolbarButtons"
-                }); 
+                });
+                
+                $("fbToolbarButtons").appendChild(this.toolButtonsNode);
             }
             
-            $("fbToolbarButtons").appendChild(this.toolButtonsNode);
             /**/
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1701,7 +4648,7 @@ Firebug.PanelBar =
             
             this.selectedPanel = panel;
             
-            addClass(panel.tabNode, "fbSelectedTab");
+            setClass(panel.tabNode, "fbSelectedTab");
             panel.initialize();
             panel.show();
         }
@@ -1821,7 +4768,7 @@ Firebug.Button.prototype = extend(Firebug.Controller,
         {
             if (display == "pressed")
             {
-                addClass(this.node, "fbBtnPressed");
+                setClass(this.node, "fbBtnPressed");
             }
             else if (display == "unpressed")
             {
@@ -2709,27 +5656,7 @@ var createChrome = function(options)
     if (isChromeFrame)
     {
         // Create the Chrome Frame
-        
-        /*
-        var style = [
-                'border:0;visibility:hidden;z-index:2147483647;position:',
-                noFixedPosition ? "absolute" : "fixed",
-                ';width:100%;left:0;bottom:',
-                noFixedPosition ? "-1px" : "0",
-                ';height:',
-                options.height,
-                'px;'
-            ].join("");
-        
-        var node = chrome.node = createGlobalElement("iframe",
-                {
-                    id: options.id,
-                    frameBorder: 0,
-                    style: style
-                });
-        /**/
-        
-        var node = chrome.node = context.document.createElement("iframe");
+        var node = chrome.node = createGlobalElement("iframe");
         
         node.setAttribute("id", options.id);
         node.setAttribute("frameBorder", "0");
@@ -2749,7 +5676,8 @@ var createChrome = function(options)
         if (!isBookmarletMode)
             node.setAttribute("src", Application.location.skin);
         
-        context.document.body.appendChild(node);
+        // document.body not available in XML+XSL documents in Firefox
+        context.document.getElementsByTagName("body").item(0).appendChild(node);
     }
     else
     {
@@ -2897,7 +5825,7 @@ var getChromeTemplate = function()
     var tpl = FirebugChrome.injected; 
     var r = [], i = -1;
     
-    r[++i] = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">';
+    r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
     r[++i] = '<html><head><title>';
     r[++i] = Firebug.version;
     r[++i] = '</title><style>';
@@ -3787,7 +6715,7 @@ FBL.ns(function() { with (FBL) {
 //----------------------------------------------------------------------------
 FirebugChrome.injected = 
 {
-    CSS: '.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 0 0 1px;_margin:1px -1px 0 1px;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}.fbToolbarButtons{display:none;}#fbStatusBarBox{display:none;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{position:absolute;z-index:5;width:100%;top:0;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;overflow:hidden;}#fbPanelBarBox{top:27px;position:absolute;z-index:8;width:100%;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:4px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:4px 2px 0 5px;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{position:relative;top:5px;line-height:19px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:10px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#fbChromeButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;_width:50px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:255px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;_position:absolute;}#fbChromeButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#fbChrome_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#fbChrome_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#fbChrome_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#fbChrome_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;_width:6px;}div.lineNo{font:11px Monaco,monospace;float:left;display:inline;position:relative;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}pre.nodeCode{font:11px Monaco,monospace;margin:0;padding-left:10px;overflow:hidden;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbChromeButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    CSS: '.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}.twisty{background-position:2px 0;}.panelNode-console{overflow-x:hidden;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{padding:0;border:none;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;outline:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#F8F8F8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectPropValue{font-weight:normal;font-style:italic;color:#555555;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.arrayLeftBracket{margin-right:4px;}.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0px 0 1px 0;}.logRow-spy,.logRow-spy .objectLink-sourceLink{padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;}.logRow-spy.loading .spyHead .spyRow .spyIcon{}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:11px;width:100%;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;white-space:nowrap;background-color:#FFFFFF;}.memberRow.hasChildren > .memberLabelCell > .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 0 0 1px;_margin:1px -1px 0 1px;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}.fbToolbarButtons{display:none;}#fbStatusBarBox{display:none;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{position:absolute;z-index:5;width:100%;top:0;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;overflow:hidden;}#fbPanelBarBox{top:27px;position:absolute;z-index:8;width:100%;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:4px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:4px 2px 0 5px;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{position:relative;top:5px;line-height:19px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:10px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#fbChromeButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:50px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:255px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;position:relative;}#fbChromeButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#fbChrome_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#fbChrome_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#fbChrome_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#fbChrome_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;_width:6px;}div.lineNo{font:11px Monaco,monospace;float:left;display:inline;position:relative;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}pre.nodeCode{font:11px Monaco,monospace;margin:0;padding-left:10px;overflow:hidden;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbChromeButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
     HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbHSplitter">&nbsp;</div><div id="fbChromeButtons"><a id="fbChrome_btClose" class="fbHover" title="Minimize Firebug">&nbsp;</a><a id="fbChrome_btDetach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a></div><div id="fbToolbar"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span><span id="fbHTMLStatusBar" class="fbStatusBar"><span><a class="fbHover"><b>body</b></a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div.class</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">body</a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div</a></span></span></span></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Style</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Layout</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div></div></div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div></td></tr><tr id="fbBottom"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
 };
 
@@ -5191,9 +8119,12 @@ Firebug.Inspector =
     {
         offlineFragment = Firebug.browser.document.createDocumentFragment();
         
-        //calculatePixelsPerInch();
-        createBoxModelInspector();
-        createOutlineInspector();
+        // TODO: xxxpedro use createGlobalElement 
+        if (!this.NS)
+        {
+            createBoxModelInspector();
+            createOutlineInspector();
+        }
     },
     
     onChromeReady: function()
@@ -5413,7 +8344,8 @@ var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hid
 var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 
 var inspectStyle = resetStyle + "z-index: 2147483500;";
-var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; background:url(http://pedrosimonetti.googlepages.com/pixel_transparent.gif);";
+var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; background:url(" +
+                        Application.location.skinDir + "pixel_transparent.gif);";
 
 //if (Application.isTraceMode) inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
 
@@ -5528,7 +8460,7 @@ Firebug.CommandLine = function(element)
     if (isOpera)
       fixOperaTabKey(this.element);
     
-    this.onKeyDown = bind(this, this.onKeyDown);
+    this.onKeyDown = bind(this.onKeyDown, this);
     addEvent(this.element, "keydown", this.onKeyDown);
     
     //Application.browser.onerror = this.onError;
@@ -5598,7 +8530,7 @@ Firebug.CommandLine.prototype =
             
             var result = this.evaluate(command);
             // evita que seja repetido o log, caso o comando executado
-            // jï¿½ seja um log via linha de comando
+            // j? seja um log via linha de comando
             if (result != Console.LOG_COMMAND)
             {
                 var html = [];
@@ -5856,9 +8788,10 @@ var CommandLineAPI =
         return Firebug.browser.document.getElementById(id)
     },
 
-    $$: function(selector)
+    $$: function(selector, context)
     {
-        return Firebug.Selector(selector, Firebug.browser.document)
+        context = context || Firebug.browser.document;
+        return Firebug.Selector(selector, context)
     },
     
     dir: Firebug.Console.dir,
@@ -6449,5 +9382,3 @@ Firebug.registerPanel(TracePanel);
 }});
 
 FBL.initialize();
-
-})();
