@@ -399,7 +399,7 @@ Firebug.HTML.onTreeClick = function (e)
 
 var OLD_chromeLoad = function OLD_chromeLoad(doc)
 {
-    Firebug.Inspector.onChromeReady();
+    //Firebug.Inspector.onChromeReady();
     
     var rootNode = document.documentElement;
     

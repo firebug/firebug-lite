@@ -117,7 +117,7 @@ var createChrome = function(options)
             node.setAttribute("src", Application.location.skin);
         
         // document.body not available in XML+XSL documents in Firefox
-        context.document.getElementsByTagName("body").item(0).appendChild(node);
+        context.document.getElementsByTagName("body")[0].appendChild(node);
     }
     else
     {
