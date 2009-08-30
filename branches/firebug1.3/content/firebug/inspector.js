@@ -11,9 +11,12 @@ Firebug.Inspector =
     {
         offlineFragment = Firebug.browser.document.createDocumentFragment();
         
-        //calculatePixelsPerInch();
-        createBoxModelInspector();
-        createOutlineInspector();
+        // TODO: xxxpedro use createGlobalElement 
+        if (!this.NS)
+        {
+            createBoxModelInspector();
+            createOutlineInspector();
+        }
     },
     
     onChromeReady: function()
