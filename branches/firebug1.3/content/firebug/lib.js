@@ -54,6 +54,7 @@ this.initialize = function()
     else // non-persistent application
     {
         // TODO: get preferences here...
+        FBL.NS = document.documentElement.namespaceURI;
         FBL.Application.browser = window;
         FBL.Application.destroy = destroyApplication;
     }    
@@ -87,7 +88,8 @@ this.initialize = function()
 
 var waitForDocument = function waitForDocument()
 {
-    if (document.body)
+    // document.body not available in XML+XSL documents in Firefox
+    if (document.getElementsByTagName("body").length > 0)
     {
         onDocumentLoad();
     }
@@ -424,7 +426,7 @@ this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
 
-this.NS = document.getElementsByTagName("html")[0].getAttribute("xmlns");
+this.NS = null;
 
 
 // ************************************************************************************************
@@ -789,19 +791,18 @@ this.createGlobalElement = function(tagName, properties)
     properties = properties || {};
     var doc = FBL.Application.browser.document;
     
-    var element = !this.NS || this.isIE ? 
-            doc.createElement(tagName) : 
-            doc.createElementNS(FBL.NS, tagName);
+    var element = this.NS && doc.createElementNS ? 
+            doc.createElementNS(FBL.NS, tagName) :
+            doc.createElement(tagName); 
             
     for(var name in properties)
     {
         var propname = name;
         if (FBL.isIE && name == "class") propname = "className";
-        if (FBL.isIE && name == "style") propname = "cssText";
         
         if (name != "document")
         {
-            element.setAttribute[propname] = properties[name];
+            element.setAttribute(propname, properties[name]);
         }
     }
     
