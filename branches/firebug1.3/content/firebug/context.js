@@ -307,7 +307,7 @@ FBL.Context.prototype =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Unit Funtions
   
-    pointsToPixels: function(name, value)
+    pointsToPixels: function(name, value, returnFloat)
     {
         var axis = /Top$|Bottom$/.test(name) ? "y" : "x";
         
