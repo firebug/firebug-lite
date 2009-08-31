@@ -132,6 +132,10 @@ XML + XSL
 ###################################################################################################
 Opera doesn't have document.elementFromPoint in XML documents
 
+revise the use of createElement and createGlobalElement
+    createElement --> createChromeElement
+    createGlobalElement --> createElement
+
 
 ###################################################################################################
 Missing

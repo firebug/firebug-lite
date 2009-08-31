@@ -5,14 +5,21 @@ FBL.ns(function() { with (FBL) {
 // Inspector Module
 
 Firebug.Inspector =
-{  
-  
-    initialize: function()
+{
+    create: function()
     {
         offlineFragment = Firebug.browser.document.createDocumentFragment();
         
         createBoxModelInspector();
         createOutlineInspector();
+    },
+    
+    destroy: function()
+    {
+        destroyBoxModelInspector();
+        destroyOutlineInspector();
+        
+        offlineFragment = null;
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -21,13 +28,19 @@ Firebug.Inspector =
     startInspecting: function()
     {
         Firebug.chrome.selectPanel("HTML");
+        
+        
         createInspectorFrame();
         
         var size = Firebug.browser.getWindowScrollSize();
         
         fbInspectFrame.style.width = size.width + "px";
         fbInspectFrame.style.height = size.height + "px";
+        /**/
 
+        
+        //addEvent(Firebug.browser.document.documentElement, "mousemove", Firebug.Inspector.onInspectingBody);
+        
         addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
         addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
     },
@@ -69,6 +82,32 @@ Firebug.Inspector =
             fbInspectFrame.style.display = "none";
             var targ = Firebug.browser.getElementFromPoint(e.clientX, e.clientY);
             fbInspectFrame.style.display = "block";
+    
+            // Avoid inspecting the outline, and the FirebugChrome
+            var id = targ.id;
+            if (id && /^fbOutline\w$/.test(id)) return;
+            if (id == "FirebugChrome") return;
+            
+            // Avoid looking at text nodes in Opera
+            while (targ.nodeType != 1) targ = targ.parentNode;
+    
+            if (targ.nodeName.toLowerCase() == "body") return;
+    
+            //Firebug.Console.log(e.clientX, e.clientY, targ);
+            Firebug.Inspector.drawOutline(targ);
+            
+            if (targ[cacheID])
+                FBL.Firebug.HTML.selectTreeNode(""+targ[cacheID])
+            
+            lastInspecting = new Date().getTime();
+        }
+    },
+    
+    onInspectingBody: function(e)
+    {
+        if (new Date().getTime() - lastInspecting > 30)
+        {
+            var targ = e.target;
     
             // Avoid inspecting the outline, and the FirebugChrome
             var id = targ.id;
@@ -255,6 +294,12 @@ var outline = {
   "fbOutlineR": "fbVerticalLine"
 };
 
+
+var getInspectingTarget = function()
+{
+    
+};
+
 // ************************************************************************************************
 // Section
 
@@ -264,12 +309,12 @@ var createInspectorFrame = function createInspectorFrame()
     fbInspectFrame.id = "fbInspectFrame";
     fbInspectFrame.style.cssText = inspectFrameStyle;
     Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectFrame);
-}
+};
 
 var destroyInspectorFrame = function createInspectorFrame()
 {
     Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
-}
+};
 
 var createOutlineInspector = function createOutlineInspector()
 {
@@ -279,6 +324,15 @@ var createOutlineInspector = function createOutlineInspector()
         el.id = name;
         el.style.cssText = inspectStyle + outlineStyle[outline[name]];
         offlineFragment.appendChild(el);
+    }
+};
+
+var destroyOutlineInspector = function destroyOutlineInspector()
+{
+    for (var name in outline)
+    {
+        var el = outlineElements[name];
+        el.parentNode.removeChild(el);
     }
 };
 
@@ -310,7 +364,10 @@ var createBoxModelInspector = function createBoxModelInspector()
     offlineFragment.appendChild(boxModel);
 };
 
-
+var destroyBoxModelInspector = function destroyBoxModelInspector()
+{
+    boxModel.parentNode.removeChild(boxModel);
+};
 
 // ************************************************************************************************
 // Section
