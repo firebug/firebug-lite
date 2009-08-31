@@ -252,7 +252,7 @@ var offlineFragment = null;
 
 var boxModelVisible = false;
 
-var pixelsPerInch, boxModel, boxModelStyle, boxMargin, boxMarginStyle, 
+var boxModel, boxModelStyle, boxMargin, boxMarginStyle, 
 boxPadding, boxPaddingStyle, boxContent, boxContentStyle;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
