@@ -256,7 +256,7 @@ FBL.Context.prototype =
             return this.percentToPixels(el, value);
     },
 
-    getMeasurementBox: function(el, name)
+    getMeasurementBox1: function(el, name)
     {
         var sufixes = ["Top", "Left", "Bottom", "Right"];
         var result = [];
@@ -265,7 +265,71 @@ FBL.Context.prototype =
             result[i] = Math.round(this.getMeasurementInPixels(el, name + sufix));
         
         return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
+    },
+    
+    getMeasurementBox: function(el, name)
+    {
+        var sufixes = ["Top", "Left", "Bottom", "Right"];
+        var result = [];
+        
+        if (document.all)
+        {
+            var propName, cssValue;
+            var autoMargin = null;
+            
+            for(var i=0, sufix; sufix=sufixes[i]; i++)
+            {
+                propName = name + sufix;
+                
+                cssValue = el.currentStyle[propName] || el.style[propName]; 
+                
+                if (cssValue == "auto")
+                {
+                    autoMargin = autoMargin || this.getCSSAutoMarginBox(el);
+                    result[i] = autoMargin[sufix.toLowerCase()];
+                }
+                else
+                    result[i] = this.getMeasurementInPixels(el, propName);
+                      
+            }
+        
+        }
+        else
+        {
+            for(var i=0, sufix; sufix=sufixes[i]; i++)
+                result[i] = this.getMeasurementInPixels(el, name + sufix);
+        }
+        
+        return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
     }, 
+    
+  
+    getCSSAutoMarginBox: function(el)
+    {
+        if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
+            return {top:0, left:0, bottom:0, right:0};
+        
+        var box = document.createElement("div");
+        box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
+        
+        var clone = el.cloneNode(false);
+        var text = document.createTextNode("&nbsp;");
+        clone.appendChild(text);
+        
+        box.appendChild(clone);
+    
+        document.body.appendChild(box);
+        
+        var marginTop = clone.offsetTop - box.offsetTop - 1;
+        var marginBottom = box.offsetHeight - clone.offsetHeight - 2 - marginTop;
+        
+        var marginLeft = clone.offsetLeft - box.offsetLeft - 1;
+        var marginRight = box.offsetWidth - clone.offsetWidth - 2 - marginLeft;
+        
+        document.body.removeChild(box);
+        
+        return {top:marginTop, left:marginLeft, bottom:marginBottom, right:marginRight};
+    },
     
     getFontSizeInPixels: function(el)
     {
@@ -377,24 +441,6 @@ var pixelsPerInch;
 
 var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
 var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
-
-
-// ************************************************************************************************
-// Measurement Functions
-
-var calculatePixelsPerInch = function calculatePixelsPerInch()
-{
-    var inch = this.document.createElement("div");
-    inch.style.cssText = resetStyle + "width:1in; height:1in; position:absolute; top:-1234px; left:-1234px;";
-    this.document.body.appendChild(inch);
-    
-    pixelsPerInch = {
-        x: inch.offsetWidth,
-        y: inch.offsetHeight
-    };
-    
-    this.document.body.removeChild(inch);
-};
 
 
 // ************************************************************************************************
