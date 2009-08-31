@@ -15,6 +15,27 @@ var FBL = {};
 var reNotWhitespace = /[^\s]/;
 var reSplitFile = /:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
 
+
+// ************************************************************************************************
+// properties
+
+var userAgent = navigator.userAgent;
+this.isFirefox = userAgent.indexOf("Firefox") != -1;
+this.isOpera   = userAgent.indexOf("Opera") != -1;
+this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
+this.isIE      = userAgent.indexOf("MSIE") != -1;
+this.isIE6     = /msie 6/i.test(navigator.appVersion);
+
+this.isQuiksMode = document.compatMode == "BackCompat";
+this.isIEQuiksMode = this.isIE && this.isQuiksMode;
+this.isIEStantandMode = this.isIE && !this.isQuiksMode;
+
+this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+
+this.NS = null;
+this.pixelsPerInch = null;
+
+
 // ************************************************************************************************
 // Namespaces
 
@@ -89,8 +110,10 @@ this.initialize = function()
 var waitForDocument = function waitForDocument()
 {
     // document.body not available in XML+XSL documents in Firefox
-    if (document.getElementsByTagName("body").length > 0)
+    var body = null;
+    if (body = document.getElementsByTagName("body")[0])
     {
+        calculatePixelsPerInch(document, body);
         onDocumentLoad();
     }
     else
@@ -407,26 +430,6 @@ function arrayInsert(array, index, other)
 
    return array;
 }
-
-
-// ************************************************************************************************
-// Browser detection
-
-var userAgent = navigator.userAgent;
-
-this.isFirefox = userAgent.indexOf("Firefox") != -1;
-this.isIE      = userAgent.indexOf("MSIE") != -1;
-this.isOpera   = userAgent.indexOf("Opera") != -1;
-this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
-this.isIE6     = /msie 6/i.test(navigator.appVersion);
-
-this.isQuiksMode = document.compatMode == "BackCompat";
-this.isIEQuiksMode = this.isIE && this.isQuiksMode;
-this.isIEStantandMode = this.isIE && !this.isQuiksMode;
-
-this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
-
-this.NS = null;
 
 
 // ************************************************************************************************
@@ -3717,6 +3720,25 @@ var fixIE6BackgroundImageCache = function(doc)
     {
         
     }
+};
+
+// ************************************************************************************************
+// calculatePixelsPerInch
+
+var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
+
+var calculatePixelsPerInch = function calculatePixelsPerInch(doc, body)
+{
+    var inch = FBL.createGlobalElement("div");
+    inch.style.cssText = resetStyle + "width:1in; height:1in; position:absolute; top:-1234px; left:-1234px;";
+    body.appendChild(inch);
+    
+    FBL.pixelsPerInch = {
+        x: inch.offsetWidth,
+        y: inch.offsetHeight
+    };
+    
+    body.removeChild(inch);
 };
 
 
