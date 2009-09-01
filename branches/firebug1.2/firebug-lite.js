@@ -1353,6 +1353,7 @@ var firebug = {
                 d.html.current[1].attribute.removeClass("Selected");
               }
               d.html.current = [_element, link];
+              d.html.openProperties();
               return;
             }
             parentLayer = d.html.openHtmlTree(map[t], parentLayer, map[t + 1]);
