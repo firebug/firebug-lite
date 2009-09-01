@@ -306,11 +306,25 @@ FBL.Context.prototype =
   
     getCSSAutoMarginBox: function(el)
     {
+        /*
         if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
             return {top:0, left:0, bottom:0, right:0};
+            /**/
+            
+        if (isIE && " h1 h2 h3 h4 h5 h6 h7 ul p ".indexOf(" "+el.nodeName.toLowerCase()+" ") == -1)
+            return {top:0, left:0, bottom:0, right:0};
+            /**/
+            
+        var offsetTop = 0;
+        if (false && isIEStantandMode)
+        {
+            var scrollSize = Firebug.browser.getWindowScrollSize();
+            offsetTop = scrollSize.height;
+        }/**/
         
         var box = document.createElement("div");
-        box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
+        //box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
+        box.style.cssText = "margin:0; padding:1px; border: 0;";
         
         var clone = el.cloneNode(false);
         var text = document.createTextNode("&nbsp;");
@@ -328,7 +342,7 @@ FBL.Context.prototype =
         
         document.body.removeChild(box);
         
-        return {top:marginTop, left:marginLeft, bottom:marginBottom, right:marginRight};
+        return {top:marginTop+offsetTop, left:marginLeft, bottom:marginBottom-offsetTop, right:marginRight};
     },
     
     getFontSizeInPixels: function(el)
