@@ -1858,7 +1858,6 @@ var firebug = {
             target!=el.main.environment.getElement()&&
             target.offsetParent!=el.main.environment.getElement() ) {
               d.inspector.inspect(target);
-              //d.html.inspect(target);
           }
         }
       
