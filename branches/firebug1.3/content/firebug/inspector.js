@@ -134,8 +134,6 @@ Firebug.Inspector =
     
     drawOutline: function(el)
     {
-        if (!outlineVisible) this.showOutline();
-        
         var box = Firebug.browser.getElementBox(el);
         
         var top = box.top;
@@ -161,6 +159,8 @@ Firebug.Inspector =
         o.fbOutlineR.style.top = top-border + "px";
         o.fbOutlineR.style.left = left+width + "px";
         o.fbOutlineR.style.height = height+2*border + "px";
+        
+        if (!outlineVisible) this.showOutline();        
     },
     
     hideOutline: function()
@@ -188,9 +188,20 @@ Firebug.Inspector =
     
     drawBoxModel: function(el)
     {
-        if (!boxModelVisible) this.showBoxModel();
-        
         var box = Firebug.browser.getElementBox(el);
+        
+        var windowSize = Firebug.browser.getWindowSize();
+        var scrollPosition = Firebug.browser.getWindowScrollPosition();
+        
+        // element may be occluded by the chrome, when in frame mode
+        var offsetHeight = Firebug.chrome.type == "frame" ? FirebugChrome.height : 0;
+        
+        // if element box is not inside the viewport, don't draw the box model
+        if (box.top > scrollPosition.top + windowSize.height - offsetHeight ||
+            box.left > scrollPosition.left + windowSize.width ||
+            scrollPosition.top > box.top + box.height ||
+            scrollPosition.left > box.left + box.width )
+            return;
         
         var top = box.top;
         var left = box.left;
@@ -214,6 +225,8 @@ Firebug.Inspector =
         boxContentStyle.left = margin.left + padding.left + "px";
         boxContentStyle.height = height - padding.top - padding.bottom + "px";
         boxContentStyle.width = width - padding.left - padding.right + "px";
+        
+        if (!boxModelVisible) this.showBoxModel();
     },
   
     hideBoxModel: function()
