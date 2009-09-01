@@ -44,7 +44,9 @@ Firebug.Inspector =
         //fbBtnInspect.className = "fbBtnInspectActive";
         //fbInspectIFrame.style.display = "block";
         
-        fbInspectIFrame.style.display = "block";
+        if(!inspectIFrameVisible)
+            showInspectIFrame();
+            
         fbInspectFrame = fbInspectIFrame.contentWindow.document.documentElement;
         fbInspectIFrameDoc = fbInspectIFrame.contentWindow.document;
         fbInspectIFrameDoc.body.style.overflow = "hidden";
@@ -56,7 +58,8 @@ Firebug.Inspector =
     
     stopInspecting: function()
     {
-        fbInspectIFrame.style.display = "none";
+        if(inspectIFrameVisible)
+            hideInspectIFrame();
         
         //destroyInspectorFrame();
         
@@ -158,11 +161,17 @@ Firebug.Inspector =
             offlineFragment.appendChild(outlineElements[name]);
 
         outlineVisible = false;
+        
+        if(inspectIFrameVisible)
+            hideInspectIFrame();
     },
     
     showOutline: function()
     {
         if (outlineVisible) return;
+        
+        if(!inspectIFrameVisible)
+            showInspectIFrame();
         
         for (var name in outline)
             //Firebug.browser.document.body.appendChild(outlineElements[name]);
@@ -210,6 +219,9 @@ Firebug.Inspector =
         {
             offlineFragment.appendChild(boxModel);
             boxModelVisible = false;
+            
+            if(inspectIFrameVisible)
+                hideInspectIFrame();
         }
     },
     
@@ -217,7 +229,9 @@ Firebug.Inspector =
     {
         if (!boxModelVisible)
         {
-//            /Firebug.browser.document.body.appendChild(boxModel);
+            if(!inspectIFrameVisible)
+                showInspectIFrame();
+            
             fbInspectIFrameDoc.body.appendChild(boxModel);
             boxModelVisible = true;
         }
@@ -283,6 +297,25 @@ var outline = {
   "fbOutlineR": "fbVerticalLine"
 };
 
+
+var inspectIFrameVisible = false;
+
+var showInspectIFrame = function()
+{
+    if (!inspectIFrameVisible)
+    {
+        fbInspectIFrame.style.display = "block";
+        inspectIFrameVisible = true;
+    }    
+};
+var hideInspectIFrame = function()
+{
+    if (inspectIFrameVisible)
+    {
+        fbInspectIFrame.style.display = "none";
+        inspectIFrameVisible = false;
+    }    
+};
 
 var getElementFromPoint = function getElementFromPoint(x, y)
 {
