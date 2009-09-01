@@ -51,33 +51,30 @@ Firebug.Inspector =
         fbInspectIFrameDoc = fbInspectIFrame.contentWindow.document;
         fbInspectIFrameDoc.body.style.overflow = "hidden";
         
-        
-        addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
-        addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
+        addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
+        addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
     },
     
     stopInspecting: function()
     {
-        if(inspectIFrameVisible)
-            hideInspectIFrame();
+        fbInspectFrame = fbInspectIFrame.contentWindow.document.documentElement;
+        removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
+        removeEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
         
-        //destroyInspectorFrame();
-        
-        //fbBtnInspect.href = "javascript:FB.startInspecting(this)";
-        //fbBtnInspect.className = "";
         Firebug.chrome.inspectButton.restore();
         
         if (outlineVisible) this.hideOutline();
-        removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
-        removeEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
+        
+        if(inspectIFrameVisible)
+            hideInspectIFrame();
     },
     
     
     onInspectingClick: function(e)
     {
-        fbInspectFrame.style.display = "none";
-        var targ = Firebug.browser.getElementFromPoint(e.clientX, e.clientY);
-        fbInspectFrame.style.display = "block";
+        fbInspectIFrame.style.display = "none";
+        var targ = getElementFromPoint(e.clientX, e.clientY);
+        fbInspectIFrame.style.display = "block";
 
         // Avoid inspecting the outline, and the FirebugChrome
         var id = targ.id;
@@ -124,8 +121,6 @@ Firebug.Inspector =
     
     drawOutline: function(el)
     {
-        if (!outlineVisible) this.showOutline();
-        
         var box = Firebug.browser.getElementBox(el);
         
         var top = box.top;
@@ -151,6 +146,8 @@ Firebug.Inspector =
         o.fbOutlineR.style.top = top-border + "px";
         o.fbOutlineR.style.left = left+width + "px";
         o.fbOutlineR.style.height = height+2*border + "px";
+        
+        if (!outlineVisible) this.showOutline();        
     },
     
     hideOutline: function()
@@ -185,8 +182,6 @@ Firebug.Inspector =
     
     drawBoxModel: function(el)
     {
-        if (!boxModelVisible) this.showBoxModel();
-        
         var box = Firebug.browser.getElementBox(el);
         
         var top = box.top;
@@ -211,6 +206,8 @@ Firebug.Inspector =
         boxContentStyle.left = margin.left + padding.left + "px";
         boxContentStyle.height = height - padding.top - padding.bottom + "px";
         boxContentStyle.width = width - padding.left - padding.right + "px";
+        
+        if (!boxModelVisible) this.showBoxModel();        
     },
   
     hideBoxModel: function()
@@ -304,6 +301,7 @@ var showInspectIFrame = function()
 {
     if (!inspectIFrameVisible)
     {
+        Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectIFrame);
         fbInspectIFrame.style.display = "block";
         inspectIFrameVisible = true;
     }    
@@ -312,7 +310,8 @@ var hideInspectIFrame = function()
 {
     if (inspectIFrameVisible)
     {
-        fbInspectIFrame.style.display = "none";
+        //fbInspectIFrame.style.display = "none";
+        offlineFragment.appendChild(fbInspectIFrame);
         inspectIFrameVisible = false;
     }    
 };
@@ -353,7 +352,7 @@ var createInspectorIFrame = function createInspectorIFrame()
     fbInspectIFrame.style.width = size.width + "px";
     fbInspectIFrame.style.height = size.height + "px";
     
-    Firebug.browser.document.getElementsByTagName("body").item(0).appendChild(fbInspectIFrame);
+    Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectIFrame);
     
     var doc = fbInspectIFrame.contentWindow.document;
     
