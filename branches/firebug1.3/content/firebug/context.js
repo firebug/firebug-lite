@@ -272,7 +272,7 @@ FBL.Context.prototype =
         var sufixes = ["Top", "Left", "Bottom", "Right"];
         var result = [];
         
-        if (document.all)
+        if (isIE)
         {
             var propName, cssValue;
             var autoMargin = null;
