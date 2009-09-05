@@ -72,9 +72,11 @@ Firebug.Inspector =
     
     onInspectingClick: function(e)
     {
-        fbInspectIFrame.style.display = "none";
+        //fbInspectIFrame.style.display = "none";
+        hideInspectIFrame();
         var targ = getElementFromPoint(e.clientX, e.clientY);
-        fbInspectIFrame.style.display = "block";
+        showInspectIFrame();
+        //fbInspectIFrame.style.display = "block";
 
         // Avoid inspecting the outline, and the FirebugChrome
         var id = targ.id;
@@ -92,9 +94,11 @@ Firebug.Inspector =
     {
         if (new Date().getTime() - lastInspecting > 30)
         {
-            fbInspectIFrame.style.display = "none";
+            //fbInspectIFrame.style.display = "none";
+            hideInspectIFrame();
             var targ = getElementFromPoint(e.clientX, e.clientY);
-            fbInspectIFrame.style.display = "block";
+            showInspectIFrame();
+            //fbInspectIFrame.style.display = "block";
     
             // Avoid inspecting the outline, and the FirebugChrome
             var id = targ.id;
@@ -121,6 +125,8 @@ Firebug.Inspector =
     
     drawOutline: function(el)
     {
+        if (!outlineVisible) this.showOutline();
+        
         var box = Firebug.browser.getElementBox(el);
         
         var top = box.top;
@@ -146,8 +152,6 @@ Firebug.Inspector =
         o.fbOutlineR.style.top = top-border + "px";
         o.fbOutlineR.style.left = left+width + "px";
         o.fbOutlineR.style.height = height+2*border + "px";
-        
-        if (!outlineVisible) this.showOutline();        
     },
     
     hideOutline: function()
@@ -182,6 +186,8 @@ Firebug.Inspector =
     
     drawBoxModel: function(el)
     {
+        if (!boxModelVisible) this.showBoxModel();
+        
         var box = Firebug.browser.getElementBox(el);
         
         var top = box.top;
@@ -206,8 +212,6 @@ Firebug.Inspector =
         boxContentStyle.left = margin.left + padding.left + "px";
         boxContentStyle.height = height - padding.top - padding.bottom + "px";
         boxContentStyle.width = width - padding.left - padding.right + "px";
-        
-        if (!boxModelVisible) this.showBoxModel();        
     },
   
     hideBoxModel: function()
@@ -299,19 +303,23 @@ var inspectIFrameVisible = false;
 
 var showInspectIFrame = function()
 {
-    if (!inspectIFrameVisible)
+    if (!inspectIFrameVisible || force)
     {
-        Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectIFrame);
         fbInspectIFrame.style.display = "block";
+        
+        var size = Firebug.browser.getWindowScrollSize();
+        
+        fbInspectIFrame.style.width = size.width + "px";
+        fbInspectIFrame.style.height = size.height + "px";
+    
         inspectIFrameVisible = true;
     }    
 };
-var hideInspectIFrame = function()
+var hideInspectIFrame = function(force)
 {
-    if (inspectIFrameVisible)
+    if (inspectIFrameVisible || force)
     {
-        //fbInspectIFrame.style.display = "none";
-        offlineFragment.appendChild(fbInspectIFrame);
+        fbInspectIFrame.style.display = "none";
         inspectIFrameVisible = false;
     }    
 };
