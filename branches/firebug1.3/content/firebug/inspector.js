@@ -228,6 +228,8 @@ Firebug.Inspector =
     {
         if (outlineVisible) return;
         
+        if (boxModelVisible) this.hideBoxModel();
+        
         for (var name in outline)
             Firebug.browser.document.getElementsByTagName("body")[0].appendChild(outlineElements[name]);
         
@@ -282,20 +284,20 @@ Firebug.Inspector =
   
     hideBoxModel: function()
     {
-        if (boxModelVisible)
-        {
-            offlineFragment.appendChild(boxModel);
-            boxModelVisible = false;
-        }
+        if (!boxModelVisible) return;
+        
+        offlineFragment.appendChild(boxModel);
+        boxModelVisible = false;
     },
     
     showBoxModel: function()
     {
-        if (!boxModelVisible)
-        {
-            Firebug.browser.document.getElementsByTagName("body")[0].appendChild(boxModel);
-            boxModelVisible = true;
-        }
+        if (boxModelVisible) return;
+            
+        if (outlineVisible) this.hideOutline();
+        
+        Firebug.browser.document.getElementsByTagName("body")[0].appendChild(boxModel);
+        boxModelVisible = true;
     }
 
 };
