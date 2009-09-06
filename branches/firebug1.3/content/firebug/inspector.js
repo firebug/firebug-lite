@@ -129,40 +129,6 @@ Firebug.Inspector =
         }
     },
     
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Inspector Outline
-    
-    drawOutline: function(el)
-    {
-        var box = Firebug.browser.getElementBox(el);
-        
-        var top = box.top;
-        var left = box.left;
-        var height = box.height;
-        var width = box.width;
-        
-        var border = 2;
-        var o = outlineElements;
-        
-        o.fbOutlineT.style.top = top-border + "px";
-        o.fbOutlineT.style.left = left + "px";
-        o.fbOutlineT.style.width = width + "px";
-  
-        o.fbOutlineB.style.top = top+height + "px";
-        o.fbOutlineB.style.left = left + "px";
-        o.fbOutlineB.style.width = width + "px";
-        
-        o.fbOutlineL.style.top = top-border + "px";
-        o.fbOutlineL.style.left = left-border + "px";
-        o.fbOutlineL.style.height = height+2*border + "px";
-
-        o.fbOutlineR.style.top = top-border + "px";
-        o.fbOutlineR.style.left = left+width + "px";
-        o.fbOutlineR.style.height = height+2*border + "px";
-        
-        if (!outlineVisible) this.showOutline();        
-    },
-    
     /**
      * 
      *   llttttttrr
@@ -181,14 +147,6 @@ Firebug.Inspector =
         var scrollSize = Firebug.browser.getWindowScrollSize();
         var scrollPosition = Firebug.browser.getWindowScrollPosition();
         
-        var offsetX = scrollSize.height > windowSize.height ? // is *vertical* scrollbar visible
-                      scrollbarSize :
-                      0;
-        
-        var offsetY = scrollSize.width > windowSize.width ? // is *horizontal* scrollbar visible
-                      scrollbarSize :
-                      0;
-        
         var box = Firebug.browser.getElementBox(el);
         
         var top = box.top;
@@ -196,8 +154,14 @@ Firebug.Inspector =
         var height = box.height;
         var width = box.width;
         
-        var freeHorizontalSpace = scrollPosition.left + windowSize.width - left - width - offsetX;
-        var freeVerticalSpace = scrollPosition.top + windowSize.height - top - height - offsetY;
+        var freeHorizontalSpace = scrollPosition.left + windowSize.width - left - width - 
+                (scrollSize.height > windowSize.height ? // is *vertical* scrollbar visible
+                 scrollbarSize : 0);
+        
+        var freeVerticalSpace = scrollPosition.top + windowSize.height - top - height -
+                (scrollSize.width > windowSize.width ? // is *horizontal* scrollbar visible
+                scrollbarSize : 0);
+        
         var numVerticalBorders = freeVerticalSpace > 0 ? 2 : 1;
         
         var o = outlineElements;
