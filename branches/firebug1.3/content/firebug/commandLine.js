@@ -279,7 +279,7 @@ Firebug.CommandLine.prototype =
             this.execute();
 
         else if (code == 27 /* ESC */)
-            setTimeout(this.clear, 0);
+            setTimeout(bind(this.clear, this), 0);
           
         else if (code == 38 /* up */)
             this.prevCommand();
