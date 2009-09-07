@@ -214,7 +214,6 @@ var onChromeLoad = function onChromeLoad(chrome)
             
             newChrome.reattach(chromeMap.frame, newChrome);
         }
-    
     }
 };
 
@@ -481,14 +480,7 @@ var ChromeBase = extend(ChromeBase, {
             if (isOpera && Firebug.chrome.type == "popup" && Firebug.chrome.node.closed)
             {
                 var frame = chromeMap.frame;
-                
-                // last UI state
-                FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
-                FBL.FirebugChrome.sidePanelVisible = frame.sidePanelVisible;
-                
-                Firebug.chrome = frame;
-                
-                this.reattach(this, frame);
+                frame.reattach();
                 
                 chromeMap.popup = null;
                 
@@ -672,6 +664,17 @@ var ChromeFrameBase = extend(ChromeContext,
         ChromeBase.shutdown.apply(this);
         
         this.isInitialized = false;
+    },
+    
+    reattach: function()
+    {
+        var frame = chromeMap.frame;
+        
+        // last UI state
+        FBL.FirebugChrome.commandLineVisible = this.commandLineVisible;
+        FBL.FirebugChrome.sidePanelVisible = this.sidePanelVisible;
+        
+        ChromeBase.reattach(chromeMap.popup, this);
     },
     
     open: function()
@@ -863,12 +866,7 @@ var ChromePopupBase = extend(ChromeContext, {
     destroy: function()
     {
         var frame = chromeMap.frame;
-        
-        // last UI state
-        FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
-        FBL.FirebugChrome.sidePanelVisible = frame.sidePanelVisible;
-        
-        this.reattach(this, frame);
+        frame.reattach();
         
         ChromeBase.destroy.apply(this);
         
