@@ -28,9 +28,9 @@ window.FBDev =
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Panels
         "firebug/html.js",
-        //"firebug/html2.js",
+        //"firebug/html2.js", // too experimental
         
-        //"firebug/dom.js",
+        //"firebug/dom.js", // experimental
         
         "firebug/tracePanel.js",
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

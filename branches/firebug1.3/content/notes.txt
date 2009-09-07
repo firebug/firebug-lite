@@ -179,11 +179,11 @@ OK  - problem with global events when in popup window
       
     - Frame/Popup settings
     
-    - Synchronize chromes
+OK  - Synchronize chromes
         
-        - detach and reattach methods
+    OK  - detach and reattach methods
     
-        - dispatch detach and reattach methods to panels  
+    OK  - dispatch detach and reattach methods to panels  
     
     OK  - Chrome Frame should have different states and handlers when in minichrome mode
         
@@ -194,13 +194,13 @@ OK  - problem with global events when in popup window
     OK  - refactor panel. each panel should have a single panelContentNode that will be shared
           across Chrome windows.
           
-    ~~  - divide Chrome.initialize and Chrome.create. addPanel() should be added only in create()
+    OK  - divide Chrome.initialize and Chrome.create. addPanel() should be added only in create()
         
-    ~~  - margin in HTML tree isn't being synchronized
+    OK  - margin in HTML tree isn't being synchronized
         
-    ~~  - selected element in HTML tree isn't being synchronized
+    OK  - selected element in HTML tree isn't being synchronized
     
-    - popup chrome in Opera isn't being initialized when NOT in bookmarlet mode. 
+Seems to be fixed - popup chrome in Opera isn't being initialized when NOT in bookmarlet mode. 
       Maybe the best way to detect when the chrome is loaded is the Joe Hewitt old way putting 
       JS in the end of HTML body. This is not a major issue since bookmarlet mode will be
       allways active when in production.

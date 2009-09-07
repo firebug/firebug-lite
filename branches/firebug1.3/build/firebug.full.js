@@ -15,6 +15,27 @@ var FBL = {};
 var reNotWhitespace = /[^\s]/;
 var reSplitFile = /:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
 
+
+// ************************************************************************************************
+// properties
+
+var userAgent = navigator.userAgent;
+this.isFirefox = userAgent.indexOf("Firefox") != -1;
+this.isOpera   = userAgent.indexOf("Opera") != -1;
+this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
+this.isIE      = userAgent.indexOf("MSIE") != -1;
+this.isIE6     = /msie 6/i.test(navigator.appVersion);
+
+this.isQuiksMode = document.compatMode == "BackCompat";
+this.isIEQuiksMode = this.isIE && this.isQuiksMode;
+this.isIEStantandMode = this.isIE && !this.isQuiksMode;
+
+this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+
+this.NS = null;
+this.pixelsPerInch = null;
+
+
 // ************************************************************************************************
 // Namespaces
 
@@ -89,8 +110,10 @@ this.initialize = function()
 var waitForDocument = function waitForDocument()
 {
     // document.body not available in XML+XSL documents in Firefox
-    if (document.getElementsByTagName("body").length > 0)
+    var body = null;
+    if (body = document.getElementsByTagName("body")[0])
     {
+        calculatePixelsPerInch(document, body);
         onDocumentLoad();
     }
     else
@@ -407,26 +430,6 @@ function arrayInsert(array, index, other)
 
    return array;
 }
-
-
-// ************************************************************************************************
-// Browser detection
-
-var userAgent = navigator.userAgent;
-
-this.isFirefox = userAgent.indexOf("Firefox") != -1;
-this.isIE      = userAgent.indexOf("MSIE") != -1;
-this.isOpera   = userAgent.indexOf("Opera") != -1;
-this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
-this.isIE6     = /msie 6/i.test(navigator.appVersion);
-
-this.isQuiksMode = document.compatMode == "BackCompat";
-this.isIEQuiksMode = this.isIE && this.isQuiksMode;
-this.isIEStantandMode = this.isIE && !this.isQuiksMode;
-
-this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
-
-this.NS = null;
 
 
 // ************************************************************************************************
@@ -964,7 +967,7 @@ this.dispatch = function(listeners, name, args)
             for (var prop in listeners)
             {
                 var listener = listeners[prop];
-                if ( listeners.hasOwnProperty(prop) && listener.hasOwnProperty(name) )
+                if ( listeners.hasOwnProperty(prop) && listener[name] )
                     listener[name].apply(listener, args);
             }
         }
@@ -3719,6 +3722,25 @@ var fixIE6BackgroundImageCache = function(doc)
     }
 };
 
+// ************************************************************************************************
+// calculatePixelsPerInch
+
+var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
+
+var calculatePixelsPerInch = function calculatePixelsPerInch(doc, body)
+{
+    var inch = FBL.createGlobalElement("div");
+    inch.style.cssText = resetStyle + "width:1in; height:1in; position:absolute; top:-1234px; left:-1234px;";
+    body.appendChild(inch);
+    
+    FBL.pixelsPerInch = {
+        x: inch.offsetWidth,
+        y: inch.offsetHeight
+    };
+    
+    body.removeChild(inch);
+};
+
 
 // ************************************************************************************************
 }).apply(FBL);
@@ -3921,11 +3943,11 @@ var reps = [];
 // ************************************************************************************************
 // Firebug
 
-Application.browser.window.Firebug = FBL.Firebug =  
+FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
-    revision: "$Revision: 4071 $",
+    revision: "$Revision: 4227 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -4067,6 +4089,11 @@ Application.browser.window.Firebug = FBL.Firebug =
     }
 
 };
+
+if (!Application.isPersistentMode || 
+     Application.isPersistentMode && Application.isChromeContext || 
+     Application.isDevelopmentMode )
+        Application.browser.window.Firebug = FBL.Firebug; 
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -4428,11 +4455,12 @@ Firebug.Panel =
 
     detach: function(oldChrome, newChrome)
     {
-        this.lastScrollTop = this.panelNode.scrollTop;
+        //this.lastScrollTop = this.panelNode.scrollTop;
     },
 
     reattach: function(doc)
     {
+        /*
         this.document = doc;
 
         if (this.panelNode)
@@ -4443,6 +4471,7 @@ Firebug.Panel =
             this.panelNode.scrollTop = this.lastScrollTop;
             delete this.lastScrollTop;
         }
+        /**/
     },
 
     show: function(state)
@@ -5414,7 +5443,7 @@ FBL.Context.prototype =
             return this.percentToPixels(el, value);
     },
 
-    getMeasurementBox: function(el, name)
+    getMeasurementBox1: function(el, name)
     {
         var sufixes = ["Top", "Left", "Bottom", "Right"];
         var result = [];
@@ -5423,7 +5452,85 @@ FBL.Context.prototype =
             result[i] = Math.round(this.getMeasurementInPixels(el, name + sufix));
         
         return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
+    },
+    
+    getMeasurementBox: function(el, name)
+    {
+        var sufixes = ["Top", "Left", "Bottom", "Right"];
+        var result = [];
+        
+        if (isIE)
+        {
+            var propName, cssValue;
+            var autoMargin = null;
+            
+            for(var i=0, sufix; sufix=sufixes[i]; i++)
+            {
+                propName = name + sufix;
+                
+                cssValue = el.currentStyle[propName] || el.style[propName]; 
+                
+                if (cssValue == "auto")
+                {
+                    autoMargin = autoMargin || this.getCSSAutoMarginBox(el);
+                    result[i] = autoMargin[sufix.toLowerCase()];
+                }
+                else
+                    result[i] = this.getMeasurementInPixels(el, propName);
+                      
+            }
+        
+        }
+        else
+        {
+            for(var i=0, sufix; sufix=sufixes[i]; i++)
+                result[i] = this.getMeasurementInPixels(el, name + sufix);
+        }
+        
+        return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
     }, 
+    
+  
+    getCSSAutoMarginBox: function(el)
+    {
+        /*
+        if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
+            return {top:0, left:0, bottom:0, right:0};
+            /**/
+            
+        if (isIE && " h1 h2 h3 h4 h5 h6 h7 ul p ".indexOf(" "+el.nodeName.toLowerCase()+" ") == -1)
+            return {top:0, left:0, bottom:0, right:0};
+            /**/
+            
+        var offsetTop = 0;
+        if (false && isIEStantandMode)
+        {
+            var scrollSize = Firebug.browser.getWindowScrollSize();
+            offsetTop = scrollSize.height;
+        }/**/
+        
+        var box = document.createElement("div");
+        //box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
+        box.style.cssText = "margin:0; padding:1px; border: 0;";
+        
+        var clone = el.cloneNode(false);
+        var text = document.createTextNode("&nbsp;");
+        clone.appendChild(text);
+        
+        box.appendChild(clone);
+    
+        document.body.appendChild(box);
+        
+        var marginTop = clone.offsetTop - box.offsetTop - 1;
+        var marginBottom = box.offsetHeight - clone.offsetHeight - 2 - marginTop;
+        
+        var marginLeft = clone.offsetLeft - box.offsetLeft - 1;
+        var marginRight = box.offsetWidth - clone.offsetWidth - 2 - marginLeft;
+        
+        document.body.removeChild(box);
+        
+        return {top:marginTop+offsetTop, left:marginLeft, bottom:marginBottom-offsetTop, right:marginRight};
+    },
     
     getFontSizeInPixels: function(el)
     {
@@ -5465,7 +5572,7 @@ FBL.Context.prototype =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Unit Funtions
   
-    pointsToPixels: function(name, value)
+    pointsToPixels: function(name, value, returnFloat)
     {
         var axis = /Top$|Bottom$/.test(name) ? "y" : "x";
         
@@ -5538,27 +5645,10 @@ var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 
 
 // ************************************************************************************************
-// Measurement Functions
-
-var calculatePixelsPerInch = function calculatePixelsPerInch()
-{
-    var inch = this.document.createElement("div");
-    inch.style.cssText = resetStyle + "width:1in; height:1in; position:absolute; top:-1234px; left:-1234px;";
-    this.document.body.appendChild(inch);
-    
-    pixelsPerInch = {
-        x: inch.offsetWidth,
-        y: inch.offsetHeight
-    };
-    
-    this.document.body.removeChild(inch);
-};
-
-
-// ************************************************************************************************
 }});
 
 FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
 
 
 FBL.chromeMap = {};
@@ -5576,6 +5666,8 @@ FBL.FirebugChrome =
     
     create: function()
     {
+        Firebug.Inspector.create();
+        
         createChrome({onLoad: onChromeLoad});
     },
     
@@ -5597,32 +5689,6 @@ FBL.FirebugChrome =
     }
 };
 
-var reattach = function()
-{
-    FBTrace.sysout("reattach", "-------------------------");
-    
-    var frame = chromeMap.frame;
-    var popup = chromeMap.popup;
-    
-    // last UI state
-    FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
-    FBL.FirebugChrome.sidePanelVisible = frame.sidePanelVisible;
-    
-    
-    // chrome synchronization
-    var framePanelMap = frame.panelMap;
-    var popupPanelMap = popup.panelMap;
-    for(var name in framePanelMap)
-    {
-        framePanelMap[name].contentNode.innerHTML = popupPanelMap[name].contentNode.innerHTML;
-    }
-    
-    Firebug.chrome = frame;
-    chromeMap.popup = null;
-    
-    if(FirebugChrome.selectedElement)
-        Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
-};
 
 // ************************************************************************************************
 // Chrome Window Options
@@ -5781,41 +5847,22 @@ var onChromeLoad = function onChromeLoad(chrome)
             // initialize the chrome application
             setTimeout(function(){
                 FBL.Firebug.initialize();
-            },100);
+            },0);
         }
         else if (chrome.type == "popup")
         {
-            FBTrace.sysout("onPopupChromeLoad", "-------------------------");
-            
             var frame = chromeMap.frame;
-            
             if (frame)
-            {
                 frame.close();
-            }
             
             // initial UI state
-            FBL.FirebugChrome.commandLineVisible = true;
-            FBL.FirebugChrome.sidePanelVisible = false;
-               
+            FirebugChrome.commandLineVisible = true;
+            FirebugChrome.sidePanelVisible = false;
             
-            var popup = Firebug.chrome = new Chrome(chrome);
+            var newChrome = new Chrome(chrome);
             
-            // chrome synchronization
-            var framePanelMap = frame.panelMap;
-            var popupPanelMap = popup.panelMap;
-            for(var name in framePanelMap)
-            {
-                popupPanelMap[name].contentNode.innerHTML = framePanelMap[name].contentNode.innerHTML;
-            }
-            
-            popup.initialize();    
-            dispatch(Firebug.modules, "initialize", []);
-            
-            if(FirebugChrome.selectedElement)
-                Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+            newChrome.reattach(chromeMap.frame, newChrome);
         }
-    
     }
 };
 
@@ -5832,7 +5879,7 @@ var getChromeTemplate = function()
     r[++i] = tpl.CSS;
     r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
     r[++i] = '</style>';
-    r[++i] = '</head><body>';
+    r[++i] = '</head><body class="FirebugPopup">';
     r[++i] = tpl.HTML;
     r[++i] = '</body></html>';
     
@@ -5977,15 +6024,10 @@ var ChromeBase = extend(ChromeBase, {
         }
         /**/
         
-        // Select the first registered panel
-        // TODO: BUG IE7
-        this.selectPanel(FirebugChrome.selectedPanel);
-        
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
-        Firebug.Inspector.initialize();
         
         this.inspectButton.initialize();
         
@@ -5997,6 +6039,12 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         // ************************************************************************************************
         
+        // Select the first registered panel
+        // TODO: BUG IE7
+        var self = this;
+        setTimeout(function(){
+            self.selectPanel(FirebugChrome.selectedPanel);
+        },0);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //this.draw();
@@ -6078,6 +6126,18 @@ var ChromeBase = extend(ChromeBase, {
         }
         else
         {
+            if (isOpera && Firebug.chrome.type == "popup" && Firebug.chrome.node.closed)
+            {
+                var frame = chromeMap.frame;
+                frame.reattach();
+                
+                chromeMap.popup = null;
+                
+                frame.open();
+                
+                return;
+            }
+                
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
             
@@ -6101,9 +6161,26 @@ var ChromeBase = extend(ChromeBase, {
         }
     },
     
-    reattach: function()
+    reattach: function(oldChrome, newChrome)
     {
+        // chrome synchronization
+        var newPanelMap = newChrome.panelMap;
+        var oldPanelMap = oldChrome.panelMap;
         
+        for(var name in newPanelMap)
+        {
+            newPanelMap[name].contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
+        }
+        
+        Firebug.chrome = newChrome;
+        
+        if (newChrome.type == "popup")
+        {
+            newChrome.initialize();
+            dispatch(Firebug.modules, "initialize", []);
+        }
+        
+        dispatch(Firebug.chrome.panelMap, "reattach", [oldChrome, newChrome]);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -6234,6 +6311,17 @@ var ChromeFrameBase = extend(ChromeContext,
         ChromeBase.shutdown.apply(this);
         
         this.isInitialized = false;
+    },
+    
+    reattach: function()
+    {
+        var frame = chromeMap.frame;
+        
+        // last UI state
+        FBL.FirebugChrome.commandLineVisible = this.commandLineVisible;
+        FBL.FirebugChrome.sidePanelVisible = this.sidePanelVisible;
+        
+        ChromeBase.reattach(chromeMap.popup, this);
     },
     
     open: function()
@@ -6424,14 +6512,19 @@ var ChromePopupBase = extend(ChromeContext, {
     
     destroy: function()
     {
-        reattach();
+        var frame = chromeMap.frame;
+        frame.reattach();
+        
         ChromeBase.destroy.apply(this);
+        
+        chromeMap.popup = null;
+        
+        this.node.close();
     },
     
     close: function()
     {
-        this.shutdown();
-        this.node.close();
+        this.destroy();
     }
 
 });
@@ -8113,14 +8206,21 @@ FBL.ns(function() { with (FBL) {
 // Inspector Module
 
 Firebug.Inspector =
-{  
-  
-    initialize: function()
+{
+    create: function()
     {
-        offlineFragment = Firebug.browser.document.createDocumentFragment();
+        offlineFragment = Application.browser.document.createDocumentFragment();
         
         createBoxModelInspector();
         createOutlineInspector();
+    },
+    
+    destroy: function()
+    {
+        destroyBoxModelInspector();
+        destroyOutlineInspector();
+        
+        offlineFragment = null;
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -8129,13 +8229,19 @@ Firebug.Inspector =
     startInspecting: function()
     {
         Firebug.chrome.selectPanel("HTML");
+        
+        
         createInspectorFrame();
         
         var size = Firebug.browser.getWindowScrollSize();
         
         fbInspectFrame.style.width = size.width + "px";
         fbInspectFrame.style.height = size.height + "px";
+        /**/
 
+        
+        //addEvent(Firebug.browser.document.documentElement, "mousemove", Firebug.Inspector.onInspectingBody);
+        
         addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
         addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
     },
@@ -8198,12 +8304,49 @@ Firebug.Inspector =
         }
     },
     
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Inspector Outline
+    onInspectingBody: function(e)
+    {
+        if (new Date().getTime() - lastInspecting > 30)
+        {
+            var targ = e.target;
     
+            // Avoid inspecting the outline, and the FirebugChrome
+            var id = targ.id;
+            if (id && /^fbOutline\w$/.test(id)) return;
+            if (id == "FirebugChrome") return;
+            
+            // Avoid looking at text nodes in Opera
+            while (targ.nodeType != 1) targ = targ.parentNode;
+    
+            if (targ.nodeName.toLowerCase() == "body") return;
+    
+            //Firebug.Console.log(e.clientX, e.clientY, targ);
+            Firebug.Inspector.drawOutline(targ);
+            
+            if (targ[cacheID])
+                FBL.Firebug.HTML.selectTreeNode(""+targ[cacheID])
+            
+            lastInspecting = new Date().getTime();
+        }
+    },
+    
+    /**
+     * 
+     *   llttttttrr
+     *   llttttttrr
+     *   ll      rr
+     *   ll      rr
+     *   llbbbbbbrr
+     *   llbbbbbbrr
+     */
     drawOutline: function(el)
     {
-        if (!outlineVisible) this.showOutline();
+        var border = 2;
+        var scrollbarSize = 17;
+        
+        var windowSize = Firebug.browser.getWindowSize();
+        var scrollSize = Firebug.browser.getWindowScrollSize();
+        var scrollPosition = Firebug.browser.getWindowScrollPosition();
         
         var box = Firebug.browser.getElementBox(el);
         
@@ -8212,24 +8355,64 @@ Firebug.Inspector =
         var height = box.height;
         var width = box.width;
         
-        var border = 2;
+        var freeHorizontalSpace = scrollPosition.left + windowSize.width - left - width - 
+                (scrollSize.height > windowSize.height ? // is *vertical* scrollbar visible
+                 scrollbarSize : 0);
+        
+        var freeVerticalSpace = scrollPosition.top + windowSize.height - top - height -
+                (scrollSize.width > windowSize.width ? // is *horizontal* scrollbar visible
+                scrollbarSize : 0);
+        
+        var numVerticalBorders = freeVerticalSpace > 0 ? 2 : 1;
+        
         var o = outlineElements;
+        var style;
         
-        o.fbOutlineT.style.top = top-border + "px";
-        o.fbOutlineT.style.left = left + "px";
-        o.fbOutlineT.style.width = width + "px";
+        style = o.fbOutlineT.style;
+        style.top = top-border + "px";
+        style.left = left + "px";
+        style.height = border + "px";  // TODO: on initialize()
+        style.width = width + "px";
   
-        o.fbOutlineB.style.top = top+height + "px";
-        o.fbOutlineB.style.left = left + "px";
-        o.fbOutlineB.style.width = width + "px";
+        style = o.fbOutlineL.style;
+        style.top = top-border + "px";
+        style.left = left-border + "px";
+        style.height = height+ numVerticalBorders*border + "px";
+        style.width = border + "px";  // TODO: on initialize()
         
-        o.fbOutlineL.style.top = top-border + "px";
-        o.fbOutlineL.style.left = left-border + "px";
-        o.fbOutlineL.style.height = height+2*border + "px";
-
-        o.fbOutlineR.style.top = top-border + "px";
-        o.fbOutlineR.style.left = left+width + "px";
-        o.fbOutlineR.style.height = height+2*border + "px";
+        style = o.fbOutlineB.style;
+        if (freeVerticalSpace > 0)
+        {
+            style.top = top+height + "px";
+            style.left = left + "px";
+            style.width = width + "px";
+            //style.height = border + "px"; // TODO: on initialize() or worst case?
+        }
+        else
+        {
+            style.top = -2*border + "px";
+            style.left = -2*border + "px";
+            style.width = border + "px";
+            //style.height = border + "px";
+        }
+        
+        style = o.fbOutlineR.style;
+        if (freeHorizontalSpace > 0)
+        {
+            style.top = top-border + "px";
+            style.left = left+width + "px";
+            style.height = height + numVerticalBorders*border + "px";
+            style.width = (freeHorizontalSpace < border ? freeHorizontalSpace : border) + "px";
+        }
+        else
+        {
+            style.top = -2*border + "px";
+            style.left = -2*border + "px";
+            style.height = border + "px";
+            style.width = border + "px";
+        }
+        
+        if (!outlineVisible) this.showOutline();        
     },
     
     hideOutline: function()
@@ -8246,6 +8429,8 @@ Firebug.Inspector =
     {
         if (outlineVisible) return;
         
+        if (boxModelVisible) this.hideBoxModel();
+        
         for (var name in outline)
             Firebug.browser.document.getElementsByTagName("body")[0].appendChild(outlineElements[name]);
         
@@ -8257,9 +8442,20 @@ Firebug.Inspector =
     
     drawBoxModel: function(el)
     {
-        if (!boxModelVisible) this.showBoxModel();
-        
         var box = Firebug.browser.getElementBox(el);
+        
+        var windowSize = Firebug.browser.getWindowSize();
+        var scrollPosition = Firebug.browser.getWindowScrollPosition();
+        
+        // element may be occluded by the chrome, when in frame mode
+        var offsetHeight = Firebug.chrome.type == "frame" ? FirebugChrome.height : 0;
+        
+        // if element box is not inside the viewport, don't draw the box model
+        if (box.top > scrollPosition.top + windowSize.height - offsetHeight ||
+            box.left > scrollPosition.left + windowSize.width ||
+            scrollPosition.top > box.top + box.height ||
+            scrollPosition.left > box.left + box.width )
+            return;
         
         var top = box.top;
         var left = box.left;
@@ -8283,24 +8479,26 @@ Firebug.Inspector =
         boxContentStyle.left = margin.left + padding.left + "px";
         boxContentStyle.height = height - padding.top - padding.bottom + "px";
         boxContentStyle.width = width - padding.left - padding.right + "px";
+        
+        if (!boxModelVisible) this.showBoxModel();
     },
   
     hideBoxModel: function()
     {
-        if (boxModelVisible)
-        {
-            offlineFragment.appendChild(boxModel);
-            boxModelVisible = false;
-        }
+        if (!boxModelVisible) return;
+        
+        offlineFragment.appendChild(boxModel);
+        boxModelVisible = false;
     },
     
     showBoxModel: function()
     {
-        if (!boxModelVisible)
-        {
-            Firebug.browser.document.getElementsByTagName("body")[0].appendChild(boxModel);
-            boxModelVisible = true;
-        }
+        if (boxModelVisible) return;
+            
+        if (outlineVisible) this.hideOutline();
+        
+        Firebug.browser.document.getElementsByTagName("body")[0].appendChild(boxModel);
+        boxModelVisible = true;
     }
 
 };
@@ -8321,7 +8519,7 @@ var offlineFragment = null;
 
 var boxModelVisible = false;
 
-var pixelsPerInch, boxModel, boxModelStyle, boxMargin, boxMarginStyle, 
+var boxModel, boxModelStyle, boxMargin, boxMarginStyle, 
 boxPadding, boxPaddingStyle, boxContent, boxContentStyle;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -8342,8 +8540,8 @@ var inspectContentStyle = inspectStyle + "background: SkyBlue;";
 
 
 var outlineStyle = { 
-    fbHorizontalLine: "background: #3875D7; height: 2px;",
-    fbVerticalLine: "background: #3875D7; width: 2px;"
+    fbHorizontalLine: "background: #3875D7;height: 2px;",
+    fbVerticalLine: "background: #3875D7;width: 2px;"
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -8363,6 +8561,12 @@ var outline = {
   "fbOutlineR": "fbVerticalLine"
 };
 
+
+var getInspectingTarget = function()
+{
+    
+};
+
 // ************************************************************************************************
 // Section
 
@@ -8372,12 +8576,12 @@ var createInspectorFrame = function createInspectorFrame()
     fbInspectFrame.id = "fbInspectFrame";
     fbInspectFrame.style.cssText = inspectFrameStyle;
     Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectFrame);
-}
+};
 
 var destroyInspectorFrame = function createInspectorFrame()
 {
     Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
-}
+};
 
 var createOutlineInspector = function createOutlineInspector()
 {
@@ -8387,6 +8591,15 @@ var createOutlineInspector = function createOutlineInspector()
         el.id = name;
         el.style.cssText = inspectStyle + outlineStyle[outline[name]];
         offlineFragment.appendChild(el);
+    }
+};
+
+var destroyOutlineInspector = function destroyOutlineInspector()
+{
+    for (var name in outline)
+    {
+        var el = outlineElements[name];
+        el.parentNode.removeChild(el);
     }
 };
 
@@ -8418,7 +8631,10 @@ var createBoxModelInspector = function createBoxModelInspector()
     offlineFragment.appendChild(boxModel);
 };
 
-
+var destroyBoxModelInspector = function destroyBoxModelInspector()
+{
+    boxModel.parentNode.removeChild(boxModel);
+};
 
 // ************************************************************************************************
 // Section
@@ -8446,7 +8662,9 @@ Firebug.CommandLine = function(element)
     if (isOpera)
       fixOperaTabKey(this.element);
     
+    this.clear = bind(this.clear, this);
     this.onKeyDown = bind(this.onKeyDown, this);
+    
     addEvent(this.element, "keydown", this.onKeyDown);
     
     //Application.browser.onerror = this.onError;
@@ -9107,7 +9325,14 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         fbPanel1 = null;
         Firebug.Panel.shutdown.apply(this, arguments);
-    }    
+    },
+    
+    reattach: function()
+    {
+        // TODO: panel reattach
+        if(FirebugChrome.selectedElement)
+            Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+    }
 });
 
 Firebug.registerPanel(HTMLPanel);
