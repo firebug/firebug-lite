@@ -17,13 +17,15 @@ FBL.FirebugChrome =
     
     create: function()
     {
-        Firebug.Inspector.create();
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.create", "creating chrome window");
         
         createChrome({onLoad: onChromeLoad});
     },
     
     initialize: function()
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.initialize", "initializing chrome window");
+        
         if (Application.chrome.type == "frame")
             ChromeMini.create(Application.chrome);
             
@@ -173,7 +175,7 @@ var onChromeLoad = function onChromeLoad(chrome)
 {
     Application.chrome = chrome;
     
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome loaded");
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome window loaded");
     
     if (Application.isPersistentMode)
     {
@@ -298,7 +300,7 @@ var ChromeBase = extend(ChromeBase, {
             FBTrace.flush(Firebug.Trace);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome");
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome application");
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
@@ -694,7 +696,7 @@ var ChromeFrameBase = extend(ChromeContext,
             
             var self = this;
             setTimeout(function(){
-                dispatch(Firebug.modules, "initialize", []);
+                //dispatch(Firebug.modules, "initialize", []);
                 self.initialize();
                 
                 if (noFixedPosition)
@@ -716,7 +718,7 @@ var ChromeFrameBase = extend(ChromeContext,
             
             if (this.isInitialized)
             {
-                dispatch(Firebug.modules, "shutdown", []);
+                //dispatch(Firebug.modules, "shutdown", []);
                 this.shutdown();
             }
             

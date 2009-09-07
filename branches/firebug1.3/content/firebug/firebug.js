@@ -44,9 +44,11 @@ FBL.Firebug =
         // Document must be cached before chrome initialization
         cacheDocument();
         
+        Firebug.Inspector.create();
+        
         FirebugChrome.initialize();
         
-        //dispatch(modules, "initialize", []);
+        dispatch(modules, "initialize", []);
     },
   
     shutdown: function()
@@ -465,8 +467,7 @@ Firebug.Panel =
         
         this.containerNode = this.panelNode.parentNode;
         
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("Firebug.Panel.initialize", this.name);
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.create", this.name);
         
         /*
         this.context = context;
@@ -487,8 +488,7 @@ Firebug.Panel =
 
     destroy: function(state) // Panel may store info on state
     {
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("Firebug.Panel.destroy", this.name);
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.destroy", this.name);
 
         if (this.panelNode)
             delete this.panelNode.ownerPanel;
@@ -498,6 +498,8 @@ Firebug.Panel =
     
     initialize: function()
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.initialize", this.name);
+        
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
         
@@ -527,7 +529,7 @@ Firebug.Panel =
     
     shutdown: function()
     {
-        
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
     },
 
     detach: function(oldChrome, newChrome)
@@ -746,7 +748,7 @@ Firebug.PanelBar =
             {
                 removeClass(selectedPanel.tabNode, "fbSelectedTab");
                 selectedPanel.hide();
-                panel.shutdown();
+                selectedPanel.shutdown();
             }
             
             if (!panel.parentPanel)

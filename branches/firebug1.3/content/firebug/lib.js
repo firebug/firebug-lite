@@ -122,7 +122,7 @@ var waitForDocument = function waitForDocument()
 
 var onDocumentLoad = function onDocumentLoad()
 {
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "create application chrome");
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "document loaded");
     
     if (FBL.isIE6)
         fixIE6BackgroundImageCache();
@@ -130,6 +130,7 @@ var onDocumentLoad = function onDocumentLoad()
     // persistent application - chrome document loaded
     if (FBL.Application.isPersistentMode && FBL.Application.isChromeContext)
     {
+        FBL.Firebug.Inspector.create();        
         FBL.Firebug.initialize();
         
         if (!FBL.Application.isDevelopmentMode)
@@ -158,7 +159,7 @@ this.Application = {
     openAtStartup: false,
     
     isBookmarletMode: false,
-    isPersistentMode: false,
+    isPersistentMode: true,
     isTraceMode: false,
     skin: "xp",
     
