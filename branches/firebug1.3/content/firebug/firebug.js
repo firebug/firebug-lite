@@ -20,7 +20,7 @@ var reps = [];
 // ************************************************************************************************
 // Firebug
 
-Application.browser.window.Firebug = FBL.Firebug =  
+FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
@@ -166,6 +166,11 @@ Application.browser.window.Firebug = FBL.Firebug =
     }
 
 };
+
+if (!Application.isPersistentMode || 
+     Application.isPersistentMode && Application.isChromeContext || 
+     Application.isDevelopmentMode )
+        Application.browser.window.Firebug = FBL.Firebug; 
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

@@ -221,7 +221,7 @@ var onChromeLoad = function onChromeLoad(chrome)
             // initialize the chrome application
             setTimeout(function(){
                 FBL.Firebug.initialize();
-            },100);
+            },0);
         }
         else if (chrome.type == "popup")
         {
