@@ -137,7 +137,7 @@ var createChrome = function(options)
     
     if (isBookmarletMode)
     {
-        var tpl = getChromeTemplate();
+        var tpl = getChromeTemplate(!isChromeFrame);
         var doc = isChromeFrame ? node.contentWindow.document : node.document;
         doc.write(tpl);
         doc.close();
@@ -218,7 +218,7 @@ var onChromeLoad = function onChromeLoad(chrome)
 };
 
 
-var getChromeTemplate = function()
+var getChromeTemplate = function(isPopup)
 {
     var tpl = FirebugChrome.injected; 
     var r = [], i = -1;
@@ -230,7 +230,7 @@ var getChromeTemplate = function()
     r[++i] = tpl.CSS;
     r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
     r[++i] = '</style>';
-    r[++i] = '</head><body class="FirebugPopup">';
+    r[++i] = '</head><body class=' + (isPopup ? '"FirebugPopup"' : '') + '>';
     r[++i] = tpl.HTML;
     r[++i] = '</body></html>';
     
