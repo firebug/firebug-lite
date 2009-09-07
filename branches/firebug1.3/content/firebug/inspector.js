@@ -8,7 +8,7 @@ Firebug.Inspector =
 {
     create: function()
     {
-        offlineFragment = Firebug.browser.document.createDocumentFragment();
+        offlineFragment = Application.browser.document.createDocumentFragment();
         
         createBoxModelInspector();
         createOutlineInspector();

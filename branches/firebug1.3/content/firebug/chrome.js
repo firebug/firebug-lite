@@ -16,6 +16,8 @@ FBL.FirebugChrome =
     
     create: function()
     {
+        Firebug.Inspector.create();
+        
         createChrome({onLoad: onChromeLoad});
     },
     
@@ -316,8 +318,6 @@ var ChromeBase = extend(ChromeBase, {
             }
         }
         
-        Firebug.Inspector.create();
-        
         this.inspectButton = new Firebug.Button({
             type: "toggle",
             node: $("fbChrome_btInspect"),
@@ -330,8 +330,6 @@ var ChromeBase = extend(ChromeBase, {
     
     destroy: function()
     {
-        Firebug.Inspector.destroy();
-        
         this.shutdown();
     },
     
