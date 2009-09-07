@@ -15,7 +15,9 @@ Firebug.CommandLine = function(element)
     if (isOpera)
       fixOperaTabKey(this.element);
     
+    this.clear = bind(this.clear, this);
     this.onKeyDown = bind(this.onKeyDown, this);
+    
     addEvent(this.element, "keydown", this.onKeyDown);
     
     //Application.browser.onerror = this.onError;
@@ -279,7 +281,7 @@ Firebug.CommandLine.prototype =
             this.execute();
 
         else if (code == 27 /* ESC */)
-            setTimeout(bind(this.clear, this), 0);
+            setTimeout(this.clear, 0);
           
         else if (code == 38 /* up */)
             this.prevCommand();
