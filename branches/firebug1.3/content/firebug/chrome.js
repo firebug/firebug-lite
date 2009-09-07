@@ -1,4 +1,5 @@
 FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
 
 
 FBL.chromeMap = {};
@@ -477,6 +478,25 @@ var ChromeBase = extend(ChromeBase, {
         }
         else
         {
+            if (isOpera && Firebug.chrome.type == "popup" && Firebug.chrome.node.closed)
+            {
+                var frame = chromeMap.frame;
+                
+                // last UI state
+                FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
+                FBL.FirebugChrome.sidePanelVisible = frame.sidePanelVisible;
+                
+                Firebug.chrome = frame;
+                
+                this.reattach(this, frame);
+                
+                chromeMap.popup = null;
+                
+                frame.open();
+                
+                return;
+            }
+                
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
             
