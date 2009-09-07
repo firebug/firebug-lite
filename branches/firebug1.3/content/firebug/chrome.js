@@ -39,32 +39,6 @@ FBL.FirebugChrome =
     }
 };
 
-var reattach = function()
-{
-    FBTrace.sysout("reattach", "-------------------------");
-    
-    var frame = chromeMap.frame;
-    var popup = chromeMap.popup;
-    
-    // last UI state
-    FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
-    FBL.FirebugChrome.sidePanelVisible = frame.sidePanelVisible;
-    
-    
-    // chrome synchronization
-    var framePanelMap = frame.panelMap;
-    var popupPanelMap = popup.panelMap;
-    for(var name in framePanelMap)
-    {
-        framePanelMap[name].contentNode.innerHTML = popupPanelMap[name].contentNode.innerHTML;
-    }
-    
-    Firebug.chrome = frame;
-    chromeMap.popup = null;
-    
-    if(FirebugChrome.selectedElement)
-        Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
-};
 
 // ************************************************************************************************
 // Chrome Window Options
@@ -227,35 +201,17 @@ var onChromeLoad = function onChromeLoad(chrome)
         }
         else if (chrome.type == "popup")
         {
-            FBTrace.sysout("onPopupChromeLoad", "-------------------------");
-            
             var frame = chromeMap.frame;
-            
             if (frame)
-            {
                 frame.close();
-            }
             
             // initial UI state
-            FBL.FirebugChrome.commandLineVisible = true;
-            FBL.FirebugChrome.sidePanelVisible = false;
-               
+            FirebugChrome.commandLineVisible = true;
+            FirebugChrome.sidePanelVisible = false;
             
-            var popup = Firebug.chrome = new Chrome(chrome);
+            var newChrome = new Chrome(chrome);
             
-            // chrome synchronization
-            var framePanelMap = frame.panelMap;
-            var popupPanelMap = popup.panelMap;
-            for(var name in framePanelMap)
-            {
-                popupPanelMap[name].contentNode.innerHTML = framePanelMap[name].contentNode.innerHTML;
-            }
-            
-            popup.initialize();    
-            dispatch(Firebug.modules, "initialize", []);
-            
-            if(FirebugChrome.selectedElement)
-                Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+            newChrome.reattach(chromeMap.frame, newChrome);
         }
     
     }
@@ -544,9 +500,28 @@ var ChromeBase = extend(ChromeBase, {
         }
     },
     
-    reattach: function()
+    reattach: function(oldChrome, newChrome)
     {
+        // chrome synchronization
+        var newPanelMap = newChrome.panelMap;
+        var oldPanelMap = oldChrome.panelMap;
         
+        for(var name in newPanelMap)
+        {
+            newPanelMap[name].contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
+        }
+        
+        Firebug.chrome = newChrome;
+        
+        if (newChrome.type == "popup")
+        {
+            newChrome.initialize();
+            dispatch(Firebug.modules, "initialize", []);
+        }
+        
+        // TODO: panel reattach
+        if(FirebugChrome.selectedElement)
+            Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -867,14 +842,24 @@ var ChromePopupBase = extend(ChromeContext, {
     
     destroy: function()
     {
-        reattach();
+        var frame = chromeMap.frame;
+        
+        // last UI state
+        FBL.FirebugChrome.commandLineVisible = frame.commandLineVisible;
+        FBL.FirebugChrome.sidePanelVisible = frame.sidePanelVisible;
+        
+        this.reattach(this, frame);
+        
         ChromeBase.destroy.apply(this);
+        
+        chromeMap.popup = null;
+        
+        this.node.close();
     },
     
     close: function()
     {
-        this.shutdown();
-        this.node.close();
+        this.destroy();
     }
 
 });
