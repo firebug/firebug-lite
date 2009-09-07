@@ -967,7 +967,7 @@ this.dispatch = function(listeners, name, args)
             for (var prop in listeners)
             {
                 var listener = listeners[prop];
-                if ( listeners.hasOwnProperty(prop) && listener.hasOwnProperty(name) )
+                if ( listeners.hasOwnProperty(prop) && listener[name] )
                     listener[name].apply(listener, args);
             }
         }
