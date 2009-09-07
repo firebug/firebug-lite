@@ -230,7 +230,7 @@ var getChromeTemplate = function()
     r[++i] = tpl.CSS;
     r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
     r[++i] = '</style>';
-    r[++i] = '</head><body>';
+    r[++i] = '</head><body class="FirebugPopup">';
     r[++i] = tpl.HTML;
     r[++i] = '</body></html>';
     
