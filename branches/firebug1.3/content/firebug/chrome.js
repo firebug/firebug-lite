@@ -6,7 +6,7 @@ FBL.chromeMap = {};
 
 FBL.FirebugChrome = 
 {
-    commandLineVisible: true,
+    commandLineVisible: false,
     sidePanelVisible: false,
     sidePanelWidth: 300,
     selectedPanel: "Console",
@@ -207,7 +207,7 @@ var onChromeLoad = function onChromeLoad(chrome)
                 frame.close();
             
             // initial UI state
-            FirebugChrome.commandLineVisible = true;
+            FirebugChrome.commandLineVisible = false;
             FirebugChrome.sidePanelVisible = false;
             
             var newChrome = new Chrome(chrome);

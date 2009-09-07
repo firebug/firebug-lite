@@ -321,25 +321,38 @@ ScrollArea Class
 ---------------------------------------------------------------------------------------------------
 Preferences
 ---------------------------------------------------------------------------------------------------
-    - frame
-        - id
-        - height
-         
-    - popup
-        - id
-        - top
-        - left
-        - width
-        - height
+
+    - Console
+        - override (for non-FF browsers)
+
+    - HTML
+        - ?
+        - ignoreFirebugElements
     
+    - DOM
+        - show DOM members
+        - ...
 
-    - console
-        - consoleDefaultNamespace
-        - consoleAlternateNamespace
-        - override console object (for non-FF browsers)
+    - Chrome
+        - open
+        - type
+        - skin
+        
+        - Frame
+            - height
+    
+        - Popup
+            - top
+            - left
+            - width
+            - height
 
-    - application
-        - define public namespace
+    - Application
+        - publish
+        - remote
+        - persist
+        - trace: "all"
+
 
 ---------------------------------------------------------------------------------------------------
 User Interface
@@ -452,6 +465,24 @@ BRAINSTORMING SECTION
 ###################################################################################################
 ###################################################################################################
 
+###################################################################################################
+getPixelValue
+###################################################################################################
+Dean Edwards:
+http://erik.eae.net/archives/2007/07/27/18.54.15/#comment-102291
+
+var PIXEL = /^\d+(px)?$/i;
+function getPixelValue(element, value) {
+if (PIXEL.test(value)) return parseInt(value);
+var style = element.style.left;
+var runtimeStyle = element.runtimeStyle.left;
+element.runtimeStyle.left = element.currentStyle.left;
+element.style.left = value || 0;
+value = element.style.pixelLeft;
+element.style.left = style;
+element.runtimeStyle.left = runtimeStyle;
+return value;
+};
 
 ###################################################################################################
 Library Expose
