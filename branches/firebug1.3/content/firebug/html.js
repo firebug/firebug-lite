@@ -306,7 +306,14 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         fbPanel1 = null;
         Firebug.Panel.shutdown.apply(this, arguments);
-    }    
+    },
+    
+    reattach: function()
+    {
+        // TODO: panel reattach
+        if(FirebugChrome.selectedElement)
+            Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+    }
 });
 
 Firebug.registerPanel(HTMLPanel);

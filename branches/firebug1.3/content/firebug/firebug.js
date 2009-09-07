@@ -532,11 +532,12 @@ Firebug.Panel =
 
     detach: function(oldChrome, newChrome)
     {
-        this.lastScrollTop = this.panelNode.scrollTop;
+        //this.lastScrollTop = this.panelNode.scrollTop;
     },
 
     reattach: function(doc)
     {
+        /*
         this.document = doc;
 
         if (this.panelNode)
@@ -547,6 +548,7 @@ Firebug.Panel =
             this.panelNode.scrollTop = this.lastScrollTop;
             delete this.lastScrollTop;
         }
+        /**/
     },
 
     show: function(state)

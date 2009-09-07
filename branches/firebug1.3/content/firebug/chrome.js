@@ -531,9 +531,7 @@ var ChromeBase = extend(ChromeBase, {
             dispatch(Firebug.modules, "initialize", []);
         }
         
-        // TODO: panel reattach
-        if(FirebugChrome.selectedElement)
-            Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+        dispatch(Firebug.chrome.panelMap, "reattach", [oldChrome, newChrome]);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
