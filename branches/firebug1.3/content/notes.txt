@@ -105,7 +105,7 @@ Preferences Brainstorm
     ------------------
     chrome
     ------------------
-    - debug
+    - trace
     - popup
     
     - frame
@@ -126,6 +126,30 @@ Preferences Brainstorm
     ------------------
     - trace
     - persist
+    
+<script type="text/javascript" src="firebug.js">
+{
+    trace: true,
+    remote: true,
+    persist: true, // not supported yet
+    
+    open: true,
+    
+    popup: true,
+    
+    skin: "classic", // not supported yet (need JSONP skin files)
+    
+}
+</script>    
+
+###################################################################################################
+Statistics
+###################################################################################################
+    Use Google Analytics to track Firebug Lite statistics.
+    It could run inside the Chrome iframe (no global pollution).
+    Not called when used locally, included when in development mode.
+
+
 
 ###################################################################################################
 XML + XSL

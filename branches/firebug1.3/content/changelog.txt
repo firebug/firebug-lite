@@ -1,4 +1,30 @@
 ###################################################################################################
+ 1.3.0a3
+###################################################################################################
+
+XML+XSL and XHTML support
+
+Bookmarlet
+    More robust and maintainable bookmarlet
+
+Core
+    Chrome synchronization (detach and reattach methods)
+    Find location
+
+
+Inspector
+    auto margin
+    pointsToPixels
+    pixelsPerInch
+    Outline Inspector is now "cropped" to avoid triggering the scrollbars
+
+Domplate
+
+Reps
+
+
+
+###################################################################################################
  1.3.0a2
 ###################################################################################################
 
