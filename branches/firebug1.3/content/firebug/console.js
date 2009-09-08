@@ -173,7 +173,6 @@ Firebug.Console = extend(ConsoleModule,
 {
     LOG_COMMAND: {},
     
-    //messageQueue: [],
     groupStack: [],
     timeMap: {},
         

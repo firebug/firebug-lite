@@ -100,13 +100,13 @@ this.initialize = function()
     
     if (FBL.Application.isPersistentMode)
     {
-        if (!isChromeContext)
+        if (isChromeContext)
         {
-            FBL.Application.FirebugChrome = FBL.FirebugChrome;
+            FBL.FirebugChrome.clone(FBL.Application.FirebugChrome);
         }
         else
         {
-            FBL.FirebugChrome.clone(FBL.Application.FirebugChrome);
+            FBL.Application.FirebugChrome = FBL.FirebugChrome;
         }
     }
     

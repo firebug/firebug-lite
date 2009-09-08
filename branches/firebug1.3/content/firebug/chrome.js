@@ -20,7 +20,7 @@ FBL.FirebugChrome =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.create", "creating chrome window");
         
-        createChrome({onLoad: onChromeLoad});
+        createChrome();
     },
     
     initialize: function()
@@ -75,7 +75,6 @@ var createChrome = function(options)
     options = extend(ChromeDefaultOptions, options);
     
     var context = options.context || Application.browser;
-    var onLoad = options.onLoad;
     
     var chrome = {};
     
@@ -173,8 +172,7 @@ var createChrome = function(options)
             chrome.window = win.window;
             chrome.document = win.document;
             
-            if (onLoad)
-                onLoad(chrome);
+            onChromeLoad(chrome);
         }
         else
             setTimeout(waitForChrome, waitDelay);
@@ -192,6 +190,8 @@ var onChromeLoad = function onChromeLoad(chrome)
     
     if (Application.isPersistentMode)
     {
+        // TODO: xxpedro make better chrome synchronization when in persistent mode
+        Application.FirebugChrome = FirebugChrome;
         chrome.window.FirebugApplication = Application;
     
         if (Application.isDevelopmentMode)
@@ -523,7 +523,7 @@ var ChromeBase = extend(ChromeBase, {
         //alert('detach');
         if(!chromeMap.popup)
         {     
-            createChrome({type: "popup", onLoad: onChromeLoad});
+            createChrome({type: "popup"});
         }
     },
     
