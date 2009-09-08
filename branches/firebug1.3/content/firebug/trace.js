@@ -11,11 +11,13 @@ var traceOptions = {
     DBG_DISPATCH: 1
 };
 
-this.messageQueue = [];
 this.module = null;
 
 this.initialize = function()
 {
+    if (!this.messageQueue)
+        this.messageQueue = [];
+    
     for (var name in traceOptions)
         this[name] = traceOptions[name]; 
 };

@@ -52,6 +52,12 @@ Inherited Styles
 
 Firebug 1.3a2 - Revision: 3847
 
+    - problem with IE and and frame.close() function that uses $(). picking wrong window.
+    
+    - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
+      the "open tag" node (<div>).
+    
+    - remove events added in disableTextSelection
 
     - rename the id "FirebugChrome" to "FirebugFrame" or "FirebugChromeFrame" or "FirebugWindow"
     
@@ -59,19 +65,14 @@ Firebug 1.3a2 - Revision: 3847
     
     - window.onerror is being turned off when UI is minimized (and should not)
     
-    - bookmarlet fail in getfirebug.com/lite.html
+OK  - bookmarlet fail in getfirebug.com/lite.html
     
-    - reference to wrong URL in var inspectFrameStyle in Inspector module.
+OK  - reference to wrong URL in var inspectFrameStyle in Inspector module.
      
     - put IE6CSS in injected chrome
     
-    - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
+OK  - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
     
-    - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
-      the "open tag" node (<div>).
-    
-    - remove events added in disableTextSelection
-
 1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
       and is getting hidden 
 
@@ -435,7 +436,7 @@ CommandLine
 BUGS
 ###################################################################################################
     - context.evaluate
-    - context is not being properly handled in persistent mode, when using
+OK  - context is not being properly handled in persistent mode, when using
       the autocomplete function in commandLine. It is using the wrong "window".
     
     - define FBL.console to point to the global console

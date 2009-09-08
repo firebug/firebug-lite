@@ -393,6 +393,7 @@ Firebug.HTML.onTreeClick = function (e)
     }
     else if (targ.className == 'nodeValue' || targ.className == 'nodeName')
     {
+        /*
         var input = FBL.Firebug.chrome.document.getElementById('treeInput');
         
         input.style.display = "block";
@@ -401,6 +402,7 @@ Firebug.HTML.onTreeClick = function (e)
         input.style.width = targ.offsetWidth + 6 + 'px';
         input.value = targ.textContent || targ.innerText;
         input.focus(); 
+        /**/
     }
 }
 

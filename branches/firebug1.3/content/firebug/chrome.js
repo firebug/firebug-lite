@@ -9,7 +9,10 @@ FBL.FirebugChrome =
     commandLineVisible: false,
     sidePanelVisible: false,
     sidePanelWidth: 300,
+    
     selectedPanel: "Console",
+    selectedElement: null,
+    
     consoleMessageQueue: [],    
     
     height: 250,
@@ -40,8 +43,10 @@ FBL.FirebugChrome =
         
         if (Application.isPersistentMode && chrome.type == "popup")
         {
-            // TODO: xxxpedro revise chrome synchronization when in persistent mode
+            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
             chromeMap.frame = FirebugChrome.chromeMap.frame;
+            FirebugChrome.chromeMap.popup = chrome;
+            
             var frame = chromeMap.frame;
             if (frame)
                 frame.close();
@@ -202,7 +207,7 @@ var onChromeLoad = function onChromeLoad(chrome)
     
     if (Application.isPersistentMode)
     {
-        // TODO: xxpedro make better chrome synchronization when in persistent mode
+        // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
         Application.FirebugChrome = FirebugChrome;
         Application.FirebugChrome.chromeMap = FBL.chromeMap;
         chrome.window.FirebugApplication = Application;
@@ -891,11 +896,22 @@ var ChromePopupBase = extend(ChromeContext, {
     
     destroy: function()
     {
+        if (Application.isPersistentMode)
+        {
+            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
+            Application.FirebugChrome.selectedElement = FirebugChrome.selectedElement;
+        }
         var frame = chromeMap.frame;
         frame.reattach(this, frame);
         
         ChromeBase.destroy.apply(this);
         
+        if (Application.isPersistentMode)
+        {
+            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
+            Application.FirebugChrome.chromeMap = FirebugChrome.chromeMap;
+            Application.FirebugChrome.chromeMap.popup = null;
+        }
         chromeMap.popup = null;
         
         this.node.close();

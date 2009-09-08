@@ -26,11 +26,13 @@ this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
 this.isIE      = userAgent.indexOf("MSIE") != -1;
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
 
-this.isQuiksMode = document.compatMode == "BackCompat";
+/*
+this.isQuiksMode = document.compatMode == "BackCompat"; // problem with IE in persistent mode
 this.isIEQuiksMode = this.isIE && this.isQuiksMode;
 this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+/**/
 
 this.NS = null;
 this.pixelsPerInch = null;
@@ -64,12 +66,13 @@ this.initialize = function()
     }
     
     FBTrace = FBL.FBTrace;
-    if (FBL.Application.isTraceMode) FBTrace.initialize();
     
     if (isChromeContext) // persistent application
     {
+        // TODO: xxxpedro persist - make a better synchronization
         FBL.Application = window.FirebugApplication;
         FBL.Application.isChromeContext = true;
+        FBTrace.messageQueue = FBL.Application.traceMessageQueue;
     }
     else // non-persistent application
     {
@@ -77,8 +80,19 @@ this.initialize = function()
         FBL.NS = document.documentElement.namespaceURI;
         FBL.Application.browser = window;
         FBL.Application.destroy = destroyApplication;
-    }    
+    }
     
+    this.isQuiksMode = FBL.Application.browser.document.compatMode == "BackCompat";
+    this.isIEQuiksMode = this.isIE && this.isQuiksMode;
+    this.isIEStantandMode = this.isIE && !this.isQuiksMode;
+    
+    this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+    
+    
+    if (FBL.Application.isTraceMode) FBTrace.initialize();
+    
+    if (FBTrace.DBG_INITIALIZE && isChromeContext) FBTrace.sysout("FBL.initialize - persistent application", "initialize chrome context");
+        
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize namespaces
 
@@ -100,6 +114,7 @@ this.initialize = function()
     
     if (FBL.Application.isPersistentMode)
     {
+        // TODO: xxxpedro persist - make a better synchronization
         if (isChromeContext)
         {
             FBL.FirebugChrome.clone(FBL.Application.FirebugChrome);
@@ -107,6 +122,7 @@ this.initialize = function()
         else
         {
             FBL.Application.FirebugChrome = FBL.FirebugChrome;
+            FBL.Application.traceMessageQueue = FBTrace.messageQueue;
         }
     }
     
@@ -116,10 +132,11 @@ this.initialize = function()
 var waitForDocument = function waitForDocument()
 {
     // document.body not available in XML+XSL documents in Firefox
+    var doc = FBL.Application.browser.document;
     var body = null;
-    if (body = document.getElementsByTagName("body")[0])
+    if (body = doc.getElementsByTagName("body")[0])
     {
-        calculatePixelsPerInch(document, body);
+        calculatePixelsPerInch(doc, body);
         onDocumentLoad();
     }
     else
@@ -136,7 +153,7 @@ var onDocumentLoad = function onDocumentLoad()
     // persistent application - chrome document loaded
     if (FBL.Application.isPersistentMode && FBL.Application.isChromeContext)
     {
-        //FBL.Firebug.Inspector.create();        
+        //FBL.Firebug.Inspector.create();
         FBL.Firebug.initialize();
         
         if (!FBL.Application.isDevelopmentMode)
@@ -165,7 +182,7 @@ this.Application = {
     openAtStartup: false,
     
     isBookmarletMode: false,
-    isPersistentMode: false,
+    isPersistentMode: true,
     isTraceMode: false,
     skin: "xp",
     
