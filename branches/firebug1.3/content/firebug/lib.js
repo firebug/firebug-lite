@@ -70,7 +70,6 @@ this.initialize = function()
     {
         FBL.Application = window.FirebugApplication;
         FBL.Application.isChromeContext = true;
-        FBL.FirebugChrome = FBL.Application.FirebugChrome;
     }
     else // non-persistent application
     {
@@ -99,9 +98,16 @@ this.initialize = function()
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     
-    if (!isChromeContext)
+    if (FBL.Application.isPersistentMode)
     {
-        FBL.Application.FirebugChrome = FBL.FirebugChrome;
+        if (!isChromeContext)
+        {
+            FBL.Application.FirebugChrome = FBL.FirebugChrome;
+        }
+        else
+        {
+            FBL.FirebugChrome.clone(FBL.Application.FirebugChrome);
+        }
     }
     
     waitForDocument();

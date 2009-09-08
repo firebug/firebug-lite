@@ -10,6 +10,7 @@ FBL.FirebugChrome =
     sidePanelVisible: false,
     sidePanelWidth: 300,
     selectedPanel: "Console",
+    consoleMessageQueue: [],    
     
     height: 250,
     
@@ -39,6 +40,18 @@ FBL.FirebugChrome =
         
         if (Application.isPersistentMode && chrome.type == "popup")
             chrome.initialize();
+    },
+    
+    clone: function(FBChrome)
+    {
+        for (var name in FBChrome)
+        {
+            var prop = FBChrome[name];
+            if (FBChrome.hasOwnProperty(name) && typeof prop != "function")
+            {
+                this[name] = prop;
+            }
+        }
     }
 };
 

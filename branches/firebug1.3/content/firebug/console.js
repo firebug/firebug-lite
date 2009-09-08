@@ -173,7 +173,7 @@ Firebug.Console = extend(ConsoleModule,
 {
     LOG_COMMAND: {},
     
-    messageQueue: [],
+    //messageQueue: [],
     groupStack: [],
     timeMap: {},
         
@@ -184,8 +184,8 @@ Firebug.Console = extend(ConsoleModule,
 
     flush: function()
     {
-        var queue = this.messageQueue;
-        this.messageQueue = [];
+        var queue = FirebugChrome.consoleMessageQueue;
+        FirebugChrome.consoleMessageQueue = [];
         
         for (var i = 0; i < queue.length; ++i)
             this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
@@ -273,7 +273,7 @@ Firebug.Console = extend(ConsoleModule,
             this.writeMessage(message, className, handler);
         else
         {
-            this.messageQueue.push([message, className, handler]);
+            FirebugChrome.consoleMessageQueue.push([message, className, handler]);
         }
         
         return this.LOG_COMMAND;
