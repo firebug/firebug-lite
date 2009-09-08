@@ -39,7 +39,19 @@ FBL.FirebugChrome =
         addGlobalEvent("keydown", onPressF12);
         
         if (Application.isPersistentMode && chrome.type == "popup")
-            chrome.initialize();
+        {
+            // TODO: xxxpedro revise chrome synchronization when in persistent mode
+            chromeMap.frame = FirebugChrome.chromeMap.frame;
+            var frame = chromeMap.frame;
+            if (frame)
+                frame.close();
+            
+            // initial UI state
+            FirebugChrome.commandLineVisible = false;
+            FirebugChrome.sidePanelVisible = false;
+
+            chrome.reattach(chromeMap.frame, chrome);
+        }
     },
     
     clone: function(FBChrome)
@@ -192,6 +204,7 @@ var onChromeLoad = function onChromeLoad(chrome)
     {
         // TODO: xxpedro make better chrome synchronization when in persistent mode
         Application.FirebugChrome = FirebugChrome;
+        Application.FirebugChrome.chromeMap = FBL.chromeMap;
         chrome.window.FirebugApplication = Application;
     
         if (Application.isDevelopmentMode)
@@ -879,7 +892,7 @@ var ChromePopupBase = extend(ChromeContext, {
     destroy: function()
     {
         var frame = chromeMap.frame;
-        frame.reattach();
+        frame.reattach(this, frame);
         
         ChromeBase.destroy.apply(this);
         

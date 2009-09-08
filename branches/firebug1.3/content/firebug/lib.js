@@ -136,7 +136,7 @@ var onDocumentLoad = function onDocumentLoad()
     // persistent application - chrome document loaded
     if (FBL.Application.isPersistentMode && FBL.Application.isChromeContext)
     {
-        FBL.Firebug.Inspector.create();        
+        //FBL.Firebug.Inspector.create();        
         FBL.Firebug.initialize();
         
         if (!FBL.Application.isDevelopmentMode)
@@ -165,7 +165,7 @@ this.Application = {
     openAtStartup: false,
     
     isBookmarletMode: false,
-    isPersistentMode: true,
+    isPersistentMode: false,
     isTraceMode: false,
     skin: "xp",
     
