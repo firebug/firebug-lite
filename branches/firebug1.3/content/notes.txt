@@ -52,7 +52,7 @@ Inherited Styles
 
 Firebug 1.3a2 - Revision: 3847
 
-    - problem with IE and and frame.close() function that uses $(). picking wrong window.
+    - problem with IE and and frame.close() function that uses $(). picking wrong window in persistent mode.
     
     - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
       the "open tag" node (<div>).
@@ -65,12 +65,12 @@ Firebug 1.3a2 - Revision: 3847
     
     - window.onerror is being turned off when UI is minimized (and should not)
     
+    - put IE6CSS in injected chrome
+    
 OK  - bookmarlet fail in getfirebug.com/lite.html
     
 OK  - reference to wrong URL in var inspectFrameStyle in Inspector module.
      
-    - put IE6CSS in injected chrome
-    
 OK  - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
     
 1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it

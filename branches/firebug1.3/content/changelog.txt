@@ -2,15 +2,15 @@
  1.3.0a3
 ###################################################################################################
 
+Core
+    Better implementation of the chrome synchronization (detach and reattach methods)
+    Find location
+
 Chrome
     XML+XSL and XHTML support
     Synchronization messages ("detach" and "reattach") are now dispatched to all panels 
     Fixed problem with Chrome synchronization in Opera
     Fixed weird bug in layout in IE
-
-Core
-    Better implementation of the chrome synchronization (detach and reattach methods)
-    Find location
 
 Inspector
     auto margin
@@ -24,6 +24,8 @@ Bookmarlet
 Domplate
 
 Reps
+
+Persist
 
 
 

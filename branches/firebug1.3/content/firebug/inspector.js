@@ -155,11 +155,11 @@ Firebug.Inspector =
         var width = box.width;
         
         var freeHorizontalSpace = scrollPosition.left + windowSize.width - left - width - 
-                (scrollSize.height > windowSize.height ? // is *vertical* scrollbar visible
+                (!isIE && scrollSize.height > windowSize.height ? // is *vertical* scrollbar visible
                  scrollbarSize : 0);
         
         var freeVerticalSpace = scrollPosition.top + windowSize.height - top - height -
-                (scrollSize.width > windowSize.width ? // is *horizontal* scrollbar visible
+                (!isIE && scrollSize.width > windowSize.width ? // is *horizontal* scrollbar visible
                 scrollbarSize : 0);
         
         var numVerticalBorders = freeVerticalSpace > 0 ? 2 : 1;
