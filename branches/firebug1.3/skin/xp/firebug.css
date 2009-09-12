@@ -972,21 +972,12 @@ body {
 }
 
 #fbToolbar {
-    position: absolute;
-    z-index: 5;
-    width: 100%;
-    top: 0;
     background: url(sprite.png) #f1f2ee 0 0;
     height: 27px;
     font-size: 11px;
-    overflow: hidden;
 }
 
 #fbPanelBarBox {
-    top: 27px;
-    position: absolute;
-    z-index: 8;
-    width: 100%;
     background: url(sprite.png) #dbd9c9 0 -27px;
     height: 22px;
 }
