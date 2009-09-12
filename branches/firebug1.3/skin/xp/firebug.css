@@ -1373,6 +1373,11 @@ div.objectBox-element {
     color: #fff !important;
 }
 
+/* IE6 need this hack */
+* html .selectedElement {
+    position: relative;
+}
+
 /* Webkit CSS Hack - bug in "highlight" named color */ 
 @media screen and (-webkit-min-device-pixel-ratio:0) {
     .selectedElement{
