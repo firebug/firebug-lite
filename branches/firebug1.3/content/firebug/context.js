@@ -285,7 +285,9 @@ FBL.Context.prototype =
                 
                 if (cssValue == "auto")
                 {
-                    autoMargin = autoMargin || this.getCSSAutoMarginBox(el);
+                    if (!autoMargin)
+                        autoMargin = this.getCSSAutoMarginBox(el);
+                    
                     result[i] = autoMargin[sufix.toLowerCase()];
                 }
                 else
