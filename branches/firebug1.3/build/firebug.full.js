@@ -26,11 +26,13 @@ this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
 this.isIE      = userAgent.indexOf("MSIE") != -1;
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
 
-this.isQuiksMode = document.compatMode == "BackCompat";
+/*
+this.isQuiksMode = document.compatMode == "BackCompat"; // problem with IE in persistent mode
 this.isIEQuiksMode = this.isIE && this.isQuiksMode;
 this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+/**/
 
 this.NS = null;
 this.pixelsPerInch = null;
@@ -64,13 +66,13 @@ this.initialize = function()
     }
     
     FBTrace = FBL.FBTrace;
-    if (FBL.Application.isTraceMode) FBTrace.initialize();
     
     if (isChromeContext) // persistent application
     {
+        // TODO: xxxpedro persist - make a better synchronization
         FBL.Application = window.FirebugApplication;
         FBL.Application.isChromeContext = true;
-        FBL.FirebugChrome = FBL.Application.FirebugChrome;
+        FBTrace.messageQueue = FBL.Application.traceMessageQueue;
     }
     else // non-persistent application
     {
@@ -78,8 +80,19 @@ this.initialize = function()
         FBL.NS = document.documentElement.namespaceURI;
         FBL.Application.browser = window;
         FBL.Application.destroy = destroyApplication;
-    }    
+    }
     
+    this.isQuiksMode = FBL.Application.browser.document.compatMode == "BackCompat";
+    this.isIEQuiksMode = this.isIE && this.isQuiksMode;
+    this.isIEStantandMode = this.isIE && !this.isQuiksMode;
+    
+    this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+    
+    
+    if (FBL.Application.isTraceMode) FBTrace.initialize();
+    
+    if (FBTrace.DBG_INITIALIZE && isChromeContext) FBTrace.sysout("FBL.initialize - persistent application", "initialize chrome context");
+        
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize namespaces
 
@@ -99,9 +112,18 @@ this.initialize = function()
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     
-    if (!isChromeContext)
+    if (FBL.Application.isPersistentMode)
     {
-        FBL.Application.FirebugChrome = FBL.FirebugChrome;
+        // TODO: xxxpedro persist - make a better synchronization
+        if (isChromeContext)
+        {
+            FBL.FirebugChrome.clone(FBL.Application.FirebugChrome);
+        }
+        else
+        {
+            FBL.Application.FirebugChrome = FBL.FirebugChrome;
+            FBL.Application.traceMessageQueue = FBTrace.messageQueue;
+        }
     }
     
     waitForDocument();
@@ -110,10 +132,11 @@ this.initialize = function()
 var waitForDocument = function waitForDocument()
 {
     // document.body not available in XML+XSL documents in Firefox
+    var doc = FBL.Application.browser.document;
     var body = null;
-    if (body = document.getElementsByTagName("body")[0])
+    if (body = doc.getElementsByTagName("body")[0])
     {
-        calculatePixelsPerInch(document, body);
+        calculatePixelsPerInch(doc, body);
         onDocumentLoad();
     }
     else
@@ -122,7 +145,7 @@ var waitForDocument = function waitForDocument()
 
 var onDocumentLoad = function onDocumentLoad()
 {
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "create application chrome");
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "document loaded");
     
     if (FBL.isIE6)
         fixIE6BackgroundImageCache();
@@ -130,6 +153,7 @@ var onDocumentLoad = function onDocumentLoad()
     // persistent application - chrome document loaded
     if (FBL.Application.isPersistentMode && FBL.Application.isChromeContext)
     {
+        //FBL.Firebug.Inspector.create();
         FBL.Firebug.initialize();
         
         if (!FBL.Application.isDevelopmentMode)
@@ -3758,11 +3782,13 @@ var traceOptions = {
     DBG_DISPATCH: 1
 };
 
-this.messageQueue = [];
 this.module = null;
 
 this.initialize = function()
 {
+    if (!this.messageQueue)
+        this.messageQueue = [];
+    
     for (var name in traceOptions)
         this[name] = traceOptions[name]; 
 };
@@ -3947,7 +3973,7 @@ FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a2",
-    revision: "$Revision: 4227 $",
+    revision: "$Revision: 4241 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -3967,9 +3993,11 @@ FBL.Firebug =
         // Document must be cached before chrome initialization
         cacheDocument();
         
+        Firebug.Inspector.create();
+        
         FirebugChrome.initialize();
         
-        //dispatch(modules, "initialize", []);
+        dispatch(modules, "initialize", []);
     },
   
     shutdown: function()
@@ -4388,8 +4416,7 @@ Firebug.Panel =
         
         this.containerNode = this.panelNode.parentNode;
         
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("Firebug.Panel.initialize", this.name);
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.create", this.name);
         
         /*
         this.context = context;
@@ -4410,8 +4437,7 @@ Firebug.Panel =
 
     destroy: function(state) // Panel may store info on state
     {
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("Firebug.Panel.destroy", this.name);
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.destroy", this.name);
 
         if (this.panelNode)
             delete this.panelNode.ownerPanel;
@@ -4421,6 +4447,8 @@ Firebug.Panel =
     
     initialize: function()
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.initialize", this.name);
+        
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
         
@@ -4450,7 +4478,7 @@ Firebug.Panel =
     
     shutdown: function()
     {
-        
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
     },
 
     detach: function(oldChrome, newChrome)
@@ -4669,7 +4697,7 @@ Firebug.PanelBar =
             {
                 removeClass(selectedPanel.tabNode, "fbSelectedTab");
                 selectedPanel.hide();
-                panel.shutdown();
+                selectedPanel.shutdown();
             }
             
             if (!panel.parentPanel)
@@ -5472,7 +5500,9 @@ FBL.Context.prototype =
                 
                 if (cssValue == "auto")
                 {
-                    autoMargin = autoMargin || this.getCSSAutoMarginBox(el);
+                    if (!autoMargin)
+                        autoMargin = this.getCSSAutoMarginBox(el);
+                    
                     result[i] = autoMargin[sufix.toLowerCase()];
                 }
                 else
@@ -5655,10 +5685,14 @@ FBL.chromeMap = {};
 
 FBL.FirebugChrome = 
 {
-    commandLineVisible: true,
+    commandLineVisible: false,
     sidePanelVisible: false,
     sidePanelWidth: 300,
+    
     selectedPanel: "Console",
+    selectedElement: null,
+    
+    consoleMessageQueue: [],    
     
     height: 250,
     
@@ -5666,13 +5700,15 @@ FBL.FirebugChrome =
     
     create: function()
     {
-        Firebug.Inspector.create();
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.create", "creating chrome window");
         
-        createChrome({onLoad: onChromeLoad});
+        createChrome();
     },
     
     initialize: function()
     {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.initialize", "initializing chrome window");
+        
         if (Application.chrome.type == "frame")
             ChromeMini.create(Application.chrome);
             
@@ -5685,7 +5721,33 @@ FBL.FirebugChrome =
         addGlobalEvent("keydown", onPressF12);
         
         if (Application.isPersistentMode && chrome.type == "popup")
-            chrome.initialize();
+        {
+            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
+            chromeMap.frame = FirebugChrome.chromeMap.frame;
+            FirebugChrome.chromeMap.popup = chrome;
+            
+            var frame = chromeMap.frame;
+            if (frame)
+                frame.close();
+            
+            // initial UI state
+            FirebugChrome.commandLineVisible = false;
+            FirebugChrome.sidePanelVisible = false;
+
+            chrome.reattach(chromeMap.frame, chrome);
+        }
+    },
+    
+    clone: function(FBChrome)
+    {
+        for (var name in FBChrome)
+        {
+            var prop = FBChrome[name];
+            if (FBChrome.hasOwnProperty(name) && typeof prop != "function")
+            {
+                this[name] = prop;
+            }
+        }
     }
 };
 
@@ -5709,7 +5771,6 @@ var createChrome = function(options)
     options = extend(ChromeDefaultOptions, options);
     
     var context = options.context || Application.browser;
-    var onLoad = options.onLoad;
     
     var chrome = {};
     
@@ -5807,8 +5868,7 @@ var createChrome = function(options)
             chrome.window = win.window;
             chrome.document = win.document;
             
-            if (onLoad)
-                onLoad(chrome);
+            onChromeLoad(chrome);
         }
         else
             setTimeout(waitForChrome, waitDelay);
@@ -5822,10 +5882,13 @@ var onChromeLoad = function onChromeLoad(chrome)
 {
     Application.chrome = chrome;
     
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome loaded");
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome window loaded");
     
     if (Application.isPersistentMode)
     {
+        // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
+        Application.FirebugChrome = FirebugChrome;
+        Application.FirebugChrome.chromeMap = FBL.chromeMap;
         chrome.window.FirebugApplication = Application;
     
         if (Application.isDevelopmentMode)
@@ -5856,7 +5919,7 @@ var onChromeLoad = function onChromeLoad(chrome)
                 frame.close();
             
             // initial UI state
-            FirebugChrome.commandLineVisible = true;
+            FirebugChrome.commandLineVisible = false;
             FirebugChrome.sidePanelVisible = false;
             
             var newChrome = new Chrome(chrome);
@@ -5947,7 +6010,7 @@ var ChromeBase = extend(ChromeBase, {
             FBTrace.flush(Firebug.Trace);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome");
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome application");
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
@@ -6157,7 +6220,7 @@ var ChromeBase = extend(ChromeBase, {
         //alert('detach');
         if(!chromeMap.popup)
         {     
-            createChrome({type: "popup", onLoad: onChromeLoad});
+            createChrome({type: "popup"});
         }
     },
     
@@ -6343,7 +6406,7 @@ var ChromeFrameBase = extend(ChromeContext,
             
             var self = this;
             setTimeout(function(){
-                dispatch(Firebug.modules, "initialize", []);
+                //dispatch(Firebug.modules, "initialize", []);
                 self.initialize();
                 
                 if (noFixedPosition)
@@ -6365,7 +6428,7 @@ var ChromeFrameBase = extend(ChromeContext,
             
             if (this.isInitialized)
             {
-                dispatch(Firebug.modules, "shutdown", []);
+                //dispatch(Firebug.modules, "shutdown", []);
                 this.shutdown();
             }
             
@@ -6512,11 +6575,22 @@ var ChromePopupBase = extend(ChromeContext, {
     
     destroy: function()
     {
+        if (Application.isPersistentMode)
+        {
+            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
+            Application.FirebugChrome.selectedElement = FirebugChrome.selectedElement;
+        }
         var frame = chromeMap.frame;
-        frame.reattach();
+        frame.reattach(this, frame);
         
         ChromeBase.destroy.apply(this);
         
+        if (Application.isPersistentMode)
+        {
+            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
+            Application.FirebugChrome.chromeMap = FirebugChrome.chromeMap;
+            Application.FirebugChrome.chromeMap.popup = null;
+        }
         chromeMap.popup = null;
         
         this.node.close();
@@ -6991,7 +7065,6 @@ Firebug.Console = extend(ConsoleModule,
 {
     LOG_COMMAND: {},
     
-    messageQueue: [],
     groupStack: [],
     timeMap: {},
         
@@ -7002,8 +7075,8 @@ Firebug.Console = extend(ConsoleModule,
 
     flush: function()
     {
-        var queue = this.messageQueue;
-        this.messageQueue = [];
+        var queue = FirebugChrome.consoleMessageQueue;
+        FirebugChrome.consoleMessageQueue = [];
         
         for (var i = 0; i < queue.length; ++i)
             this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
@@ -7091,7 +7164,7 @@ Firebug.Console = extend(ConsoleModule,
             this.writeMessage(message, className, handler);
         else
         {
-            this.messageQueue.push([message, className, handler]);
+            FirebugChrome.consoleMessageQueue.push([message, className, handler]);
         }
         
         return this.LOG_COMMAND;
@@ -8356,11 +8429,11 @@ Firebug.Inspector =
         var width = box.width;
         
         var freeHorizontalSpace = scrollPosition.left + windowSize.width - left - width - 
-                (scrollSize.height > windowSize.height ? // is *vertical* scrollbar visible
+                (!isIE && scrollSize.height > windowSize.height ? // is *vertical* scrollbar visible
                  scrollbarSize : 0);
         
         var freeVerticalSpace = scrollPosition.top + windowSize.height - top - height -
-                (scrollSize.width > windowSize.width ? // is *horizontal* scrollbar visible
+                (!isIE && scrollSize.width > windowSize.width ? // is *horizontal* scrollbar visible
                 scrollbarSize : 0);
         
         var numVerticalBorders = freeVerticalSpace > 0 ? 2 : 1;
@@ -9412,6 +9485,7 @@ Firebug.HTML.onTreeClick = function (e)
     }
     else if (targ.className == 'nodeValue' || targ.className == 'nodeName')
     {
+        /*
         var input = FBL.Firebug.chrome.document.getElementById('treeInput');
         
         input.style.display = "block";
@@ -9420,6 +9494,7 @@ Firebug.HTML.onTreeClick = function (e)
         input.style.width = targ.offsetWidth + 6 + 'px';
         input.value = targ.textContent || targ.innerText;
         input.focus(); 
+        /**/
     }
 }
 
