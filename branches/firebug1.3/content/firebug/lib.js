@@ -182,7 +182,7 @@ this.Application = {
     openAtStartup: false,
     
     isBookmarletMode: false,
-    isPersistentMode: true,
+    isPersistentMode: false,
     isTraceMode: false,
     skin: "xp",
     

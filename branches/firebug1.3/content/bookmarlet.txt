@@ -1,20 +1,5 @@
-javascript:var firebug=document.createElement('script');firebug.setAttribute('src','http://fbug.googlecode.com/svn/lite/branches/firebug1.2/firebug-lite-compressed.js');document.body.appendChild(firebug);(function(){if(window.firebug.version){firebug.init();}else{setTimeout(arguments.callee);}})();void(firebug);
-
-javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.body.appendChild(L);})(document,'http://firebug.local:8740/firebug1.3/build/firebug.full.js#remote');
-
 //*************************************************************************************************
-
-(function(d){
-var e=d.createElement('div');
-e.id='FirebugLoadIndicator';
-e.style.cssText='position:fixed;top:0;left:0;background:#ff0;padding:2px 5px;margin:0;z-index:2147483647;';
-e.innerHTML='Loading Firebug Lite...';
-d.body.appendChild(e);
-})(document);
-
-
-//*************************************************************************************************
-
+// Bookmarlet FBL (sequencial)
 
 (function(F,B,L){
 L=F.createElement('script');
@@ -28,23 +13,40 @@ javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src
 
 
 //*************************************************************************************************
+// Bookmarlet FBLite (parallel)
 
+(function(F,B,L,i,t,e){
+e=F[B]('script');
+e.id='FBLS';
+e.src=t+L;
+F.getElementsByTagName('head')[0].appendChild(e);
+
+e=F.createElement('img');
+e.id='FBLI';
+e.src=t+i;
+})(document,'createElement','firebug.jgz#remote','sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
+//  F         B              L                    i             t
+
+
+//*************************************************************************************************
+// Bookmarlet FBL* (sequencial with loading indicator)
 
 (function(F,B,L){
 L=F.createElement('div');
-L.id='FirebugLoadIndicator';
+L.id='FBLI';
 L.style.cssText='position:fixed;top:0;left:0;background:#ff0;padding:2px 5px;margin:0;z-index:2147483647;';
-L.innerHTML='Loading Firebug Lite...';
+L.innerHTML='Loading ...';
 F.body.appendChild(L);
 
 L=F.createElement('script');
+L.id='FBLS';
 L.src=B;
 F.getElementsByTagName('head')[0].appendChild(L);
 })(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
 
 
 //*************************************************************************************************
-
+// experimental bookmarlet
 
 (function(F,B,L,i,t,e){
 
@@ -63,20 +65,4 @@ F.getElementsByTagName('head')[0].appendChild(e);
         
 })(document,navigator,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
 
-
 //*************************************************************************************************
-
-
-(function(D,N){
-    (function(B,E,I,i){
-        var F=i||I&&D.compatMode=='BackCompat';     
-        var t=D&&D.scrollTop||E&&E.scrollTop;
-    
-        var e=d.createElement('div');
-        e.id='FirebugLoadIndicator';
-        e.style.cssText='position:absolute;top:0;left:0;background:#ff0;padding:2px 5px;margin:0;z-index:2147483647;';
-        e.innerHTML='Loading Firebug Lite...';
-        d.body.appendChild(e);
-        
-    })(D.body,D.documentElement,N.userAgent.indexOf('MSIE')!=-1,/msie 6/i.test(N.appVersion));
-})(document,navigator);

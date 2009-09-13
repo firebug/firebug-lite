@@ -52,6 +52,9 @@ Inherited Styles
 
 Firebug 1.3a2 - Revision: 3847
 
+    - When loading the bookmarlet in IE it shows a security warning
+        https://www.google.com/accounts/ServiceLogin?service=adwords&cd=null&hl=en-US&ltmpl=adwords&passive=true&ifr=false&alwf=true&continue=https%3A%2F%2Fadwords.google.com%2Fselect%2Fgaiaauth%3Fapt%3DNone%26ugl%3Dtrue&sourceid=awo&subid=ww-en-et-ads-0-adsC-all
+
     - problem with IE and and frame.close() function that uses $(). picking wrong window in persistent mode.
     
     - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
@@ -322,6 +325,14 @@ ScrollArea Class
 ---------------------------------------------------------------------------------------------------
 Preferences
 ---------------------------------------------------------------------------------------------------
+<script>
+Firebug.loadPrefs({
+    Chrome: {
+        skin: "xp",
+        height: 400
+    }
+});
+</script>
 
     - Console
         - override (for non-FF browsers)
