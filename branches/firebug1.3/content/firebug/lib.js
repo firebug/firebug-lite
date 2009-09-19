@@ -253,29 +253,49 @@ var findLocation =  function findLocation()
         var fileName = file[1];
         var fileOptions = file[2];
         
-        
+        // absolute path
         if (reProtocol.test(script.src)) {
-            // absolute path
             path = rePath.exec(script.src)[1];
           
         }
+        // relative path
         else
         {
-            // relative path
             var r = rePath.exec(script.src);
             var src = r ? r[1] : script.src;
-            var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
-            var lastFolder = /^(.*\/)[^\/]+\/$/;
+            var backDir = /^((?:\.\.\/)+)(.*)/.exec(src);
+            var reLastDir = /^(.*\/)[^\/]+\/$/;
             path = rePath.exec(location.href)[1];
             
-            if (rel)
+            // "../some/path"
+            if (backDir)
             {
-                var j = rel[1].length/3;
+                var j = backDir[1].length/3;
                 var p;
                 while (j-- > 0)
-                    path = lastFolder.exec(path)[1];
+                    path = reLastDir.exec(path)[1];
 
-                path += rel[2];
+                path += backDir[2];
+            }
+            
+            if(src.indexOf("/") != -1)
+            {
+                // "./some/path"
+                if(/^\.\/./.test(src))
+                {
+                    path += src.substring(2);
+                }
+                // "/some/path"
+                else if(/^\/./.test(src))
+                {
+                    var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
+                    path = domain[1] + src;
+                }
+                // "some/path"
+                else
+                {
+                    path += src;
+                }
             }
         }
     }

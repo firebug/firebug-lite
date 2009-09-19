@@ -173,7 +173,6 @@ function findLocation()
     var reProtocol = /^\w+:\/\//;
     
     var head = document.getElementsByTagName("head")[0];
-    //var head = document.getElementsByTagName("body")[0];
     
     var path = null;
     
@@ -198,11 +197,12 @@ function findLocation()
                 var r = rePath.exec(ci.src);
                 var src = r ? r[1] : ci.src;
                 var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
-                var lastFolder = /^(.*\/)[^\/]+\/$/;
                 path = rePath.exec(location.href)[1];
                 
                 if (rel)
                 {
+                    var lastFolder = /^(.*\/)[^\/]+\/$/;
+                    
                     var j = rel[1].length/3;
                     var p;
                     while (j-- > 0)
@@ -210,12 +210,32 @@ function findLocation()
 
                     path += rel[2];
                 }
+                
+                if(src.indexOf("/") != -1)
+                {
+                    // "./some/path"
+                    if(/^\.\/./.test(src))
+                    {
+                        path += src.substring(2);
+                    }
+                    // "/some/path"
+                    else if(/^\/./.test(src))
+                    {
+                        var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
+                        path = domain[1] + src;
+                    }
+                    // "some/path"
+                    else
+                    {
+                        path += src;
+                    }
+                }
             }
             
             break;
         }
     }
-    
+                    
     var m = path.match(/([^\/]+)\/$/);
     
     if (path && m)
