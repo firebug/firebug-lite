@@ -17,15 +17,79 @@ javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src
 
 (function(F,B,L,i,t,e){
 e=F[B]('script');
+e.id='FirebugLite';
+e.src=t+L;
+F.getElementsByTagName('head')[0].appendChild(e);
+
+e=F[B]('img');
+e.src=t+i;
+})(document,'createElement','build/firebug.min.js#remote','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/');
+//  F         B              L                             i                    t
+
+//---------------------------------------------------
+
+(function(F,i,r,e,b,u,g){
+if(F.getElementById(r))return;
+
+g=F[i]('script');
+g.id=r;
+g.src=u+e;
+F.getElementsByTagName('head')[0].appendChild(g);
+
+g=F[i]('img');
+g.src=u+b;
+})(document,'createElement','FirebugLite','build/firebug.min.js#remote','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/');
+//  F         i               r             e                             b                    u
+
+//---------------------------------------------------
+
+(function(F,i,r,e,b,u,g){
+if(F.getElementById(r))return;
+
+g=F[i]('script');
+g.id=r;
+g.src=u+e;
+
+r='getElementsByTagName';
+e='appendChild';
+
+F[r]('head')[0][e](g);
+
+g=F[i]('img');
+g.src=u+b;
+
+g=F[i]('div');
+g.id='FBLI';
+g.style.cssText='position:fixed;top:0;right:0;background:#ff0;padding:2px;margin:0;z-index:2147483647;';
+g.innerHTML='Loading...';
+F[r]('body')[0][e](g);
+
+})(document,'createElement','FirebugLite','build/firebug.min.js#remote','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/');
+//  F         i               r             e                             b                    u
+
+//---------------------------------------------------
+
+//        F,B,u,g,L,i,t,e
+//        F,i,r,e,b,u,g,
+(function(F,B,L,i,t,e){
+if(F.getElementById('FBLS'))return;
+
+e=F[B]('div');
+e.id='FBLI';
+e.style.cssText='position:fixed;top:0;right:0;background:#ff0;padding:2px;margin:0;z-index:2147483647;';
+e.innerHTML='Loading...';
+F.body.appendChild(e);
+
+e=F[B]('script');
 e.id='FBLS';
 e.src=t+L;
 F.getElementsByTagName('head')[0].appendChild(e);
 
-e=F.createElement('img');
-e.id='FBLI';
+e=F[B]('img');
 e.src=t+i;
-})(document,'createElement','firebug.jgz#remote','sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
-//  F         B              L                    i             t
+})(document,'createElement','build/firebug.min.js#remote','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/');
+//  F         B              L                             i                    t
+
 
 
 //*************************************************************************************************
