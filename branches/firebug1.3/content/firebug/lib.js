@@ -26,12 +26,13 @@ this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
 this.isIE      = userAgent.indexOf("MSIE") != -1;
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
 
-/*
+// . . . . . . . . . . . . . . . . .
 this.isQuiksMode = document.compatMode == "BackCompat"; // problem with IE in persistent mode
 this.isIEQuiksMode = this.isIE && this.isQuiksMode;
 this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+// . . . . . . . . . . . . . . . . .
 /**/
 
 this.NS = null;

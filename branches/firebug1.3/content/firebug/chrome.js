@@ -753,7 +753,8 @@ var ChromeFrameBase = extend(ChromeContext,
                 this.shutdown();
             }
             
-            var main = $("fbChrome");
+            // TODO: xxxpedro - persist IE fixed? 
+            var main = $("fbChrome", chromeMap.frame.document);
             main.style.display = "none";
                     
             FirebugChrome.isOpen = false;
@@ -804,14 +805,17 @@ var ChromeMini = extend(Firebug.Controller,
     {
         Firebug.Controller.initialize.apply(this);
         
-        var mini = $("fbMiniChrome");
+        // TODO: xxxpedro - persist IE fixed? 
+        var doc = chromeMap.frame.document;
+        
+        var mini = $("fbMiniChrome", doc);
         mini.style.display = "block";
         
-        var miniIcon = $("fbMiniIcon");
+        var miniIcon = $("fbMiniIcon", doc);
         var width = miniIcon.offsetWidth + 10;
         miniIcon.title = "Open " + Firebug.version;
         
-        var errors = $("fbMiniErrors");
+        var errors = $("fbMiniErrors", doc);
         if (errors.offsetWidth)
             width += errors.offsetWidth + 10;
         
@@ -856,7 +860,10 @@ var ChromeMini = extend(Firebug.Controller,
         
         this.document.body.style.backgroundColor = "#fff";
         
-        var mini = $("fbMiniChrome");
+        // TODO: xxxpedro - persist IE fixed? 
+        var doc = chromeMap.frame.document;
+        
+        var mini = $("fbMiniChrome", doc);
         mini.style.display = "none";
         
         Firebug.Controller.shutdown.apply(this);
