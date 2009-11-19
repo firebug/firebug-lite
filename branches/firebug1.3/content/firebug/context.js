@@ -305,10 +305,8 @@ FBL.Context.prototype =
         return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
     }, 
     
-  
     getCSSAutoMarginBox: function(el)
     {
-        /*
         if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
             return {top:0, left:0, bottom:0, right:0};
             /**/
@@ -322,19 +320,19 @@ FBL.Context.prototype =
         {
             var scrollSize = Firebug.browser.getWindowScrollSize();
             offsetTop = scrollSize.height;
-        }/**/
+        }
         
-        var box = document.createElement("div");
+        var box = this.document.createElement("div");
         //box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
         box.style.cssText = "margin:0; padding:1px; border: 0;";
         
         var clone = el.cloneNode(false);
-        var text = document.createTextNode("&nbsp;");
+        var text = this.document.createTextNode("&nbsp;");
         clone.appendChild(text);
         
         box.appendChild(clone);
     
-        document.body.appendChild(box);
+        this.document.body.appendChild(box);
         
         var marginTop = clone.offsetTop - box.offsetTop - 1;
         var marginBottom = box.offsetHeight - clone.offsetHeight - 2 - marginTop;
@@ -342,7 +340,7 @@ FBL.Context.prototype =
         var marginLeft = clone.offsetLeft - box.offsetLeft - 1;
         var marginRight = box.offsetWidth - clone.offsetWidth - 2 - marginLeft;
         
-        document.body.removeChild(box);
+        this.document.body.removeChild(box);
         
         return {top:marginTop+offsetTop, left:marginLeft, bottom:marginBottom-offsetTop, right:marginRight};
     },
@@ -354,6 +352,7 @@ FBL.Context.prototype =
         if (size.unit == "px") return size.value;
         
         // get font size, the dirty way
+        /*
         var computeDirtyFontSize = function(el, calibration)
         {
             var div = this.document.createElement("div");
@@ -371,12 +370,14 @@ FBL.Context.prototype =
             return value;
         }
         
-        // Calibration fails in some environments, so we're using a static value
-        // based in the test case result.
+        var calibrationBase = 200;
+        var calibrationValue = computeDirtyFontSize(el, calibrationBase);
+        var rate = calibrationBase / calibrationValue;
+        /**/
+        
+        // the "dirty technique" fails in some environments, so we're using a static value
+        // based in some tests.
         var rate = 200 / 225;
-        //var calibrationBase = 200;
-        //var calibrationValue = computeDirtyFontSize(el, calibrationBase);
-        //var rate = calibrationBase / calibrationValue;
         
         var value = computeDirtyFontSize(el);
 
