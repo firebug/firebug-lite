@@ -833,7 +833,7 @@ var ChromeMini = extend(Firebug.Controller,
         
         
         this.addController(
-            [$("fbMiniIcon"), "click", onMiniIconClick]       
+            [$("fbMiniIcon", doc), "click", onMiniIconClick]       
         );
         
         if (noFixedPosition)

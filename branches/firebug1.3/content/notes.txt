@@ -1,12 +1,35 @@
+IE 6: gzip + ETag != If-None-Match
+http://abstractfinal.blogspot.com/2007/05/ie-6-gzip-etag-if-none-match.html
+
+JavaScript + Frames + IE 6 + gzip + “no-cache” Header = Trouble
+http://www.akmattie.net/blog/2007/11/10/javascript-frames-ie-6-gzip-no-cache-header-trouble/
+
+IE problems
+http://www.julienlecomte.net/blog/2007/08/13/#comment-258
+
+
+http://support.microsoft.com/kb/321722/EN-US/
+http://support.microsoft.com/default.aspx?scid=kb;LN;Q312496
+http://support.microsoft.com/default.aspx?scid=kb;en-us;823386&Product=ie600
+
+
 ###################################################################################################
 Firebug Lite 1.3a3
 ###################################################################################################
+    - settings
+        - url settings "remote"/"local" should be replace
+            remote - should be the default
+            local - should be replace by "dev"
+
     - getfirebug release instructions page
         - what to test?
             - bookmarlet
             - UI
                 - positioning
                 - display
+                - resizing
+                - popup loading
+                - popup/frame synchronization
                 
             - different scenarios (XHTML, XSL+XML)
 
