@@ -385,6 +385,8 @@ function expandMembers(members, toggles, offset, level)  // recursion starts wit
             var args = [i+1, 0];
             args.push.apply(args, newMembers);
             members.splice.apply(members, args);
+            
+            /*
             if (FBTrace.DBG_DOM)
             {
                 FBTrace.sysout("expandMembers member.name", member.name);
@@ -392,6 +394,7 @@ function expandMembers(members, toggles, offset, level)  // recursion starts wit
                 FBTrace.sysout("expandMembers toggles[member.name]", toggles[member.name]);
                 FBTrace.sysout("dom.expandedMembers level: "+level+" member", member);
             }
+            /**/
 
             expanded += newMembers.length;
             i += newMembers.length + expandMembers(members, toggles[member.name], i+1, level+1);
@@ -550,24 +553,20 @@ DOMPanel.prototype = extend(Firebug.Panel,
         hasToolButtons: true
     },
     
-    create: function(){
+    isInitialized: false,
+    
+    create: function()
+    {
         Firebug.Panel.create.apply(this, arguments);
         
+        this.toggles = this.toggles || {};
         this.panelNode.style.padding = "0 1px";
-        
-        /*
-        this.clearButton = new Firebug.Button({
-            caption: "Clear",
-            title: "Clear FBTrace logs",            
-            module: Firebug.Trace,
-            onClick: Firebug.Trace.clear
-        });
-        /**/
     },
     
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
         
+        /*
         var target = this.contentNode;
         var template = DirTablePlate;
         
@@ -575,8 +574,62 @@ DOMPanel.prototype = extend(Firebug.Panel,
         var toggles = {};
         
         template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
+        /**/
         
-        //this.clearButton.initialize();
+        //if (this.isInitialized) return;
+        
+        var target = this.contentNode;
+        var template = DirTablePlate;
+        
+        var panel = {};
+        var toggles = this.toggles;
+        
+        template.tableTag.replace({domPanel: panel, toggles: toggles, object: {}}, target);
+        
+        var row = $$("tr", target)[0];
+        
+        var value = window;
+        var members = getMembers(value, 0);
+        expandMembers(members, toggles, 0, 0);
+
+        var rowTag = template.rowTag;
+        var lastRow = row;
+
+        var delay = 30;
+        var setSize = members.length;
+        var rowCount = 1;
+        
+        while (members.length)
+        {
+            with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
+            {
+                setTimeout(function()
+                {
+                    if (lastRow.parentNode)
+                    {
+                        var result = rowTag.insertRows({members: slice}, lastRow);
+                        lastRow = result[1];
+                        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
+                        rowCount += insertSliceSize;
+                    }
+                    if (isLast)
+                        delete row.insertTimeout;
+                }, delay);
+            }
+
+            delay += insertInterval;
+        }
+
+        row.insertTimeout = delay;
+        
+        this.isInitialized = true;
+        /**/
+    },
+    
+    reattach: function(oldChrome)
+    {
+        //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
+        this.toggles = oldChrome.getPanel("DOM").toggles;
     }
     
 });
