@@ -65,22 +65,38 @@ ScriptPanel.prototype = extend(Firebug.Panel,
         addEvent(this.selectNode, "change", bind(this.onChangeSelect, this));
         
         this.selectSourceCode(this.sourceIndex);
+        
+        /*
+        var self = this;
+        setTimeout(function(){
+            self.containerNode.scrollTop = self.lastScrollTop;
+        },0);
+        /**/
     },
     
-    detach: function()
+    shutdown: function()
     {
+        this.lastScrollTop = this.containerNode.scrollTop;
+        
+        Firebug.Panel.shutdown.apply(this, arguments);
     },
     
-    reattach: function(oldChrome, newChrome)
+    detach: function(oldChrome, newChrome)
     {
         var oldPanel = oldChrome.getPanel("Script");
         
         var index = oldPanel.sourceIndex;
         this.selectNode.selectedIndex = index;
         this.sourceIndex = index;
-        this.lastSourceIndex = index;
+        this.lastSourceIndex = -1;
+        /**/
+        this.lastScrollTop = oldPanel.containerNode.scrollTop;
         
-        this.containerNode.scrollTop = oldPanel.containerNode.scrollTop;        
+        //alert(this.lastScrollTop);
+    },
+    
+    reattach: function(oldChrome, newChrome)
+    {
     },
     
     onChangeSelect: function(event)
@@ -103,69 +119,89 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     
     renderSourceCode: function(index)
     {
+        
+        //alert(this.lastSourceIndex != index);
+        
         if (this.lastSourceIndex != index)
         {
+            var self = this;
+            
+            var renderProcess = function renderProcess(src)
+            {
+                var html = [],
+                    hl = 0,
+                    s = [],
+                    sl = 0;
+                
+                //src = isIE ? src+'\n' : '\n'+src+'\n';
+                src = '\n'+src+'\n';
+                
+                var match = src.match(/\n/g);
+                var num = match ? match.length : 0;
+                
+                //var t = new Date().getTime();
+                
+                for(var c=1; c<num; c++)
+                {
+                    s[sl++] = '<div line="';
+                    s[sl++] = c;
+                    s[sl++] = '">';
+                    s[sl++] = c;
+                    s[sl++] = '</div>';
+                }
+                  
+                html[hl++] = '<div><div class="lineNo">';
+                html = html.concat(s);
+                hl = html.length;
+                html[hl++] = '</div><pre class="nodeCode">';
+                html[hl++] = escapeHTML(src);
+                html[hl++] = '</pre></div>';
+                
+                //alert(new Date().getTime() - t);
+                
+                updatePanel(html);
+            };
+            
+            var updatePanel = function(html)
+            {
+                self.contentNode.innerHTML = html.join("");
+                
+                setTimeout(function(){
+                    //self.containerNode.scrollTop = 0;
+                    self.containerNode.scrollTop = self.lastScrollTop;
+                },0);                        
+            };
+            
             var doc = Firebug.browser.document;
             var script = doc.getElementsByTagName("script")[index];
+            var url = getScriptURL(script);
+            var isExternal = url != doc.location.href;
             
-            try
+            if (isExternal)
+                Ajax.request({url: url, onComplete: renderProcess})
+                
+            else
             {
-                var self = this;
-                var renderProcess = function renderProcess(response)
+                var src;
+                
+                try
                 {
-                    var html = [],
-                        hl = 0,
-                        s = [],
-                        sl = 0,
-                        src = isExternal ? response : script.innerHTML;
-                    
-                    //src = isIE ? src+'\n' : '\n'+src+'\n';
-                    src = '\n'+src+'\n';
-                    
-                    var match = src.match(/\n/g);
-                    var num = match ? match.length : 0;
-                    
-                    //var t = new Date().getTime();
-                    
-                    for(var c=1; c<num; c++)
-                    {
-                        s[sl++] = '<div line="';
-                        s[sl++] = c;
-                        s[sl++] = '">';
-                        s[sl++] = c;
-                        s[sl++] = '</div>';
-                    }
-                      
-                    html[hl++] = '<div><div class="lineNo">';
-                    html = html.concat(s);
-                    hl = html.length;
-                    html[hl++] = '</div><pre class="nodeCode">';
-                    html[hl++] = escapeHTML(src);
-                    html[hl++] = '</pre></div>';
-                    
-                    //alert(new Date().getTime() - t);
-                    
-                    setTimeout(function(){
-                        self.contentNode.innerHTML = html.join("");
-                        self.containerNode.scrollTop = 0;
-                    },0);
-                };
+                    src = script.innerHTML;
+                }
+                catch(e)
+                {
+                    src = "<em>Access to restricted URI denied</em>";
+                }
                 
-                var url = getScriptURL(script);
-                var isExternal = url != doc.location.href;
+                renderProcess(src);
+            }
                 
-                if (isExternal)
-                    Ajax.request({url: url, onComplete: renderProcess})
-                    
-                else
-                    renderProcess();
-            }
-            catch(e)
-            {
-                //str = "<em>Access to restricted URI denied</em>";
-            }
             
             this.lastSourceIndex = index;
+        }
+        else
+        {
+            this.containerNode.scrollTop = this.lastScrollTop;
         }
     }
 });
