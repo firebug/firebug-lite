@@ -344,13 +344,15 @@ ConsolePanel.prototype = extend(Firebug.Panel,
     name: "Console",
     title: "Console",
     
-    options: {
+    options: 
+    {
         hasCommandLine: true,
         hasToolButtons: true,
         isPreRendered: true
     },
 
-    create: function(){
+    create: function()
+    {
         Firebug.Panel.create.apply(this, arguments);
         
         this.clearButton = new Firebug.Button({
@@ -360,7 +362,8 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         });
     },
     
-    initialize: function(){
+    initialize: function()
+    {
         Firebug.Panel.initialize.apply(this, arguments);
         
         this.clearButton.initialize();
