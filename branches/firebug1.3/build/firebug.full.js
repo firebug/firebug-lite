@@ -26,12 +26,13 @@ this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
 this.isIE      = userAgent.indexOf("MSIE") != -1;
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
 
-/*
+// . . . . . . . . . . . . . . . . .
 this.isQuiksMode = document.compatMode == "BackCompat"; // problem with IE in persistent mode
 this.isIEQuiksMode = this.isIE && this.isQuiksMode;
 this.isIEStantandMode = this.isIE && !this.isQuiksMode;
 
 this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+// . . . . . . . . . . . . . . . . .
 /**/
 
 this.NS = null;
@@ -253,29 +254,49 @@ var findLocation =  function findLocation()
         var fileName = file[1];
         var fileOptions = file[2];
         
-        
+        // absolute path
         if (reProtocol.test(script.src)) {
-            // absolute path
             path = rePath.exec(script.src)[1];
           
         }
+        // relative path
         else
         {
-            // relative path
             var r = rePath.exec(script.src);
             var src = r ? r[1] : script.src;
-            var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
-            var lastFolder = /^(.*\/)[^\/]+\/$/;
+            var backDir = /^((?:\.\.\/)+)(.*)/.exec(src);
+            var reLastDir = /^(.*\/)[^\/]+\/$/;
             path = rePath.exec(location.href)[1];
             
-            if (rel)
+            // "../some/path"
+            if (backDir)
             {
-                var j = rel[1].length/3;
+                var j = backDir[1].length/3;
                 var p;
                 while (j-- > 0)
-                    path = lastFolder.exec(path)[1];
+                    path = reLastDir.exec(path)[1];
 
-                path += rel[2];
+                path += backDir[2];
+            }
+            
+            if(src.indexOf("/") != -1)
+            {
+                // "./some/path"
+                if(/^\.\/./.test(src))
+                {
+                    path += src.substring(2);
+                }
+                // "/some/path"
+                else if(/^\/./.test(src))
+                {
+                    var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
+                    path = domain[1] + src;
+                }
+                // "some/path"
+                else
+                {
+                    path += src;
+                }
             }
         }
     }
@@ -998,7 +1019,6 @@ this.dispatch = function(listeners, name, args)
     }
     catch (exc)
     {
-        /*
         if (FBTrace.DBG_ERRORS)
         {
             FBTrace.dumpProperties(" Exception in lib.dispatch "+ name, exc);
@@ -3972,8 +3992,8 @@ var reps = [];
 FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.0a2",
-    revision: "$Revision: 4241 $",
+    version: "Firebug Lite 1.3.0a3",
+    revision: "$Revision: 4900 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -4646,6 +4666,15 @@ Firebug.PanelBar =
     create: function()
     {
         this.panelMap = {};
+        
+        var panelMap = Firebug.panelTypes;
+        for (var i=0, p; p=panelMap[i]; i++)
+        {
+            if (!p.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
     },
     
     initialize: function()
@@ -4669,6 +4698,16 @@ Firebug.PanelBar =
     
     shutdown: function()
     {
+        var selectedPanel = this.selectedPanel;
+        
+        if (selectedPanel)
+        {
+            removeClass(selectedPanel.tabNode, "fbSelectedTab");
+            selectedPanel.shutdown();
+            selectedPanel.hide();
+        }
+        
+        this.selectedPanel = "";
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -4696,8 +4735,8 @@ Firebug.PanelBar =
             if (selectedPanel)
             {
                 removeClass(selectedPanel.tabNode, "fbSelectedTab");
-                selectedPanel.hide();
                 selectedPanel.shutdown();
+                selectedPanel.hide();
             }
             
             if (!panel.parentPanel)
@@ -4706,8 +4745,8 @@ Firebug.PanelBar =
             this.selectedPanel = panel;
             
             setClass(panel.tabNode, "fbSelectedTab");
-            panel.initialize();
             panel.show();
+            panel.initialize();
         }
     },
     
@@ -4967,6 +5006,1068 @@ Firebug.registerPanel(HelloWorldPanel);
 // ************************************************************************************************
 }});
 
+// Problems in IE
+// FIXED - eval return
+// FIXED - addEventListener problem in IE
+// FIXED doc.createRange?
+//
+// class reserved word
+// test all honza examples in IE6 and IE7
+
+
+/* See license.txt for terms of usage */
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+function DomplateTag(tagName)
+{
+    this.tagName = tagName;
+}
+
+function DomplateEmbed()
+{
+}
+
+function DomplateLoop()
+{
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+(function() {
+
+var womb = null;
+
+domplate = function()
+{
+    var lastSubject;
+    for (var i = 0; i < arguments.length; ++i)
+        lastSubject = lastSubject ? copyObject(lastSubject, arguments[i]) : arguments[i];
+
+    for (var name in lastSubject)
+    {
+        var val = lastSubject[name];
+        if (isTag(val))
+            val.tag.subject = lastSubject;
+    }
+
+    return lastSubject;
+};
+
+domplate.context = function(context, fn)
+{
+    var lastContext = domplate.lastContext;
+    domplate.topContext = context;
+    fn.apply(context);
+    domplate.topContext = lastContext;
+};
+
+FBL.TAG = function()
+{
+    var embed = new DomplateEmbed();
+    return embed.merge(arguments);
+};
+
+FBL.FOR = function()
+{
+    var loop = new DomplateLoop();
+    return loop.merge(arguments);
+};
+
+DomplateTag.prototype =
+{
+    merge: function(args, oldTag)
+    {
+        if (oldTag)
+            this.tagName = oldTag.tagName;
+
+        this.context = oldTag ? oldTag.context : null;
+        this.subject = oldTag ? oldTag.subject : null;
+        this.attrs = oldTag ? copyObject(oldTag.attrs) : {};
+        this.classes = oldTag ? copyObject(oldTag.classes) : {};
+        this.props = oldTag ? copyObject(oldTag.props) : null;
+        this.listeners = oldTag ? copyArray(oldTag.listeners) : null;
+        this.children = oldTag ? copyArray(oldTag.children) : [];
+        this.vars = oldTag ? copyArray(oldTag.vars) : [];
+
+        var attrs = args.length ? args[0] : null;
+        var hasAttrs = typeof(attrs) == "object" && !isTag(attrs);
+
+        this.children = [];
+
+        if (domplate.topContext)
+            this.context = domplate.topContext;
+
+        if (args.length)
+            parseChildren(args, hasAttrs ? 1 : 0, this.vars, this.children);
+
+        if (hasAttrs)
+            this.parseAttrs(attrs);
+
+        return creator(this, DomplateTag);
+    },
+
+    parseAttrs: function(args)
+    {
+        for (var name in args)
+        {
+            var val = parseValue(args[name]);
+            readPartNames(val, this.vars);
+
+            if (name.indexOf("on") == 0)
+            {
+                var eventName = name.substr(2);
+                if (!this.listeners)
+                    this.listeners = [];
+                this.listeners.push(eventName, val);
+            }
+            else if (name.indexOf("_") == 0)
+            {
+                var propName = name.substr(1);
+                if (!this.props)
+                    this.props = {};
+                this.props[propName] = val;
+            }
+            else if (name.indexOf("$") == 0)
+            {
+                var className = name.substr(1);
+                if (!this.classes)
+                    this.classes = {};
+                this.classes[className] = val;
+            }
+            else
+            {
+                if (name == "class" && this.attrs.hasOwnProperty(name) )
+                    this.attrs[name] += " " + val;
+                else
+                    this.attrs[name] = val;
+            }
+        }
+    },
+
+    compile: function()
+    {
+        if (this.renderMarkup)
+            return;
+
+        this.compileMarkup();
+        this.compileDOM();
+
+        //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate renderMarkup: ", this.renderMarkup);
+        //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate renderDOM:", this.renderDOM);
+        //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate domArgs:", this.domArgs);
+    },
+
+    compileMarkup: function()
+    {
+        this.markupArgs = [];
+        var topBlock = [], topOuts = [], blocks = [], info = {args: this.markupArgs, argIndex: 0};
+         
+        this.generateMarkup(topBlock, topOuts, blocks, info);
+        this.addCode(topBlock, topOuts, blocks);
+
+        var fnBlock = ['r=(function (__code__, __context__, __in__, __out__'];
+        for (var i = 0; i < info.argIndex; ++i)
+            fnBlock.push(', s', i);
+        fnBlock.push(') {');
+
+        if (this.subject)
+            fnBlock.push('with (this) {');
+        if (this.context)
+            fnBlock.push('with (__context__) {');
+        fnBlock.push('with (__in__) {');
+
+        fnBlock.push.apply(fnBlock, blocks);
+
+        if (this.subject)
+            fnBlock.push('}');
+        if (this.context)
+            fnBlock.push('}');
+
+        fnBlock.push('}})');
+
+        function __link__(tag, code, outputs, args)
+        {
+            if (!tag || !tag.tag)
+                return;
+
+            tag.tag.compile();
+
+            var tagOutputs = [];
+            var markupArgs = [code, tag.tag.context, args, tagOutputs];
+            markupArgs.push.apply(markupArgs, tag.tag.markupArgs);
+            tag.tag.renderMarkup.apply(tag.tag.subject, markupArgs);
+
+            outputs.push(tag);
+            outputs.push(tagOutputs);
+        }
+
+        function __escape__(value)
+        {
+            function replaceChars(ch)
+            {
+                switch (ch)
+                {
+                    case "<":
+                        return "&lt;";
+                    case ">":
+                        return "&gt;";
+                    case "&":
+                        return "&amp;";
+                    case "'":
+                        return "&#39;";
+                    case '"':
+                        return "&quot;";
+                }
+                return "?";
+            };
+            return String(value).replace(/[<>&"']/g, replaceChars);
+        }
+
+        function __loop__(iter, outputs, fn)
+        {
+            var iterOuts = [];
+            outputs.push(iterOuts);
+
+            if (iter instanceof Array)
+                iter = new ArrayIterator(iter);
+
+            try
+            {
+                while (1)
+                {
+                    var value = iter.next();
+                    var itemOuts = [0,0];
+                    iterOuts.push(itemOuts);
+                    fn.apply(this, [value, itemOuts]);
+                }
+            }
+            catch (exc)
+            {
+                if (exc != StopIteration)
+                    throw exc;
+            }
+        }
+
+        var js = fnBlock.join("");
+        var r = null;
+        eval(js)
+        this.renderMarkup = r;
+    },
+
+    getVarNames: function(args)
+    {
+        if (this.vars)
+            args.push.apply(args, this.vars);
+
+        for (var i = 0; i < this.children.length; ++i)
+        {
+            var child = this.children[i];
+            if (isTag(child))
+                child.tag.getVarNames(args);
+            else if (child instanceof Parts)
+            {
+                for (var i = 0; i < child.parts.length; ++i)
+                {
+                    if (child.parts[i] instanceof Variable)
+                    {
+                        var name = child.parts[i].name;
+                        var names = name.split(".");
+                        args.push(names[0]);
+                    }
+                }
+            }
+        }
+    },
+
+    generateMarkup: function(topBlock, topOuts, blocks, info)
+    {
+        topBlock.push(',"<', this.tagName, '"');
+
+        for (var name in this.attrs)
+        {
+            if (name != "class")
+            {
+                var val = this.attrs[name];
+                topBlock.push(', " ', name, '=\\""');
+                addParts(val, ',', topBlock, info, true);
+                topBlock.push(', "\\""');
+            }
+        }
+
+        if (this.listeners)
+        {
+            for (var i = 0; i < this.listeners.length; i += 2)
+                readPartNames(this.listeners[i+1], topOuts);
+        }
+
+        if (this.props)
+        {
+            for (var name in this.props)
+                readPartNames(this.props[name], topOuts);
+        }
+
+        if ( this.attrs.hasOwnProperty("class") || this.classes)
+        {
+            topBlock.push(', " class=\\""');
+            if (this.attrs.hasOwnProperty("class"))
+                addParts(this.attrs["class"], ',', topBlock, info, true);
+              topBlock.push(', " "');
+            for (var name in this.classes)
+            {
+                topBlock.push(', (');
+                addParts(this.classes[name], '', topBlock, info);
+                topBlock.push(' ? "', name, '" + " " : "")');
+            }
+            topBlock.push(', "\\""');
+        }
+        topBlock.push(',">"');
+
+        this.generateChildMarkup(topBlock, topOuts, blocks, info);
+        topBlock.push(',"</', this.tagName, '>"');
+    },
+
+    generateChildMarkup: function(topBlock, topOuts, blocks, info)
+    {
+        for (var i = 0; i < this.children.length; ++i)
+        {
+            var child = this.children[i];
+            if (isTag(child))
+                child.tag.generateMarkup(topBlock, topOuts, blocks, info);
+            else
+                addParts(child, ',', topBlock, info, true);
+        }
+    },
+
+    addCode: function(topBlock, topOuts, blocks)
+    {
+        if (topBlock.length)
+            blocks.push('__code__.push(""', topBlock.join(""), ');');
+        if (topOuts.length)
+            blocks.push('__out__.push(', topOuts.join(","), ');');
+        topBlock.splice(0, topBlock.length);
+        topOuts.splice(0, topOuts.length);
+    },
+
+    addLocals: function(blocks)
+    {
+        var varNames = [];
+        this.getVarNames(varNames);
+
+        var map = {};
+        for (var i = 0; i < varNames.length; ++i)
+        {
+            var name = varNames[i];
+            if ( map.hasOwnProperty(name) )
+                continue;
+
+            map[name] = 1;
+            var names = name.split(".");
+            blocks.push('var ', names[0] + ' = ' + '__in__.' + names[0] + ';');
+        }
+    },
+
+    compileDOM: function()
+    {
+        var path = [];
+        var blocks = [];
+        this.domArgs = [];
+        path.embedIndex = 0;
+        path.loopIndex = 0;
+        path.staticIndex = 0;
+        path.renderIndex = 0;
+        var nodeCount = this.generateDOM(path, blocks, this.domArgs);
+
+        var fnBlock = ['r=(function (root, context, o'];
+
+        for (var i = 0; i < path.staticIndex; ++i)
+            fnBlock.push(', ', 's'+i);
+
+        for (var i = 0; i < path.renderIndex; ++i)
+            fnBlock.push(', ', 'd'+i);
+
+        fnBlock.push(') {');
+        for (var i = 0; i < path.loopIndex; ++i)
+            fnBlock.push('var l', i, ' = 0;');
+        for (var i = 0; i < path.embedIndex; ++i)
+            fnBlock.push('var e', i, ' = 0;');
+
+        if (this.subject)
+            fnBlock.push('with (this) {');
+        if (this.context)
+            fnBlock.push('with (context) {');
+
+        fnBlock.push(blocks.join(""));
+
+        if (this.subject)
+            fnBlock.push('}');
+        if (this.context)
+            fnBlock.push('}');
+
+        fnBlock.push('return ', nodeCount, ';');
+        fnBlock.push('})');
+
+        function __bind__(object, fn)
+        {
+            return function(event) { return fn.apply(object, [event]); }
+        }
+
+        function __link__(node, tag, args)
+        {
+            if (!tag || !tag.tag)
+                return;
+
+            tag.tag.compile();
+
+            var domArgs = [node, tag.tag.context, 0];
+            domArgs.push.apply(domArgs, tag.tag.domArgs);
+            domArgs.push.apply(domArgs, args);
+            //if (FBTrace.DBG_DOM) FBTrace.dumpProperties("domplate__link__ domArgs:", domArgs);
+            return tag.tag.renderDOM.apply(tag.tag.subject, domArgs);
+        }
+
+        var self = this;
+        function __loop__(iter, fn)
+        {
+            var nodeCount = 0;
+            for (var i = 0; i < iter.length; ++i)
+            {
+                iter[i][0] = i;
+                iter[i][1] = nodeCount;
+                nodeCount += fn.apply(this, iter[i]);
+                //if (FBTrace.DBG_DOM) FBTrace.sysout("nodeCount", nodeCount);
+            }
+            return nodeCount;
+        }
+
+        function __path__(parent, offset)
+        {
+            //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate __path__ offset: "+ offset+"\n");
+            var root = parent;
+
+            for (var i = 2; i < arguments.length; ++i)
+            {
+                var index = arguments[i];
+                if (i == 3)
+                    index += offset;
+
+                if (index == -1)
+                    parent = parent.parentNode;
+                else
+                    parent = parent.childNodes[index];
+            }
+
+            //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate: "+arguments[2]+", root: "+ root+", parent: "+ parent+"\n");
+            return parent;
+        }
+
+        var js = fnBlock.join("");
+        //if (FBTrace.DBG_DOM) FBTrace.sysout(js.replace(/(\;|\{)/g, "$1\n"));
+        var r = null;
+        eval(js)
+        this.renderDOM = r;
+    },
+
+    generateDOM: function(path, blocks, args)
+    {
+        if (this.listeners || this.props)
+            this.generateNodePath(path, blocks);
+
+        if (this.listeners)
+        {
+            for (var i = 0; i < this.listeners.length; i += 2)
+            {
+                var val = this.listeners[i+1];
+                var arg = generateArg(val, path, args);
+                //blocks.push('node.addEventListener("', this.listeners[i], '", __bind__(this, ', arg, '), false);');
+                blocks.push('addEvent(node, "', this.listeners[i], '", __bind__(this, ', arg, '), false);');
+            }
+        }
+
+        if (this.props)
+        {
+            for (var name in this.props)
+            {
+                var val = this.props[name];
+                var arg = generateArg(val, path, args);
+                blocks.push('node.', name, ' = ', arg, ';');
+            }
+        }
+
+        this.generateChildDOM(path, blocks, args);
+        return 1;
+    },
+
+    generateNodePath: function(path, blocks)
+    {
+        blocks.push("var node = __path__(root, o");
+        for (var i = 0; i < path.length; ++i)
+            blocks.push(",", path[i]);
+        blocks.push(");");
+    },
+
+    generateChildDOM: function(path, blocks, args)
+    {
+        path.push(0);
+        for (var i = 0; i < this.children.length; ++i)
+        {
+            var child = this.children[i];
+            if (isTag(child))
+                path[path.length-1] += '+' + child.tag.generateDOM(path, blocks, args);
+            else
+                path[path.length-1] += '+1';
+        }
+        path.pop();
+    }
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+DomplateEmbed.prototype = copyObject(DomplateTag.prototype,
+{
+    merge: function(args, oldTag)
+    {
+        this.value = oldTag ? oldTag.value : parseValue(args[0]);
+        this.attrs = oldTag ? oldTag.attrs : {};
+        this.vars = oldTag ? copyArray(oldTag.vars) : [];
+
+        var attrs = args[1];
+        for (var name in attrs)
+        {
+            var val = parseValue(attrs[name]);
+            this.attrs[name] = val;
+            readPartNames(val, this.vars);
+        }
+
+        return creator(this, DomplateEmbed);
+    },
+
+    getVarNames: function(names)
+    {
+        if (this.value instanceof Parts)
+            names.push(this.value.parts[0].name);
+
+        if (this.vars)
+            names.push.apply(names, this.vars);
+    },
+
+    generateMarkup: function(topBlock, topOuts, blocks, info)
+    {
+        this.addCode(topBlock, topOuts, blocks);
+
+        blocks.push('__link__(');
+        addParts(this.value, '', blocks, info);
+        blocks.push(', __code__, __out__, {');
+
+        var lastName = null;
+        for (var name in this.attrs)
+        {
+            if (lastName)
+                blocks.push(',');
+            lastName = name;
+
+            var val = this.attrs[name];
+            blocks.push('"', name, '":');
+            addParts(val, '', blocks, info);
+        }
+
+        blocks.push('});');
+        //this.generateChildMarkup(topBlock, topOuts, blocks, info);
+    },
+
+    generateDOM: function(path, blocks, args)
+    {
+        var embedName = 'e'+path.embedIndex++;
+
+        this.generateNodePath(path, blocks);
+
+        var valueName = 'd' + path.renderIndex++;
+        var argsName = 'd' + path.renderIndex++;
+        blocks.push(embedName + ' = __link__(node, ', valueName, ', ', argsName, ');');
+
+        return embedName;
+    }
+});
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+DomplateLoop.prototype = copyObject(DomplateTag.prototype,
+{
+    merge: function(args, oldTag)
+    {
+        this.varName = oldTag ? oldTag.varName : args[0];
+        this.iter = oldTag ? oldTag.iter : parseValue(args[1]);
+        this.vars = [];
+
+        this.children = oldTag ? copyArray(oldTag.children) : [];
+
+        var offset = Math.min(args.length, 2);
+        parseChildren(args, offset, this.vars, this.children);
+
+        return creator(this, DomplateLoop);
+    },
+
+    getVarNames: function(names)
+    {
+        if (this.iter instanceof Parts)
+            names.push(this.iter.parts[0].name);
+
+        DomplateTag.prototype.getVarNames.apply(this, [names]);
+    },
+
+    generateMarkup: function(topBlock, topOuts, blocks, info)
+    {
+        this.addCode(topBlock, topOuts, blocks);
+
+        var iterName;
+        if (this.iter instanceof Parts)
+        {
+            var part = this.iter.parts[0];
+            iterName = part.name;
+
+            if (part.format)
+            {
+                for (var i = 0; i < part.format.length; ++i)
+                    iterName = part.format[i] + "(" + iterName + ")";
+            }
+        }
+        else
+            iterName = this.iter;
+
+        blocks.push('__loop__.apply(this, [', iterName, ', __out__, function(', this.varName, ', __out__) {');
+        this.generateChildMarkup(topBlock, topOuts, blocks, info);
+        this.addCode(topBlock, topOuts, blocks);
+        blocks.push('}]);');
+    },
+
+    generateDOM: function(path, blocks, args)
+    {
+        var iterName = 'd'+path.renderIndex++;
+        var counterName = 'i'+path.loopIndex;
+        var loopName = 'l'+path.loopIndex++;
+
+        if (!path.length)
+            path.push(-1, 0);
+
+        var preIndex = path.renderIndex;
+        path.renderIndex = 0;
+
+        var nodeCount = 0;
+
+        var subBlocks = [];
+        var basePath = path[path.length-1];
+        for (var i = 0; i < this.children.length; ++i)
+        {
+            path[path.length-1] = basePath+'+'+loopName+'+'+nodeCount;
+
+            var child = this.children[i];
+            if (isTag(child))
+                nodeCount += '+' + child.tag.generateDOM(path, subBlocks, args);
+            else
+                nodeCount += '+1';
+        }
+
+        path[path.length-1] = basePath+'+'+loopName;
+
+        blocks.push(loopName,' = __loop__.apply(this, [', iterName, ', function(', counterName,',',loopName);
+        for (var i = 0; i < path.renderIndex; ++i)
+            blocks.push(',d'+i);
+        blocks.push(') {');
+        blocks.push(subBlocks.join(""));
+        blocks.push('return ', nodeCount, ';');
+        blocks.push('}]);');
+
+        path.renderIndex = preIndex;
+
+        return loopName;
+    }
+});
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+function Variable(name, format)
+{
+    this.name = name;
+    this.format = format;
+}
+
+function Parts(parts)
+{
+    this.parts = parts;
+}
+
+// ************************************************************************************************
+
+function parseParts(str)
+{
+    var re = /\$([_A-Za-z][_A-Za-z0-9.|]*)/g;
+    var index = 0;
+    var parts = [];
+
+    var m;
+    while (m = re.exec(str))
+    {
+        var pre = str.substr(index, (re.lastIndex-m[0].length)-index);
+        if (pre)
+            parts.push(pre);
+
+        var expr = m[1].split("|");
+        parts.push(new Variable(expr[0], expr.slice(1)));
+        index = re.lastIndex;
+    }
+
+    if (!index)
+        return str;
+
+    var post = str.substr(index);
+    if (post)
+        parts.push(post);
+
+    return new Parts(parts);
+}
+
+function parseValue(val)
+{
+    return typeof(val) == 'string' ? parseParts(val) : val;
+}
+
+function parseChildren(args, offset, vars, children)
+{
+    for (var i = offset; i < args.length; ++i)
+    {
+        var val = parseValue(args[i]);
+        children.push(val);
+        readPartNames(val, vars);
+    }
+}
+
+function readPartNames(val, vars)
+{
+    if (val instanceof Parts)
+    {
+        for (var i = 0; i < val.parts.length; ++i)
+        {
+            var part = val.parts[i];
+            if (part instanceof Variable)
+                vars.push(part.name);
+        }
+    }
+}
+
+function generateArg(val, path, args)
+{
+    if (val instanceof Parts)
+    {
+        var vals = [];
+        for (var i = 0; i < val.parts.length; ++i)
+        {
+            var part = val.parts[i];
+            if (part instanceof Variable)
+            {
+                var varName = 'd'+path.renderIndex++;
+                if (part.format)
+                {
+                    for (var j = 0; j < part.format.length; ++j)
+                        varName = part.format[j] + '(' + varName + ')';
+                }
+
+                vals.push(varName);
+            }
+            else
+                vals.push('"'+part.replace(/"/g, '\\"')+'"');
+        }
+
+        return vals.join('+');
+    }
+    else
+    {
+        args.push(val);
+        return 's' + path.staticIndex++;
+    }
+}
+
+function addParts(val, delim, block, info, escapeIt)
+{
+    var vals = [];
+    if (val instanceof Parts)
+    {
+        for (var i = 0; i < val.parts.length; ++i)
+        {
+            var part = val.parts[i];
+            if (part instanceof Variable)
+            {
+                var partName = part.name;
+                if (part.format)
+                {
+                    for (var j = 0; j < part.format.length; ++j)
+                        partName = part.format[j] + "(" + partName + ")";
+                }
+
+                if (escapeIt)
+                    vals.push("__escape__(" + partName + ")");
+                else
+                    vals.push(partName);
+            }
+            else
+                vals.push('"'+ part + '"');
+        }
+    }
+    else if (isTag(val))
+    {
+        info.args.push(val);
+        vals.push('s'+info.argIndex++);
+    }
+    else
+        vals.push('"'+ val + '"');
+
+    var parts = vals.join(delim);
+    if (parts)
+        block.push(delim, parts);
+}
+
+function isTag(obj)
+{
+    return (typeof(obj) == "function" || obj instanceof Function) && !!obj.tag;
+}
+
+function creator(tag, cons)
+{
+    var fn = new Function(
+        "var tag = arguments.callee.tag;" +
+        "var cons = arguments.callee.cons;" +
+        "var newTag = new cons();" +
+        "return newTag.merge(arguments, tag);");
+
+    fn.tag = tag;
+    fn.cons = cons;
+    extend(fn, Renderer);
+
+    return fn;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+function copyArray(oldArray)
+{
+    var ary = [];
+    if (oldArray)
+        for (var i = 0; i < oldArray.length; ++i)
+            ary.push(oldArray[i]);
+   return ary;
+}
+
+function copyObject(l, r)
+{
+    var m = {};
+    extend(m, l);
+    extend(m, r);
+    return m;
+}
+
+function extend(l, r)
+{
+    for (var n in r)
+        l[n] = r[n];
+}
+
+function addEvent(object, name, handler)
+{
+    if (document.all)
+        object.attachEvent("on"+name, handler);
+    else
+        object.addEventListener(name, handler, false);
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+function ArrayIterator(array)
+{
+    var index = -1;
+
+    this.next = function()
+    {
+        if (++index >= array.length)
+            throw StopIteration;
+
+        return array[index];
+    };
+}
+
+function StopIteration() {}
+
+FBL.$break = function()
+{
+    throw StopIteration;
+};
+
+// ************************************************************************************************
+
+var Renderer =
+{
+    renderHTML: function(args, outputs, self)
+    {
+        var code = [];
+        var markupArgs = [code, this.tag.context, args, outputs];
+        markupArgs.push.apply(markupArgs, this.tag.markupArgs);
+        this.tag.renderMarkup.apply(self ? self : this.tag.subject, markupArgs);
+        return code.join("");
+    },
+
+    insertRows: function(args, before, self)
+    {
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+
+        var doc = before.ownerDocument;
+        var div = doc.createElement("div");
+        div.innerHTML = "<table><tbody>"+html+"</tbody></table>";
+
+        var tbody = div.firstChild.firstChild
+        var parent = before.tagName == "TR" ? before.parentNode : before;
+        var after = before.tagName == "TR" ? before.nextSibling : null;
+
+        var firstRow = tbody.firstChild, lastRow;
+        while (tbody.firstChild)
+        {
+            lastRow = tbody.firstChild;
+            if (after)
+                parent.insertBefore(lastRow, after);
+            else
+                parent.appendChild(lastRow);
+        }
+
+        var offset = 0;
+        if (before.tagName == "TR")
+        {
+            var node = firstRow.parentNode.firstChild;
+            for (; node && node != firstRow; node = node.nextSibling)
+                ++offset;
+        }
+
+        var domArgs = [firstRow, this.tag.context, offset];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+
+        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
+        return [firstRow, lastRow];
+    },
+
+    insertAfter: function(args, before, self)
+    {
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+
+        var doc = before.ownerDocument;
+        if (!womb || womb.ownerDocument != doc)
+            womb = doc.createElement("div");
+        
+        womb.innerHTML = html;
+  
+        root = womb.firstChild;
+        while (womb.firstChild)
+            if (before.nextSibling)
+                before.parentNode.insertBefore(womb.firstChild, before.nextSibling);
+            else
+                before.parentNode.appendChild(womb.firstChild);
+        
+        var domArgs = [root, this.tag.context, 0];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+
+        this.tag.renderDOM.apply(self ? self : (this.tag.subject ? this.tag.subject : null),
+            domArgs);
+
+        return root;
+    },
+
+    replace: function(args, parent, self)
+    {
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+
+        var root;
+        if (parent.nodeType == 1)
+        {
+            parent.innerHTML = html;
+            root = parent.firstChild;
+        }
+        else
+        {
+            if (!parent || parent.nodeType != 9)
+                parent = document;
+
+            if (!womb || womb.ownerDocument != parent)
+                womb = parent.createElement("div");
+            womb.innerHTML = html;
+
+            root = womb.firstChild;
+            //womb.removeChild(root);
+        }
+
+        var domArgs = [root, this.tag.context, 0];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
+
+        return root;
+    },
+
+    append: function(args, parent, self)
+    {
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+        //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate.append html: "+html+"\n");
+        
+        if (!womb || womb.ownerDocument != parent.ownerDocument)
+            womb = parent.ownerDocument.createElement("div");
+        womb.innerHTML = html;
+
+        root = womb.firstChild;
+        while (womb.firstChild)
+            parent.appendChild(womb.firstChild);
+
+        var domArgs = [root, this.tag.context, 0];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+        
+        //if (FBTrace.DBG_DOM) FBTrace.dumpProperties("domplate append domArgs:", domArgs);
+        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
+
+        return root;
+    }
+};
+
+// ************************************************************************************************
+
+function defineTags()
+{
+    for (var i = 0; i < arguments.length; ++i)
+    {
+        var tagName = arguments[i];
+        var fn = new Function("var newTag = new DomplateTag('"+tagName+"'); return newTag.merge(arguments);");
+
+        var fnName = tagName.toUpperCase();
+        FBL[fnName] = fn;
+    }
+}
+
+defineTags(
+    "a", "button", "br", "canvas", "col", "colgroup", "div", "fieldset", "form", "h1", "h2", "h3", "hr",
+     "img", "input", "label", "legend", "li", "ol", "optgroup", "option", "p", "pre", "select",
+    "span", "strong", "table", "tbody", "td", "textarea", "tfoot", "th", "thead", "tr", "tt", "ul", "iframe"
+);
+
+})();
+
+
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
@@ -5212,6 +6313,1759 @@ From firebug
 
 // ************************************************************************************************
 }});
+
+/* See license.txt for terms of usage */
+
+var FirebugReps = FBL.ns(function() { with (FBL) {
+
+
+// ************************************************************************************************
+// Common Tags
+
+var OBJECTBOX = this.OBJECTBOX =
+    SPAN({"class": "objectBox objectBox-$className"});
+
+var OBJECTBLOCK = this.OBJECTBLOCK =
+    DIV({"class": "objectBox objectBox-$className"});
+
+var OBJECTLINK = this.OBJECTLINK =
+    A({
+        "class": "objectLink objectLink-$className a11yFocus",
+        _repObject: "$object"
+    });
+
+
+// ************************************************************************************************
+
+Firebug.Rep = domplate(
+{
+    className: "",
+    inspectable: true,
+
+    supportsObject: function(object, type)
+    {
+        return false;
+    },
+
+    inspectObject: function(object, context)
+    {
+        Firebug.chrome.select(object);
+    },
+
+    browseObject: function(object, context)
+    {
+    },
+
+    persistObject: function(object, context)
+    {
+    },
+
+    getRealObject: function(object, context)
+    {
+        return object;
+    },
+
+    getTitle: function(object)
+    {
+        var label = safeToString(object);
+
+        var re = /\[object (.*?)\]/;
+        var m = re.exec(label);
+        return m ? m[1] : label;
+    },
+
+    getTooltip: function(object)
+    {
+        return null;
+    },
+
+    getContextMenuItems: function(object, target, context)
+    {
+        return [];
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Convenience for domplates
+
+    STR: function(name)
+    {
+        return $STR(name);
+    },
+
+    cropString: function(text)
+    {
+        return cropString(text);
+    },
+
+    toLowerCase: function(text)
+    {
+        return text ? text.toLowerCase() : text;
+    },
+
+    plural: function(n)
+    {
+        return n == 1 ? "" : "s";
+    }
+});
+
+// ************************************************************************************************
+
+this.Undefined = domplate(Firebug.Rep,
+{
+    tag: OBJECTBOX("undefined"),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "undefined",
+
+    supportsObject: function(object, type)
+    {
+        return type == "undefined";
+    }
+});
+
+// ************************************************************************************************
+
+this.Null = domplate(Firebug.Rep,
+{
+    tag: OBJECTBOX("null"),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "null",
+
+    supportsObject: function(object, type)
+    {
+        return object == null;
+    }
+});
+
+// ************************************************************************************************
+
+this.Nada = domplate(Firebug.Rep,
+{
+    tag: SPAN(""),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "nada"
+});
+
+// ************************************************************************************************
+
+this.Number = domplate(Firebug.Rep,
+{
+    tag: OBJECTBOX("$object"),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "number",
+
+    supportsObject: function(object, type)
+    {
+        return type == "boolean" || type == "number";
+    }
+});
+
+// ************************************************************************************************
+
+this.String = domplate(Firebug.Rep,
+{
+    tag: OBJECTBOX("&quot;$object&quot;"),
+
+    shortTag: OBJECTBOX("&quot;$object|cropString&quot;"),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "string",
+
+    supportsObject: function(object, type)
+    {
+        return type == "string";
+    }
+});
+
+// ************************************************************************************************
+
+this.Text = domplate(Firebug.Rep,
+{
+    tag: OBJECTBOX("$object"),
+
+    shortTag: OBJECTBOX("$object|cropString"),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "text"
+});
+
+// ************************************************************************************************
+
+this.Caption = domplate(Firebug.Rep,
+{
+    tag: SPAN({"class": "caption"}, "$object")
+});
+
+// ************************************************************************************************
+
+this.Warning = domplate(Firebug.Rep,
+{
+    tag: DIV({"class": "warning focusRow", role : 'listitem'}, "$object|STR")
+});
+
+// ************************************************************************************************
+
+this.Func = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTLINK("$object|summarizeFunction"),
+
+    summarizeFunction: function(fn)
+    {
+        var fnRegex = /function ([^(]+\([^)]*\)) \{/;
+        var fnText = safeToString(fn);
+
+        var m = fnRegex.exec(fnText);
+        return m ? m[1] : "function()";
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    copySource: function(fn)
+    {
+        copyToClipboard(safeToString(fn));
+    },
+
+    monitor: function(fn, script, monitored)
+    {
+        if (monitored)
+            Firebug.Debugger.unmonitorScript(fn, script, "monitor");
+        else
+            Firebug.Debugger.monitorScript(fn, script, "monitor");
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "function",
+
+    supportsObject: function(object, type)
+    {
+        return type == "function";
+    },
+
+    inspectObject: function(fn, context)
+    {
+        var sourceLink = findSourceForFunction(fn, context);
+        if (sourceLink)
+            Firebug.chrome.select(sourceLink);
+        if (FBTrace.DBG_FUNCTION_NAME)
+            FBTrace.sysout("reps.function.inspectObject selected sourceLink is ", sourceLink);
+    },
+
+    getTooltip: function(fn, context)
+    {
+        var script = findScriptForFunctionInContext(context, fn);
+        if (script)
+            return $STRF("Line", [normalizeURL(script.fileName), script.baseLineNumber]);
+        else
+            if (fn.toString)
+                return fn.toString();
+    },
+
+    getTitle: function(fn, context)
+    {
+        var name = fn.name ? fn.name : "function";
+        return name + "()";
+    },
+
+    getContextMenuItems: function(fn, target, context, script)
+    {
+        if (!script)
+            script = findScriptForFunctionInContext(context, fn);
+        if (!script)
+            return;
+
+        var scriptInfo = getSourceFileAndLineByScript(context, script);
+        var monitored = scriptInfo ? fbs.isMonitored(scriptInfo.sourceFile.href, scriptInfo.lineNo) : false;
+
+        var name = script ? getFunctionName(script, context) : fn.name;
+        return [
+            {label: "CopySource", command: bindFixed(this.copySource, this, fn) },
+            "-",
+            {label: $STRF("ShowCallsInConsole", [name]), nol10n: true,
+             type: "checkbox", checked: monitored,
+             command: bindFixed(this.monitor, this, fn, script, monitored) }
+        ];
+    }
+});
+
+// ************************************************************************************************
+
+this.jsdScript = domplate(Firebug.Rep,
+{
+    copySource: function(script)
+    {
+        var fn = script.functionObject.getWrappedValue();
+        return FirebugReps.Func.copySource(fn);
+    },
+
+    monitor: function(fn, script, monitored)
+    {
+        fn = script.functionObject.getWrappedValue();
+        return FirebugReps.Func.monitor(fn, script, monitored);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "jsdScript",
+    inspectable: false,
+
+    supportsObject: function(object, type)
+    {
+        return object instanceof jsdIScript;
+    },
+
+    inspectObject: function(script, context)
+    {
+        var sourceLink = getSourceLinkForScript(script, context);
+        if (sourceLink)
+            Firebug.chrome.select(sourceLink);
+    },
+
+    getRealObject: function(script, context)
+    {
+        return script;
+    },
+
+    getTooltip: function(script)
+    {
+        return $STRF("jsdIScript", [script.tag]);
+    },
+
+    getTitle: function(script, context)
+    {
+        var fn = script.functionObject.getWrappedValue();
+        return FirebugReps.Func.getTitle(fn, context);
+    },
+
+    getContextMenuItems: function(script, target, context)
+    {
+        var fn = script.functionObject.getWrappedValue();
+
+        var scriptInfo = getSourceFileAndLineByScript(context, script);
+           var monitored = scriptInfo ? fbs.isMonitored(scriptInfo.sourceFile.href, scriptInfo.lineNo) : false;
+
+        var name = getFunctionName(script, context);
+
+        return [
+            {label: "CopySource", command: bindFixed(this.copySource, this, script) },
+            "-",
+            {label: $STRF("ShowCallsInConsole", [name]), nol10n: true,
+             type: "checkbox", checked: monitored,
+             command: bindFixed(this.monitor, this, fn, script, monitored) }
+        ];
+    }
+});
+
+//************************************************************************************************
+
+this.Obj = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTLINK(
+            SPAN({"class": "objectTitle"}, "$object|getTitle"),
+            FOR("prop", "$object|propIterator",
+                " $prop.name=",
+                SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
+            )
+        ),
+
+    propIterator: function (object)
+    {
+        if (!object)
+            return [];
+
+        var props = [];
+        var len = 0;
+
+        try
+        {
+            for (var name in object)
+            {
+                var val;
+                try
+                {
+                    val = object[name];
+                }
+                catch (exc)
+                {
+                    continue;
+                }
+
+                var t = typeof(val);
+                if (t == "boolean" || t == "number" || (t == "string" && val)
+                    || (t == "object" && val && val.toString))
+                {
+                    var title = (t == "object")
+                        ? Firebug.getRep(val).getTitle(val)
+                        : val+"";
+
+                    len += name.length + title.length + 1;
+                    if (len < 50)
+                        props.push({name: name, value: title});
+                    else
+                        break;
+                }
+            }
+        }
+        catch (exc)
+        {
+            // Sometimes we get exceptions when trying to read from certain objects, like
+            // StorageList, but don't let that gum up the works
+            // XXXjjb also History.previous fails because object is a web-page object which does not have
+            // permission to read the history
+        }
+
+        return props;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "object",
+
+    supportsObject: function(object, type)
+    {
+        return true;
+    }
+});
+
+
+// ************************************************************************************************
+
+this.Arr = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTBOX({_repObject: "$object"},
+            SPAN({"class": "arrayLeftBracket", role : "presentation"}, "["),
+            FOR("item", "$object|arrayIterator",
+                TAG("$item.tag", {object: "$item.object"}),
+                SPAN({"class": "arrayComma", role : "presentation"}, "$item.delim")
+            ),
+            SPAN({"class": "arrayRightBracket", role : "presentation"}, "]")
+        ),
+
+    shortTag:
+        OBJECTBOX({_repObject: "$object"},
+            SPAN({"class": "arrayLeftBracket", role : "presentation"}, "["),
+            FOR("item", "$object|shortArrayIterator",
+                TAG("$item.tag", {object: "$item.object"}),
+                SPAN({"class": "arrayComma", role : "presentation"}, "$item.delim")
+            ),
+            // TODO: xxxpedro - confirm this on Firebug
+            //FOR("prop", "$object|shortPropIterator",
+            //        " $prop.name=",
+            //        SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
+            //),
+            SPAN({"class": "arrayRightBracket"}, "]")
+        ),
+
+    arrayIterator: function(array)
+    {
+        var items = [];
+        for (var i = 0; i < array.length; ++i)
+        {
+            var value = array[i];
+            var rep = Firebug.getRep(value);
+            var tag = rep.shortTag ? rep.shortTag : rep.tag;
+            var delim = (i == array.length-1 ? "" : ", ");
+
+            items.push({object: value, tag: tag, delim: delim});
+        }
+
+        return items;
+    },
+
+    shortArrayIterator: function(array)
+    {
+        var items = [];
+        for (var i = 0; i < array.length && i < 3; ++i)
+        {
+            var value = array[i];
+            var rep = Firebug.getRep(value);
+            var tag = rep.shortTag ? rep.shortTag : rep.tag;
+            var delim = (i == array.length-1 ? "" : ", ");
+
+            items.push({object: value, tag: tag, delim: delim});
+        }
+
+        if (array.length > 3)
+            items.push({object: (array.length-3) + " more...", tag: FirebugReps.Caption.tag, delim: ""});
+
+        return items;
+    },
+
+    shortPropIterator:    this.Obj.propIterator,
+
+    getItemIndex: function(child)
+    {
+        var arrayIndex = 0;
+        for (child = child.previousSibling; child; child = child.previousSibling)
+        {
+            if (child.repObject)
+                ++arrayIndex;
+        }
+        return arrayIndex;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "array",
+
+    supportsObject: function(object)
+    {
+        return this.isArray(object);
+    },
+
+    // http://code.google.com/p/fbug/issues/detail?id=874
+    // BEGIN Yahoo BSD Source (modified here)  YAHOO.lang.isArray, YUI 2.2.2 June 2007
+    isArray: function(obj) {
+        try {
+            if (!obj)
+                return false;
+            //TODO: xxxpedro
+            //else if (obj instanceof Ci.nsIDOMHistory) // do this first to avoid security 1000 errors?
+            //    return false;
+            else if (isIE && typeof obj == "object" && isFinite(obj.length) && obj.nodeType != 8)
+                return true;
+            else if (isFinite(obj.length) && typeof obj.splice === 'function')
+                return true;
+            else if (isFinite(obj.length) && typeof obj.callee === 'function') // arguments
+                return true;
+            else if (obj instanceof HTMLCollection)
+                return true;
+            else if (obj instanceof NodeList)
+                return true;
+            else
+                return false;
+        }
+        catch(exc)
+        {
+            if (FBTrace.DBG_ERRORS)
+            {
+                FBTrace.sysout("isArray FAILS:", exc);  /* Something weird: without the try/catch, OOM, with no exception?? */
+                FBTrace.sysout("isArray Fails on obj", obj);
+            }
+        }
+
+        return false;
+    },
+    // END Yahoo BSD SOURCE See license below.
+
+    getTitle: function(object, context)
+    {
+        return "[" + object.length + "]";
+    }
+});
+
+// ************************************************************************************************
+
+this.Property = domplate(Firebug.Rep,
+{
+    supportsObject: function(object)
+    {
+        return object instanceof Property;
+    },
+
+    getRealObject: function(prop, context)
+    {
+        return prop.object[prop.name];
+    },
+
+    getTitle: function(prop, context)
+    {
+        return prop.name;
+    }
+});
+
+// ************************************************************************************************
+
+this.NetFile = domplate(this.Obj,
+{
+    supportsObject: function(object)
+    {
+        return object instanceof Firebug.NetFile;
+    },
+
+    browseObject: function(file, context)
+    {
+        openNewTab(file.href);
+        return true;
+    },
+
+    getRealObject: function(file, context)
+    {
+        return null;
+    }
+});
+
+// ************************************************************************************************
+
+this.Except = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTBOX({_repObject: "$object"}, "$object.message"),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "exception",
+
+    supportsObject: function(object)
+    {
+        return object instanceof ErrorCopy;
+    }
+});
+
+
+// ************************************************************************************************
+
+this.Element = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTLINK(
+            "&lt;",
+            SPAN({"class": "nodeTag"}, "$object.tagName|toLowerCase"),
+            FOR("attr", "$object|attrIterator",
+                "&nbsp;$attr.tagName=&quot;", SPAN({"class": "nodeValue"}, "$attr.nodeValue"), "&quot;"
+            ),
+            "&gt;"
+         ),
+
+    shortTag:
+        OBJECTLINK(
+            SPAN({"class": "$object|getVisible"},
+                SPAN({"class": "selectorTag"}, "$object|getSelectorTag"),
+                SPAN({"class": "selectorId"}, "$object|getSelectorId"),
+                SPAN({"class": "selectorClass"}, "$object|getSelectorClass"),
+                SPAN({"class": "selectorValue"}, "$object|getValue")
+            )
+         ),
+
+     getVisible: function(elt)
+     {
+         return isVisible(elt) ? "" : "selectorHidden";
+     },
+
+     getSelectorTag: function(elt)
+     {
+         return elt.tagName.toLowerCase();
+     },
+
+     getSelectorId: function(elt)
+     {
+         return elt.id ? ("#" + elt.id) : "";
+     },
+
+     getSelectorClass: function(elt)
+     {
+         // TODO: xxxpedro
+         return "";
+         return elt.getAttribute("class")
+             ? ("." + elt.getAttribute("class").split(" ")[0])
+             : "";
+     },
+
+     getValue: function(elt)
+     {
+         // TODO: xxxpedro
+         return "";
+         var value;
+         if (elt instanceof HTMLImageElement)
+             value = getFileName(elt.src);
+         else if (elt instanceof HTMLAnchorElement)
+             value = getFileName(elt.href);
+         else if (elt instanceof HTMLInputElement)
+             value = elt.value;
+         else if (elt instanceof HTMLFormElement)
+             value = getFileName(elt.action);
+         else if (elt instanceof HTMLScriptElement)
+             value = getFileName(elt.src);
+
+         return value ? " " + cropString(value, 20) : "";
+     },
+
+     attrIterator: function(elt)
+     {
+         var attrs = [];
+         var idAttr, classAttr;
+         if (elt.attributes)
+         {
+             for (var i = 0; i < elt.attributes.length; ++i)
+             {
+                 var attr = elt.attributes[i];
+                 if (attr.tagName && attr.tagName.indexOf("firebug-") != -1)
+                    continue;
+                 else if (attr.tagName == "id")
+                     idAttr = attr;
+                else if (attr.tagName == "class")
+                    classAttr = attr;
+                 else
+                     attrs.push(attr);
+             }
+         }
+         if (classAttr)
+            attrs.splice(0, 0, classAttr);
+         if (idAttr)
+            attrs.splice(0, 0, idAttr);
+         
+         return attrs;
+     },
+
+     shortAttrIterator: function(elt)
+     {
+         var attrs = [];
+         if (elt.attributes)
+         {
+             for (var i = 0; i < elt.attributes.length; ++i)
+             {
+                 var attr = elt.attributes[i];
+                 if (attr.tagName == "id" || attr.tagName == "class")
+                     attrs.push(attr);
+             }
+         }
+
+         return attrs;
+     },
+
+     getHidden: function(elt)
+     {
+         return isVisible(elt) ? "" : "nodeHidden";
+     },
+
+     getXPath: function(elt)
+     {
+         return getElementTreeXPath(elt);
+     },
+
+     getNodeText: function(element)
+     {
+         var text = element.textContent;
+         if (Firebug.showFullTextNodes)
+            return text;
+        else
+            return cropString(text, 50);
+     },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    copyHTML: function(elt)
+    {
+        var html = getElementXML(elt);
+        copyToClipboard(html);
+    },
+
+    copyInnerHTML: function(elt)
+    {
+        copyToClipboard(elt.innerHTML);
+    },
+
+    copyXPath: function(elt)
+    {
+        var xpath = getElementXPath(elt);
+        copyToClipboard(xpath);
+    },
+
+    persistor: function(context, xpath)
+    {
+        var elts = xpath
+            ? getElementsByXPath(context.window.document, xpath)
+            : null;
+
+        return elts && elts.length ? elts[0] : null;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "element",
+
+    supportsObject: function(object)
+    {
+        //return object instanceof Element || object.nodeType == 1 && typeof object.nodeName == "string";
+        return instanceOf(object, "Element");
+    },
+
+    browseObject: function(elt, context)
+    {
+        var tag = elt.tagName.toLowerCase();
+        if (tag == "script")
+            openNewTab(elt.src);
+        else if (tag == "link")
+            openNewTab(elt.href);
+        else if (tag == "a")
+            openNewTab(elt.href);
+        else if (tag == "img")
+            openNewTab(elt.src);
+
+        return true;
+    },
+
+    persistObject: function(elt, context)
+    {
+        var xpath = getElementXPath(elt);
+
+        return bind(this.persistor, top, xpath);
+    },
+
+    getTitle: function(element, context)
+    {
+        return getElementCSSSelector(element);
+    },
+
+    getTooltip: function(elt)
+    {
+        return this.getXPath(elt);
+    },
+
+    getContextMenuItems: function(elt, target, context)
+    {
+        var monitored = areEventsMonitored(elt, null, context);
+
+        return [
+            {label: "CopyHTML", command: bindFixed(this.copyHTML, this, elt) },
+            {label: "CopyInnerHTML", command: bindFixed(this.copyInnerHTML, this, elt) },
+            {label: "CopyXPath", command: bindFixed(this.copyXPath, this, elt) },
+            "-",
+            {label: "ShowEventsInConsole", type: "checkbox", checked: monitored,
+             command: bindFixed(toggleMonitorEvents, FBL, elt, null, monitored, context) },
+            "-",
+            {label: "ScrollIntoView", command: bindFixed(elt.scrollIntoView, elt) }
+        ];
+    }
+});
+
+// ************************************************************************************************
+
+this.TextNode = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTLINK(
+            "&lt;",
+            SPAN({"class": "nodeTag"}, "TextNode"),
+            "&nbsp;textContent=&quot;", SPAN({"class": "nodeValue"}, "$object.textContent|cropString"), "&quot;",
+            "&gt;"
+            ),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "textNode",
+
+    supportsObject: function(object)
+    {
+        return object instanceof Text;
+    }
+});
+
+// ************************************************************************************************
+
+this.Document = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTLINK("Document ", SPAN({"class": "objectPropValue"}, "$object|getLocation")),
+
+    getLocation: function(doc)
+    {
+        return doc.location ? getFileName(doc.location.href) : "";
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "object",
+
+    supportsObject: function(object)
+    {
+        //return object instanceof Document || object instanceof XMLDocument;
+        return instanceOf(object, "Document");
+    },
+
+    browseObject: function(doc, context)
+    {
+        openNewTab(doc.location.href);
+        return true;
+    },
+
+    persistObject: function(doc, context)
+    {
+        return this.persistor;
+    },
+
+    persistor: function(context)
+    {
+        return context.window.document;
+    },
+
+    getTitle: function(win, context)
+    {
+        return "document";
+    },
+
+    getTooltip: function(doc)
+    {
+        return doc.location.href;
+    }
+});
+
+// ************************************************************************************************
+
+this.StyleSheet = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTLINK("StyleSheet ", SPAN({"class": "objectPropValue"}, "$object|getLocation")),
+
+    getLocation: function(styleSheet)
+    {
+        return getFileName(styleSheet.href);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    copyURL: function(styleSheet)
+    {
+        copyToClipboard(styleSheet.href);
+    },
+
+    openInTab: function(styleSheet)
+    {
+        openNewTab(styleSheet.href);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "object",
+
+    supportsObject: function(object)
+    {
+        return object instanceof CSSStyleSheet;
+    },
+
+    browseObject: function(styleSheet, context)
+    {
+        openNewTab(styleSheet.href);
+        return true;
+    },
+
+    persistObject: function(styleSheet, context)
+    {
+        return bind(this.persistor, top, styleSheet.href);
+    },
+
+    getTooltip: function(styleSheet)
+    {
+        return styleSheet.href;
+    },
+
+    getContextMenuItems: function(styleSheet, target, context)
+    {
+        return [
+            {label: "CopyLocation", command: bindFixed(this.copyURL, this, styleSheet) },
+            "-",
+            {label: "OpenInTab", command: bindFixed(this.openInTab, this, styleSheet) }
+        ];
+    },
+
+    persistor: function(context, href)
+    {
+        return getStyleSheetByHref(href, context);
+    }
+});
+
+// ************************************************************************************************
+
+this.Window = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTLINK("Window ", SPAN({"class": "objectPropValue"}, "$object|getLocation")),
+
+    getLocation: function(win)
+    {
+        try
+        {
+            return (win && win.location && !win.closed) ? getFileName(win.location.href) : "";
+        }
+        catch (exc)
+        {
+            if (FBTrace.DBG_ERRORS)
+                FBTrace.sysout("reps.Window window closed?");
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "object",
+
+    supportsObject: function(object)
+    {
+        return instanceOf(object, "Window");
+    },
+
+    browseObject: function(win, context)
+    {
+        openNewTab(win.location.href);
+        return true;
+    },
+
+    persistObject: function(win, context)
+    {
+        return this.persistor;
+    },
+
+    persistor: function(context)
+    {
+        return context.window;
+    },
+
+    getTitle: function(win, context)
+    {
+        return "window";
+    },
+
+    getTooltip: function(win)
+    {
+        if (win && !win.closed)
+            return win.location.href;
+    }
+});
+
+// ************************************************************************************************
+
+this.Event = domplate(Firebug.Rep,
+{
+    tag: TAG("$copyEventTag", {object: "$object|copyEvent"}),
+
+    copyEventTag:
+        OBJECTLINK("$object|summarizeEvent"),
+
+    summarizeEvent: function(event)
+    {
+        var info = [event.type, ' '];
+
+        var eventFamily = getEventFamily(event.type);
+        if (eventFamily == "mouse")
+            info.push("clientX=", event.clientX, ", clientY=", event.clientY);
+        else if (eventFamily == "key")
+            info.push("charCode=", event.charCode, ", keyCode=", event.keyCode);
+
+        return info.join("");
+    },
+
+    copyEvent: function(event)
+    {
+        return new EventCopy(event);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "object",
+
+    supportsObject: function(object)
+    {
+        return object instanceof Event || object instanceof EventCopy;
+    },
+
+    getTitle: function(event, context)
+    {
+        return "Event " + event.type;
+    }
+});
+
+// ************************************************************************************************
+
+this.SourceLink = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTLINK({$collapsed: "$object|hideSourceLink"}, "$object|getSourceLinkTitle"),
+
+    hideSourceLink: function(sourceLink)
+    {
+        return sourceLink ? sourceLink.href.indexOf("XPCSafeJSObjectWrapper") != -1 : true;
+    },
+
+    getSourceLinkTitle: function(sourceLink)
+    {
+        if (!sourceLink)
+            return "";
+
+        try
+        {
+            var fileName = getFileName(sourceLink.href);
+            fileName = decodeURIComponent(fileName);
+            fileName = cropString(fileName, 17);
+        }
+        catch(exc)
+        {
+            if (FBTrace.DBG_ERRORS)
+                FBTrace.sysout("reps.getSourceLinkTitle decodeURIComponent fails for \'"+fileName+"\': "+exc, exc);
+        }
+        return $STRF("Line", [fileName, sourceLink.line]);
+    },
+
+    copyLink: function(sourceLink)
+    {
+        copyToClipboard(sourceLink.href);
+    },
+
+    openInTab: function(sourceLink)
+    {
+        openNewTab(sourceLink.href);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "sourceLink",
+
+    supportsObject: function(object)
+    {
+        return object instanceof SourceLink;
+    },
+
+    getTooltip: function(sourceLink)
+    {
+        return decodeURI(sourceLink.href);
+    },
+
+    inspectObject: function(sourceLink, context)
+    {
+        if (sourceLink.type == "js")
+        {
+            var scriptFile = getSourceFileByHref(sourceLink.href, context);
+            if (scriptFile)
+                return Firebug.chrome.select(sourceLink);
+        }
+        else if (sourceLink.type == "css")
+        {
+            // If an object is defined, treat it as the highest priority for
+            // inspect actions
+            if (sourceLink.object) {
+                Firebug.chrome.select(sourceLink.object);
+                return;
+            }
+
+            var stylesheet = getStyleSheetByHref(sourceLink.href, context);
+            if (stylesheet)
+            {
+                var ownerNode = stylesheet.ownerNode;
+                if (ownerNode)
+                {
+                    Firebug.chrome.select(sourceLink, "html");
+                    return;
+                }
+
+                var panel = context.getPanel("stylesheet");
+                if (panel && panel.getRuleByLine(stylesheet, sourceLink.line))
+                    return Firebug.chrome.select(sourceLink);
+            }
+        }
+
+        // Fallback is to just open the view-source window on the file
+        viewSource(sourceLink.href, sourceLink.line);
+    },
+
+    browseObject: function(sourceLink, context)
+    {
+        openNewTab(sourceLink.href);
+        return true;
+    },
+
+    getContextMenuItems: function(sourceLink, target, context)
+    {
+        return [
+            {label: "CopyLocation", command: bindFixed(this.copyLink, this, sourceLink) },
+            "-",
+            {label: "OpenInTab", command: bindFixed(this.openInTab, this, sourceLink) }
+        ];
+    }
+});
+
+// ************************************************************************************************
+
+this.SourceFile = domplate(this.SourceLink,
+{
+    tag:
+        OBJECTLINK({$collapsed: "$object|hideSourceLink"}, "$object|getSourceLinkTitle"),
+
+    persistor: function(context, href)
+    {
+        return getSourceFileByHref(href, context);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "sourceFile",
+
+    supportsObject: function(object)
+    {
+        return object instanceof SourceFile;
+    },
+
+    persistObject: function(sourceFile)
+    {
+        return bind(this.persistor, top, sourceFile.href);
+    },
+
+    browseObject: function(sourceLink, context)
+    {
+    },
+
+    getTooltip: function(sourceFile)
+    {
+        return sourceFile.href;
+    }
+});
+
+// ************************************************************************************************
+
+this.StackFrame = domplate(Firebug.Rep,  // XXXjjb Since the repObject is fn the stack does not have correct line numbers
+{
+    tag:
+        OBJECTBLOCK(
+            A({"class": "objectLink focusRow a11yFocus", _repObject: "$object"}, "$object|getCallName"),
+            "(",
+            FOR("arg", "$object|argIterator",
+                TAG("$arg.tag", {object: "$arg.value"}),
+                SPAN({"class": "arrayComma"}, "$arg.delim")
+            ),
+            ")",
+            SPAN({"class": "objectLink-sourceLink objectLink"}, "$object|getSourceLinkTitle")
+        ),
+
+    getCallName: function(frame)
+    {
+        return getFunctionName(frame.script, frame.context);
+    },
+
+    getSourceLinkTitle: function(frame)
+    {
+        var fileName = cropString(getFileName(frame.href), 17);
+        return $STRF("Line", [fileName, frame.lineNo]);
+    },
+
+    argIterator: function(frame)
+    {
+        if (!frame.args)
+            return [];
+
+        var items = [];
+
+        for (var i = 0; i < frame.args.length; ++i)
+        {
+            var arg = frame.args[i];
+
+            if (!arg)
+                break;
+
+            var rep = Firebug.getRep(arg.value);
+            var tag = rep.shortTag ? rep.shortTag : rep.tag;
+
+            var delim = (i == frame.args.length-1 ? "" : ", ");
+
+            items.push({name: arg.name, value: arg.value, tag: tag, delim: delim});
+        }
+
+        return items;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "stackFrame",
+
+    supportsObject: function(object)
+    {
+        return object instanceof StackFrame;
+    },
+
+    inspectObject: function(stackFrame, context)
+    {
+        var sourceLink = new SourceLink(stackFrame.href, stackFrame.lineNo, "js");
+        Firebug.chrome.select(sourceLink);
+    },
+
+    getTooltip: function(stackFrame, context)
+    {
+        return $STRF("Line", [stackFrame.href, stackFrame.lineNo]);
+    }
+
+});
+
+// ************************************************************************************************
+
+this.StackTrace = domplate(Firebug.Rep,
+{
+    tag:
+        FOR("frame", "$object.frames focusRow",
+            TAG(this.StackFrame.tag, {object: "$frame"})
+        ),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "stackTrace",
+
+    supportsObject: function(object)
+    {
+        return object instanceof StackTrace;
+    }
+});
+
+// ************************************************************************************************
+
+this.jsdStackFrame = domplate(Firebug.Rep,
+{
+    inspectable: false,
+
+    supportsObject: function(object)
+    {
+        return (object instanceof jsdIStackFrame) && (object.isValid);
+    },
+
+    getTitle: function(frame, context)
+    {
+        if (!frame.isValid) return "(invalid frame)"; // XXXjjb avoid frame.script == null
+        return getFunctionName(frame.script, context);
+    },
+
+    getTooltip: function(frame, context)
+    {
+        if (!frame.isValid) return "(invalid frame)";  // XXXjjb avoid frame.script == null
+        var sourceInfo = FBL.getSourceFileAndLineByScript(context, frame.script, frame);
+        if (sourceInfo)
+            return $STRF("Line", [sourceInfo.sourceFile.href, sourceInfo.lineNo]);
+        else
+            return $STRF("Line", [frame.script.fileName, frame.line]);
+    },
+
+    getContextMenuItems: function(frame, target, context)
+    {
+        var fn = frame.script.functionObject.getWrappedValue();
+        return FirebugReps.Func.getContextMenuItems(fn, target, context, frame.script);
+    }
+});
+
+// ************************************************************************************************
+
+this.ErrorMessage = domplate(Firebug.Rep,
+{
+    tag:
+        OBJECTBOX({
+                $hasTwisty: "$object|hasStackTrace",
+                $hasBreakSwitch: "$object|hasBreakSwitch",
+                $breakForError: "$object|hasErrorBreak",
+                _repObject: "$object",
+                _stackTrace: "$object|getLastErrorStackTrace",
+                onclick: "$onToggleError"},
+
+            DIV({"class": "errorTitle a11yFocus", role : 'checkbox', 'aria-checked' : 'false'},
+                "$object.message|getMessage"
+            ),
+            DIV({"class": "errorTrace"}),
+            DIV({"class": "errorSourceBox errorSource-$object|getSourceType"},
+                IMG({"class": "errorBreak a11yFocus", src:"blank.gif", role : 'checkbox', 'aria-checked':'false', title: "Break on this error"}),
+                A({"class": "errorSource a11yFocus"}, "$object|getLine")
+            ),
+            TAG(this.SourceLink.tag, {object: "$object|getSourceLink"})
+        ),
+
+    getLastErrorStackTrace: function(error)
+    {
+        return error.trace;
+    },
+
+    hasStackTrace: function(error)
+    {
+        var url = error.href.toString();
+        var fromCommandLine = (url.indexOf("XPCSafeJSObjectWrapper") != -1);
+        return !fromCommandLine && error.trace;
+    },
+
+    hasBreakSwitch: function(error)
+    {
+        return error.href && error.lineNo > 0;
+    },
+
+    hasErrorBreak: function(error)
+    {
+        return fbs.hasErrorBreakpoint(error.href, error.lineNo);
+    },
+
+    getMessage: function(message)
+    {
+        var re = /\[Exception... "(.*?)" nsresult:/;
+        var m = re.exec(message);
+        return m ? m[1] : message;
+    },
+
+    getLine: function(error)
+    {
+        if (error.category == "js")
+        {
+            if (error.source)
+                return cropString(error.source, 80);
+            else if (error.href && error.href.indexOf("XPCSafeJSObjectWrapper") == -1)
+                return cropString(error.getSourceLine(), 80);
+        }
+    },
+
+    getSourceLink: function(error)
+    {
+        var ext = error.category == "css" ? "css" : "js";
+        return error.lineNo ? new SourceLink(error.href, error.lineNo, ext) : null;
+    },
+
+    getSourceType: function(error)
+    {
+        // Errors occurring inside of HTML event handlers look like "foo.html (line 1)"
+        // so let's try to skip those
+        if (error.source)
+            return "syntax";
+        else if (error.lineNo == 1 && getFileExtension(error.href) != "js")
+            return "none";
+        else if (error.category == "css")
+            return "none";
+        else if (!error.href || !error.lineNo)
+            return "none";
+        else
+            return "exec";
+    },
+
+    onToggleError: function(event)
+    {
+        var target = event.currentTarget;
+        if (hasClass(event.target, "errorBreak"))
+        {
+            this.breakOnThisError(target.repObject);
+        }
+        else if (hasClass(event.target, "errorSource"))
+        {
+            var panel = Firebug.getElementPanel(event.target);
+            this.inspectObject(target.repObject, panel.context);
+        }
+        else if (hasClass(event.target, "errorTitle"))
+        {
+            var traceBox = target.childNodes[1];
+            toggleClass(target, "opened");
+            event.target.setAttribute('aria-checked', hasClass(target, "opened"));
+            if (hasClass(target, "opened"))
+            {
+                if (target.stackTrace)
+                    var node = FirebugReps.StackTrace.tag.append({object: target.stackTrace}, traceBox);
+                if (Firebug.A11yModel.enabled)
+                {
+                    var panel = Firebug.getElementPanel(event.target);
+                    dispatch([Firebug.A11yModel], "onLogRowContentCreated", [panel , traceBox]);
+                }
+            }
+            else
+                clearNode(traceBox);
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    copyError: function(error)
+    {
+        var message = [
+            this.getMessage(error.message),
+            error.href,
+            "Line " +  error.lineNo
+        ];
+        copyToClipboard(message.join("\n"));
+    },
+
+    breakOnThisError: function(error)
+    {
+        if (this.hasErrorBreak(error))
+            Firebug.Debugger.clearErrorBreakpoint(error.href, error.lineNo);
+        else
+            Firebug.Debugger.setErrorBreakpoint(error.href, error.lineNo);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "errorMessage",
+    inspectable: false,
+
+    supportsObject: function(object)
+    {
+        return object instanceof ErrorMessage;
+    },
+
+    inspectObject: function(error, context)
+    {
+        var sourceLink = this.getSourceLink(error);
+        FirebugReps.SourceLink.inspectObject(sourceLink, context);
+    },
+
+    getContextMenuItems: function(error, target, context)
+    {
+        var breakOnThisError = this.hasErrorBreak(error);
+
+        var items = [
+            {label: "CopyError", command: bindFixed(this.copyError, this, error) }
+        ];
+
+        if (error.category == "css")
+        {
+            items.push(
+                "-",
+                {label: "BreakOnThisError", type: "checkbox", checked: breakOnThisError,
+                 command: bindFixed(this.breakOnThisError, this, error) },
+
+                optionMenu("BreakOnAllErrors", "breakOnErrors")
+            );
+        }
+
+        return items;
+    }
+});
+
+// ************************************************************************************************
+
+this.Assert = domplate(Firebug.Rep,
+{
+    tag:
+        DIV(
+            DIV({"class": "errorTitle"}),
+            DIV({"class": "assertDescription"})
+        ),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "assert",
+
+    inspectObject: function(error, context)
+    {
+        var sourceLink = this.getSourceLink(error);
+        Firebug.chrome.select(sourceLink);
+    },
+
+    getContextMenuItems: function(error, target, context)
+    {
+        var breakOnThisError = this.hasErrorBreak(error);
+
+        return [
+            {label: "CopyError", command: bindFixed(this.copyError, this, error) },
+            "-",
+            {label: "BreakOnThisError", type: "checkbox", checked: breakOnThisError,
+             command: bindFixed(this.breakOnThisError, this, error) },
+            {label: "BreakOnAllErrors", type: "checkbox", checked: Firebug.breakOnErrors,
+             command: bindFixed(this.breakOnAllErrors, this, error) }
+        ];
+    }
+});
+
+// ************************************************************************************************
+
+this.SourceText = domplate(Firebug.Rep,
+{
+    tag:
+        DIV(
+            FOR("line", "$object|lineIterator",
+                DIV({"class": "sourceRow", role : "presentation"},
+                    SPAN({"class": "sourceLine", role : "presentation"}, "$line.lineNo"),
+                    SPAN({"class": "sourceRowText", role : "presentation"}, "$line.text")
+                )
+            )
+        ),
+
+    lineIterator: function(sourceText)
+    {
+        var maxLineNoChars = (sourceText.lines.length + "").length;
+        var list = [];
+
+        for (var i = 0; i < sourceText.lines.length; ++i)
+        {
+            // Make sure all line numbers are the same width (with a fixed-width font)
+            var lineNo = (i+1) + "";
+            while (lineNo.length < maxLineNoChars)
+                lineNo = " " + lineNo;
+
+            list.push({lineNo: lineNo, text: sourceText.lines[i]});
+        }
+
+        return list;
+    },
+
+    getHTML: function(sourceText)
+    {
+        return getSourceLineRange(sourceText, 1, sourceText.lines.length);
+    }
+});
+
+//************************************************************************************************
+this.nsIDOMHistory = domplate(Firebug.Rep,
+{
+    tag:OBJECTBOX({onclick: "$showHistory"},
+            OBJECTLINK("$object|summarizeHistory")
+        ),
+
+    className: "nsIDOMHistory",
+
+    summarizeHistory: function(history)
+    {
+        try
+        {
+            var items = history.length;
+            return items + " history entries";
+        }
+        catch(exc)
+        {
+            return "object does not support history (nsIDOMHistory)";
+        }
+    },
+
+    showHistory: function(history)
+    {
+        try
+        {
+            var items = history.length;  // if this throws, then unsupported
+            Firebug.chrome.select(history);
+        }
+        catch (exc)
+        {
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    supportsObject: function(object, type)
+    {
+        return (object instanceof Ci.nsIDOMHistory);
+    }
+});
+
+// ************************************************************************************************
+this.ApplicationCache = domplate(Firebug.Rep,
+{
+    tag:OBJECTBOX({onclick: "$showApplicationCache"},
+            OBJECTLINK("$object|summarizeCache")
+        ),
+
+    summarizeCache: function(applicationCache)
+    {
+        try
+        {
+            return applicationCache.length + " items in offline cache";
+        }
+        catch(exc)
+        {
+            return "https://bugzilla.mozilla.org/show_bug.cgi?id=422264";
+        }
+    },
+
+    showApplicationCache: function(event)
+    {
+        openNewTab("https://bugzilla.mozilla.org/show_bug.cgi?id=422264");
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "applicationCache",
+
+    supportsObject: function(object, type)
+    {
+        if (Ci.nsIDOMOfflineResourceList)
+            return (object instanceof Ci.nsIDOMOfflineResourceList);
+    }
+
+});
+
+this.Storage = domplate(Firebug.Rep,
+{
+    tag: OBJECTBOX({onclick: "$show"}, OBJECTLINK("$object|summarize")),
+
+    summarize: function(storage)
+    {
+        return storage.length +" items in Storage";
+    },
+    show: function(storage)
+    {
+        openNewTab("http://dev.w3.org/html5/webstorage/#storage-0");
+    },
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    className: "Storage",
+
+    supportsObject: function(object, type)
+    {
+        return (object instanceof Storage);
+    }
+
+});
+
+// ************************************************************************************************
+Firebug.registerRep(
+    //this.nsIDOMHistory, // make this early to avoid exceptions
+    this.Undefined,
+    this.Null,
+    this.Number,
+    this.String,
+    this.Window,
+    //this.ApplicationCache, // must come before Arr (array) else exceptions.
+    //this.ErrorMessage,
+    this.Element,
+    //this.TextNode,
+    this.Document,
+    this.StyleSheet,
+    this.Event,
+    //this.SourceLink,
+    //this.SourceFile,
+    //this.StackTrace,
+    //this.StackFrame,
+    //this.jsdStackFrame,
+    //this.jsdScript,
+    //this.NetFile,
+    this.Property,
+    this.Except,
+    this.Arr
+);
+
+Firebug.setDefaultReps(this.Func, this.Obj);
+
+}});
+
+// ************************************************************************************************
+/*
+ * The following is http://developer.yahoo.com/yui/license.txt and applies to only code labeled "Yahoo BSD Source"
+ * in only this file reps.js.  John J. Barton June 2007.
+ *
+Software License Agreement (BSD License)
+
+Copyright (c) 2006, Yahoo! Inc.
+All rights reserved.
+
+Redistribution and use of this software in source and binary forms, with or without modification, are
+permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above
+  copyright notice, this list of conditions and the
+  following disclaimer.
+
+* Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the
+  following disclaimer in the documentation and/or other
+  materials provided with the distribution.
+
+* Neither the name of Yahoo! Inc. nor the names of its
+  contributors may be used to endorse or promote products
+  derived from this software without specific prior
+  written permission of Yahoo! Inc.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * /
+ */
+
 
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
@@ -5520,10 +8374,8 @@ FBL.Context.prototype =
         return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
     }, 
     
-  
     getCSSAutoMarginBox: function(el)
     {
-        /*
         if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
             return {top:0, left:0, bottom:0, right:0};
             /**/
@@ -5537,19 +8389,19 @@ FBL.Context.prototype =
         {
             var scrollSize = Firebug.browser.getWindowScrollSize();
             offsetTop = scrollSize.height;
-        }/**/
+        }
         
-        var box = document.createElement("div");
+        var box = this.document.createElement("div");
         //box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
         box.style.cssText = "margin:0; padding:1px; border: 0;";
         
         var clone = el.cloneNode(false);
-        var text = document.createTextNode("&nbsp;");
+        var text = this.document.createTextNode("&nbsp;");
         clone.appendChild(text);
         
         box.appendChild(clone);
     
-        document.body.appendChild(box);
+        this.document.body.appendChild(box);
         
         var marginTop = clone.offsetTop - box.offsetTop - 1;
         var marginBottom = box.offsetHeight - clone.offsetHeight - 2 - marginTop;
@@ -5557,7 +8409,7 @@ FBL.Context.prototype =
         var marginLeft = clone.offsetLeft - box.offsetLeft - 1;
         var marginRight = box.offsetWidth - clone.offsetWidth - 2 - marginLeft;
         
-        document.body.removeChild(box);
+        this.document.body.removeChild(box);
         
         return {top:marginTop+offsetTop, left:marginLeft, bottom:marginBottom-offsetTop, right:marginRight};
     },
@@ -5569,6 +8421,7 @@ FBL.Context.prototype =
         if (size.unit == "px") return size.value;
         
         // get font size, the dirty way
+        /*
         var computeDirtyFontSize = function(el, calibration)
         {
             var div = this.document.createElement("div");
@@ -5586,12 +8439,14 @@ FBL.Context.prototype =
             return value;
         }
         
-        // Calibration fails in some environments, so we're using a static value
-        // based in the test case result.
+        var calibrationBase = 200;
+        var calibrationValue = computeDirtyFontSize(el, calibrationBase);
+        var rate = calibrationBase / calibrationValue;
+        /**/
+        
+        // the "dirty technique" fails in some environments, so we're using a static value
+        // based in some tests.
         var rate = 200 / 225;
-        //var calibrationBase = 200;
-        //var calibrationValue = computeDirtyFontSize(el, calibrationBase);
-        //var rate = calibrationBase / calibrationValue;
         
         var value = computeDirtyFontSize(el);
 
@@ -5915,16 +8770,21 @@ var onChromeLoad = function onChromeLoad(chrome)
         else if (chrome.type == "popup")
         {
             var frame = chromeMap.frame;
-            if (frame)
-                frame.close();
             
             // initial UI state
             FirebugChrome.commandLineVisible = false;
             FirebugChrome.sidePanelVisible = false;
             
             var newChrome = new Chrome(chrome);
+            var oldChrome = chromeMap.frame;
+        
+            // TODO: xxxpedro sync detach reattach attach
+            dispatch(newChrome.panelMap, "detach", [frame, newChrome]);
+        
+            if (frame)
+                frame.close();
             
-            newChrome.reattach(chromeMap.frame, newChrome);
+            newChrome.reattach(frame, newChrome);
         }
     }
 };
@@ -5977,14 +8837,6 @@ var ChromeBase = extend(ChromeBase, {
     create: function()
     {
         Firebug.PanelBar.create.apply(this);
-        var panelMap = Firebug.panelTypes;
-        for (var i=0, p; p=panelMap[i]; i++)
-        {
-            if (!p.parentPanel)
-            {
-                this.addPanel(p.prototype.name);
-            }
-        }
         
         this.inspectButton = new Firebug.Button({
             type: "toggle",
@@ -6232,10 +9084,14 @@ var ChromeBase = extend(ChromeBase, {
         
         for(var name in newPanelMap)
         {
+            // TODO: xxxpedro
             newPanelMap[name].contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
         }
         
         Firebug.chrome = newChrome;
+        
+        // TODO: xxxpedro sync detach reattach attach
+        //dispatch(Firebug.chrome.panelMap, "detach", [oldChrome, newChrome]);
         
         if (newChrome.type == "popup")
         {
@@ -6432,7 +9288,8 @@ var ChromeFrameBase = extend(ChromeContext,
                 this.shutdown();
             }
             
-            var main = $("fbChrome");
+            // TODO: xxxpedro - persist IE fixed? 
+            var main = $("fbChrome", chromeMap.frame.document);
             main.style.display = "none";
                     
             FirebugChrome.isOpen = false;
@@ -6483,14 +9340,17 @@ var ChromeMini = extend(Firebug.Controller,
     {
         Firebug.Controller.initialize.apply(this);
         
-        var mini = $("fbMiniChrome");
+        // TODO: xxxpedro - persist IE fixed? 
+        var doc = chromeMap.frame.document;
+        
+        var mini = $("fbMiniChrome", doc);
         mini.style.display = "block";
         
-        var miniIcon = $("fbMiniIcon");
+        var miniIcon = $("fbMiniIcon", doc);
         var width = miniIcon.offsetWidth + 10;
         miniIcon.title = "Open " + Firebug.version;
         
-        var errors = $("fbMiniErrors");
+        var errors = $("fbMiniErrors", doc);
         if (errors.offsetWidth)
             width += errors.offsetWidth + 10;
         
@@ -6508,7 +9368,7 @@ var ChromeMini = extend(Firebug.Controller,
         
         
         this.addController(
-            [$("fbMiniIcon"), "click", onMiniIconClick]       
+            [$("fbMiniIcon", doc), "click", onMiniIconClick]       
         );
         
         if (noFixedPosition)
@@ -6535,7 +9395,10 @@ var ChromeMini = extend(Firebug.Controller,
         
         this.document.body.style.backgroundColor = "#fff";
         
-        var mini = $("fbMiniChrome");
+        // TODO: xxxpedro - persist IE fixed? 
+        var doc = chromeMap.frame.document;
+        
+        var mini = $("fbMiniChrome", doc);
         mini.style.display = "none";
         
         Firebug.Controller.shutdown.apply(this);
@@ -6575,12 +9438,17 @@ var ChromePopupBase = extend(ChromeContext, {
     
     destroy: function()
     {
+        // TODO: xxxpedro sync detach reattach attach
+        var frame = chromeMap.frame;
+        
+        dispatch(frame.panelMap, "detach", [this, frame]);
+            
         if (Application.isPersistentMode)
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
             Application.FirebugChrome.selectedElement = FirebugChrome.selectedElement;
         }
-        var frame = chromeMap.frame;
+        
         frame.reattach(this, frame);
         
         ChromeBase.destroy.apply(this);
@@ -7236,13 +10104,15 @@ ConsolePanel.prototype = extend(Firebug.Panel,
     name: "Console",
     title: "Console",
     
-    options: {
+    options: 
+    {
         hasCommandLine: true,
         hasToolButtons: true,
         isPreRendered: true
     },
 
-    create: function(){
+    create: function()
+    {
         Firebug.Panel.create.apply(this, arguments);
         
         this.clearButton = new Firebug.Button({
@@ -7252,7 +10122,8 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         });
     },
     
-    initialize: function(){
+    initialize: function()
+    {
         Firebug.Panel.initialize.apply(this, arguments);
         
         this.clearButton.initialize();
@@ -7300,10 +10171,20 @@ FBL.ns(function() { with (FBL) {
  *  More information: http://sizzlejs.com/
  */
 
-var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?/g,
+var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?((?:.|\r|\n)*)/g,
     done = 0,
     toString = Object.prototype.toString,
-    hasDuplicate = false;
+    hasDuplicate = false,
+    baseHasDuplicate = true;
+
+// Here we check if the JavaScript engine is using some sort of
+// optimization where it does not always call our comparision
+// function. If that is the case, discard the hasDuplicate value.
+//   Thus far that includes Google Chrome.
+[0, 0].sort(function(){
+    baseHasDuplicate = false;
+    return 0;
+});
 
 var Sizzle = function(selector, context, results, seed) {
     results = results || [];
@@ -7317,16 +10198,17 @@ var Sizzle = function(selector, context, results, seed) {
         return results;
     }
 
-    var parts = [], m, set, checkSet, check, mode, extra, prune = true, contextXML = isXML(context);
+    var parts = [], m, set, checkSet, check, mode, extra, prune = true, contextXML = isXML(context),
+        soFar = selector;
     
     // Reset the position of the chunker regexp (start from head)
-    chunker.lastIndex = 0;
-    
-    while ( (m = chunker.exec(selector)) !== null ) {
+    while ( (chunker.exec(""), m = chunker.exec(soFar)) !== null ) {
+        soFar = m[3];
+        
         parts.push( m[1] );
         
         if ( m[2] ) {
-            extra = RegExp.rightContext;
+            extra = m[3];
             break;
         }
     }
@@ -7427,7 +10309,7 @@ var Sizzle = function(selector, context, results, seed) {
 
 Sizzle.uniqueSort = function(results){
     if ( sortOrder ) {
-        hasDuplicate = false;
+        hasDuplicate = baseHasDuplicate;
         results.sort(sortOrder);
 
         if ( hasDuplicate ) {
@@ -7438,6 +10320,8 @@ Sizzle.uniqueSort = function(results){
             }
         }
     }
+
+    return results;
 };
 
 Sizzle.matches = function(expr, set){
@@ -7454,8 +10338,9 @@ Sizzle.find = function(expr, context, isXML){
     for ( var i = 0, l = Expr.order.length; i < l; i++ ) {
         var type = Expr.order[i], match;
         
-        if ( (match = Expr.match[ type ].exec( expr )) ) {
-            var left = RegExp.leftContext;
+        if ( (match = Expr.leftMatch[ type ].exec( expr )) ) {
+            var left = match[1];
+            match.splice(1,1);
 
             if ( left.substr( left.length - 1 ) !== "\\" ) {
                 match[1] = (match[1] || "").replace(/\\/g, "");
@@ -7553,15 +10438,16 @@ Sizzle.filter = function(expr, set, inplace, not){
 var Expr = Sizzle.selectors = {
     order: [ "ID", "NAME", "TAG" ],
     match: {
-        ID: /#((?:[\w\u00c0-\uFFFF_-]|\\.)+)/,
-        CLASS: /\.((?:[\w\u00c0-\uFFFF_-]|\\.)+)/,
-        NAME: /\[name=['"]*((?:[\w\u00c0-\uFFFF_-]|\\.)+)['"]*\]/,
-        ATTR: /\[\s*((?:[\w\u00c0-\uFFFF_-]|\\.)+)\s*(?:(\S?=)\s*(['"]*)(.*?)\3|)\s*\]/,
-        TAG: /^((?:[\w\u00c0-\uFFFF\*_-]|\\.)+)/,
+        ID: /#((?:[\w\u00c0-\uFFFF-]|\\.)+)/,
+        CLASS: /\.((?:[\w\u00c0-\uFFFF-]|\\.)+)/,
+        NAME: /\[name=['"]*((?:[\w\u00c0-\uFFFF-]|\\.)+)['"]*\]/,
+        ATTR: /\[\s*((?:[\w\u00c0-\uFFFF-]|\\.)+)\s*(?:(\S?=)\s*(['"]*)(.*?)\3|)\s*\]/,
+        TAG: /^((?:[\w\u00c0-\uFFFF\*-]|\\.)+)/,
         CHILD: /:(only|nth|last|first)-child(?:\((even|odd|[\dn+-]*)\))?/,
         POS: /:(nth|eq|gt|lt|first|last|even|odd)(?:\((\d*)\))?(?=[^-]|$)/,
-        PSEUDO: /:((?:[\w\u00c0-\uFFFF_-]|\\.)+)(?:\((['"]*)((?:\([^\)]+\)|[^\2\(\)]*)+)\2\))?/
+        PSEUDO: /:((?:[\w\u00c0-\uFFFF-]|\\.)+)(?:\((['"]*)((?:\([^\)]+\)|[^\2\(\)]*)+)\2\))?/
     },
+    leftMatch: {},
     attrMap: {
         "class": "className",
         "for": "htmlFor"
@@ -7626,7 +10512,7 @@ var Expr = Sizzle.selectors = {
         "": function(checkSet, part, isXML){
             var doneName = done++, checkFn = dirCheck;
 
-            if ( !part.match(/\W/) ) {
+            if ( !/\W/.test(part) ) {
                 var nodeCheck = part = isXML ? part : part.toUpperCase();
                 checkFn = dirNodeCheck;
             }
@@ -7636,7 +10522,7 @@ var Expr = Sizzle.selectors = {
         "~": function(checkSet, part, isXML){
             var doneName = done++, checkFn = dirCheck;
 
-            if ( typeof part === "string" && !part.match(/\W/) ) {
+            if ( typeof part === "string" && !/\W/.test(part) ) {
                 var nodeCheck = part = isXML ? part : part.toUpperCase();
                 checkFn = dirNodeCheck;
             }
@@ -7729,7 +10615,7 @@ var Expr = Sizzle.selectors = {
         PSEUDO: function(match, curLoop, inplace, result, not){
             if ( match[1] === "not" ) {
                 // If we're dealing with a complex expression, or a simple one
-                if ( match[3].match(chunker).length > 1 || /^\w/.test(match[3]) ) {
+                if ( ( chunker.exec(match[3]) || "" ).length > 1 || /^\w/.test(match[3]) ) {
                     match[3] = Sizzle(match[3], null, null, curLoop);
                 } else {
                     var ret = Sizzle.filter(match[3], curLoop, inplace, true ^ not);
@@ -7845,7 +10731,7 @@ var Expr = Sizzle.selectors = {
             } else if ( name === "not" ) {
                 var not = match[3];
 
-                for ( i = 0, l = not.length; i < l; i++ ) {
+                for ( var i = 0, l = not.length; i < l; i++ ) {
                     if ( not[i] === elem ) {
                         return false;
                     }
@@ -7952,10 +10838,11 @@ var origPOS = Expr.match.POS;
 
 for ( var type in Expr.match ) {
     Expr.match[ type ] = new RegExp( Expr.match[ type ].source + /(?![^\[]*\])(?![^\(]*\))/.source );
+    Expr.leftMatch[ type ] = new RegExp( /(^(?:.|\r|\n)*?)/.source + Expr.match[ type ].source );
 }
 
 var makeArray = function(array, results) {
-    array = Array.prototype.slice.call( array );
+    array = Array.prototype.slice.call( array, 0 );
 
     if ( results ) {
         results.push.apply( results, array );
@@ -7968,7 +10855,7 @@ var makeArray = function(array, results) {
 // Perform a simple check to determine if the browser is capable of
 // converting a NodeList to an array using builtin methods.
 try {
-    Array.prototype.slice.call( document.documentElement.childNodes );
+    Array.prototype.slice.call( document.documentElement.childNodes, 0 );
 
 // Provide a fallback method if it does not work
 } catch(e){
@@ -7997,6 +10884,13 @@ var sortOrder;
 
 if ( document.documentElement.compareDocumentPosition ) {
     sortOrder = function( a, b ) {
+        if ( !a.compareDocumentPosition || !b.compareDocumentPosition ) {
+            if ( a == b ) {
+                hasDuplicate = true;
+            }
+            return 0;
+        }
+
         var ret = a.compareDocumentPosition(b) & 4 ? -1 : a === b ? 0 : 1;
         if ( ret === 0 ) {
             hasDuplicate = true;
@@ -8005,6 +10899,13 @@ if ( document.documentElement.compareDocumentPosition ) {
     };
 } else if ( "sourceIndex" in document.documentElement ) {
     sortOrder = function( a, b ) {
+        if ( !a.sourceIndex || !b.sourceIndex ) {
+            if ( a == b ) {
+                hasDuplicate = true;
+            }
+            return 0;
+        }
+
         var ret = a.sourceIndex - b.sourceIndex;
         if ( ret === 0 ) {
             hasDuplicate = true;
@@ -8013,11 +10914,18 @@ if ( document.documentElement.compareDocumentPosition ) {
     };
 } else if ( document.createRange ) {
     sortOrder = function( a, b ) {
+        if ( !a.ownerDocument || !b.ownerDocument ) {
+            if ( a == b ) {
+                hasDuplicate = true;
+            }
+            return 0;
+        }
+
         var aRange = a.ownerDocument.createRange(), bRange = b.ownerDocument.createRange();
-        aRange.selectNode(a);
-        aRange.collapse(true);
-        bRange.selectNode(b);
-        bRange.collapse(true);
+        aRange.setStart(a, 0);
+        aRange.setEnd(a, 0);
+        bRange.setStart(b, 0);
+        bRange.setEnd(b, 0);
         var ret = aRange.compareBoundaryPoints(Range.START_TO_END, bRange);
         if ( ret === 0 ) {
             hasDuplicate = true;
@@ -9600,6 +12508,1087 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
     }
 }
 
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+// ************************************************************************************************
+// CSS Module
+
+Firebug.CSS = extend(Firebug.Module, 
+{
+    getPanel: function()
+    {
+        return Firebug.chrome ? Firebug.chrome.getPanel("CSS") : null;
+    },
+    
+    renderStylesheet: function(index)
+    {
+        var styleSheet = Firebug.browser.document.styleSheets[index],
+            str = [], 
+            sl = -1;
+        
+        try
+        {
+            var rules = styleSheet[isIE ? "rules" : "cssRules"];
+            
+            for (var i=0, rule; rule = rules[i]; i++)
+            {
+                var selector = rule.selectorText;
+                var cssText = isIE ? 
+                        rule.style.cssText :
+                        rule.cssText.match(/\{(.*)\}/)[1];
+                
+                str[++sl] = renderRule(selector, cssText.split(";"));
+            }
+        }
+        catch(e)
+        {
+            str[++sl] = "<em>Access to restricted URI denied</em>";
+        }
+        
+        var panel = this.getPanel();
+        panel.contentNode.innerHTML = str.join("");
+        panel.containerNode.scrollTop = 0;
+    }
+      
+});
+
+Firebug.registerModule(Firebug.CSS);
+
+
+// ************************************************************************************************
+// CSS Panel
+
+function CSSPanel(){};
+
+CSSPanel.prototype = extend(Firebug.Panel,
+{
+    name: "CSS",
+    title: "CSS",
+    
+    options: {
+        hasToolButtons: true
+    },
+
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        var selectNode = createElement("select");
+        
+        var doc = Firebug.browser.document;
+        var collection = doc.styleSheets;
+        var options = "";
+        
+        for(var i=0,len=collection.length; i<len; i++)
+        {
+            var uri = getFileName(collection[i].href) ||  getFileName(doc.location.href);
+            
+            var option = createElement("option", {value:i});
+            option.appendChild(Firebug.chrome.document.createTextNode(uri));
+            selectNode.appendChild(option);
+        };
+        
+        this.toolButtonsNode.appendChild(selectNode);
+    },
+    
+    initialize: function()
+    {
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        Firebug.CSS.renderStylesheet(0);
+    }
+    
+});
+
+Firebug.registerPanel(CSSPanel);
+
+// ************************************************************************************************
+
+var renderRule = function renderRule(_selector,_css)
+{
+    var str = "<div class='Selector'>"+_selector.toLowerCase()+" {</div>";
+    
+    for(var i=0,len=_css.length; i<len; i++)
+    {
+        var item = _css[i];
+        str += item.replace(/(.+)\:(.+)/, renderRuleReplacer);
+    }
+    
+    str += "<div class='SelectorEnd'>}</div>";
+    return str;
+};
+
+var renderRuleReplacer = function renderRuleReplacer(m,g1,g2)
+{
+    return "<div class='CSSText'><span class='CSSProperty'>" +
+        g1.toLowerCase() + 
+        ": </span><span class='CSSValue'>" +
+        g2 +
+        ";</span></div>"; 
+};
+
+var getFileName = function getFileName(_path)
+{
+    if (!_path) return "";
+    
+    var match = _path&&_path.match(/[^\/]+(\?.*)?(#.*)?$/);
+    
+    return match&&match[0]||_path;
+};
+
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+// ************************************************************************************************
+// Script Module
+
+Firebug.Script = extend(Firebug.Module, 
+{
+    getPanel: function()
+    {
+        return Firebug.chrome ? Firebug.chrome.getPanel("Script") : null;
+    },
+    
+    selectSourceCode: function(index)
+    {
+        this.getPanel().selectSourceCode(index);
+    }
+      
+});
+
+Firebug.registerModule(Firebug.Script);
+
+
+// ************************************************************************************************
+// Script Panel
+
+function ScriptPanel(){};
+
+ScriptPanel.prototype = extend(Firebug.Panel,
+{
+    name: "Script",
+    title: "Script",
+    
+    sourceIndex: 0,
+    lastSourceIndex: -1,
+    
+    options: {
+        hasToolButtons: true
+    },
+
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        var doc = Firebug.browser.document;
+        var scripts = doc.getElementsByTagName("script");
+        var selectNode = this.selectNode = createElement("select");
+        
+        for(var i=0, script; script=scripts[i]; i++)
+        {
+            var fileName = getFileName(script.src) || "..";
+            var option = createElement("option", {value:i});
+            
+            option.appendChild(Firebug.chrome.document.createTextNode(fileName));
+            selectNode.appendChild(option);
+        };
+    
+        this.toolButtonsNode.appendChild(selectNode);
+    },
+    
+    initialize: function()
+    {
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        addEvent(this.selectNode, "change", bind(this.onChangeSelect, this));
+        
+        this.selectSourceCode(this.sourceIndex);
+        
+        /*
+        var self = this;
+        setTimeout(function(){
+            self.containerNode.scrollTop = self.lastScrollTop;
+        },0);
+        /**/
+    },
+    
+    shutdown: function()
+    {
+        this.lastScrollTop = this.containerNode.scrollTop;
+        
+        Firebug.Panel.shutdown.apply(this, arguments);
+    },
+    
+    detach: function(oldChrome, newChrome)
+    {
+        var oldPanel = oldChrome.getPanel("Script");
+        
+        var index = oldPanel.sourceIndex;
+        this.selectNode.selectedIndex = index;
+        this.sourceIndex = index;
+        this.lastSourceIndex = -1;
+        /**/
+        this.lastScrollTop = oldPanel.containerNode.scrollTop;
+        
+        //alert(this.lastScrollTop);
+    },
+    
+    reattach: function(oldChrome, newChrome)
+    {
+    },
+    
+    onChangeSelect: function(event)
+    {
+        event = event || window.event;
+        
+        var target = event.srcElement || event.currentTarget;
+        var index = target.selectedIndex;
+        
+        this.sourceIndex = index;
+        this.renderSourceCode(index);
+    },
+    
+    selectSourceCode: function(index)
+    {
+        this.selectNode.selectedIndex = index;
+        this.sourceIndex = index;
+        this.renderSourceCode(index);
+    },
+    
+    renderSourceCode: function(index)
+    {
+        
+        //alert(this.lastSourceIndex != index);
+        
+        if (this.lastSourceIndex != index)
+        {
+            var self = this;
+            
+            var renderProcess = function renderProcess(src)
+            {
+                var html = [],
+                    hl = 0,
+                    s = [],
+                    sl = 0;
+                
+                //src = isIE ? src+'\n' : '\n'+src+'\n';
+                src = '\n'+src+'\n';
+                
+                var match = src.match(/\n/g);
+                var num = match ? match.length : 0;
+                
+                //var t = new Date().getTime();
+                
+                for(var c=1; c<num; c++)
+                {
+                    s[sl++] = '<div line="';
+                    s[sl++] = c;
+                    s[sl++] = '">';
+                    s[sl++] = c;
+                    s[sl++] = '</div>';
+                }
+                  
+                html[hl++] = '<div><div class="lineNo">';
+                html = html.concat(s);
+                hl = html.length;
+                html[hl++] = '</div><pre class="nodeCode">';
+                html[hl++] = escapeHTML(src);
+                html[hl++] = '</pre></div>';
+                
+                //alert(new Date().getTime() - t);
+                
+                updatePanel(html);
+            };
+            
+            var updatePanel = function(html)
+            {
+                self.contentNode.innerHTML = html.join("");
+                
+                setTimeout(function(){
+                    //self.containerNode.scrollTop = 0;
+                    self.containerNode.scrollTop = self.lastScrollTop;
+                },0);                        
+            };
+            
+            var doc = Firebug.browser.document;
+            var script = doc.getElementsByTagName("script")[index];
+            var url = getScriptURL(script);
+            var isExternal = url != doc.location.href;
+            
+            if (isExternal)
+                Ajax.request({url: url, onComplete: renderProcess})
+                
+            else
+            {
+                var src;
+                
+                try
+                {
+                    src = script.innerHTML;
+                }
+                catch(e)
+                {
+                    src = "<em>Access to restricted URI denied</em>";
+                }
+                
+                renderProcess(src);
+            }
+                
+            
+            this.lastSourceIndex = index;
+        }
+        else
+        {
+            this.containerNode.scrollTop = this.lastScrollTop;
+        }
+    }
+});
+
+Firebug.registerPanel(ScriptPanel);
+
+
+// ************************************************************************************************
+
+
+
+var getScriptURL = function getScriptURL(script) 
+{
+    var reFile = /([^\/\?#]+)(#.+)?$/;
+    var rePath = /^(.*\/)/;
+    var reProtocol = /^\w+:\/\//;
+    var path = null;
+    var doc = Firebug.browser.document;
+    
+    var file = reFile.exec(script.src);
+
+    if (file)
+    {
+        var fileName = file[1];
+        var fileOptions = file[2];
+        
+        // absolute path
+        if (reProtocol.test(script.src)) {
+            path = rePath.exec(script.src)[1];
+          
+        }
+        // relative path
+        else
+        {
+            var r = rePath.exec(script.src);
+            var src = r ? r[1] : script.src;
+            var backDir = /^((?:\.\.\/)+)(.*)/.exec(src);
+            var reLastDir = /^(.*\/)[^\/]+\/$/;
+            path = rePath.exec(doc.location.href)[1];
+            
+            // "../some/path"
+            if (backDir)
+            {
+                var j = backDir[1].length/3;
+                var p;
+                while (j-- > 0)
+                    path = reLastDir.exec(path)[1];
+
+                path += backDir[2];
+            }
+            
+            else if(src.indexOf("/") != -1)
+            {
+                // "./some/path"
+                if(/^\.\/./.test(src))
+                {
+                    path += src.substring(2);
+                }
+                // "/some/path"
+                else if(/^\/./.test(src))
+                {
+                    var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
+                    path = domain[1] + src;
+                }
+                // "some/path"
+                else
+                {
+                    path += src;
+                }
+            }
+        }
+    }
+    
+    var m = path && path.match(/([^\/]+)\/$/) || null;
+    
+    if (path && m)
+    {
+        return path + fileName;
+        
+        var App = FBL.Application;
+        var loc = App.location; 
+        loc.sourceDir = path;
+        loc.baseDir = path.substr(0, path.length - m[1].length - 1);
+        loc.skinDir = loc.baseDir + "skin/" + App.skin + "/"; 
+        loc.skin = loc.skinDir + "firebug.html";
+        loc.app = path + fileName;
+    }
+};
+
+
+var getFileName = function getFileName(_path)
+{
+    if (!_path) return "";
+    
+    var match = _path&&_path.match(/[^\/]+(\?.*)?(#.*)?$/);
+    
+    return match&&match[0]||_path;
+};
+
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var insertSliceSize = 18;
+var insertInterval = 40;
+
+var ignoreVars =
+{
+    "__firebug__": 1,
+    "eval": 1,
+
+    // We are forced to ignore Java-related variables, because
+    // trying to access them causes browser freeze
+    "java": 1,
+    "sun": 1,
+    "Packages": 1,
+    "JavaArray": 1,
+    "JavaMember": 1,
+    "JavaObject": 1,
+    "JavaClass": 1,
+    "JavaPackage": 1,
+    "_firebug": 1,
+    "_FirebugConsole": 1,
+    "_FirebugCommandLine": 1
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var RowTag =
+    TR({"class": "memberRow $member.open $member.type\\Row", $hasChildren: "$member.hasChildren", role : 'presentation',
+        level: "$member.level"},
+        TD({"class": "memberLabelCell", style: "padding-left: $member.indent\\px", role : 'presentation'},
+            DIV({"class": "memberLabel $member.type\\Label"},
+                SPAN({}, "$member.name")
+            )
+        ),
+        TD({"class": "memberValueCell", role : 'presentation'},
+            TAG("$member.tag", {object: "$member.value"})
+        )
+    );
+
+var $STR = function(){};
+
+var WatchRowTag =
+    TR({"class": "watchNewRow", level: 0},
+        TD({"class": "watchEditCell", colspan: 2},
+            DIV({"class": "watchEditBox a11yFocusNoTab", role: "button", 'tabindex' : '0',
+                'aria-label' : $STR('press enter to add new watch expression')},
+                    $STR("NewWatch")
+            )
+        )
+    );
+
+var SizerRow =
+    TR({role : 'presentation'},
+        TD({width: "30%"}),
+        TD({width: "70%"})
+    );
+
+Firebug.Rep={};  // TODO: xxxpedro
+
+var DirTablePlate = domplate(Firebug.Rep,
+{
+    tag:
+        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0, onclick: "$onClick", role :"tree"},
+            TBODY({role: 'presentation'},
+                SizerRow,
+                FOR("member", "$object|memberIterator", RowTag)
+            )
+        ),
+        
+    watchTag:
+        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0,
+               _toggles: "$toggles", _domPanel: "$domPanel", onclick: "$onClick", role : 'tree'},
+            TBODY({role : 'presentation'},
+                SizerRow,
+                WatchRowTag
+            )
+        ),
+
+    tableTag:
+        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0,
+            _toggles: "$toggles", _domPanel: "$domPanel", onclick: "$onClick", role : 'tree'},
+            TBODY({role : 'presentation'},
+                SizerRow
+            )
+        ),
+
+    rowTag:
+        FOR("member", "$members", RowTag),
+
+    memberIterator: function(object, level)
+    {
+        return getMembers(object, level);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    onClick: function(event)
+    {
+        if (!isLeftClick(event))
+            return;
+        
+        var target = event.target || event.srcElement;
+
+        var row = getAncestorByClass(target, "memberRow");
+        var label = getAncestorByClass(target, "memberLabel");
+        if (label && hasClass(row, "hasChildren"))
+        {
+            var row = label.parentNode.parentNode;
+            this.toggleRow(row);
+        }
+        else
+        {
+            var object = Firebug.getRepObject(target);
+            if (typeof(object) == "function")
+            {
+                Firebug.chrome.select(object, "script");
+                cancelEvent(event);
+            }
+            else if (event.detail == 2 && !object)
+            {
+                var panel = row.parentNode.parentNode.domPanel;
+                if (panel)
+                {
+                    var rowValue = panel.getRowPropertyValue(row);
+                    if (typeof(rowValue) == "boolean")
+                        panel.setPropertyValue(row, !rowValue);
+                    else
+                        panel.editProperty(row);
+
+                    cancelEvent(event);
+                }
+            }
+        }
+    },
+
+    toggleRow: function(row)
+    {
+        var level = parseInt(row.getAttribute("level"));
+        var toggles = row.parentNode.parentNode.toggles;
+
+        if (hasClass(row, "opened"))
+        {
+            removeClass(row, "opened");
+
+            if (toggles)
+            {
+                var path = getPath(row);
+
+                // Remove the path from the toggle tree
+                for (var i = 0; i < path.length; ++i)
+                {
+                    if (i == path.length-1)
+                        delete toggles[path[i]];
+                    else
+                        toggles = toggles[path[i]];
+                }
+            }
+
+            var rowTag = this.rowTag;
+            var tbody = row.parentNode;
+
+            setTimeout(function()
+            {
+                for (var firstRow = row.nextSibling; firstRow; firstRow = row.nextSibling)
+                {
+                    if (parseInt(firstRow.getAttribute("level")) <= level)
+                        break;
+
+                    tbody.removeChild(firstRow);
+                }
+            }, row.insertTimeout ? row.insertTimeout : 0);
+        }
+        else
+        {
+            setClass(row, "opened");
+
+            if (toggles)
+            {
+                var path = getPath(row);
+
+                // Mark the path in the toggle tree
+                for (var i = 0; i < path.length; ++i)
+                {
+                    var name = path[i];
+                    if (toggles.hasOwnProperty(name))
+                        toggles = toggles[name];
+                    else
+                        toggles = toggles[name] = {};
+                }
+            }
+
+            var value = row.lastChild.firstChild.repObject;
+            var members = getMembers(value, level+1);
+
+            var rowTag = this.rowTag;
+            var lastRow = row;
+
+            var delay = 0;
+            var setSize = members.length;
+            var rowCount = 1;
+            while (members.length)
+            {
+                with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
+                {
+                    setTimeout(function()
+                    {
+                        if (lastRow.parentNode)
+                        {
+                            var result = rowTag.insertRows({members: slice}, lastRow);
+                            lastRow = result[1];
+                            //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
+                            rowCount += insertSliceSize;
+                        }
+                        if (isLast)
+                            delete row.insertTimeout;
+                    }, delay);
+                }
+
+                delay += insertInterval;
+            }
+
+            row.insertTimeout = delay;
+        }
+    }
+});
+
+
+
+
+// ************************************************************************************************
+// Local Helpers
+
+var getMembers = function getMembers(object, level)  // we expect object to be user-level object wrapped in security blanket
+{
+    if (!level)
+        level = 0;
+
+    var ordinals = [], userProps = [], userClasses = [], userFuncs = [],
+        domProps = [], domFuncs = [], domConstants = [];
+
+    try
+    {
+        var domMembers = getDOMMembers(object);
+        //var domMembers = {}; // TODO: xxxpedro
+        //var domConstantMap = {};  // TODO: xxxpedro
+
+        if (object.wrappedJSObject)
+            var insecureObject = object.wrappedJSObject;
+        else
+            var insecureObject = object;
+
+        // IE function prototype is not listed in (for..in)
+        if (isIE && typeof object == "function")
+            addMember("user", userProps, "prototype", object.prototype, level);            
+            
+        for (var name in insecureObject)  // enumeration is safe
+        {
+            if (ignoreVars[name] == 1)  // javascript.options.strict says ignoreVars is undefined.
+                continue;
+
+            var val;
+            try
+            {
+                val = insecureObject[name];  // getter is safe
+            }
+            catch (exc)
+            {
+                // Sometimes we get exceptions trying to access certain members
+                if (FBTrace.DBG_ERRORS && FBTrace.DBG_DOM)
+                    FBTrace.sysout("dom.getMembers cannot access "+name, exc);
+            }
+
+            var ordinal = parseInt(name);
+            if (ordinal || ordinal == 0)
+            {
+                addMember("ordinal", ordinals, name, val, level);
+            }
+            else if (typeof(val) == "function")
+            {
+                if (isClassFunction(val))
+                    addMember("userClass", userClasses, name, val, level);
+                else if (name in domMembers)
+                    addMember("domFunction", domFuncs, name, val, level, domMembers[name]);
+                else
+                    addMember("userFunction", userFuncs, name, val, level);
+            }
+            else
+            {
+                //TODO: xxxpedro
+                /*
+                var getterFunction = insecureObject.__lookupGetter__(name),
+                    setterFunction = insecureObject.__lookupSetter__(name),
+                    prefix = "";
+
+                if(getterFunction && !setterFunction)
+                    prefix = "get ";
+                /**/
+                
+                var prefix = "";
+
+                if (name in domMembers)
+                    addMember("dom", domProps, (prefix+name), val, level, domMembers[name]);
+                else if (name in domConstantMap)
+                    addMember("dom", domConstants, (prefix+name), val, level);
+                else
+                    addMember("user", userProps, (prefix+name), val, level);
+            }
+        }
+    }
+    catch (exc)
+    {
+        // Sometimes we get exceptions just from trying to iterate the members
+        // of certain objects, like StorageList, but don't let that gum up the works
+        //throw exc;
+        //if (FBTrace.DBG_ERRORS && FBTrace.DBG_DOM)
+        //    FBTrace.sysout("dom.getMembers FAILS: ", exc);
+        throw exc;
+    }
+
+    function sortName(a, b) { return a.name > b.name ? 1 : -1; }
+    function sortOrder(a, b) { return a.order > b.order ? 1 : -1; }
+
+    var members = [];
+
+    members.push.apply(members, ordinals);
+
+    Firebug.showUserProps = true; // TODO: xxxpedro
+    Firebug.showUserFuncs = true; // TODO: xxxpedro
+    Firebug.showDOMProps = true;
+    Firebug.showDOMFuncs = true;
+    Firebug.showDOMConstants = true;
+    
+    if (Firebug.showUserProps)
+    {
+        userProps.sort(sortName);
+        members.push.apply(members, userProps);
+    }
+
+    if (Firebug.showUserFuncs)
+    {
+        userClasses.sort(sortName);
+        members.push.apply(members, userClasses);
+
+        userFuncs.sort(sortName);
+        members.push.apply(members, userFuncs);
+    }
+
+    if (Firebug.showDOMProps)
+    {
+        domProps.sort(sortName);
+        members.push.apply(members, domProps);
+    }
+
+    if (Firebug.showDOMFuncs)
+    {
+        domFuncs.sort(sortName);
+        members.push.apply(members, domFuncs);
+    }
+
+    if (Firebug.showDOMConstants)
+        members.push.apply(members, domConstants);
+
+    return members;
+}
+
+function expandMembers(members, toggles, offset, level)  // recursion starts with offset=0, level=0
+{
+    var expanded = 0;
+    for (var i = offset; i < members.length; ++i)
+    {
+        var member = members[i];
+        if (member.level > level)
+            break;
+
+        if ( toggles.hasOwnProperty(member.name) )
+        {
+            member.open = "opened";  // member.level <= level && member.name in toggles.
+
+            var newMembers = getMembers(member.value, level+1);  // sets newMembers.level to level+1
+
+            var args = [i+1, 0];
+            args.push.apply(args, newMembers);
+            members.splice.apply(members, args);
+            
+            /*
+            if (FBTrace.DBG_DOM)
+            {
+                FBTrace.sysout("expandMembers member.name", member.name);
+                FBTrace.sysout("expandMembers toggles", toggles);
+                FBTrace.sysout("expandMembers toggles[member.name]", toggles[member.name]);
+                FBTrace.sysout("dom.expandedMembers level: "+level+" member", member);
+            }
+            /**/
+
+            expanded += newMembers.length;
+            i += newMembers.length + expandMembers(members, toggles[member.name], i+1, level+1);
+        }
+    }
+
+    return expanded;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+function isClassFunction(fn)
+{
+    try
+    {
+        for (var name in fn.prototype)
+            return true;
+    } catch (exc) {}
+    return false;
+}
+
+function hasProperties(ob)
+{
+    try
+    {
+        for (var name in ob)
+            return true;
+    } catch (exc) {}
+    
+    // IE function prototype is not listed in (for..in)
+    if (typeof ob == "function") return true;
+    
+    return false;
+}
+
+FBL.ErrorCopy = function(message)
+{
+    this.message = message;
+};
+
+function addMember(type, props, name, value, level, order)
+{
+    var rep = Firebug.getRep(value);    // do this first in case a call to instanceof reveals contents
+    var tag = rep.shortTag ? rep.shortTag : rep.tag;
+
+    var ErrorCopy = function(){}; //TODO: xxxpedro
+    
+    var valueType = typeof(value);
+    var hasChildren = hasProperties(value) && !(value instanceof ErrorCopy) &&
+        (valueType == "function" || (valueType == "object" && value != null)
+        || (valueType == "string" && value.length > Firebug.stringCropLength));
+
+    props.push({
+        name: name,
+        value: value,
+        type: type,
+        rowClass: "memberRow-"+type,
+        open: "",
+        order: order,
+        level: level,
+        indent: level*16,
+        hasChildren: hasChildren,
+        tag: tag
+    });
+}
+
+function getWatchRowIndex(row)
+{
+    var index = -1;
+    for (; row && hasClass(row, "watchRow"); row = row.previousSibling)
+        ++index;
+    return index;
+}
+
+function getRowName(row)
+{
+    return row.firstChild.textContent;
+}
+
+function getRowValue(row)
+{
+    return row.lastChild.firstChild.repObject;
+}
+
+function getRowOwnerObject(row)
+{
+    var parentRow = getParentRow(row);
+    if (parentRow)
+        return getRowValue(parentRow);
+}
+
+function getParentRow(row)
+{
+    var level = parseInt(row.getAttribute("level"))-1;
+    for (row = row.previousSibling; row; row = row.previousSibling)
+    {
+        if (parseInt(row.getAttribute("level")) == level)
+            return row;
+    }
+}
+
+function getPath(row)
+{
+    var name = getRowName(row);
+    var path = [name];
+
+    var level = parseInt(row.getAttribute("level"))-1;
+    for (row = row.previousSibling; row; row = row.previousSibling)
+    {
+        if (parseInt(row.getAttribute("level")) == level)
+        {
+            var name = getRowName(row);
+            path.splice(0, 0, name);
+
+            --level;
+        }
+    }
+
+    return path;
+}
+
+// ************************************************************************************************
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+// ************************************************************************************************
+// DOM Module
+
+Firebug.DOM = extend(Firebug.Module,
+{
+    getPanel: function()
+    {
+        return Firebug.chrome ? Firebug.chrome.getPanel("DOM") : null;
+    }
+});
+
+Firebug.registerModule(Firebug.DOM);
+
+
+// ************************************************************************************************
+// FBTrace Panel
+
+function DOMPanel(){};
+
+DOMPanel.prototype = extend(Firebug.Panel,
+{
+    name: "DOM",
+    title: "DOM",
+    
+    options: {
+        hasToolButtons: true
+    },
+    
+    isInitialized: false,
+    
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        this.toggles = this.toggles || {};
+        this.panelNode.style.padding = "0 1px";
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        /*
+        var target = this.contentNode;
+        var template = DirTablePlate;
+        
+        var panel = {};
+        var toggles = {};
+        
+        template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
+        /**/
+        
+        //if (this.isInitialized) return;
+        
+        var target = this.contentNode;
+        var template = DirTablePlate;
+        
+        var panel = {};
+        var toggles = this.toggles;
+        
+        template.tableTag.replace({domPanel: panel, toggles: toggles, object: {}}, target);
+        
+        var row = $$("tr", target)[0];
+        
+        var value = window;
+        var members = getMembers(value, 0);
+        expandMembers(members, toggles, 0, 0);
+
+        var rowTag = template.rowTag;
+        var lastRow = row;
+
+        var delay = 30;
+        var setSize = members.length;
+        var rowCount = 1;
+        
+        while (members.length)
+        {
+            with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
+            {
+                setTimeout(function()
+                {
+                    if (lastRow.parentNode)
+                    {
+                        var result = rowTag.insertRows({members: slice}, lastRow);
+                        lastRow = result[1];
+                        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
+                        rowCount += insertSliceSize;
+                    }
+                    if (isLast)
+                        delete row.insertTimeout;
+                }, delay);
+            }
+
+            delay += insertInterval;
+        }
+
+        row.insertTimeout = delay;
+        
+        this.isInitialized = true;
+        /**/
+    },
+    
+    reattach: function(oldChrome)
+    {
+        //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
+        this.toggles = oldChrome.getPanel("DOM").toggles;
+    }
+    
+});
+
+Firebug.registerPanel(DOMPanel);
 
 // ************************************************************************************************
 }});
