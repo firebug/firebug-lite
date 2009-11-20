@@ -822,7 +822,7 @@
     margin-top: 1px;
     padding-left: 3px;
     background: #fafafa;
-    border-color: #888;
+    border: 1px inset #fff;
     width: 250px;
 }
 
@@ -1308,7 +1308,7 @@ a.fbTab:hover .fbTabR {
 /* splitters 
 *************************************************************************************************/
 #fbHSplitter {
-    position: absolute;
+    position: fixed;
     left: 0;
     top: 0;
     width: 100%;
