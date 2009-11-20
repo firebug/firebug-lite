@@ -79,16 +79,7 @@ CSSPanel.prototype = extend(Firebug.Panel,
             selectNode.appendChild(option);
         };
         
-        
         this.toolButtonsNode.appendChild(selectNode);
-    
-        /*
-        this.clearButton = new Firebug.Button({
-            node: $("fbConsole_btClear"),
-            owner: Firebug.Console,
-            onClick: Firebug.Console.clear
-        });
-        /**/
     },
     
     initialize: function()
@@ -96,8 +87,6 @@ CSSPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         
         Firebug.CSS.renderStylesheet(0);
-        
-        //this.clearButton.initialize();
     }
     
 });

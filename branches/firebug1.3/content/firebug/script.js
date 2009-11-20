@@ -56,34 +56,31 @@ ScriptPanel.prototype = extend(Firebug.Panel,
         };
     
         this.toolButtonsNode.appendChild(selectNode);
-        
-        /*
-        this.clearButton = new Firebug.Button({
-            node: $("fbConsole_btClear"),
-            owner: Firebug.Console,
-            onClick: Firebug.Console.clear
-        });
-        /**/
     },
     
     initialize: function()
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
-        //this.clearButton.initialize();
-        
         addEvent(this.selectNode, "change", bind(this.onChangeSelect, this));
         
         this.selectSourceCode(this.sourceIndex);
     },
     
+    detach: function()
+    {
+    },
+    
     reattach: function(oldChrome, newChrome)
     {
-        var index = oldChrome.getPanel("Script").sourceIndex;;
+        var oldPanel = oldChrome.getPanel("Script");
         
+        var index = oldPanel.sourceIndex;
         this.selectNode.selectedIndex = index;
         this.sourceIndex = index;
         this.lastSourceIndex = index;
+        
+        this.containerNode.scrollTop = oldPanel.containerNode.scrollTop;        
     },
     
     onChangeSelect: function(event)
@@ -165,7 +162,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             }
             catch(e)
             {
-                str = "<em>Access to restricted URI denied</em>";
+                //str = "<em>Access to restricted URI denied</em>";
             }
             
             this.lastSourceIndex = index;
