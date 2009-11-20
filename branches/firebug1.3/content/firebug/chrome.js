@@ -236,16 +236,21 @@ var onChromeLoad = function onChromeLoad(chrome)
         else if (chrome.type == "popup")
         {
             var frame = chromeMap.frame;
-            if (frame)
-                frame.close();
             
             // initial UI state
             FirebugChrome.commandLineVisible = false;
             FirebugChrome.sidePanelVisible = false;
             
             var newChrome = new Chrome(chrome);
+            var oldChrome = chromeMap.frame;
+        
+            // TODO: xxxpedro sync detach reattach attach
+            dispatch(newChrome.panelMap, "detach", [frame, newChrome]);
+        
+            if (frame)
+                frame.close();
             
-            newChrome.reattach(chromeMap.frame, newChrome);
+            newChrome.reattach(frame, newChrome);
         }
     }
 };
@@ -298,14 +303,6 @@ var ChromeBase = extend(ChromeBase, {
     create: function()
     {
         Firebug.PanelBar.create.apply(this);
-        var panelMap = Firebug.panelTypes;
-        for (var i=0, p; p=panelMap[i]; i++)
-        {
-            if (!p.parentPanel)
-            {
-                this.addPanel(p.prototype.name);
-            }
-        }
         
         this.inspectButton = new Firebug.Button({
             type: "toggle",
@@ -907,12 +904,17 @@ var ChromePopupBase = extend(ChromeContext, {
     
     destroy: function()
     {
+        // TODO: xxxpedro sync detach reattach attach
+        var frame = chromeMap.frame;
+        
+        dispatch(frame.panelMap, "detach", [this, frame]);
+            
         if (Application.isPersistentMode)
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
             Application.FirebugChrome.selectedElement = FirebugChrome.selectedElement;
         }
-        var frame = chromeMap.frame;
+        
         frame.reattach(this, frame);
         
         ChromeBase.destroy.apply(this);

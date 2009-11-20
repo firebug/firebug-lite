@@ -2,7 +2,21 @@
  1.3.0a4
 ###################################################################################################
 
+Lib
+    general source name and path functions
+    
+
+Script
+    Cache source code
+
+    
+CSS
+    Add AJAX request
+    Cache source code
+
+
 Chrome
+    Better detach and reattach methods
     change chrome sync - 
         only use innerHTML for logging panels (console/trace), rebuild the whole panel runs faster.
     

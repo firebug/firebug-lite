@@ -697,6 +697,15 @@ Firebug.PanelBar =
     create: function()
     {
         this.panelMap = {};
+        
+        var panelMap = Firebug.panelTypes;
+        for (var i=0, p; p=panelMap[i]; i++)
+        {
+            if (!p.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
     },
     
     initialize: function()
@@ -720,6 +729,16 @@ Firebug.PanelBar =
     
     shutdown: function()
     {
+        var selectedPanel = this.selectedPanel;
+        
+        if (selectedPanel)
+        {
+            removeClass(selectedPanel.tabNode, "fbSelectedTab");
+            selectedPanel.shutdown();
+            selectedPanel.hide();
+        }
+        
+        this.selectedPanel = "";
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -747,8 +766,8 @@ Firebug.PanelBar =
             if (selectedPanel)
             {
                 removeClass(selectedPanel.tabNode, "fbSelectedTab");
-                selectedPanel.hide();
                 selectedPanel.shutdown();
+                selectedPanel.hide();
             }
             
             if (!panel.parentPanel)
@@ -757,8 +776,8 @@ Firebug.PanelBar =
             this.selectedPanel = panel;
             
             setClass(panel.tabNode, "fbSelectedTab");
-            panel.initialize();
             panel.show();
+            panel.initialize();
         }
     },
     
