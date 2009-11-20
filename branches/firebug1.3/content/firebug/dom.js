@@ -552,6 +552,9 @@ DOMPanel.prototype = extend(Firebug.Panel,
     
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
+        
+        this.panelNode.style.padding = "0 1px";
+        
         /*
         this.clearButton = new Firebug.Button({
             caption: "Clear",
@@ -560,8 +563,10 @@ DOMPanel.prototype = extend(Firebug.Panel,
             onClick: Firebug.Trace.clear
         });
         /**/
-        
-        this.panelNode.style.padding = "0 1px";
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
         
         var target = this.contentNode;
         var template = DirTablePlate;
@@ -570,12 +575,6 @@ DOMPanel.prototype = extend(Firebug.Panel,
         var toggles = {};
         
         template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
-        
-        //Firebug.reps[5].tag.replace({}, target);
-    },
-    
-    initialize: function(){
-        Firebug.Panel.initialize.apply(this, arguments);
         
         //this.clearButton.initialize();
     }
