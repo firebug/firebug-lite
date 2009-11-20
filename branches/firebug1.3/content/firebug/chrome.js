@@ -553,10 +553,14 @@ var ChromeBase = extend(ChromeBase, {
         
         for(var name in newPanelMap)
         {
+            // TODO: xxxpedro
             newPanelMap[name].contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
         }
         
         Firebug.chrome = newChrome;
+        
+        // TODO: xxxpedro sync detach reattach attach
+        //dispatch(Firebug.chrome.panelMap, "detach", [oldChrome, newChrome]);
         
         if (newChrome.type == "popup")
         {

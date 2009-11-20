@@ -1,14 +1,25 @@
 ###################################################################################################
- 1.3.0a6
+ 1.3.0a4
+###################################################################################################
+
+Chrome
+    change chrome sync - 
+        only use innerHTML for logging panels (console/trace), rebuild the whole panel runs faster.
+    
+
+DOM
+    change DOM time skip frame technique
+        treshold should be duration time, not number of operations (freezes on slow computers/browsers)
+
+
+
+###################################################################################################
+ 1.3.0a5
 ###################################################################################################
 DOM improve
 
-DOM select Element
+HTML SidePanel Controller
 
-Console
-  DOM view inside Console
-  click on DOM element --> goto DOM
-  click on HTML element --> goto HTML
 
 
 ###################################################################################################
@@ -21,12 +32,16 @@ HTML DOM SidePanel
 
 
 ###################################################################################################
- 1.3.0a5
+ 1.3.0a7
 ###################################################################################################
 DOM improve
 
-HTML SidePanel Controller
+DOM select Element
 
+Console
+  DOM view inside Console
+  click on DOM element --> goto DOM
+  click on HTML element --> goto HTML
 
 ###################################################################################################
 ###################################################################################################
@@ -92,7 +107,7 @@ Firebug Lite 1.3a6
 ###################################################################################################
 Versions
 ###################################################################################################
-    Firebug 1.3a3 - Revision: xxxx
+    Firebug 1.3a3 - Revision: 4882
     Firebug 1.3a2 - Revision: 3847
 
     

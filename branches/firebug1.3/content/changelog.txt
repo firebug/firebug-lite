@@ -2,8 +2,13 @@
  1.3.0a4
 ###################################################################################################
 
+Core
+    Loading performance improvement
+     
+    
 DOM
-  add
+    add
+    Initial rendering performance improvement
 
 Script
   import
