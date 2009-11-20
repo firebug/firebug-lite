@@ -808,6 +808,34 @@
 
 
 
+/************************************************************************************************
+ CSS Not organized
+*************************************************************************************************/
+
+#fbCSS {
+    font: 11px Monaco, monospace;
+    padding: 0 7px;
+}
+
+#fbCSSButtons select, #fbScriptButtons select {
+    font: 11px Lucida Grande, Tahoma, sans-serif;
+    margin-top: 1px;
+    padding-left: 3px;
+    background: #fafafa;
+    border-color: #888;
+    width: 250px;
+}
+
+.Selector { margin-top:10px }
+.CSSText { padding-left:20px; }
+.CSSProperty { color:#005500; margin-top:10px; }
+.CSSValue { padding-left:5px; color:#000088; }
+
+
+/************************************************************************************************
+ Not organized
+*************************************************************************************************/
+
 .fbBtnPressed {
     background: #ECEBE3;
     padding: 3px 6px 2px 7px !important;
@@ -1083,7 +1111,7 @@ body {
 *************************************************************************************************/
 
 #fbPanelBar1 {
-    width: 255px; /* fixed width to avoid tabs breaking line */
+    width: 1024px; /* fixed width to avoid tabs breaking line */
     z-index: 8;
     left: 0;
     white-space: nowrap;
