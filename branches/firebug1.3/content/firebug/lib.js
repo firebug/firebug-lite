@@ -26,6 +26,7 @@ this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
 this.isIE      = userAgent.indexOf("MSIE") != -1;
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
 
+/*
 // . . . . . . . . . . . . . . . . .
 this.isQuiksMode = document.compatMode == "BackCompat"; // problem with IE in persistent mode
 this.isIEQuiksMode = this.isIE && this.isQuiksMode;
@@ -83,11 +84,15 @@ this.initialize = function()
         FBL.Application.destroy = destroyApplication;
     }
     
+    
+    
+    // TODO: xxxpedro why is these here?
     this.isQuiksMode = FBL.Application.browser.document.compatMode == "BackCompat";
     this.isIEQuiksMode = this.isIE && this.isQuiksMode;
     this.isIEStantandMode = this.isIE && !this.isQuiksMode;
     
     this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+    
     
     
     if (FBL.Application.isTraceMode) FBTrace.initialize();
@@ -3592,7 +3597,7 @@ this.Ajax =
      * @param {Function} options.onComplete    Função a ser executada ao completar a requisição.
      * @param {Function} options.onUpdate      Função a ser executada após completar a requisição.
      * @param {Function} options.onSuccess     Função a ser executada ao completar a requisição com sucesso.
-     * @param {Function} options.onError       Função a ser executada ao completar a requisição com erro.
+     * @param {Function} options.onFailure     Função a ser executada ao completar a requisição com erro.
      */      
     request: function(options)
     {
