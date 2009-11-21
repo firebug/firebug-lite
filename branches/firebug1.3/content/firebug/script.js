@@ -15,7 +15,6 @@ Firebug.Script = extend(Firebug.Module,
     {
         this.getPanel().selectSourceCode(index);
     }
-      
 });
 
 Firebug.registerModule(Firebug.Script);
@@ -67,44 +66,30 @@ ScriptPanel.prototype = extend(Firebug.Panel,
         this.selectSourceCode(this.sourceIndex);
     },
     
-    shutdown: function()
-    {
-        this.lastScrollTop = this.containerNode.scrollTop;
-        
-        Firebug.Panel.shutdown.apply(this, arguments);
-    },
-    
     detach: function(oldChrome, newChrome)
     {
-        var oldPanel = oldChrome.getPanel("Script");
+        Firebug.Panel.detach.apply(this, arguments);
         
+        var oldPanel = oldChrome.getPanel("Script");
         var index = oldPanel.sourceIndex;
+        
         this.selectNode.selectedIndex = index;
         this.sourceIndex = index;
         this.lastSourceIndex = -1;
-        
-        this.lastScrollTop = oldPanel.containerNode.scrollTop;
-    },
-    
-    reattach: function(oldChrome, newChrome)
-    {
     },
     
     onChangeSelect: function(event)
     {
         event = event || window.event;
-        
         var target = event.srcElement || event.currentTarget;
         var index = target.selectedIndex;
         
-        this.sourceIndex = index;
         this.renderSourceCode(index);
     },
     
     selectSourceCode: function(index)
     {
         this.selectNode.selectedIndex = index;
-        this.sourceIndex = index;
         this.renderSourceCode(index);
     },
     
@@ -121,13 +106,15 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                     s = [],
                     sl = 0;
                 
-                //src = isIE ? src+'\n' : '\n'+src+'\n';
-                src = '\n'+src+'\n';
+                src = isIE && !isExternal ? 
+                        src+'\n' :  // IE put an extra line when reading source of local resources
+                        '\n'+src+'\n';
                 
+                // find the number of lines of code
                 var match = src.match(/\n/g);
-                var num = match ? match.length : 0;
                 
-                for(var c=1; c<num; c++)
+                // render the line number divs
+                for(var c=1, lines=match ? match.length : 0; c<lines; c++)
                 {
                     s[sl++] = '<div line="';
                     s[sl++] = c;
@@ -135,10 +122,11 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                     s[sl++] = c;
                     s[sl++] = '</div>';
                 }
-                  
+                
+                // render the full source code + line numbers html
                 html[hl++] = '<div><div class="lineNo">';
-                html = html.concat(s);
-                hl = html.length;
+                html = html.concat(s); // uses concat instead of string.join() to boost performance 
+                hl = html.length; // adjust the size index
                 html[hl++] = '</div><pre class="nodeCode">';
                 html[hl++] = escapeHTML(src);
                 html[hl++] = '</pre></div>';
@@ -152,40 +140,39 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                 
                 // IE needs this timeout, otherwise the panel won't scroll
                 setTimeout(function(){
-                    self.containerNode.scrollTop = self.lastScrollTop || 0;
+                    self.synchronizeUI();
                 },0);                        
+            };
+            
+            var onFailure = function()
+            {
+                renderProcess("<em>Access to restricted URI denied</em>");
             };
             
             var doc = Firebug.browser.document;
             var script = doc.getElementsByTagName("script")[index];
             var url = getScriptURL(script);
-            var isExternal = url != doc.location.href;
+            var isExternal = url && url != doc.location.href;
             
-            if (isExternal)
+            try
             {
-                Ajax.request({url: url, onComplete: renderProcess});
+                if (isExternal)
+                {
+                    Ajax.request({url: url, onSuccess: renderProcess, onFailure: onError});
+                }
+                else
+                {
+                    var src = script.innerHTML;
+                    renderProcess(src);
+                }   
             }
-            else
+            catch(e)
             {
-                var src;
+                renderProcess("Access to restricted URI denied");
+            }
                 
-                try
-                {
-                    src = script.innerHTML;
-                }
-                catch(e)
-                {
-                    src = "<em>Access to restricted URI denied</em>";
-                }
-                
-                renderProcess(src);
-            }   
-            
+            this.sourceIndex = index;
             this.lastSourceIndex = index;
-        }
-        else
-        {
-            this.containerNode.scrollTop = this.lastScrollTop || 0;
         }
     }
 });
@@ -194,7 +181,6 @@ Firebug.registerPanel(ScriptPanel);
 
 
 // ************************************************************************************************
-
 
 
 var getScriptURL = function getScriptURL(script) 
@@ -274,7 +260,6 @@ var getScriptURL = function getScriptURL(script)
         loc.app = path + fileName;
     }
 };
-
 
 var getFileName = function getFileName(_path)
 {

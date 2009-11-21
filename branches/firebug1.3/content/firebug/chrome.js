@@ -548,10 +548,13 @@ var ChromeBase = extend(ChromeBase, {
         var newPanelMap = newChrome.panelMap;
         var oldPanelMap = oldChrome.panelMap;
         
+        var panel;
         for(var name in newPanelMap)
         {
             // TODO: xxxpedro innerHTML
-            //newPanelMap[name].contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
+            panel = newPanelMap[name]; 
+            if (panel.options.innerHTMLSync)
+                panel.contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
         }
         
         Firebug.chrome = newChrome;
@@ -565,7 +568,7 @@ var ChromeBase = extend(ChromeBase, {
             dispatch(Firebug.modules, "initialize", []);
         }
         
-        dispatch(Firebug.chrome.panelMap, "reattach", [oldChrome, newChrome]);
+        dispatch(newPanelMap, "reattach", [oldChrome, newChrome]);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

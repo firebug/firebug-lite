@@ -1,10 +1,23 @@
+FirebugChrome (called only once!)
+    create
+    initialize
+    clone
+
+
+
+
+
+
 ###################################################################################################
  1.3.0a4
 ###################################################################################################
 
 Lib
     general source name and path functions
+    general cache
     
+    "FirebugChrome" shared memory name
+    "Application" name
 
 Script
     Cache source code
@@ -16,6 +29,7 @@ CSS
 
 
 Chrome
+    Panel remember scroll position
     Better detach and reattach methods
     change chrome sync - 
         only use innerHTML for logging panels (console/trace), rebuild the whole panel runs faster.

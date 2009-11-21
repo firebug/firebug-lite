@@ -34,7 +34,8 @@ TracePanel.prototype = extend(Firebug.Panel,
     title: "Trace",
     
     options: {
-        hasToolButtons: true
+        hasToolButtons: true,
+        innerHTMLSync: true
     },
     
     create: function(){

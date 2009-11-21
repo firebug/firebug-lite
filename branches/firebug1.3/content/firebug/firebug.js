@@ -348,13 +348,16 @@ Firebug.Panel =
         
         // Pre-rendered panels are those included in the skin file (firebug.html)
         isPreRendered: false,
+        innerHTMLSync: false
         
+        /*
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // To be used by external extensions
         panelHTML: "",
         panelCSS: "",
         
         toolButtonsHTML: ""
+        /**/
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -525,32 +528,32 @@ Firebug.Panel =
         }
             
         this.containerNode = this.panelNode.parentNode;
+        
+        this.containerNode.scrollTop = this.lastScrollTop;
     },
     
     shutdown: function()
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
+        
+        this.lastScrollTop = this.containerNode.scrollTop;
     },
 
     detach: function(oldChrome, newChrome)
     {
-        //this.lastScrollTop = this.panelNode.scrollTop;
+        if (oldChrome.selectedPanel.name == this.name)
+            this.lastScrollTop = oldChrome.selectedPanel.containerNode.scrollTop;
     },
 
     reattach: function(doc)
     {
-        /*
-        this.document = doc;
-
-        if (this.panelNode)
-        {
-            this.panelNode = doc.adoptNode(this.panelNode, true);
-            this.panelNode.ownerPanel = this;
-            doc.body.appendChild(this.panelNode);
-            this.panelNode.scrollTop = this.lastScrollTop;
-            delete this.lastScrollTop;
-        }
-        /**/
+        if (this.options.innerHTMLSync)
+            this.synchronizeUI();
+    },
+    
+    synchronizeUI: function()
+    {
+        this.containerNode.scrollTop = this.lastScrollTop || 0;
     },
 
     show: function(state)
