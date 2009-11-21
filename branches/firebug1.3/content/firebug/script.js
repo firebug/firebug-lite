@@ -65,13 +65,6 @@ ScriptPanel.prototype = extend(Firebug.Panel,
         addEvent(this.selectNode, "change", bind(this.onChangeSelect, this));
         
         this.selectSourceCode(this.sourceIndex);
-        
-        /*
-        var self = this;
-        setTimeout(function(){
-            self.containerNode.scrollTop = self.lastScrollTop;
-        },0);
-        /**/
     },
     
     shutdown: function()
@@ -89,10 +82,8 @@ ScriptPanel.prototype = extend(Firebug.Panel,
         this.selectNode.selectedIndex = index;
         this.sourceIndex = index;
         this.lastSourceIndex = -1;
-        /**/
-        this.lastScrollTop = oldPanel.containerNode.scrollTop;
         
-        //alert(this.lastScrollTop);
+        this.lastScrollTop = oldPanel.containerNode.scrollTop;
     },
     
     reattach: function(oldChrome, newChrome)
@@ -119,9 +110,6 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     
     renderSourceCode: function(index)
     {
-        
-        //alert(this.lastSourceIndex != index);
-        
         if (this.lastSourceIndex != index)
         {
             var self = this;
@@ -139,8 +127,6 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                 var match = src.match(/\n/g);
                 var num = match ? match.length : 0;
                 
-                //var t = new Date().getTime();
-                
                 for(var c=1; c<num; c++)
                 {
                     s[sl++] = '<div line="';
@@ -157,8 +143,6 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                 html[hl++] = escapeHTML(src);
                 html[hl++] = '</pre></div>';
                 
-                //alert(new Date().getTime() - t);
-                
                 updatePanel(html);
             };
             
@@ -166,9 +150,9 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             {
                 self.contentNode.innerHTML = html.join("");
                 
+                // IE needs this timeout, otherwise the panel won't scroll
                 setTimeout(function(){
-                    //self.containerNode.scrollTop = 0;
-                    self.containerNode.scrollTop = self.lastScrollTop;
+                    self.containerNode.scrollTop = self.lastScrollTop || 0;
                 },0);                        
             };
             
@@ -178,8 +162,9 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             var isExternal = url != doc.location.href;
             
             if (isExternal)
-                Ajax.request({url: url, onComplete: renderProcess})
-                
+            {
+                Ajax.request({url: url, onComplete: renderProcess});
+            }
             else
             {
                 var src;
@@ -194,14 +179,13 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                 }
                 
                 renderProcess(src);
-            }
-                
+            }   
             
             this.lastSourceIndex = index;
         }
         else
         {
-            this.containerNode.scrollTop = this.lastScrollTop;
+            this.containerNode.scrollTop = this.lastScrollTop || 0;
         }
     }
 });

@@ -550,8 +550,8 @@ var ChromeBase = extend(ChromeBase, {
         
         for(var name in newPanelMap)
         {
-            // TODO: xxxpedro
-            newPanelMap[name].contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
+            // TODO: xxxpedro innerHTML
+            //newPanelMap[name].contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
         }
         
         Firebug.chrome = newChrome;
