@@ -1046,6 +1046,7 @@ body {
     float: left;
     padding: 4px 2px 0 5px;
     position: absolute;
+    left: 30px;
 }
 
 #fbToolbarButtons a {
