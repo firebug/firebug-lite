@@ -348,7 +348,8 @@ ConsolePanel.prototype = extend(Firebug.Panel,
     {
         hasCommandLine: true,
         hasToolButtons: true,
-        isPreRendered: true
+        isPreRendered: true,
+        innerHTMLSync: true
     },
 
     create: function()

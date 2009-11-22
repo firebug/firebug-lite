@@ -823,7 +823,6 @@
     padding-left: 3px;
     background: #fafafa;
     border: 1px inset #fff;
-    width: 250px;
 }
 
 .Selector { margin-top:10px }
@@ -1309,6 +1308,7 @@ a.fbTab:hover .fbTabR {
 *************************************************************************************************/
 #fbHSplitter {
     position: fixed;
+    _position: absolute;
     left: 0;
     top: 0;
     width: 100%;
@@ -1345,9 +1345,9 @@ a.fbTab:hover .fbTabR {
 /************************************************************************************************/
 div.lineNo {
     font: 11px Monaco, monospace;
-    float: left;
-    display: inline;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     margin: 0;
     padding: 0 5px 0 20px;
     background: #eee;
@@ -1356,14 +1356,15 @@ div.lineNo {
     text-align: right;
 }
 
-pre.nodeCode {
+.sourceBox {
+    position: absolute;
+}
+
+.sourceCode {
     font: 11px Monaco, monospace;
-    margin: 0;
-    padding-left: 10px;
     overflow: hidden;
-    /*
-    _width: 100%;
-    /**/
+    white-space: pre;
+    display: inline;
 }
 
 /************************************************************************************************/

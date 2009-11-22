@@ -1,10 +1,63 @@
+###################################################################################################
+ 1.3.0a4 IMPORTANT TODOs
+###################################################################################################
+
+Data Sharing / Cache
+
+Chrome Synchronization
+
+Panel as Controller?
+
+SidePanelBar
+
+Computed Styles
+
+CSS "Run CSS" sidePanel????    
+
+
+###################################################################################################
+
+Application --> Env
+
+Firebug.Env.Cache
+
+Env
+    Chrome (ex-FirebugChrome)
+        selectedPanel
+        ...
+        
+    Cache
+    
+    Location
+
+
+
 FirebugChrome (called only once!)
-    create
-    initialize
-    clone
+    create --> App.create
+    initialize --> App.create
+    clone --> Cache.synchronize()
+
+FirebugChrome --> Data/Cache
+
+Firebug.SharedData
+Firebug.GlobalCache
 
 
-
+SharedData
+    - setting1
+    - setting2
+    - setting3
+    
+    - Cache
+        - HTML
+            - element
+            
+        - CSS
+            - source
+            
+        - Script
+            - source
+            
 
 
 

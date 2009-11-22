@@ -41,6 +41,9 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
+        //this.containerNode.style.position = "relative";
+        this.panelNode.style.position = "absolute";
+        
         var doc = Firebug.browser.document;
         var scripts = doc.getElementsByTagName("script");
         var selectNode = this.selectNode = createElement("select");
@@ -108,13 +111,14 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                 
                 src = isIE && !isExternal ? 
                         src+'\n' :  // IE put an extra line when reading source of local resources
-                        '\n'+src+'\n';
+                        '\n'+src;
                 
                 // find the number of lines of code
                 var match = src.match(/\n/g);
+                var lines=match ? match.length : 0;
                 
                 // render the line number divs
-                for(var c=1, lines=match ? match.length : 0; c<lines; c++)
+                for(var c=1, lines; c<=lines; c++)
                 {
                     s[sl++] = '<div line="';
                     s[sl++] = c;
@@ -124,12 +128,15 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                 }
                 
                 // render the full source code + line numbers html
-                html[hl++] = '<div><div class="lineNo">';
+                html[hl++] = '<div><div class="sourceBox" style="left:'; 
+                html[hl++] = 35 + 7*(lines+'').length;
+                html[hl++] = 'px;"><pre class="sourceCode">';
+                html[hl++] = escapeHTML(src);
+                html[hl++] = '</pre></div><div class="lineNo">';
                 html = html.concat(s); // uses concat instead of string.join() to boost performance 
                 hl = html.length; // adjust the size index
-                html[hl++] = '</div><pre class="nodeCode">';
-                html[hl++] = escapeHTML(src);
-                html[hl++] = '</pre></div>';
+                html[hl++] = '</div></div>';
+                /**/
                 
                 updatePanel(html);
             };
@@ -146,7 +153,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             
             var onFailure = function()
             {
-                renderProcess("<em>Access to restricted URI denied</em>");
+                renderProcess("Access to restricted URI denied");
             };
             
             var doc = Firebug.browser.document;
@@ -158,7 +165,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             {
                 if (isExternal)
                 {
-                    Ajax.request({url: url, onSuccess: renderProcess, onFailure: onError});
+                    Ajax.request({url: url, onSuccess: renderProcess, onFailure: onFailure});
                 }
                 else
                 {
