@@ -41,9 +41,6 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
-        //this.containerNode.style.position = "relative";
-        this.panelNode.style.position = "absolute";
-        
         var doc = Firebug.browser.document;
         var scripts = doc.getElementsByTagName("script");
         var selectNode = this.selectNode = createElement("select");
