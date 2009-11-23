@@ -1050,6 +1050,9 @@ var onHSplitterMouseDown = function onHSplitterMouseDown(event)
     addGlobalEvent("mousemove", onHSplitterMouseMove);
     addGlobalEvent("mouseup", onHSplitterMouseUp);
     
+    if (isIE)
+        addEvent(Application.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
+    
     fbHSplitter.className = "fbOnMovingHSplitter";
     
     return false;
@@ -1151,9 +1154,16 @@ var onHSplitterMouseUp = function onHSplitterMouseUp(event)
     removeGlobalEvent("mousemove", onHSplitterMouseMove);
     removeGlobalEvent("mouseup", onHSplitterMouseUp);
     
+    if (isIE)
+        removeEvent(Application.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
+    
     fbHSplitter.className = "";
     
     Firebug.chrome.draw();
+    
+    // avoid text selection in IE when returning to the document
+    // after the mouse leaves the document during the resizing
+    return false;
 };
 
 
