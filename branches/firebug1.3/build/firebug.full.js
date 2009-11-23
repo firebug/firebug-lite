@@ -12642,7 +12642,7 @@ var renderRuleReplacer = function renderRuleReplacer(m,g1,g2)
     return "<div class='CSSText'><span class='CSSProperty'>" +
         g1.toLowerCase() + 
         ": </span><span class='CSSValue'>" +
-        g2 +
+        g2.replace(/\s*$/, "") +
         ";</span></div>"; 
 };
 

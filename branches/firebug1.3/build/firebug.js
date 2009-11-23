@@ -3464,7 +3464,7 @@ str+=item.replace(/(.+)\:(.+)/,renderRuleReplacer)
 }str+="<div class='SelectorEnd'>}</div>";
 return str
 };
-var renderRuleReplacer=function renderRuleReplacer(m,g1,g2){return"<div class='CSSText'><span class='CSSProperty'>"+g1.toLowerCase()+": </span><span class='CSSValue'>"+g2+";</span></div>"
+var renderRuleReplacer=function renderRuleReplacer(m,g1,g2){return"<div class='CSSText'><span class='CSSProperty'>"+g1.toLowerCase()+": </span><span class='CSSValue'>"+g2.replace(/\s*$/,"")+";</span></div>"
 };
 var getFileName=function getFileName(_path){if(!_path){return""
 }var match=_path&&_path.match(/[^\/]+(\?.*)?(#.*)?$/);
