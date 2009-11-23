@@ -650,7 +650,7 @@ o.dataType=o.dataType||"text";
 o.contentType=o.contentType||"application/x-www-form-urlencoded";
 this.requests.push(o);
 var s=this.getState();
-if(s=="Uninitialized"||s=="Complete"){this.sendRequest()
+if(s=="Uninitialized"||s=="Complete"||s=="Loaded"){this.sendRequest()
 }},serialize:function(data){var r=[""],rl=0;
 if(data){if(typeof data=="string"){r[rl++]=data
 }else{if(data.innerHTML&&data.elements){for(var i=0,el,l=(el=data.elements).length;

@@ -3604,7 +3604,7 @@ this.Ajax =
         this.requests.push(o);
     
         var s = this.getState();
-        if (s == "Uninitialized" || s == "Complete") 
+        if (s == "Uninitialized" || s == "Complete" || s == "Loaded") 
             this.sendRequest();
     },
     
