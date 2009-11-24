@@ -189,7 +189,10 @@ var createChrome = function(options)
             chrome.window = win.window;
             chrome.document = win.document;
             
-            onChromeLoad(chrome);
+            // Prevent getting the wrong chrome height in FF 
+            setTimeout(function(){
+                onChromeLoad(chrome);
+            },0);
         }
         else
             setTimeout(waitForChrome, waitDelay);
