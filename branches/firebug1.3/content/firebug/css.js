@@ -13,28 +13,7 @@ Firebug.CSS = extend(Firebug.Module,
     
     renderStylesheet: function(index)
     {
-        var styleSheet = Firebug.browser.document.styleSheets[index],
-            str = [], 
-            sl = -1;
-        
-        try
-        {
-            var rules = styleSheet[isIE ? "rules" : "cssRules"];
-            
-            for (var i=0, rule; rule = rules[i]; i++)
-            {
-                var selector = rule.selectorText;
-                var cssText = isIE ? 
-                        rule.style.cssText :
-                        rule.cssText.match(/\{(.*)\}/)[1];
-                
-                str[++sl] = renderRule(selector, cssText.split(";"));
-            }
-        }
-        catch(e)
-        {
-            str[++sl] = "<em>Access to restricted URI denied</em>";
-        }
+        var str = renderStylesheet(index);
         
         var panel = this.getPanel();
         panel.contentNode.innerHTML = str.join("");
@@ -97,22 +76,22 @@ Firebug.registerPanel(CSSPanel);
 
 var renderRule = function renderRule(_selector,_css)
 {
-    var str = "<div class='Selector'>"+_selector.toLowerCase()+" {</div>";
+    var str = "<div class='Selector'>"+ selector.toLowerCase()+ " {</div>";
     
-    for(var i=0,len=_css.length; i<len; i++)
+    for(var i=0, len=styles.length; i<len; i++)
     {
-        var item = _css[i];
-        str += item.replace(/(.+)\:(.+)/, renderRuleReplacer);
+        var rule = styles[i];
+        str += rule.replace(/(.+)\:(.+)/, renderRuleReplacer);
     }
     
     str += "<div class='SelectorEnd'>}</div>";
     return str;
 };
 
-var renderRuleReplacer = function renderRuleReplacer(m,g1,g2)
+var renderRuleReplacer = function renderRuleReplacer(m, g1, g2)
 {
     return "<div class='CSSText'><span class='CSSProperty'>" +
-        g1.toLowerCase() + 
+        g1.toLowerCase() +
         ": </span><span class='CSSValue'>" +
         g2.replace(/\s*$/, "") +
         ";</span></div>"; 
