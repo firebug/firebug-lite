@@ -189,7 +189,7 @@ var createChrome = function(options)
             chrome.window = win.window;
             chrome.document = win.document;
             
-            // Prevent getting the wrong chrome height in FF 
+            // Prevent getting the wrong chrome height in FF when opening a popup 
             setTimeout(function(){
                 onChromeLoad(chrome);
             },0);
