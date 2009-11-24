@@ -8,29 +8,60 @@ Chrome Synchronization
 
 Panel as Controller?
 
-SidePanelBar
+~~SidePanelBar
+    sidePanel group? to show/hide multiple tabs
+        NO. PANEL inherits SIDEPANELBAR
 
 Computed Styles
 
-CSS "Run CSS" sidePanel????    
+CSS "Run CSS" sidePanel????
 
+Use "offline" mode when switching panels (to avoid loose any message)?    
 
 ###################################################################################################
 
 Application --> Env
 
-Firebug.Env.Cache
-
-Env
-    Chrome (ex-FirebugChrome)
-        selectedPanel
-        ...
+- Firebug
+    - Env
+        - browser
+        - chrome
         
-    Cache
+        - create()
+        - destroy()
+        - initialize()
     
-    Location
-
-
+        - Settings
+            - openAtStartup
+            
+            - isPersistent
+            - isLocal
+            - isTrace
+            - isDevelopment
+        
+        - Location
+            - app
+            - baseDir
+            - skin
+            - skinDir
+            - source
+        
+        - Cache
+            - synchronize()
+            
+            - Chrome (ex-FirebugChrome)
+                - selectedPanel
+                - ...
+                
+            - HTML
+                - element
+                
+            - CSS
+                - source
+                
+            - Script
+                - source
+        
 
 FirebugChrome (called only once!)
     create --> App.create
@@ -689,6 +720,9 @@ element.style.left = style;
 element.runtimeStyle.left = runtimeStyle;
 return value;
 };
+
+
+window.PIXEL=/^\d+(px)?$/i, window.getPixelValue=function (element, value) {if (PIXEL.test(value)) return parseInt(value);var style = element.style.left;var runtimeStyle = element.runtimeStyle.left;element.runtimeStyle.left = element.currentStyle.left;element.style.left = value || 0;value = element.style.pixelLeft;element.style.left = style;element.runtimeStyle.left = runtimeStyle;return value;};
 
 ###################################################################################################
 Library Expose

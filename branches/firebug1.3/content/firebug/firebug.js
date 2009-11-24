@@ -14,6 +14,7 @@ var modules = [];
 var panelTypes = [];
 
 var panelTypeMap = {};
+var parentPanelMap = {};
 
 var reps = [];
 
@@ -72,8 +73,13 @@ FBL.Firebug =
     {
         panelTypes.push.apply(panelTypes, arguments);
 
-        for (var i = 0; i < arguments.length; ++i)
-            panelTypeMap[arguments[i].prototype.name] = arguments[i];
+        for (var i = 0, panelType; panelType = arguments[i]; ++i)
+        {
+            panelTypeMap[panelType.prototype.name] = arguments[i];
+            
+            if (panelType.prototype.parentPanel)
+                parentPanelMap[panelType.prototype.parentPanel] = 1;
+        }
         
         if (FBTrace.DBG_INITIALIZE)
             for (var i = 0; i < arguments.length; ++i)
@@ -336,6 +342,7 @@ Firebug.Panel =
 {
     name: "HelloWorld",
     title: "Hello World!",
+    
     parentPanel: null,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -388,6 +395,12 @@ Firebug.Panel =
     
     create: function(context, doc)
     {
+        if (parentPanelMap.hasOwnProperty(this.name))
+        {
+            this.sidePanelBar = extend({}, Firebug.PanelBar);
+            this.sidePanelBar.create(true);
+        }
+        
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
         
@@ -416,6 +429,8 @@ Firebug.Panel =
         }
         else
         {
+            var containerSufix = this.parentPanel ? "2" : "1";
+            
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // Create Panel
             var panelNode = this.panelNode = createElement("div", {
@@ -423,7 +438,7 @@ Firebug.Panel =
                 className: "fbPanel"
             });
 
-            $("fbPanel1").appendChild(panelNode);
+            $("fbPanel" + containerSufix).appendChild(panelNode);
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // Create Panel Tab
@@ -441,7 +456,7 @@ Firebug.Panel =
                 tabNode.href = "javascript:void(0)";
             }
             
-            $("fbPanelBar1").appendChild(tabNode);
+            $("fbPanelBar" + containerSufix).appendChild(tabNode);
             tabNode.style.display = "block";
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -493,15 +508,20 @@ Firebug.Panel =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.destroy", this.name);
 
-        if (this.panelNode)
-            delete this.panelNode.ownerPanel;
+        //if (this.panelNode)
+        //    delete this.panelNode.ownerPanel;
 
-        this.destroyNode();
+        //this.destroyNode();
     },
     
     initialize: function()
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.initialize", this.name);
+        
+        if (parentPanelMap.hasOwnProperty(this.name))
+        {
+            this.sidePanelBar.initialize();
+        }
         
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
@@ -578,7 +598,8 @@ Firebug.Panel =
         
         this.panelNode.style.display = "block";
         
-        Firebug.chrome.layout(this);
+        if (!this.parentPanel)
+            Firebug.chrome.layout(this);
     },
 
     hide: function(state)
@@ -691,20 +712,23 @@ Firebug.PanelBar =
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     selectedPanel: null,
+    isSidePanelBar: null, // only SidePanelBar
     
     //panelBarNode: null,
     //context: null,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    create: function()
+    create: function(isSidePanelBar)
     {
         this.panelMap = {};
+        this.isSidePanelBar = isSidePanelBar;
         
-        var panelMap = Firebug.panelTypes;
-        for (var i=0, p; p=panelMap[i]; i++)
+        var panels = Firebug.panelTypes;
+        for (var i=0, p; p=panels[i]; i++)
         {
-            if (!p.parentPanel)
+            if (isSidePanelBar && p.prototype.parentPanel || 
+                !isSidePanelBar && !p.prototype.parentPanel)
             {
                 this.addPanel(p.prototype.name);
             }
@@ -741,7 +765,7 @@ Firebug.PanelBar =
             selectedPanel.hide();
         }
         
-        this.selectedPanel = "";
+        this.selectedPanel = null;
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -751,7 +775,7 @@ Firebug.PanelBar =
         var PanelType = panelTypeMap[panelName];
         var panel = this.panelMap[panelName] = new PanelType();
         
-        panel.create();        
+        panel.create();
     },
     
     removePanel: function(panelName)
@@ -789,12 +813,7 @@ Firebug.PanelBar =
         var panel = this.panelMap[panelName];
         
         return panel;
-    },
-    
-    getSelectedPanel: function()
-    {
-        return this.selectedPanel;
-    }    
+    }
    
 };
 

@@ -360,6 +360,7 @@ var ChromeBase = extend(ChromeBase, {
         fbPanel1 = $("fbPanel1");
         fbPanel1Style = fbPanel1.style;
         fbPanel2 = $("fbPanel2");
+        fbPanel2Style = fbPanel2.style;
       
         fbConsole = $("fbConsole");
         fbConsoleStyle = fbConsole.style;
@@ -553,7 +554,7 @@ var ChromeBase = extend(ChromeBase, {
         {
             // TODO: xxxpedro innerHTML
             panel = newPanelMap[name]; 
-            if (panel.options.innerHTMLSync)
+            if (true || panel.options.innerHTMLSync)
                 panel.contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
         }
         
@@ -577,40 +578,52 @@ var ChromeBase = extend(ChromeBase, {
     {
         var size = Firebug.chrome.getWindowSize();
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Height related drawings
-        var chromeHeight = size.height;
-        var commandLineHeight = FirebugChrome.commandLineVisible ? fbCommandLine.offsetHeight : 0;
-        var fixedHeight = topHeight + commandLineHeight;
-        var y = Math.max(chromeHeight, topHeight);
+        // Height related values
+        var commandLineHeight = FirebugChrome.commandLineVisible ? fbCommandLine.offsetHeight : 0,
+            y = Math.max(size.height /* chrome height */, topHeight),
+            
+            height = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0)+ "px",
+            
+            
+            // Width related values
+            sideWidth = FirebugChrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0,
+            
+            width = Math.max(size.width /* chrome width */ - sideWidth, 0) + "px";
         
-        fbPanel1Style.height = Math.max(y - fixedHeight, 0)+ "px";
-        fbPanelBox1Style.height = Math.max(y - fixedHeight, 0)+ "px";
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Height related rendering
+        fbPanelBox1Style.height = height;
+        fbPanel1Style.height = height;
         
         if (isIE || isOpera)
         {
             // Fix IE and Opera problems with auto resizing the verticall splitter
             fbVSplitterStyle.height = Math.max(y - topPartialHeight - commandLineHeight, 0) + "px";
         }
+        //xxxpedro FF2 only?
+        /*
         else if (isFirefox)
         {
             // Fix Firefox problem with table rows with 100% height (fit height)
             fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
-        }
+        }/**/
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Width related drawings
-        var chromeWidth = size.width /* window borders */;
-        var sideWidth = FirebugChrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0;
+        // Width related rendering
+        fbPanelBox1Style.width = width;
+        fbPanel1Style.width = width;
         
-        fbPanelBox1Style.width = Math.max(chromeWidth - sideWidth, 0) + "px";
-        fbPanel1Style.width = Math.max(chromeWidth - sideWidth, 0) + "px";                
-        
+        // SidePanel rendering
         if (FirebugChrome.sidePanelVisible)
         {
-            fbPanelBox2Style.width = sideWidth + "px";
-            fbPanelBar2BoxStyle.width = Math.max(sideWidth, 0) + "px";
-            fbVSplitterStyle.right = Math.max(sideWidth - 6, 0) + "px";
+            sideWidth = Math.max(sideWidth - 6, 0) + "px";
+            
+            fbPanel2Style.height = height;
+            fbPanel2Style.width = sideWidth;
+            
+            fbPanelBox2Style.width = sideWidth;
+            fbPanelBar2BoxStyle.width = sideWidth;
+            fbVSplitterStyle.right = sideWidth;
         }
     },
     
@@ -990,7 +1003,7 @@ var topPartialHeight = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var chromeRedrawSkipRate = isIE ? 30 : isOpera ? 80 : 75;
+var chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75;
 
 
 //************************************************************************************************

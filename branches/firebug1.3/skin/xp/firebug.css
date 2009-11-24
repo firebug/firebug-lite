@@ -1137,7 +1137,7 @@ body {
     position: absolute;
     width: 290px; /* fixed width to avoid tabs breaking line */
     height: 22px;
-    padding-left: 10px;
+    padding-left: 4px;
 }
 
 /* body 
@@ -1162,7 +1162,7 @@ body {
 }
 
 #fbPanel2 {
-    padding-left: 6px;
+    margin-left: 6px;
     background: #fff;
 }
 
@@ -1344,7 +1344,6 @@ a.fbTab:hover .fbTabR {
     position: absolute;
     height: 100%;
     top: 27px;
-    _width: 6px;
 }
 
 /************************************************************************************************/
