@@ -636,5 +636,105 @@ DOMPanel.prototype = extend(Firebug.Panel,
 
 Firebug.registerPanel(DOMPanel);
 
+
+// ************************************************************************************************
+// DOM Panel
+
+function DOMPanel2(){};
+
+DOMPanel2.prototype = extend(Firebug.Panel,
+{
+    name: "DOM2",
+    parentPanel: "HTML",
+    title: "DOM",
+    
+    options: {
+        hasToolButtons: true
+    },
+    
+    isInitialized: false,
+    
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        this.toggles = this.toggles || {};
+        this.panelNode.style.padding = "0 1px";
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        /*
+        var target = this.contentNode;
+        var template = DirTablePlate;
+        
+        var panel = {};
+        var toggles = {};
+        
+        template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
+        /**/
+        
+        //if (this.isInitialized) return;
+        
+        var target = this.contentNode;
+        var template = DirTablePlate;
+        
+        var panel = {};
+        var toggles = this.toggles;
+        
+        template.tableTag.replace({domPanel: panel, toggles: toggles, object: {}}, target);
+        
+        var row = $$("tr", target)[0];
+        
+        var value = window;
+        var members = getMembers(value, 0);
+        expandMembers(members, toggles, 0, 0);
+
+        var rowTag = template.rowTag;
+        var lastRow = row;
+
+        var delay = 30;
+        var setSize = members.length;
+        var rowCount = 1;
+        
+        while (members.length)
+        {
+            with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
+            {
+                setTimeout(function()
+                {
+                    if (lastRow.parentNode)
+                    {
+                        var result = rowTag.insertRows({members: slice}, lastRow);
+                        lastRow = result[1];
+                        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
+                        rowCount += insertSliceSize;
+                    }
+                    if (isLast)
+                        delete row.insertTimeout;
+                }, delay);
+            }
+
+            delay += insertInterval;
+        }
+
+        row.insertTimeout = delay;
+        
+        this.isInitialized = true;
+        /**/
+    },
+    
+    reattach: function(oldChrome)
+    {
+        //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
+        this.toggles = oldChrome.getPanel("DOM2").toggles;
+    }
+    
+});
+
+Firebug.registerPanel(DOMPanel2);
+
+
 // ************************************************************************************************
 }});

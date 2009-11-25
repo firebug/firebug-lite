@@ -72,9 +72,73 @@ CSSPanel.prototype = extend(Firebug.Panel,
 
 Firebug.registerPanel(CSSPanel);
 
+
+// ************************************************************************************************
+// CSS Panel
+
+function CSSPanel2(){};
+
+CSSPanel2.prototype = extend(Firebug.Panel,
+{
+    name: "CSS2",
+    parentPanel: "HTML",
+    title: "CSS",
+    
+    options: {
+        hasToolButtons: true
+    },
+
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+    },
+    
+    initialize: function()
+    {
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        var str = renderStylesheet(0);
+        
+        var panel = this;
+        panel.contentNode.innerHTML = str.join("");
+        panel.containerNode.scrollTop = 0;
+    }
+});
+
+Firebug.registerPanel(CSSPanel2);
+
 // ************************************************************************************************
 
-var renderRule = function renderRule(_selector,_css)
+var renderStylesheet = function renderStylesheet(index)
+{
+    var styleSheet = Firebug.browser.document.styleSheets[index],
+        str = [], 
+        sl = -1;
+    
+    try
+    {
+        var rules = styleSheet[isIE ? "rules" : "cssRules"];
+        
+        for (var i=0, rule; rule = rules[i]; i++)
+        {
+            var selector = rule.selectorText;
+            var cssText = isIE ? 
+                    rule.style.cssText :
+                    rule.cssText.match(/\{(.*)\}/)[1];
+            
+            str[++sl] = renderRule(selector, cssText.split(";"));
+        }
+    }
+    catch(e)
+    {
+        str[++sl] = "<em>Access to restricted URI denied</em>";
+    }
+    
+    return str;
+};
+
+var renderRule = function renderRule(selector, styles)
 {
     var str = "<div class='Selector'>"+ selector.toLowerCase()+ " {</div>";
     

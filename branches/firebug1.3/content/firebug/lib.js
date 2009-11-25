@@ -64,22 +64,22 @@ this.initialize = function()
     if (isChromeContext) // persistent application
     {
         // TODO: xxxpedro persist - make a better synchronization
-        FBL.Application = window.FirebugApplication;
-        FBL.Application.isChromeContext = true;
-        FBTrace.messageQueue = FBL.Application.traceMessageQueue;
+        FBL.Env = window.FirebugApplication;
+        FBL.Env.isChromeContext = true;
+        FBTrace.messageQueue = FBL.Env.traceMessageQueue;
     }
     else // non-persistent application
     {
         // TODO: get preferences here...
         FBL.NS = document.documentElement.namespaceURI;
-        FBL.Application.browser = window;
-        FBL.Application.destroy = destroyApplication;
+        FBL.Env.browser = window;
+        FBL.Env.destroy = destroyApplication;
     }
     
     
     
     // TODO: xxxpedro why is these here?
-    this.isQuiksMode = FBL.Application.browser.document.compatMode == "BackCompat";
+    this.isQuiksMode = FBL.Env.browser.document.compatMode == "BackCompat";
     this.isIEQuiksMode = this.isIE && this.isQuiksMode;
     this.isIEStantandMode = this.isIE && !this.isQuiksMode;
     
@@ -87,7 +87,7 @@ this.initialize = function()
     
     
     
-    if (FBL.Application.isTraceMode) FBTrace.initialize();
+    if (FBL.Env.isTraceMode) FBTrace.initialize();
     
     if (FBTrace.DBG_INITIALIZE && isChromeContext) FBTrace.sysout("FBL.initialize - persistent application", "initialize chrome context");
         
@@ -110,17 +110,17 @@ this.initialize = function()
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     
-    if (FBL.Application.isPersistentMode)
+    if (FBL.Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make a better synchronization
         if (isChromeContext)
         {
-            FBL.FirebugChrome.clone(FBL.Application.FirebugChrome);
+            FBL.FirebugChrome.clone(FBL.Env.FirebugChrome);
         }
         else
         {
-            FBL.Application.FirebugChrome = FBL.FirebugChrome;
-            FBL.Application.traceMessageQueue = FBTrace.messageQueue;
+            FBL.Env.FirebugChrome = FBL.FirebugChrome;
+            FBL.Env.traceMessageQueue = FBTrace.messageQueue;
         }
     }
     
@@ -130,7 +130,7 @@ this.initialize = function()
 var waitForDocument = function waitForDocument()
 {
     // document.body not available in XML+XSL documents in Firefox
-    var doc = FBL.Application.browser.document;
+    var doc = FBL.Env.browser.document;
     var body = null;
     if (body = doc.getElementsByTagName("body")[0])
     {
@@ -149,12 +149,12 @@ var onDocumentLoad = function onDocumentLoad()
         fixIE6BackgroundImageCache();
         
     // persistent application - chrome document loaded
-    if (FBL.Application.isPersistentMode && FBL.Application.isChromeContext)
+    if (FBL.Env.isPersistentMode && FBL.Env.isChromeContext)
     {
         //FBL.Firebug.Inspector.create();
         FBL.Firebug.initialize();
         
-        if (!FBL.Application.isDevelopmentMode)
+        if (!FBL.Env.isDevelopmentMode)
         {
             window.FirebugApplication.destroy();
         
@@ -172,11 +172,11 @@ var onDocumentLoad = function onDocumentLoad()
 };
 
 // ************************************************************************************************
-// Application
+// Env
 
-this.Application = {
+this.Env = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // Application preferences
+    // Env preferences
     openAtStartup: false,
     
     isBookmarletMode: false,
@@ -185,12 +185,12 @@ this.Application = {
     skin: "xp",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // Application states
+    // Env states
     isDevelopmentMode: false,
     isChromeContext: false,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // Application references
+    // Env references
     browser: null,
     chrome: null
 };
@@ -208,7 +208,7 @@ var destroyApplication = function destroyApplication()
 // ************************************************************************************************
 // Library location
 
-this.Application.location =
+this.Env.location =
 {
     sourceDir: null,
     baseDir: null,
@@ -302,7 +302,7 @@ var findLocation =  function findLocation()
     
     if (path && m)
     {
-        var App = FBL.Application;
+        var App = FBL.Env;
         var loc = App.location; 
         loc.sourceDir = path;
         loc.baseDir = path.substr(0, path.length - m[1].length - 1);
@@ -834,7 +834,7 @@ this.createElement = function(tagName, properties)
 this.createGlobalElement = function(tagName, properties)
 {
     properties = properties || {};
-    var doc = FBL.Application.browser.document;
+    var doc = FBL.Env.browser.document;
     
     var element = this.NS && doc.createElementNS ? 
             doc.createElementNS(FBL.NS, tagName) :

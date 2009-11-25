@@ -39,7 +39,7 @@ FBL.Firebug =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.initialize", "initializing application");
         
-        Firebug.browser = new Context(Application.browser);
+        Firebug.browser = new Context(Env.browser);
         Firebug.context = Firebug.browser;
         
         // Document must be cached before chrome initialization
@@ -175,10 +175,10 @@ FBL.Firebug =
 
 };
 
-if (!Application.isPersistentMode || 
-     Application.isPersistentMode && Application.isChromeContext || 
-     Application.isDevelopmentMode )
-        Application.browser.window.Firebug = FBL.Firebug; 
+if (!Env.isPersistentMode || 
+     Env.isPersistentMode && Env.isChromeContext || 
+     Env.isDevelopmentMode )
+        Env.browser.window.Firebug = FBL.Firebug; 
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

@@ -30,18 +30,18 @@ FBL.FirebugChrome =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.initialize", "initializing chrome window");
         
-        if (Application.chrome.type == "frame")
-            ChromeMini.create(Application.chrome);
+        if (Env.chrome.type == "frame")
+            ChromeMini.create(Env.chrome);
             
-        if (Application.browser.document.documentElement.getAttribute("debug") == "true")
-            Application.openAtStartup = true;
+        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
+            Env.openAtStartup = true;
 
-        var chrome = Firebug.chrome = new Chrome(Application.chrome);
+        var chrome = Firebug.chrome = new Chrome(Env.chrome);
         chromeMap[chrome.type] = chrome;
         
         addGlobalEvent("keydown", onPressF12);
         
-        if (Application.isPersistentMode && chrome.type == "popup")
+        if (Env.isPersistentMode && chrome.type == "popup")
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
             chromeMap.frame = FirebugChrome.chromeMap.frame;
@@ -91,15 +91,15 @@ var createChrome = function(options)
     options = options || {};
     options = extend(ChromeDefaultOptions, options);
     
-    var context = options.context || Application.browser;
+    var context = options.context || Env.browser;
     
     var chrome = {};
     
     chrome.type = options.type;
     
     var isChromeFrame = chrome.type == "frame";
-    var isBookmarletMode = Application.isBookmarletMode;
-    var url = isBookmarletMode ? "about:blank" : Application.location.skin;
+    var isBookmarletMode = Env.isBookmarletMode;
+    var url = isBookmarletMode ? "about:blank" : Env.location.skin;
     
     if (isChromeFrame)
     {
@@ -122,7 +122,7 @@ var createChrome = function(options)
             node.style.display = "none";
         
         if (!isBookmarletMode)
-            node.setAttribute("src", Application.location.skin);
+            node.setAttribute("src", Env.location.skin);
         
         // document.body not available in XML+XSL documents in Firefox
         context.document.getElementsByTagName("body")[0].appendChild(node);
@@ -204,26 +204,26 @@ var createChrome = function(options)
 
 var onChromeLoad = function onChromeLoad(chrome)
 {
-    Application.chrome = chrome;
+    Env.chrome = chrome;
     
     if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome window loaded");
     
-    if (Application.isPersistentMode)
+    if (Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
-        Application.FirebugChrome = FirebugChrome;
-        Application.FirebugChrome.chromeMap = FBL.chromeMap;
-        chrome.window.FirebugApplication = Application;
+        Env.FirebugChrome = FirebugChrome;
+        Env.FirebugChrome.chromeMap = FBL.chromeMap;
+        chrome.window.FirebugApplication = Env;
     
-        if (Application.isDevelopmentMode)
+        if (Env.isDevelopmentMode)
         {
-            Application.browser.window.FBDev.loadChromeApplication(chrome);
+            Env.browser.window.FBDev.loadChromeApplication(chrome);
         }
         else
         {
             var doc = chrome.document;
             var script = doc.createElement("script");
-            script.src = Application.location.app;
+            script.src = Env.location.app;
             doc.getElementsByTagName("head")[0].appendChild(script);
         }
     }
@@ -669,7 +669,7 @@ var ChromeFrameBase = extend(ChromeContext,
         if (isFirefox)
             this.node.style.display = "block";
         
-        if (Application.openAtStartup)
+        if (Env.openAtStartup)
             this.open();
         else
         {
@@ -928,21 +928,21 @@ var ChromePopupBase = extend(ChromeContext, {
         
         dispatch(frame.panelMap, "detach", [this, frame]);
             
-        if (Application.isPersistentMode)
+        if (Env.isPersistentMode)
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Application.FirebugChrome.selectedElement = FirebugChrome.selectedElement;
+            Env.FirebugChrome.selectedElement = FirebugChrome.selectedElement;
         }
         
         frame.reattach(this, frame);
         
         ChromeBase.destroy.apply(this);
         
-        if (Application.isPersistentMode)
+        if (Env.isPersistentMode)
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Application.FirebugChrome.chromeMap = FirebugChrome.chromeMap;
-            Application.FirebugChrome.chromeMap.popup = null;
+            Env.FirebugChrome.chromeMap = FirebugChrome.chromeMap;
+            Env.FirebugChrome.chromeMap.popup = null;
         }
         chromeMap.popup = null;
         
@@ -1067,7 +1067,7 @@ var onHSplitterMouseDown = function onHSplitterMouseDown(event)
     addGlobalEvent("mouseup", onHSplitterMouseUp);
     
     if (isIE)
-        addEvent(Application.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
+        addEvent(Env.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
     
     fbHSplitter.className = "fbOnMovingHSplitter";
     
@@ -1171,7 +1171,7 @@ var onHSplitterMouseUp = function onHSplitterMouseUp(event)
     removeGlobalEvent("mouseup", onHSplitterMouseUp);
     
     if (isIE)
-        removeEvent(Application.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
+        removeEvent(Env.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
     
     fbHSplitter.className = "";
     

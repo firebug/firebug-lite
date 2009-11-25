@@ -396,7 +396,7 @@ FBL.onError = function(msg, href, lineNo)
 // Register console namespace
 
 if (!isFirefox)
-    Application.browser.window.console = ConsoleAPI;        
+    Env.browser.window.console = ConsoleAPI;        
 
 
 // ************************************************************************************************

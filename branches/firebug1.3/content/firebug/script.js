@@ -255,7 +255,7 @@ var getScriptURL = function getScriptURL(script)
     {
         return path + fileName;
         
-        var App = FBL.Application;
+        var App = FBL.Env;
         var loc = App.location; 
         loc.sourceDir = path;
         loc.baseDir = path.substr(0, path.length - m[1].length - 1);
