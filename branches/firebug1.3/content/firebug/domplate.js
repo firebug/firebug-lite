@@ -30,7 +30,7 @@ function DomplateLoop()
 
 var womb = null;
 
-domplate = function()
+var domplate = FBL.domplate = function()
 {
     var lastSubject;
     for (var i = 0; i < arguments.length; ++i)
@@ -1044,7 +1044,8 @@ function defineTags()
     for (var i = 0; i < arguments.length; ++i)
     {
         var tagName = arguments[i];
-        var fn = new Function("var newTag = new DomplateTag('"+tagName+"'); return newTag.merge(arguments);");
+        var fn = new Function("var newTag = new arguments.callee.DomplateTag('"+tagName+"'); return newTag.merge(arguments);");
+        fn.DomplateTag = DomplateTag;
 
         var fnName = tagName.toUpperCase();
         FBL[fnName] = fn;
