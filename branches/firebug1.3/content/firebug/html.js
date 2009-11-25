@@ -491,7 +491,7 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
     
         if (!/\snodeBox\s|\sobjectBox-selector\s/.test(" " + targ.className + " ")) return;
         
-        if (el.id == "FirebugChrome" || " html head body br script link iframe ".indexOf(" "+nodeName+" ") != -1) { 
+        if (el.id == "FirebugUI" || " html head body br script link iframe ".indexOf(" "+nodeName+" ") != -1) { 
             FBL.Firebug.Inspector.hideBoxModel();
             hoverElement = null;
             return;

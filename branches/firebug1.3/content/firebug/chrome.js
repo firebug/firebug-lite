@@ -79,7 +79,7 @@ var ChromeCache = FBL.Env.Cache.Chrome =
 var ChromeDefaultOptions = 
 {
     type: "frame",
-    id: "FirebugChrome",
+    id: "FirebugUI",
     height: 250
 };
 
@@ -1104,7 +1104,7 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
         }
     }
     
-    if (isOpera && isQuiksMode && win.frameElement.id == "FirebugChrome")
+    if (isOpera && isQuiksMode && win.frameElement.id == "FirebugUI")
     {
         clientY = Firebug.browser.getWindowSize().height - win.frameElement.offsetHeight + clientY;
     }

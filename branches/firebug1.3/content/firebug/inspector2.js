@@ -78,10 +78,10 @@ Firebug.Inspector =
         showInspectIFrame();
         //fbInspectIFrame.style.display = "block";
 
-        // Avoid inspecting the outline, and the FirebugChrome
+        // Avoid inspecting the outline, and the FirebugUI
         var id = targ.id;
         if (id && /^fbOutline\w$/.test(id)) return;
-        if (id == "FirebugChrome") return;
+        if (id == "FirebugUI") return;
 
         // Avoid looking at text nodes in Opera
         while (targ.nodeType != 1) targ = targ.parentNode;
@@ -100,10 +100,10 @@ Firebug.Inspector =
             showInspectIFrame();
             //fbInspectIFrame.style.display = "block";
     
-            // Avoid inspecting the outline, and the FirebugChrome
+            // Avoid inspecting the outline, and the FirebugUI
             var id = targ.id;
             if (id && /^fbOutline\w$/.test(id)) return;
-            if (id == "FirebugChrome") return;
+            if (id == "FirebugUI") return;
             
             // Avoid looking at text nodes in Opera
             while (targ.nodeType != 1) targ = targ.parentNode;
