@@ -211,8 +211,8 @@ var onChromeLoad = function onChromeLoad(chrome)
     if (Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
-        Env.FirebugChrome = ChromeCache;
-        Env.FirebugChrome.chromeMap = FBL.chromeMap;
+        Env._lastChromeCache = ChromeCache;
+        Env._lastChromeCache.chromeMap = FBL.chromeMap;
         chrome.window.FirebugApplication = Env;
     
         if (Env.isDevelopmentMode)
@@ -931,7 +931,7 @@ var ChromePopupBase = extend(ChromeContext, {
         if (Env.isPersistentMode)
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Env.FirebugChrome.selectedElement = ChromeCache.selectedElement;
+            Env._lastChromeCache.selectedElement = ChromeCache.selectedElement;
         }
         
         frame.reattach(this, frame);
@@ -941,8 +941,8 @@ var ChromePopupBase = extend(ChromeContext, {
         if (Env.isPersistentMode)
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Env.FirebugChrome.chromeMap = ChromeCache.chromeMap;
-            Env.FirebugChrome.chromeMap.popup = null;
+            Env._lastChromeCache.chromeMap = ChromeCache.chromeMap;
+            Env._lastChromeCache.chromeMap.popup = null;
         }
         chromeMap.popup = null;
         

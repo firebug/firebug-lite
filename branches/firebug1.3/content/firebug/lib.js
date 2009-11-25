@@ -119,11 +119,11 @@ this.initialize = function()
         // TODO: xxxpedro persist - make a better synchronization
         if (isChromeContext)
         {
-            FBL.Env.Cache.Chrome.clone(FBL.Env.FirebugChrome);
+            FBL.Env.Cache.Chrome.clone(FBL.Env._lastChromeCache);
         }
         else
         {
-            FBL.Env.FirebugChrome = FBL.Env.Cache.Chrome;
+            FBL.Env._lastChromeCache = FBL.Env.Cache.Chrome;
             FBL.Env.traceMessageQueue = FBTrace.messageQueue;
         }
     }

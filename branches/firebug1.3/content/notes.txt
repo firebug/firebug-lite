@@ -10,7 +10,9 @@ Panel as Controller?
 
 ~~SidePanelBar
     sidePanel group? to show/hide multiple tabs
-        NO. PANEL inherits SIDEPANELBAR
+        OK - NO. PANEL inherits SIDEPANELBAR
+
+OK - domplate uses 2 global namespaces: domplate, DomplateTag
 
 Computed Styles
 

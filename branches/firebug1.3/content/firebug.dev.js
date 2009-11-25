@@ -4,6 +4,7 @@ var bookmarletMode = true;
 var bookmarletURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/";
 var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
 
+window.FBL = {}; // force exposure in IE global namespace
 window.FBDev =
 {
     modules:
@@ -63,7 +64,7 @@ window.FBDev =
     
     buildSource: function(callback)
     {
-        var useClosure = false;
+        var useClosure = true;
         var source = [];
         var last = FBDev.modules.length-1;
         
