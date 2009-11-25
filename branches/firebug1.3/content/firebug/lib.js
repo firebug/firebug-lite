@@ -52,7 +52,7 @@ this.initialize = function()
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize application
-    this.Env.Cache = {
+    FBL.Env.Cache = {
         Chrome: null
     };
     
@@ -83,11 +83,11 @@ this.initialize = function()
     
     
     // TODO: xxxpedro why is these here?
-    this.isQuiksMode = FBL.Env.browser.document.compatMode == "BackCompat";
-    this.isIEQuiksMode = this.isIE && this.isQuiksMode;
-    this.isIEStantandMode = this.isIE && !this.isQuiksMode;
+    FBL.isQuiksMode = FBL.Env.browser.document.compatMode == "BackCompat";
+    FBL.isIEQuiksMode = FBL.isIE && FBL.isQuiksMode;
+    FBL.isIEStantandMode = FBL.isIE && !FBL.isQuiksMode;
     
-    this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
+    FBL.noFixedPosition = FBL.isIE6 || FBL.isIEQuiksMode;
     
     
     
@@ -113,7 +113,7 @@ this.initialize = function()
     }
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    
+
     if (FBL.Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make a better synchronization
@@ -196,7 +196,7 @@ this.Env = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Env references
     browser: null,
-    chrome: null,
+    chrome: null
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
