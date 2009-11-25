@@ -99,8 +99,8 @@ FBL.Firebug =
 
     setDefaultReps: function(funcRep, rep)
     {
-        defaultRep = rep;
-        defaultFuncRep = funcRep;
+        FBL.defaultRep = rep;
+        FBL.defaultFuncRep = funcRep;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

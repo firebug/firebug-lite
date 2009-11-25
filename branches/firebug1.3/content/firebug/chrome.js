@@ -992,6 +992,7 @@ var fbVSplitterStyle = null;
 var fbPanel1 = null;
 var fbPanel1Style = null;
 var fbPanel2 = null;
+var fbPanel2Style = null;
 
 var fbConsole = null;
 var fbConsoleStyle = null;
