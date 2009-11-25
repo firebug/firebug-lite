@@ -52,6 +52,10 @@ this.initialize = function()
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize application
+    this.Env.Cache = {
+        Chrome: null
+    };
+    
     var isChromeContext = typeof window.FirebugApplication == "object";
     
     if (!isChromeContext)
@@ -115,11 +119,11 @@ this.initialize = function()
         // TODO: xxxpedro persist - make a better synchronization
         if (isChromeContext)
         {
-            FBL.FirebugChrome.clone(FBL.Env.FirebugChrome);
+            FBL.Env.Cache.Chrome.clone(FBL.Env.FirebugChrome);
         }
         else
         {
-            FBL.Env.FirebugChrome = FBL.FirebugChrome;
+            FBL.Env.FirebugChrome = FBL.Env.Cache.Chrome;
             FBL.Env.traceMessageQueue = FBTrace.messageQueue;
         }
     }
@@ -167,7 +171,7 @@ var onDocumentLoad = function onDocumentLoad()
     // main document loaded
     else
     {
-        FBL.FirebugChrome.create();
+        FBL.Env.Cache.Chrome.create();
     }    
 };
 
@@ -192,7 +196,7 @@ this.Env = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Env references
     browser: null,
-    chrome: null
+    chrome: null,
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

@@ -247,7 +247,7 @@ Firebug.Inspector =
         var scrollPosition = Firebug.browser.getWindowScrollPosition();
         
         // element may be occluded by the chrome, when in frame mode
-        var offsetHeight = Firebug.chrome.type == "frame" ? FirebugChrome.height : 0;
+        var offsetHeight = Firebug.chrome.type == "frame" ? Env.Cache.Chrome.height : 0;
         
         // if element box is not inside the viewport, don't draw the box model
         if (box.top > scrollPosition.top + windowSize.height - offsetHeight ||

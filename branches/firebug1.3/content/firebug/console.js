@@ -183,8 +183,8 @@ Firebug.Console = extend(ConsoleModule,
 
     flush: function()
     {
-        var queue = FirebugChrome.consoleMessageQueue;
-        FirebugChrome.consoleMessageQueue = [];
+        var queue = Env.Cache.Chrome.consoleMessageQueue;
+        Env.Cache.Chrome.consoleMessageQueue = [];
         
         for (var i = 0; i < queue.length; ++i)
             this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
@@ -272,7 +272,7 @@ Firebug.Console = extend(ConsoleModule,
             this.writeMessage(message, className, handler);
         else
         {
-            FirebugChrome.consoleMessageQueue.push([message, className, handler]);
+            Env.Cache.Chrome.consoleMessageQueue.push([message, className, handler]);
         }
         
         return this.LOG_COMMAND;
@@ -390,7 +390,6 @@ FBL.onError = function(msg, href, lineNo)
     
     Firebug.Console.logRow(html, "error");
 };
-
 
 // ************************************************************************************************
 // Register console namespace

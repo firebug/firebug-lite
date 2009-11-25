@@ -47,7 +47,7 @@ FBL.Firebug =
         
         Firebug.Inspector.create();
         
-        FirebugChrome.initialize();
+        Env.Cache.Chrome.initialize();
         
         dispatch(modules, "initialize", []);
     },
@@ -798,7 +798,7 @@ Firebug.PanelBar =
             }
             
             if (!panel.parentPanel)
-                FirebugChrome.selectedPanel = panelName;
+                Env.Cache.Chrome.selectedPanel = panelName;
             
             this.selectedPanel = panel;
             
