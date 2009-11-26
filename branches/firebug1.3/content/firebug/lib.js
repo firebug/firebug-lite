@@ -56,7 +56,7 @@ this.initialize = function()
         Chrome: null
     };
     
-    var isChromeContext = typeof window.FirebugApplication == "object";
+    var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
     
     if (!isChromeContext)
     {
@@ -68,7 +68,7 @@ this.initialize = function()
     if (isChromeContext) // persistent application
     {
         // TODO: xxxpedro persist - make a better synchronization
-        FBL.Env = window.FirebugApplication;
+        FBL.Env = window.Firebug.SharedEnv;
         FBL.Env.isChromeContext = true;
         FBTrace.messageQueue = FBL.Env.traceMessageQueue;
     }
@@ -135,8 +135,8 @@ var waitForDocument = function waitForDocument()
 {
     // document.body not available in XML+XSL documents in Firefox
     var doc = FBL.Env.browser.document;
-    var body = null;
-    if (body = doc.getElementsByTagName("body")[0])
+    var body = doc.getElementsByTagName("body")[0];
+    if (body)
     {
         calculatePixelsPerInch(doc, body);
         onDocumentLoad();
@@ -155,17 +155,12 @@ var onDocumentLoad = function onDocumentLoad()
     // persistent application - chrome document loaded
     if (FBL.Env.isPersistentMode && FBL.Env.isChromeContext)
     {
-        //FBL.Firebug.Inspector.create();
         FBL.Firebug.initialize();
         
         if (!FBL.Env.isDevelopmentMode)
         {
-            window.FirebugApplication.destroy();
-        
-            if (FBL.isIE)
-                window.FirebugApplication = null;
-            else
-                delete window.FirebugApplication;
+            window.Firebug.SharedEnv.destroy();
+            delete window.Firebug.SharedEnv;
         }
     }
     // main document loaded

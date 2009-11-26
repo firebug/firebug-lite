@@ -213,7 +213,9 @@ var onChromeLoad = function onChromeLoad(chrome)
         // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
         Env._lastChromeCache = ChromeCache;
         Env._lastChromeCache.chromeMap = FBL.chromeMap;
-        chrome.window.FirebugApplication = Env;
+        
+        chrome.window.Firebug = FBL.Firebug;
+        chrome.window.Firebug.SharedEnv = Env;
     
         if (Env.isDevelopmentMode)
         {

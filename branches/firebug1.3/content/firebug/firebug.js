@@ -175,9 +175,11 @@ FBL.Firebug =
 
 };
 
+/*
 if (!Env.isPersistentMode || 
      Env.isPersistentMode && Env.isChromeContext || 
      Env.isDevelopmentMode )
+    /**/
         Env.browser.window.Firebug = FBL.Firebug; 
 
 
