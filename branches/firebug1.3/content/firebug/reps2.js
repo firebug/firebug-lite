@@ -524,9 +524,11 @@ this.Arr = domplate(Firebug.Rep,
                 return true;
             else if (isFinite(obj.length) && typeof obj.callee === 'function') // arguments
                 return true;
-            else if (obj instanceof HTMLCollection)
+            //else if (obj instanceof HTMLCollection)
+            else if (instanceOf(obj, "HTMLCollection"))
                 return true;
-            else if (obj instanceof NodeList)
+            //else if (obj instanceof NodeList)
+            else if (instanceOf(obj, "NodeList"))
                 return true;
             else
                 return false;
@@ -926,7 +928,8 @@ this.StyleSheet = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
-        return object instanceof CSSStyleSheet;
+        //return object instanceof CSSStyleSheet;
+        return instanceOf(object, "CSSStyleSheet");
     },
 
     browseObject: function(styleSheet, context)
@@ -1050,7 +1053,8 @@ this.Event = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
-        return object instanceof Event || object instanceof EventCopy;
+        //return object instanceof Event || object instanceof EventCopy;
+        return instanceOf(object, "Event") || instanceOf(object, "EventCopy");
     },
 
     getTitle: function(event, context)
