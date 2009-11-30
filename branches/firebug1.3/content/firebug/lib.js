@@ -51,42 +51,46 @@ var FBTrace = null;
 this.initialize = function()
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // initialize application
+    // initialize environment
+
+    // check if the actual window is a persisted chrome context
     var isChromeContext = typeof window.FirebugApplication == "object";
     
     if (!isChromeContext)
     {
+        // find the URL location of the loaded application
         findLocation();
     }
     
+    // point the FBTrace object to the local variable
     FBTrace = FBL.FBTrace;
     
-    if (isChromeContext) // persistent application
+    // chrome context of the persistent application
+    if (isChromeContext)
     {
         // TODO: xxxpedro persist - make a better synchronization
         FBL.Env = window.FirebugApplication;
         FBL.Env.isChromeContext = true;
         FBTrace.messageQueue = FBL.Env.traceMessageQueue;
     }
-    else // non-persistent application
+    // non-persistent application
+    else
     {
-        // TODO: get preferences here...
         FBL.NS = document.documentElement.namespaceURI;
         FBL.Env.browser = window;
         FBL.Env.destroy = destroyApplication;
+
+        // TODO: get preferences here...
     }
     
-    
-    
-    // TODO: xxxpedro why is these here?
+    // check browser compatibilities
     this.isQuiksMode = FBL.Env.browser.document.compatMode == "BackCompat";
     this.isIEQuiksMode = this.isIE && this.isQuiksMode;
     this.isIEStantandMode = this.isIE && !this.isQuiksMode;
     
     this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
     
-    
-    
+    // after creating/synchronizing the environment, initialize the FBTrace module
     if (FBL.Env.isTraceMode) FBTrace.initialize();
     
     if (FBTrace.DBG_INITIALIZE && isChromeContext) FBTrace.sysout("FBL.initialize - persistent application", "initialize chrome context");
@@ -109,7 +113,8 @@ this.initialize = function()
     }
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    
+    // finish environment initialization
+
     if (FBL.Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make a better synchronization
@@ -124,6 +129,7 @@ this.initialize = function()
         }
     }
     
+    // wait document load
     waitForDocument();
 };
 
@@ -131,8 +137,9 @@ var waitForDocument = function waitForDocument()
 {
     // document.body not available in XML+XSL documents in Firefox
     var doc = FBL.Env.browser.document;
-    var body = null;
-    if (body = doc.getElementsByTagName("body")[0])
+    var body = doc.getElementsByTagName("body")[0];
+    
+    if (body)
     {
         calculatePixelsPerInch(doc, body);
         onDocumentLoad();
@@ -145,15 +152,18 @@ var onDocumentLoad = function onDocumentLoad()
 {
     if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "document loaded");
     
+    // fix IE6 problem with cache of background images, causing a lot of flickering 
     if (FBL.isIE6)
         fixIE6BackgroundImageCache();
         
-    // persistent application - chrome document loaded
+    // chrome context of the persistent application
     if (FBL.Env.isPersistentMode && FBL.Env.isChromeContext)
     {
-        //FBL.Firebug.Inspector.create();
+        // finally, start the application in the chrome context
         FBL.Firebug.initialize();
         
+        // if is not development mode, remove the shared environment cache object
+        // used to synchronize the both persistent contexts
         if (!FBL.Env.isDevelopmentMode)
         {
             window.FirebugApplication.destroy();
@@ -164,7 +174,7 @@ var onDocumentLoad = function onDocumentLoad()
                 delete window.FirebugApplication;
         }
     }
-    // main document loaded
+    // non-persistent application
     else
     {
         FBL.FirebugChrome.create();
