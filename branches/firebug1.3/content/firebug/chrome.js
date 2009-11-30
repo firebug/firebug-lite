@@ -4,7 +4,7 @@ FBL.ns(function() { with (FBL) {
 
 FBL.chromeMap = {};
 
-var ChromeCache = FBL.Env.Cache.Chrome = 
+FBL.FirebugChrome = 
 {
     commandLineVisible: false,
     sidePanelVisible: false,
@@ -21,14 +21,14 @@ var ChromeCache = FBL.Env.Cache.Chrome =
     
     create: function()
     {
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Env.Cache.Chrome.create", "creating chrome window");
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.create", "creating chrome window");
         
         createChrome();
     },
     
     initialize: function()
     {
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Env.Cache.Chrome.initialize", "initializing chrome window");
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.initialize", "initializing chrome window");
         
         if (Env.chrome.type == "frame")
             ChromeMini.create(Env.chrome);
@@ -44,16 +44,16 @@ var ChromeCache = FBL.Env.Cache.Chrome =
         if (Env.isPersistentMode && chrome.type == "popup")
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            chromeMap.frame = ChromeCache.chromeMap.frame;
-            ChromeCache.chromeMap.popup = chrome;
+            chromeMap.frame = FirebugChrome.chromeMap.frame;
+            FirebugChrome.chromeMap.popup = chrome;
             
             var frame = chromeMap.frame;
             if (frame)
                 frame.close();
             
             // initial UI state
-            ChromeCache.commandLineVisible = false;
-            ChromeCache.sidePanelVisible = false;
+            FirebugChrome.commandLineVisible = false;
+            FirebugChrome.sidePanelVisible = false;
 
             chrome.reattach(chromeMap.frame, chrome);
         }
@@ -130,7 +130,7 @@ var createChrome = function(options)
     else
     {
         // Create the Chrome Popup
-        var height = ChromeCache.height || options.height;
+        var height = FirebugChrome.height || options.height;
         var options = [
                 "true,top=",
                 Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
@@ -211,11 +211,9 @@ var onChromeLoad = function onChromeLoad(chrome)
     if (Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
-        Env._lastChromeCache = ChromeCache;
-        Env._lastChromeCache.chromeMap = FBL.chromeMap;
-        
-        chrome.window.Firebug = FBL.Firebug;
-        chrome.window.Firebug.SharedEnv = Env;
+        Env.FirebugChrome = FirebugChrome;
+        Env.FirebugChrome.chromeMap = FBL.chromeMap;
+        chrome.window.FirebugApplication = Env;
     
         if (Env.isDevelopmentMode)
         {
@@ -243,8 +241,8 @@ var onChromeLoad = function onChromeLoad(chrome)
             var frame = chromeMap.frame;
             
             // initial UI state
-            ChromeCache.commandLineVisible = false;
-            ChromeCache.sidePanelVisible = false;
+            FirebugChrome.commandLineVisible = false;
+            FirebugChrome.sidePanelVisible = false;
             
             var newChrome = new Chrome(chrome);
             var oldChrome = chromeMap.frame;
@@ -263,7 +261,7 @@ var onChromeLoad = function onChromeLoad(chrome)
 
 var getChromeTemplate = function(isPopup)
 {
-    var tpl = ChromeCache.injected; 
+    var tpl = FirebugChrome.injected; 
     var r = [], i = -1;
     
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
@@ -430,7 +428,7 @@ var ChromeBase = extend(ChromeBase, {
         // TODO: BUG IE7
         var self = this;
         setTimeout(function(){
-            self.selectPanel(ChromeCache.selectedPanel);
+            self.selectPanel(FirebugChrome.selectedPanel);
         },0);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -528,7 +526,7 @@ var ChromeBase = extend(ChromeBase, {
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
             
-            var shouldOpen = forceOpen || !ChromeCache.isOpen;
+            var shouldOpen = forceOpen || !FirebugChrome.isOpen;
             
             if(shouldOpen)
                this.open();
@@ -584,14 +582,14 @@ var ChromeBase = extend(ChromeBase, {
         var size = Firebug.chrome.getWindowSize();
         
         // Height related values
-        var commandLineHeight = ChromeCache.commandLineVisible ? fbCommandLine.offsetHeight : 0,
+        var commandLineHeight = FirebugChrome.commandLineVisible ? fbCommandLine.offsetHeight : 0,
             y = Math.max(size.height /* chrome height */, topHeight),
             
             height = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0)+ "px",
             
             
             // Width related values
-            sideWidth = ChromeCache.sidePanelVisible ? ChromeCache.sidePanelWidth : 0,
+            sideWidth = FirebugChrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0,
             
             width = Math.max(size.width /* chrome width */ - sideWidth, 0) + "px";
         
@@ -619,7 +617,7 @@ var ChromeBase = extend(ChromeBase, {
         fbPanel1Style.width = width;
         
         // SidePanel rendering
-        if (ChromeCache.sidePanelVisible)
+        if (FirebugChrome.sidePanelVisible)
         {
             sideWidth = Math.max(sideWidth - 6, 0) + "px";
             
@@ -675,7 +673,7 @@ var ChromeFrameBase = extend(ChromeContext,
             this.open();
         else
         {
-            ChromeCache.isOpen = true;
+            FirebugChrome.isOpen = true;
             this.close();
         }
         
@@ -724,15 +722,15 @@ var ChromeFrameBase = extend(ChromeContext,
         var frame = chromeMap.frame;
         
         // last UI state
-        ChromeCache.commandLineVisible = this.commandLineVisible;
-        ChromeCache.sidePanelVisible = this.sidePanelVisible;
+        FBL.FirebugChrome.commandLineVisible = this.commandLineVisible;
+        FBL.FirebugChrome.sidePanelVisible = this.sidePanelVisible;
         
         ChromeBase.reattach(chromeMap.popup, this);
     },
     
     open: function()
     {
-        if (!ChromeCache.isOpen)
+        if (!FirebugChrome.isOpen)
         {
             var node = this.node;
             node.style.visibility = "hidden"; // Avoid flickering
@@ -745,7 +743,7 @@ var ChromeFrameBase = extend(ChromeContext,
             var main = $("fbChrome");
             main.style.display = "block";
             
-            ChromeCache.isOpen = true;
+            FirebugChrome.isOpen = true;
             
             var self = this;
             setTimeout(function(){
@@ -764,7 +762,7 @@ var ChromeFrameBase = extend(ChromeContext,
     
     close: function()
     {
-        if (ChromeCache.isOpen)
+        if (FirebugChrome.isOpen)
         {
             var node = this.node;
             node.style.visibility = "hidden"; // Avoid flickering
@@ -779,7 +777,7 @@ var ChromeFrameBase = extend(ChromeContext,
             var main = $("fbChrome", chromeMap.frame.document);
             main.style.display = "none";
                     
-            ChromeCache.isOpen = false;
+            FirebugChrome.isOpen = false;
             
             ChromeMini.initialize();
             
@@ -871,7 +869,7 @@ var ChromeMini = extend(Firebug.Controller,
     shutdown: function()
     {
         var node = this.node;
-        node.style.height = ChromeCache.height + "px";
+        node.style.height = FirebugChrome.height + "px";
         node.style.width = "100%";
         node.style.left = 0;
         node.style.right = "";
@@ -933,7 +931,7 @@ var ChromePopupBase = extend(ChromeContext, {
         if (Env.isPersistentMode)
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Env._lastChromeCache.selectedElement = ChromeCache.selectedElement;
+            Env.FirebugChrome.selectedElement = FirebugChrome.selectedElement;
         }
         
         frame.reattach(this, frame);
@@ -943,8 +941,8 @@ var ChromePopupBase = extend(ChromeContext, {
         if (Env.isPersistentMode)
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Env._lastChromeCache.chromeMap = ChromeCache.chromeMap;
-            Env._lastChromeCache.chromeMap.popup = null;
+            Env.FirebugChrome.chromeMap = FirebugChrome.chromeMap;
+            Env.FirebugChrome.chromeMap.popup = null;
         }
         chromeMap.popup = null;
         
@@ -1017,26 +1015,26 @@ var chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75;
 
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
-    var last = ChromeCache.commandLineVisible;
-    Firebug.chrome.commandLineVisible = ChromeCache.commandLineVisible = 
-        typeof visibility == "boolean" ? visibility : !ChromeCache.commandLineVisible;
+    var last = FirebugChrome.commandLineVisible;
+    Firebug.chrome.commandLineVisible = FirebugChrome.commandLineVisible = 
+        typeof visibility == "boolean" ? visibility : !FirebugChrome.commandLineVisible;
     
-    if (ChromeCache.commandLineVisible != last)
+    if (FirebugChrome.commandLineVisible != last)
     {
-        fbBottom.className = ChromeCache.commandLineVisible ? "" : "hide";
+        fbBottom.className = FirebugChrome.commandLineVisible ? "" : "hide";
     }
 };
 
 var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 {
-    var last = ChromeCache.sidePanelVisible;
-    Firebug.chrome.sidePanelVisible = ChromeCache.sidePanelVisible = 
-        typeof visibility == "boolean" ? visibility : !ChromeCache.sidePanelVisible;
+    var last = FirebugChrome.sidePanelVisible;
+    Firebug.chrome.sidePanelVisible = FirebugChrome.sidePanelVisible = 
+        typeof visibility == "boolean" ? visibility : !FirebugChrome.sidePanelVisible;
     
-    if (ChromeCache.sidePanelVisible != last)
+    if (FirebugChrome.sidePanelVisible != last)
     {
-        fbPanelBox2.className = ChromeCache.sidePanelVisible ? "" : "hide"; 
-        fbPanelBar2Box.className = ChromeCache.sidePanelVisible ? "" : "hide";
+        fbPanelBox2.className = FirebugChrome.sidePanelVisible ? "" : "hide"; 
+        fbPanelBar2Box.className = FirebugChrome.sidePanelVisible ? "" : "hide";
     }
 };
 
@@ -1146,7 +1144,7 @@ var handleHSplitterMouseMove = function()
     var scrollSize = Firebug.browser.getWindowScrollSize();
     
     // compute chrome fixed size (top bar and command line)
-    var commandLineHeight = ChromeCache.commandLineVisible ? fbCommandLine.offsetHeight : 0;
+    var commandLineHeight = FirebugChrome.commandLineVisible ? fbCommandLine.offsetHeight : 0;
     var fixedHeight = topHeight + commandLineHeight;
     var chromeNode = Firebug.chrome.node;
     
@@ -1159,7 +1157,7 @@ var handleHSplitterMouseMove = function()
     var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
         chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
 
-    ChromeCache.height = chromeHeight;
+    FirebugChrome.height = chromeHeight;
     chromeNode.style.height = chromeHeight + "px";
     
     if (noFixedPosition)
@@ -1217,7 +1215,7 @@ var onVSplitterMouseMove = function onVSplitterMouseMove(event)
             var size = Firebug.chrome.getWindowSize();
             var x = Math.max(size.width - clientX + 3, 6);
             
-            ChromeCache.sidePanelWidth = x;
+            FirebugChrome.sidePanelWidth = x;
             Firebug.chrome.draw();
         }
         
