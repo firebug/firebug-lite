@@ -315,10 +315,10 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
     {
         // Sometimes we get exceptions just from trying to iterate the members
         // of certain objects, like StorageList, but don't let that gum up the works
-        //throw exc;
-        //if (FBTrace.DBG_ERRORS && FBTrace.DBG_DOM)
-        //    FBTrace.sysout("dom.getMembers FAILS: ", exc);
         throw exc;
+        if (FBTrace.DBG_ERRORS && FBTrace.DBG_DOM)
+            FBTrace.sysout("dom.getMembers FAILS: ", exc);
+        //throw exc;
     }
 
     function sortName(a, b) { return a.name > b.name ? 1 : -1; }
@@ -436,7 +436,7 @@ FBL.ErrorCopy = function(message)
     this.message = message;
 };
 
-function addMember(type, props, name, value, level, order)
+var addMember = function addMember(type, props, name, value, level, order)
 {
     var rep = Firebug.getRep(value);    // do this first in case a call to instanceof reveals contents
     var tag = rep.shortTag ? rep.shortTag : rep.tag;
@@ -588,7 +588,7 @@ DOMPanel.prototype = extend(Firebug.Panel,
         
         var row = $$("tr", target)[0];
         
-        var value = window;
+        var value = Firebug.browser.window;
         var members = getMembers(value, 0);
         expandMembers(members, toggles, 0, 0);
 
@@ -687,7 +687,7 @@ DOMPanel2.prototype = extend(Firebug.Panel,
         
         var row = $$("tr", target)[0];
         
-        var value = window;
+        var value = Firebug.browser.window;
         var members = getMembers(value, 0);
         expandMembers(members, toggles, 0, 0);
 

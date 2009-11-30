@@ -54,7 +54,7 @@ this.initialize = function()
     // initialize environment
 
     // check if the actual window is a persisted chrome context
-    var isChromeContext = typeof window.FirebugApplication == "object";
+    var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
     
     if (!isChromeContext)
     {
@@ -69,7 +69,7 @@ this.initialize = function()
     if (isChromeContext)
     {
         // TODO: xxxpedro persist - make a better synchronization
-        FBL.Env = window.FirebugApplication;
+        FBL.Env = window.Firebug.SharedEnv;
         FBL.Env.isChromeContext = true;
         FBTrace.messageQueue = FBL.Env.traceMessageQueue;
     }
@@ -166,12 +166,12 @@ var onDocumentLoad = function onDocumentLoad()
         // used to synchronize the both persistent contexts
         if (!FBL.Env.isDevelopmentMode)
         {
-            window.FirebugApplication.destroy();
+            window.Firebug.SharedEnv.destroy();
         
             if (FBL.isIE)
-                window.FirebugApplication = null;
+                window.Firebug.SharedEnv = null;
             else
-                delete window.FirebugApplication;
+                delete window.Firebug.SharedEnv;
         }
     }
     // non-persistent application
