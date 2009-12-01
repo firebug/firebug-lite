@@ -17,6 +17,8 @@ Firebug.HTML = extend(Firebug.Module,
         {
             if (node.nodeType == 1)
             {
+                if (node.firebugIgnore) continue;
+                
                 var uid = node[cacheID];
                 var child = node.childNodes;
                 var childLength = child.length;

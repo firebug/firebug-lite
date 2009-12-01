@@ -373,11 +373,12 @@ var createInspectorFrame = function createInspectorFrame()
 {
     fbInspectFrame = createGlobalElement("div");
     fbInspectFrame.id = "fbInspectFrame";
+    fbInspectFrame.firebugIgnore = true;
     fbInspectFrame.style.cssText = inspectFrameStyle;
     Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectFrame);
 };
 
-var destroyInspectorFrame = function createInspectorFrame()
+var destroyInspectorFrame = function destroyInspectorFrame()
 {
     Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
 };
@@ -388,6 +389,7 @@ var createOutlineInspector = function createOutlineInspector()
     {
         var el = outlineElements[name] = createGlobalElement("div");
         el.id = name;
+        el.firebugIgnore = true;
         el.style.cssText = inspectStyle + outlineStyle[outline[name]];
         offlineFragment.appendChild(el);
     }
@@ -406,6 +408,7 @@ var createBoxModelInspector = function createBoxModelInspector()
 {
     boxModel = createGlobalElement("div");
     boxModel.id = "fbBoxModel";
+    boxModel.firebugIgnore = true;
     boxModelStyle = boxModel.style;
     boxModelStyle.cssText = inspectModelStyle;
     

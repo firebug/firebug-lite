@@ -98,6 +98,7 @@ var createChrome = function(options)
         
         node.setAttribute("id", options.id);
         node.setAttribute("frameBorder", "0");
+        node.firebugIgnore = true;
         node.style.border = "0";
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
