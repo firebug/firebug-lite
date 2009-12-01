@@ -1557,6 +1557,9 @@ this.instanceOf = function(object, className)
     if (!object || typeof object != "object")
         return false;
     
+    if(className in window)
+        return object instanceof window[className];
+    
     var cache = instanceCheckMap[className];
     if (!cache)
         return false;
@@ -1573,7 +1576,7 @@ this.instanceOf = function(object, className)
             
             if( n == "property" && !(value in object) ||
                 n == "method" && !this.isFunction(object[value]) ||
-                n == "value" && (""+object[name]).toLowerCase() != ""+value )
+                n == "value" && (""+object[name]).toLowerCase() != (""+value).toLowerCase() )
                     return false;
         }
     }
