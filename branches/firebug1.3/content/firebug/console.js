@@ -8,6 +8,26 @@ FBL.ns(function() { with (FBL) {
 var ConsoleAPI = 
 {
     firebuglite: Firebug.version,
+    
+    xxx: function(o)
+    {
+        var rep = Firebug.getRep(o);
+        var className = "";
+        
+        var panel = Firebug.DOM.getPanel();
+        var toggles = {};
+        
+        var row = Firebug.Console.getPanel().contentNode.ownerDocument.createElement("div");
+        var target = row;
+        var object = o;
+        
+        row.className = "logRow" + (className ? " logRow-"+className : "");
+        //row.innerHTML = message.join("");
+        
+        rep.tag.replace({domPanel: panel, toggles: toggles, object: object}, target);
+        
+        Firebug.Console.appendRow(row);
+    },
 
     log: function()
     {
