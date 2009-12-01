@@ -233,7 +233,7 @@ this.Func = domplate(Firebug.Rep,
 
     supportsObject: function(object, type)
     {
-        return type == "function";
+        return isFunction(object);
     },
 
     inspectObject: function(fn, context)
@@ -385,9 +385,9 @@ this.Obj = domplate(Firebug.Rep,
                     continue;
                 }
 
-                var t = typeof(val);
+                var t = typeof val;
                 if (t == "boolean" || t == "number" || (t == "string" && val)
-                    || (t == "object" && val && val.toString))
+                    || (t == "object" && !isFunction(val) && val && val.toString))
                 {
                     var title = (t == "object")
                         ? Firebug.getRep(val).getTitle(val)
@@ -515,19 +515,14 @@ this.Arr = domplate(Firebug.Rep,
         try {
             if (!obj)
                 return false;
-            //TODO: xxxpedro
-            //else if (obj instanceof Ci.nsIDOMHistory) // do this first to avoid security 1000 errors?
-            //    return false;
-            else if (isIE && typeof obj == "object" && isFinite(obj.length) && obj.nodeType != 8)
+            else if (isIE && !isFunction(obj) && typeof obj == "object" && isFinite(obj.length) && obj.nodeType != 8)
                 return true;
-            else if (isFinite(obj.length) && typeof obj.splice === 'function')
+            else if (isFinite(obj.length) && isFunction(obj.splice))
                 return true;
-            else if (isFinite(obj.length) && typeof obj.callee === 'function') // arguments
+            else if (isFinite(obj.length) && isFunction(obj.callee)) // arguments
                 return true;
-            //else if (obj instanceof HTMLCollection)
             else if (instanceOf(obj, "HTMLCollection"))
                 return true;
-            //else if (obj instanceof NodeList)
             else if (instanceOf(obj, "NodeList"))
                 return true;
             else
@@ -647,16 +642,12 @@ this.Element = domplate(Firebug.Rep,
 
      getSelectorId: function(elt)
      {
-         return elt.id ? ("#" + elt.id) : "";
+         return elt.id ? "#" + elt.id : "";
      },
 
      getSelectorClass: function(elt)
      {
-         // TODO: xxxpedro
-         return "";
-         return elt.getAttribute("class")
-             ? ("." + elt.getAttribute("class").split(" ")[0])
-             : "";
+         return elt.className ? "." + elt.className.split(" ")[0] : "";
      },
 
      getValue: function(elt)
