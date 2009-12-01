@@ -32,7 +32,7 @@ FBL.FirebugChrome =
         if (Env.chrome.type == "frame")
             ChromeMini.create(Env.chrome);
             
-        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
+        if (Firebug.browser.document.documentElement.getAttribute("debug") == "true")
             Env.openAtStartup = true;
 
         var chrome = Firebug.chrome = new Chrome(Env.chrome);
@@ -288,6 +288,7 @@ var Chrome = function Chrome(chrome)
     
     FirebugChrome.chromeMap[type] = this;
     Firebug.chrome = this;
+    Env.chrome = chrome.window;
     
     this.create();
     
@@ -544,6 +545,8 @@ var ChromeBase = extend(ChromeBase, {
     
     reattach: function(oldChrome, newChrome)
     {
+        Firebug.browser.window.Firebug = Firebug;
+        
         // chrome synchronization
         var newPanelMap = newChrome.panelMap;
         var oldPanelMap = oldChrome.panelMap;
@@ -1052,7 +1055,7 @@ var onHSplitterMouseDown = function onHSplitterMouseDown(event)
     addGlobalEvent("mouseup", onHSplitterMouseUp);
     
     if (isIE)
-        addEvent(Env.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
+        addEvent(Firebug.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
     
     fbHSplitter.className = "fbOnMovingHSplitter";
     
@@ -1156,7 +1159,7 @@ var onHSplitterMouseUp = function onHSplitterMouseUp(event)
     removeGlobalEvent("mouseup", onHSplitterMouseUp);
     
     if (isIE)
-        removeEvent(Env.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
+        removeEvent(Firebug.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
     
     fbHSplitter.className = "";
     

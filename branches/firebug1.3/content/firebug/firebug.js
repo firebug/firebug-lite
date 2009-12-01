@@ -21,7 +21,7 @@ var reps = [];
 // ************************************************************************************************
 // Firebug
 
-window.Firebug = Env.browser.window.Firebug = FBL.Firebug =  
+window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a3",
