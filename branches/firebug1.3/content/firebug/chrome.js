@@ -560,7 +560,14 @@ var ChromeBase = extend(ChromeBase, {
         if (newChrome.type == "popup")
         {
             newChrome.initialize();
-            dispatch(Firebug.modules, "initialize", []);
+            //dispatch(Firebug.modules, "initialize", []);
+        }
+        else
+        {
+            // TODO: xxxpedro only needed in persistent
+            // should use FirebugChrome.clone, but popup FBChrome
+            // isn't acessible 
+            FirebugChrome.selectedPanelName = oldChrome.selectedPanel.name;
         }
         
         dispatch(newPanelMap, "reattach", [oldChrome, newChrome]);
@@ -914,7 +921,7 @@ var ChromePopupBase = extend(ChromeContext, {
         var frame = FirebugChrome.chromeMap.frame;
         
         dispatch(frame.panelMap, "detach", [this, frame]);
-            
+        
         frame.reattach(this, frame);
         
         ChromeBase.destroy.apply(this);

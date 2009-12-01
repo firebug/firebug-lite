@@ -910,18 +910,18 @@ this.isShift = function(event)
 
 this.addEvent = function(object, name, handler)
 {
-    if (document.all)
-        object.attachEvent("on"+name, handler);
-    else
+    if (object.addEventListener)
         object.addEventListener(name, handler, false);
+    else
+        object.attachEvent("on"+name, handler);
 };
 
 this.removeEvent = function(object, name, handler)
 {
-    if (document.all)
-        object.detachEvent("on"+name, handler);
-    else
+    if (object.removeEventListener)
         object.removeEventListener(name, handler, false);
+    else
+        object.detachEvent("on"+name, handler);
 };
 
 this.cancelEvent = function(e, preventDefault)
@@ -936,30 +936,29 @@ this.cancelEvent = function(e, preventDefault)
                     e.returnValue = false;
     }
     
-    if (document.all)
-        e.cancelBubble = true;
-    else
+    if (e.stopPropagation)
         e.stopPropagation();
-                
+    else
+        e.cancelBubble = true;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 this.addGlobalEvent = function(name, handler)
 {
-    var doc = FBL.Firebug.browser.document;
-    var frames = FBL.Firebug.browser.window.frames;
+    var doc = this.Firebug.browser.document;
+    var frames = this.Firebug.browser.window.frames;
     
-    FBL.addEvent(doc, name, handler);
+    this.addEvent(doc, name, handler);
     
-    if (FBL.Firebug.chrome.type == "popup")
-        FBL.addEvent(FBL.Firebug.chrome.document, name, handler);
+    if (this.Firebug.chrome.type == "popup")
+        this.addEvent(this.Firebug.chrome.document, name, handler);
   
     for (var i = 0, frame; frame = frames[i]; i++)
     {
         try
         {
-            FBL.addEvent(frame.document, name, handler);
+            this.addEvent(frame.document, name, handler);
         }
         catch(E)
         {
@@ -970,19 +969,19 @@ this.addGlobalEvent = function(name, handler)
 
 this.removeGlobalEvent = function(name, handler)
 {
-    var doc = FBL.Firebug.browser.document;
-    var frames = FBL.Firebug.browser.window.frames;
+    var doc = this.Firebug.browser.document;
+    var frames = this.Firebug.browser.window.frames;
     
-    FBL.removeEvent(doc, name, handler);
+    this.removeEvent(doc, name, handler);
     
-    if (FBL.Firebug.chrome.type == "popup")
-        FBL.removeEvent(FBL.Firebug.chrome.document, name, handler);
+    if (this.Firebug.chrome.type == "popup")
+        this.removeEvent(this.Firebug.chrome.document, name, handler);
   
     for (var i = 0, frame; frame = frames[i]; i++)
     {
         try
         {
-            FBL.removeEvent(frame.document, name, handler);
+            this.removeEvent(frame.document, name, handler);
         }
         catch(E)
         {
