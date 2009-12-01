@@ -1045,48 +1045,84 @@ PanelOptions.prototype = extend(Firebug.Controller, {
 
 
 // ************************************************************************************************
-// ************************************************************************************************
-// ************************************************************************************************
 
-
-/*
-
-From Honza Tutorial
-----------------------------------------------------
-FBL.ns(function() { with (FBL) {
-var panelName = "HelloWorld";
-Firebug.HelloWorldModel = extend(Firebug.Module,
+Firebug.Rep = domplate(
 {
-    showPanel: function(browser, panel) {
-        var isHwPanel = panel && panel.name == panelName;
-        var hwButtons = browser.chrome.$("fbHelloWorldButtons");
-        collapse(hwButtons, !isHwPanel);
+    className: "",
+    inspectable: true,
+
+    supportsObject: function(object, type)
+    {
+        return false;
     },
-    onMyButton: function(context) {
-        alert("Hello World!");
+
+    inspectObject: function(object, context)
+    {
+        Firebug.chrome.select(object);
+    },
+
+    browseObject: function(object, context)
+    {
+    },
+
+    persistObject: function(object, context)
+    {
+    },
+
+    getRealObject: function(object, context)
+    {
+        return object;
+    },
+
+    getTitle: function(object)
+    {
+        var label = safeToString(object);
+
+        var re = /\[object (.*?)\]/;
+        var m = re.exec(label);
+        return m ? m[1] : label;
+    },
+
+    getTooltip: function(object)
+    {
+        return null;
+    },
+
+    getContextMenuItems: function(object, target, context)
+    {
+        return [];
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Convenience for domplates
+
+    STR: function(name)
+    {
+        return $STR(name);
+    },
+
+    cropString: function(text)
+    {
+        return cropString(text);
+    },
+
+    cropMultipleLines: function(text, limit)
+    {
+        return cropMultipleLines(text, limit);
+    },
+
+    toLowerCase: function(text)
+    {
+        return text ? text.toLowerCase() : text;
+    },
+
+    plural: function(n)
+    {
+        return n == 1 ? "" : "s";
     }
 });
 
-function HelloWorldPanel() {}
-HelloWorldPanel.prototype = extend(Firebug.Panel,
-{
-    name: panelName,
-    title: "Hello World!",
-
-    initialize: function() {
-        Firebug.Panel.initialize.apply(this, arguments);
-    }
-});
-
-Firebug.registerModule(Firebug.HelloWorldModel);
-Firebug.registerPanel(HelloWorldPanel);
-
-}});
-----------------------------------------------------
-
-/**/  
-  
-
+// ************************************************************************************************
 
 
 // ************************************************************************************************

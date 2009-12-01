@@ -59,8 +59,6 @@ var SizerRow =
         TD({width: "70%"})
     );
 
-Firebug.Rep={};  // TODO: xxxpedro
-
 var DirTablePlate = domplate(Firebug.Rep,
 {
     tag:
@@ -355,10 +353,9 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
     {
         var object = this.objectPath[index];
         
-        // TODO:xxxpedro
-        //if (object instanceof Property)
-        //    return object.getObject();
-        //else
+        if (object instanceof Property)
+            return object.getObject();
+        else
             return object;
     },
 
@@ -1244,7 +1241,8 @@ var getWatchRowIndex = function getWatchRowIndex(row)
 
 var getRowName = function getRowName(row)
 {
-    return row.firstChild.textContent;
+    var node = row.firstChild;
+    return node.textContent ? node.textContent : node.innerText;
 }
 
 var getRowValue = function getRowValue(row)
