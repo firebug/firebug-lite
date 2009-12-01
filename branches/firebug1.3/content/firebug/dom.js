@@ -254,7 +254,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
             var insecureObject = object;
 
         // IE function prototype is not listed in (for..in)
-        if (isIE && typeof object == "function")
+        if (isIE && isFunction(object))
             addMember("user", userProps, "prototype", object.prototype, level);            
             
         for (var name in insecureObject)  // enumeration is safe
@@ -279,7 +279,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
             {
                 addMember("ordinal", ordinals, name, val, level);
             }
-            else if (typeof(val) == "function")
+            else if (isFunction(val))
             {
                 if (isClassFunction(val))
                     addMember("userClass", userClasses, name, val, level);
@@ -417,7 +417,7 @@ function isClassFunction(fn)
     return false;
 }
 
-function hasProperties(ob)
+var hasProperties = function hasProperties(ob)
 {
     try
     {
@@ -426,7 +426,7 @@ function hasProperties(ob)
     } catch (exc) {}
     
     // IE function prototype is not listed in (for..in)
-    if (typeof ob == "function") return true;
+    if (isFunction(ob)) return true;
     
     return false;
 }
@@ -445,7 +445,7 @@ var addMember = function addMember(type, props, name, value, level, order)
     
     var valueType = typeof(value);
     var hasChildren = hasProperties(value) && !(value instanceof ErrorCopy) &&
-        (valueType == "function" || (valueType == "object" && value != null)
+        (isFunction(value) || (valueType == "object" && value != null)
         || (valueType == "string" && value.length > Firebug.stringCropLength));
 
     props.push({
