@@ -798,7 +798,7 @@ Firebug.PanelBar =
             }
             
             if (!panel.parentPanel)
-                FirebugChrome.selectedPanel = panelName;
+                FirebugChrome.selectedPanelName = panelName;
             
             this.selectedPanel = panel;
             

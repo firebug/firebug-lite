@@ -312,8 +312,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     reattach: function()
     {
         // TODO: panel reattach
-        if(FirebugChrome.selectedElement)
-            Firebug.HTML.selectTreeNode(FirebugChrome.selectedElement);
+        if(FirebugChrome.selectedHTMLElementId)
+            Firebug.HTML.selectTreeNode(FirebugChrome.selectedHTMLElementId);
     }
 });
 

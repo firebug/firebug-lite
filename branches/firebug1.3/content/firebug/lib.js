@@ -53,17 +53,11 @@ this.initialize = function()
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize environment
 
-    // check if the actual window is a persisted chrome context
-    var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
-    
-    if (!isChromeContext)
-    {
-        // find the URL location of the loaded application
-        findLocation();
-    }
-    
     // point the FBTrace object to the local variable
     FBTrace = FBL.FBTrace;
+    
+    // check if the actual window is a persisted chrome context
+    var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
     
     // chrome context of the persistent application
     if (isChromeContext)
@@ -80,6 +74,9 @@ this.initialize = function()
         FBL.Env.browser = window;
         FBL.Env.destroy = destroyApplication;
 
+        // find the URL location of the loaded application
+        findLocation();
+        
         // TODO: get preferences here...
     }
     
