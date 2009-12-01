@@ -167,11 +167,7 @@ var onDocumentLoad = function onDocumentLoad()
         if (!FBL.Env.isDevelopmentMode)
         {
             window.Firebug.SharedEnv.destroy();
-        
-            if (FBL.isIE)
-                window.Firebug.SharedEnv = null;
-            else
-                delete window.Firebug.SharedEnv;
+            delete window.Firebug.SharedEnv;
         }
     }
     // non-persistent application
@@ -588,6 +584,9 @@ this.isWhitespace = function(text)
 
 this.safeToString = function(ob)
 {
+    if (this.isIE)
+        return ob + "";
+    
     try
     {
         if (ob && "toString" in ob && typeof ob.toString == "function")

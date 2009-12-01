@@ -21,7 +21,7 @@ var reps = [];
 // ************************************************************************************************
 // Firebug
 
-FBL.Firebug =  
+window.Firebug = Env.browser.window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a3",
@@ -108,7 +108,7 @@ FBL.Firebug =
 
     getRep: function(object)
     {
-        var type = typeof(object);
+        var type = typeof object;
         if (isIE && isFunction(object))
             type = "function";
         

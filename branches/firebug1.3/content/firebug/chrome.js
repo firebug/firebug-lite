@@ -214,7 +214,8 @@ var onChromeLoad = function onChromeLoad(chrome)
         Env.FirebugChrome = FirebugChrome;
         Env.FirebugChrome.chromeMap = FBL.chromeMap;
         
-        chrome.window.Firebug = {SharedEnv: Env};
+        chrome.window.Firebug = chrome.window.Firebug || {};
+        chrome.window.Firebug.SharedEnv = Env;
     
         if (Env.isDevelopmentMode)
         {

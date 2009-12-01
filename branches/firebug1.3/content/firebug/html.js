@@ -270,7 +270,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         hasSidePanel: true,
         //hasToolButtons: true,
         //hasStatusBar: true,
-        isPreRendered: true
+        isPreRendered: true,
+        innerHTMLSync: true
     },
 
     create: function(){
