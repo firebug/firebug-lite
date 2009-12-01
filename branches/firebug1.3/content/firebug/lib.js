@@ -1547,11 +1547,6 @@ this.isArray = function(object) {
     return toString.call(object) === '[object Array]'; 
 };
 
-this.isArrayLike = function(object) {
-    // TODO:
-    //return instanceOf(object, "Array");
-};
-
 this.isFunction = function(object) {
     return toString.call(object) === "[object Function]" || 
             this.isIE && typeof object != "string" && reFunction.test(""+object);
