@@ -678,9 +678,35 @@ Firebug.Panel =
         return 0;
     },
 
-    refresh: function()
+    hasObject: function(object)  // beyond type testing, is this object selectable?
     {
+        return false;
+    },
 
+    select: function(object, forceUpdate)
+    {
+        if (!object)
+            object = this.getDefaultSelection(this.context);
+
+        if(FBTrace.DBG_PANELS)
+            FBTrace.sysout("firebug.select "+this.name+" forceUpdate: "+forceUpdate+" "+object+((object==this.selection)?"==":"!=")+this.selection);
+
+        if (forceUpdate || object != this.selection)
+        {
+            this.selection = object;
+            this.updateSelection(object);
+
+            // TODO: xxxpedro
+            // XXXjoe This is kind of cheating, but, feh.
+            //Firebug.chrome.onPanelSelect(object, this);
+            //if (uiListeners.length > 0)
+            //    dispatch(uiListeners, "onPanelSelect", [object, this]);  // TODO: make Firebug.chrome a uiListener
+        }
+    },
+
+
+    updateSelection: function(object)
+    {
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -693,6 +719,13 @@ Firebug.Panel =
     {
     },
 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    getDefaultSelection: function(context)
+    {
+        return null;
+    },
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
     search: function(text)
