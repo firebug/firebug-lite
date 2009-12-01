@@ -1,11 +1,10 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-
-FBL.chromeMap = {};
-
 FBL.FirebugChrome = 
 {
+    chromeMap: {},
+    
     commandLineVisible: false,
     sidePanelVisible: false,
     sidePanelWidth: 300,
@@ -37,17 +36,14 @@ FBL.FirebugChrome =
             Env.openAtStartup = true;
 
         var chrome = Firebug.chrome = new Chrome(Env.chrome);
-        chromeMap[chrome.type] = chrome;
+        FirebugChrome.chromeMap[chrome.type] = chrome;
         
         addGlobalEvent("keydown", onPressF12);
         
         if (Env.isPersistentMode && chrome.type == "popup")
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            chromeMap.frame = FirebugChrome.chromeMap.frame;
-            FirebugChrome.chromeMap.popup = chrome;
-            
-            var frame = chromeMap.frame;
+            var frame = FirebugChrome.chromeMap.frame;
             if (frame)
                 frame.close();
             
@@ -55,7 +51,7 @@ FBL.FirebugChrome =
             FirebugChrome.commandLineVisible = false;
             FirebugChrome.sidePanelVisible = false;
 
-            chrome.reattach(chromeMap.frame, chrome);
+            chrome.reattach(frame, chrome);
         }
     },
     
@@ -212,7 +208,6 @@ var onChromeLoad = function onChromeLoad(chrome)
     {
         // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
         Env.FirebugChrome = FirebugChrome;
-        Env.FirebugChrome.chromeMap = FBL.chromeMap;
         
         chrome.window.Firebug = chrome.window.Firebug || {};
         chrome.window.Firebug.SharedEnv = Env;
@@ -240,14 +235,14 @@ var onChromeLoad = function onChromeLoad(chrome)
         }
         else if (chrome.type == "popup")
         {
-            var frame = chromeMap.frame;
+            var frame = FirebugChrome.chromeMap.frame;
             
             // initial UI state
             FirebugChrome.commandLineVisible = false;
             FirebugChrome.sidePanelVisible = false;
             
             var newChrome = new Chrome(chrome);
-            var oldChrome = chromeMap.frame;
+            var oldChrome = frame;
         
             // TODO: xxxpedro sync detach reattach attach
             dispatch(newChrome.panelMap, "detach", [frame, newChrome]);
@@ -291,7 +286,7 @@ var Chrome = function Chrome(chrome)
     append(this, chrome); // inherit chrome window properties
     append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
     
-    chromeMap[type] = this;
+    FirebugChrome.chromeMap[type] = this;
     Firebug.chrome = this;
     
     this.create();
@@ -515,10 +510,10 @@ var ChromeBase = extend(ChromeBase, {
         {
             if (isOpera && Firebug.chrome.type == "popup" && Firebug.chrome.node.closed)
             {
-                var frame = chromeMap.frame;
+                var frame = FirebugChrome.chromeMap.frame;
                 frame.reattach();
                 
-                chromeMap.popup = null;
+                FirebugChrome.chromeMap.popup = null;
                 
                 frame.open();
                 
@@ -541,8 +536,7 @@ var ChromeBase = extend(ChromeBase, {
     
     detach: function()
     {
-        //alert('detach');
-        if(!chromeMap.popup)
+        if(!FirebugChrome.chromeMap.popup)
         {     
             createChrome({type: "popup"});
         }
@@ -721,13 +715,13 @@ var ChromeFrameBase = extend(ChromeContext,
     
     reattach: function()
     {
-        var frame = chromeMap.frame;
+        var frame = FirebugChrome.chromeMap.frame;
         
         // last UI state
         FBL.FirebugChrome.commandLineVisible = this.commandLineVisible;
         FBL.FirebugChrome.sidePanelVisible = this.sidePanelVisible;
         
-        ChromeBase.reattach(chromeMap.popup, this);
+        ChromeBase.reattach(FirebugChrome.chromeMap.popup, this);
     },
     
     open: function()
@@ -776,7 +770,7 @@ var ChromeFrameBase = extend(ChromeContext,
             }
             
             // TODO: xxxpedro - persist IE fixed? 
-            var main = $("fbChrome", chromeMap.frame.document);
+            var main = $("fbChrome", FirebugChrome.chromeMap.frame.document);
             main.style.display = "none";
                     
             FirebugChrome.isOpen = false;
@@ -828,7 +822,7 @@ var ChromeMini = extend(Firebug.Controller,
         Firebug.Controller.initialize.apply(this);
         
         // TODO: xxxpedro - persist IE fixed? 
-        var doc = chromeMap.frame.document;
+        var doc = FirebugChrome.chromeMap.frame.document;
         
         var mini = $("fbMiniChrome", doc);
         mini.style.display = "block";
@@ -883,7 +877,7 @@ var ChromeMini = extend(Firebug.Controller,
         this.document.body.style.backgroundColor = "#fff";
         
         // TODO: xxxpedro - persist IE fixed? 
-        var doc = chromeMap.frame.document;
+        var doc = FirebugChrome.chromeMap.frame.document;
         
         var mini = $("fbMiniChrome", doc);
         mini.style.display = "none";
@@ -926,27 +920,15 @@ var ChromePopupBase = extend(ChromeContext, {
     destroy: function()
     {
         // TODO: xxxpedro sync detach reattach attach
-        var frame = chromeMap.frame;
+        var frame = FirebugChrome.chromeMap.frame;
         
         dispatch(frame.panelMap, "detach", [this, frame]);
             
-        if (Env.isPersistentMode)
-        {
-            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Env.FirebugChrome.selectedElement = FirebugChrome.selectedElement;
-        }
-        
         frame.reattach(this, frame);
         
         ChromeBase.destroy.apply(this);
         
-        if (Env.isPersistentMode)
-        {
-            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Env.FirebugChrome.chromeMap = FirebugChrome.chromeMap;
-            Env.FirebugChrome.chromeMap.popup = null;
-        }
-        chromeMap.popup = null;
+        FirebugChrome.chromeMap.popup = null;
         
         this.node.close();
     },
