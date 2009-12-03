@@ -845,10 +845,30 @@
     border-color: #ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;
 }
 
+#fbHTMLStatusBar {
+    display: inline;
+}
+
 .fbToolbarButtons {
     display: none;
-    position: absolute;
-    top: 4px;
+}
+
+.fbToolbarButtons a {
+    text-decoration: none;
+    zzzdisplay: block;
+    zzzfloat: left;
+    color: #000;
+    padding: 4px 5px;
+    margin: 0 0 0 1px;
+    cursor: default;
+}
+
+.fbToolbarButtons  a:hover {
+    color: #333;
+    padding: 3px 4px;
+    border: 1px solid #fff;
+    border-bottom: 1px solid #bbb;
+    border-right: 1px solid #bbb;
 }
 
 #fbStatusBarBox {
@@ -1045,8 +1065,6 @@ body {
 #fbToolbarButtons {
     float: left;
     padding: 4px 2px 0 5px;
-    position: absolute;
-    left: 30px;
 }
 
 #fbToolbarButtons a {
@@ -1083,17 +1101,20 @@ body {
     float: left;
 }
 
-.fbStatusBar span {
-    color: #808080;
-    padding: 0 4px 0 0;
+.fbBtnSelected {
+    font-weight: bold;
 }
 
-.fbStatusBar span a {
+.fbStatusBar {
+    color: #808080;
+}
+
+.fbStatusBar a {
     text-decoration: none;
     color: black;
 }
 
-.fbStatusBar span a:hover {
+.fbStatusBar a:hover {
     color: blue;
     cursor: pointer;    
 }
