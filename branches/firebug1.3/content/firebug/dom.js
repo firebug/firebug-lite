@@ -695,9 +695,14 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                     if (this.panelNode.scrollTop)
                         previousView.scrollTop = this.panelNode.scrollTop;
 
-                    this.objectPath.splice(previousIndex+1);
-                    this.propertyPath.splice(previousIndex+1);
-                    this.viewPath.splice(previousIndex+1);
+                    var start = previousIndex + 1, 
+                        // Opera needs the length argument in splice(), otherwise
+                        // it will consider that only one element should be removed
+                        length = this.objectPath.length - start;
+                    
+                    this.objectPath.splice(start, length);
+                    this.propertyPath.splice(start, length);
+                    this.viewPath.splice(start, length);
                 }
 
                 var value = this.getPathObject(previousIndex);
@@ -708,7 +713,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                     return;
                 }
 
-                for (var i = 0; i < newPath.length; ++i)
+                for (var i = 0, length = newPath.length; i < length; ++i)
                 {
                     var name = newPath[i];
                     var object = value;
@@ -920,7 +925,8 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     statusSeparator: ">",
     
     options: {
-        hasToolButtons: true
+        hasToolButtons: true,
+        hasStatusBar: true
     },    
 
     create: function()
