@@ -41,7 +41,16 @@ var RowTag =
         )
     );
 
-var $STR = function(){};
+// TODO: xxxpedro localization
+var oSTR =
+{
+    NoMembersWarning: "There are no properties to show for this object."    
+}
+
+FBL.$STR = function(name)
+{
+    return oSTR.hasOwnProperty(name) ? oSTR[name] : "";
+};
 
 var WatchRowTag =
     TR({"class": "watchNewRow", level: 0},
@@ -253,6 +262,8 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         expandMembers(members, this.toggles, 0, 0);
 
         this.showMembers(members, update, scrollTop);
+        //TODO: xxxpedro statusbar
+        updateStatusBar(this);
     },
 
     showMembers: function(members, update, scrollTop)
@@ -867,6 +878,26 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
 });
 
 // ************************************************************************************************
+
+// TODO: xxxpedro statusbar
+var updateStatusBar = function(panel)
+{
+    var path = panel.propertyPath;
+    var index = panel.pathIndex;
+    
+    var r = [];
+    
+    for (var i=0, l=path.length; i<l; i++)
+    {
+        r.push(i==index ? '<a class="fbHover fbBtnSelected">' : '<a class="fbHover">');
+        r.push(i==0 ? "window" : path[i]);
+        r.push('</a>');
+        
+        if(i < l-1)
+            r.push('&gt;');
+    }
+    panel.statusBarNode.innerHTML = r.join("");
+};
 
 var DOMMainPanel = Firebug.DOMPanel = function () {};
 

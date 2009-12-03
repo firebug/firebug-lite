@@ -475,6 +475,17 @@ Firebug.Panel =
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create StatusBar
+            if (options.hasStatusBar)
+            {
+                this.statusBarBox = $("fbStatusBarBox");
+                
+                this.statusBarNode = createElement("span", {
+                    id: panelId + "StatusBar",
+                    className: "fbToolbarButtons fbStatusBar"
+                });
+                
+                this.statusBarBox.appendChild(this.statusBarNode);
+            }
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create SidePanel
