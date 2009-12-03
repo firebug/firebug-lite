@@ -889,8 +889,11 @@ var updateStatusBar = function(panel)
     
     for (var i=0, l=path.length; i<l; i++)
     {
-        r.push(i==index ? '<a class="fbHover fbBtnSelected">' : '<a class="fbHover">');
-        r.push(i==0 ? "window" : path[i]);
+        r.push(i==index ? '<a class="fbHover fbBtnSelected" ' : '<a class="fbHover" ');
+        r.push('pathIndex=');
+        r.push(i);
+        r.push('>');
+        r.push(i==0 ? "window" : path[i] || "Object");
         r.push('</a>');
         
         if(i < l-1)
@@ -899,12 +902,29 @@ var updateStatusBar = function(panel)
     panel.statusBarNode.innerHTML = r.join("");
 };
 
+
 var DOMMainPanel = Firebug.DOMPanel = function () {};
 
 Firebug.DOMPanel.DirTable = DirTablePlate;
 
 DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
 {
+    onClickStatusBar: function(event)
+    {
+        var target = event.srcElement || event.target;
+        var element = getAncestorByClass(target, "fbHover");
+        
+        if(element)
+        {
+            var pathIndex = element.getAttribute("pathIndex");
+            
+            if(pathIndex)
+            {
+                this.select(this.getPathObject(pathIndex));
+            }
+        }
+    },
+    
     selectRow: function(row, target)
     {
         if (!target)
@@ -963,6 +983,9 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     create: function()
     {
         this.onClick = bind(this.onClick, this);
+        
+        //TODO: xxxpedro
+        this.onClickStatusBar = bind(this.onClickStatusBar, this);
 
         Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
     },
@@ -980,6 +1003,9 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         
         this.context.loaded = true;
         this.ishow();
+        
+        //TODO: xxxpedro
+        addEvent(this.statusBarNode, "click", this.onClickStatusBar);        
     },
 
     shutdown: function()
