@@ -1043,6 +1043,102 @@ this.disableTextSelection = function(e)
     e.style.cursor = "default";
 };
 
+
+// ************************************************************************************************
+// DOM Events
+
+var eventTypes =
+{
+    composition: [
+        "composition",
+        "compositionstart",
+        "compositionend" ],
+    contextmenu: [
+        "contextmenu" ],
+    drag: [
+        "dragenter",
+        "dragover",
+        "dragexit",
+        "dragdrop",
+        "draggesture" ],
+    focus: [
+        "focus",
+        "blur" ],
+    form: [
+        "submit",
+        "reset",
+        "change",
+        "select",
+        "input" ],
+    key: [
+        "keydown",
+        "keyup",
+        "keypress" ],
+    load: [
+        "load",
+        "beforeunload",
+        "unload",
+        "abort",
+        "error" ],
+    mouse: [
+        "mousedown",
+        "mouseup",
+        "click",
+        "dblclick",
+        "mouseover",
+        "mouseout",
+        "mousemove" ],
+    mutation: [
+        "DOMSubtreeModified",
+        "DOMNodeInserted",
+        "DOMNodeRemoved",
+        "DOMNodeRemovedFromDocument",
+        "DOMNodeInsertedIntoDocument",
+        "DOMAttrModified",
+        "DOMCharacterDataModified" ],
+    paint: [
+        "paint",
+        "resize",
+        "scroll" ],
+    scroll: [
+        "overflow",
+        "underflow",
+        "overflowchanged" ],
+    text: [
+        "text" ],
+    ui: [
+        "DOMActivate",
+        "DOMFocusIn",
+        "DOMFocusOut" ],
+    xul: [
+        "popupshowing",
+        "popupshown",
+        "popuphiding",
+        "popuphidden",
+        "close",
+        "command",
+        "broadcast",
+        "commandupdate" ]
+};
+
+this.getEventFamily = function(eventType)
+{
+    if (!this.families)
+    {
+        this.families = {};
+
+        for (var family in eventTypes)
+        {
+            var types = eventTypes[family];
+            for (var i = 0; i < types.length; ++i)
+                this.families[types[i]] = family;
+        }
+    }
+
+    return this.families[eventType];
+};
+
+
 // ************************************************************************************************
 // URLs
 
