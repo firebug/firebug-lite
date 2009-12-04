@@ -670,6 +670,7 @@
     font-size: 11px;
     width: 100%;
     table-layout: fixed;
+    background: #fff;
 }
 
 .memberLabelCell {
@@ -883,9 +884,11 @@
 
 #fbToolbarContent {
     display: block;
+    position: fixed;
+    _position: absolute;
     top: 0;
     padding-top: 4px;
-    height: 27px;
+    height: 23px;
     clip: rect(0, 2048px, 27px, 0);
 }
 
