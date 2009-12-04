@@ -897,7 +897,7 @@ var updateStatusBar = function(panel)
         r.push('</a>');
         
         if(i < l-1)
-            r.push('&gt;');
+            r.push('<span class="fbStatusSeparator">&gt;</span>');
     }
     panel.statusBarNode.innerHTML = r.join("");
 };
@@ -971,7 +971,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     // extends Panel
 
     name: "MainDOM",
-    title: "MainDOM",
+    title: "DOM",
     searchable: true,
     statusSeparator: ">",
     
@@ -1467,7 +1467,7 @@ DOMPanel.prototype = extend(Firebug.Panel,
     
 });
 
-Firebug.registerPanel(DOMPanel);
+//Firebug.registerPanel(DOMPanel);
 
 
 // ************************************************************************************************

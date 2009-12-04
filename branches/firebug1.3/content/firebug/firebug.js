@@ -946,7 +946,7 @@ Firebug.Button.prototype = extend(Firebug.Controller,
     
     restore: function()
     {
-        this.changeState("unpressed");        
+        this.changeState("unpressed");
     },
     
     changeState: function(state)
