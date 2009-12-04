@@ -839,8 +839,8 @@
 .fbBtnPressed {
     background: #ECEBE3;
     padding: 3px 6px 2px 7px !important;
-    margin: 1px 0 0 1px;
-    _margin: 1px -1px 0 1px;
+    margin: 1px 1px 0 1px !important;
+    _margin: 1px 0 0 1px;
     border: 1px solid #ACA899 !important;
     border-color: #ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;
 }
@@ -855,8 +855,8 @@
 
 .fbToolbarButtons a {
     text-decoration: none;
-    zzzdisplay: block;
-    zzzfloat: left;
+    display: block;
+    float: left;
     color: #000;
     padding: 4px 5px;
     margin: 0 0 0 1px;
@@ -871,8 +871,22 @@
     border-right: 1px solid #bbb;
 }
 
+.fbStatusSeparator{
+    display: block;
+    float: left;
+    padding-top: 4px;
+}
+
 #fbStatusBarBox {
     display: none;
+}
+
+#fbToolbarContent {
+    display: block;
+    top: 0;
+    padding-top: 4px;
+    height: 27px;
+    clip: rect(0, 2048px, 27px, 0);
 }
 
 /************************************************************************************************
@@ -1050,7 +1064,7 @@ body {
 *************************************************************************************************/
 #fbToolbarIcon {
     float: left;
-    padding: 4px 5px 0;
+    padding: 0 5px 0;
 }
 
 #fbToolbarIcon a {
@@ -1063,8 +1077,7 @@ body {
 }
 
 #fbToolbarButtons {
-    float: left;
-    padding: 4px 2px 0 5px;
+    padding: 0 2px 0 5px;
 }
 
 #fbToolbarButtons a {
@@ -1085,9 +1098,7 @@ body {
 }
 
 #fbStatusBarBox {
-    position: relative;
-    top: 5px;
-    line-height: 19px;
+    top: 4px;
     cursor: default;    
 }
 
@@ -1097,7 +1108,7 @@ body {
     border-color: transparent #fff transparent #777;
     _border-color: #eee #fff #eee #777;
     height: 7px;
-    margin: 10px 6px 0 0;
+    margin: 6px 3px;
     float: left;
 }
 
