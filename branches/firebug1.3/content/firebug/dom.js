@@ -892,6 +892,10 @@ var updateStatusBar = function(panel)
         r.push(i==index ? '<a class="fbHover fbBtnSelected" ' : '<a class="fbHover" ');
         r.push('pathIndex=');
         r.push(i);
+        
+        if(isIE6)
+            r.push(' href="javascript:void(0)"');
+        
         r.push('>');
         r.push(i==0 ? "window" : path[i] || "Object");
         r.push('</a>');
