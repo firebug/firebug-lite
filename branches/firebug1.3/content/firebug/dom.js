@@ -1502,6 +1502,11 @@ DOMPanel2.prototype = extend(Firebug.Panel,
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
         
+        setTimeout(bind(this.draw, this), 100);
+    },
+    
+    draw: function(){
+
         /*
         var target = this.contentNode;
         var template = DirTablePlate;

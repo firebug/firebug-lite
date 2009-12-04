@@ -302,6 +302,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
         fbPanel1 = $("fbPanel1");
+        
+        this.sidePanelBar.selectPanel("DOM2");        
     },
     
     shutdown: function()
