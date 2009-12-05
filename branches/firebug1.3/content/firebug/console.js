@@ -127,17 +127,18 @@ var ConsoleAPI =
     
     time: function(name)
     {
-        this.timeMap[name] = (new Date()).getTime();
+        Firebug.Console.timeMap[name] = new Date().getTime();
         return Firebug.Console.LOG_COMMAND;
     },
     
     timeEnd: function(name)
     {
-        if (name in this.timeMap)
+        var timeMap = Firebug.Console.timeMap;
+        if (name in timeMap)
         {
-            var delta = (new Date()).getTime() - this.timeMap[name];
+            var delta = new Date().getTime() - timeMap[name];
             Firebug.Console.logFormatted([name+ ":", delta+"ms"]);
-            delete this.timeMap[name];
+            delete timeMap[name];
         }
         return Firebug.Console.LOG_COMMAND;
     },
