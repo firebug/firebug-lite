@@ -303,7 +303,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
         var timeouts = [];
         
-        var delay = 100;
+        var delay = 0;
         while (members.length)
         {
             with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
@@ -1483,6 +1483,52 @@ function DOMPanel2(){};
 
 DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
 {
+    selectRow: function(row, target)
+    {
+        if (!target)
+            target = row.lastChild.firstChild;
+
+        if (!target || !target.repObject)
+            return;
+
+        this.pathToAppend = getPath(row);
+
+        // If the object is inside an array, look up its index
+        var valueBox = row.lastChild.firstChild;
+        if (hasClass(valueBox, "objectBox-array"))
+        {
+            var arrayIndex = FirebugReps.Arr.getItemIndex(target);
+            this.pathToAppend.push(arrayIndex);
+        }
+
+        // Make sure we get a fresh status path for the object, since otherwise
+        // it might find the object in the existing path and not refresh it
+        //Firebug.chrome.clearStatusPath();
+
+        Firebug.chrome.selectPanel("MainDOM");
+        Firebug.chrome.getPanel("MainDOM").select(target.repObject, true);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    onClick: function(event)
+    {
+        var target = event.srcElement || event.target;
+        var repNode = Firebug.getRepNode(target);
+        if (repNode)
+        {
+            var row = getAncestorByClass(target, "memberRow");
+            if (row)
+            {
+                this.selectRow(row, repNode);
+                cancelEvent(event);
+            }
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // extends Panel
+
     name: "DOM2",
     parentPanel: "HTML",
     title: "DOM",
@@ -1498,6 +1544,8 @@ DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
         Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
         //Firebug.Panel.create.apply(this, arguments);
         
+        this.onClick = bind(this.onClick, this);
+        
         this.toggles = this.toggles || {};
         this.panelNode.style.padding = "0 1px";
     },
@@ -1505,7 +1553,14 @@ DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
         
-        //setTimeout(bind(this.draw, this), 100);
+        addEvent(this.panelNode, "click", this.onClick);
+    },
+    
+    shutdown: function()
+    {
+        removeEvent(this.panelNode, "click", this.onClick);
+        
+        Firebug.Panel.shutdown.apply(this, arguments);
     },
     
     reattach: function(oldChrome)
