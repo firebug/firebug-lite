@@ -1502,10 +1502,10 @@ DOMPanel2.prototype = extend(Firebug.Panel,
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
         
-        setTimeout(bind(this.draw, this), 100);
+        //setTimeout(bind(this.draw, this), 100);
     },
     
-    draw: function(){
+    draw: function(targetObject){
 
         /*
         var target = this.contentNode;
@@ -1529,7 +1529,7 @@ DOMPanel2.prototype = extend(Firebug.Panel,
         
         var row = $$("tr", target)[0];
         
-        var value = Firebug.browser.window;
+        var value = targetObject || Firebug.browser.window;
         var members = getMembers(value, 0);
         expandMembers(members, toggles, 0, 0);
 

@@ -303,7 +303,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         fbPanel1 = $("fbPanel1");
         
-        this.sidePanelBar.selectPanel("DOM2");        
+        this.sidePanelBar.selectPanel("DOM2");
     },
     
     shutdown: function()
@@ -329,6 +329,7 @@ var selectedElement = null
 var fbPanel1 = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+var selectedDOMTS, selectedDOMTimer;
 
 var selectElement= function selectElement(e)
 {
@@ -349,6 +350,34 @@ var selectElement= function selectElement(e)
         selectedElement = e;
         
         FirebugChrome.selectedElement = e.id;
+        
+        var target = documentCache[e.id];
+        var DOM = Firebug.chrome.getPanel("HTML").sidePanelBar.getPanel("DOM2");
+        
+        if (new Date().getTime() - selectedDOMTS > 100)
+            setTimeout(function(){
+                if (selectedDOMTimer)
+                {
+                    clearTimeout(selectedDOMTimer);
+                    selectedDOMTimer = null;
+                }
+                
+                selectedDOMTS = new Date().getTime();
+                DOM.draw(target);
+            }, 0)
+        else
+        {
+            if (selectedDOMTimer)
+            {
+                clearTimeout(selectedDOMTimer);
+                selectedDOMTimer = null;
+            }
+                
+            selectedDOMTimer = setTimeout(function(){
+                selectedDOMTS = new Date().getTime();
+                DOM.draw(target);
+            }, 150)
+        }
     }
 }
 
