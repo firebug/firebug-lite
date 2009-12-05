@@ -41,8 +41,8 @@ Firebug.Inspector =
         
         //addEvent(Firebug.browser.document.documentElement, "mousemove", Firebug.Inspector.onInspectingBody);
         
-        addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
-        addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
+        addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
+        addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
     },
     
     stopInspecting: function()
@@ -52,8 +52,11 @@ Firebug.Inspector =
         Firebug.chrome.inspectButton.restore();
         
         if (outlineVisible) this.hideOutline();
-        removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
-        removeEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
+        removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
+        removeEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
+        
+        if (Firebug.chrome.type == "popup")
+            Firebug.chrome.node.focus();
     },
     
     
