@@ -363,7 +363,7 @@ var selectElement= function selectElement(e)
                 }
                 
                 selectedDOMTS = new Date().getTime();
-                DOM.draw(target);
+                DOM.select(target);
             }, 0)
         else
         {
@@ -375,7 +375,7 @@ var selectElement= function selectElement(e)
                 
             selectedDOMTimer = setTimeout(function(){
                 selectedDOMTS = new Date().getTime();
-                DOM.draw(target);
+                DOM.select(target);
             }, 150)
         }
     }

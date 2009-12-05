@@ -207,8 +207,8 @@ var DirTablePlate = domplate(Firebug.Rep,
             var lastRow = row;
 
             var delay = 0;
-            var setSize = members.length;
-            var rowCount = 1;
+            //var setSize = members.length;
+            //var rowCount = 1;
             while (members.length)
             {
                 with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
@@ -220,7 +220,7 @@ var DirTablePlate = domplate(Firebug.Rep,
                             var result = rowTag.insertRows({members: slice}, lastRow);
                             lastRow = result[1];
                             //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
-                            rowCount += insertSliceSize;
+                            //rowCount += insertSliceSize;
                         }
                         if (isLast)
                             delete row.insertTimeout;
@@ -293,15 +293,17 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         var rowTag = DirTablePlate.rowTag;
 
         // Insert the first slice immediately
-        var setSize = members.length;
-        var slice = members.splice(0, insertSliceSize);
-        var result = rowTag.insertRows({members: slice}, tbody.lastChild);
-        var rowCount = 1;
+        //var slice = members.splice(0, insertSliceSize);
+        //var result = rowTag.insertRows({members: slice}, tbody.lastChild);
+        
+        //var setSize = members.length;
+        //var rowCount = 1;
+        
         var panel = this;
         //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
         var timeouts = [];
         
-        var delay = 0;
+        var delay = 100;
         while (members.length)
         {
             with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
@@ -309,7 +311,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                 timeouts.push(this.context.setTimeout(function()
                 {
                     result = rowTag.insertRows({members: slice}, tbody.lastChild);
-                    rowCount += insertSliceSize;
+                    //rowCount += insertSliceSize;
                     //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
     
                     if ((panelNode.scrollHeight+panelNode.offsetHeight) >= priorScrollTop)
@@ -1479,7 +1481,7 @@ DOMPanel.prototype = extend(Firebug.Panel,
 
 function DOMPanel2(){};
 
-DOMPanel2.prototype = extend(Firebug.Panel,
+DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
 {
     name: "DOM2",
     parentPanel: "HTML",
@@ -1493,7 +1495,8 @@ DOMPanel2.prototype = extend(Firebug.Panel,
     
     create: function()
     {
-        Firebug.Panel.create.apply(this, arguments);
+        Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
+        //Firebug.Panel.create.apply(this, arguments);
         
         this.toggles = this.toggles || {};
         this.panelNode.style.padding = "0 1px";
@@ -1503,68 +1506,6 @@ DOMPanel2.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         
         //setTimeout(bind(this.draw, this), 100);
-    },
-    
-    draw: function(targetObject){
-
-        /*
-        var target = this.contentNode;
-        var template = DirTablePlate;
-        
-        var panel = {};
-        var toggles = {};
-        
-        template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
-        /**/
-        
-        //if (this.isInitialized) return;
-        
-        var target = this.contentNode;
-        var template = DirTablePlate;
-        
-        var panel = {};
-        var toggles = this.toggles;
-        
-        template.tableTag.replace({domPanel: panel, toggles: toggles, object: {}}, target);
-        
-        var row = $$("tr", target)[0];
-        
-        var value = targetObject || Firebug.browser.window;
-        var members = getMembers(value, 0);
-        expandMembers(members, toggles, 0, 0);
-
-        var rowTag = template.rowTag;
-        var lastRow = row;
-
-        var delay = 30;
-        var setSize = members.length;
-        var rowCount = 1;
-        
-        while (members.length)
-        {
-            with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
-            {
-                setTimeout(function()
-                {
-                    if (lastRow.parentNode)
-                    {
-                        var result = rowTag.insertRows({members: slice}, lastRow);
-                        lastRow = result[1];
-                        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
-                        rowCount += insertSliceSize;
-                    }
-                    if (isLast)
-                        delete row.insertTimeout;
-                }, delay);
-            }
-
-            delay += insertInterval;
-        }
-
-        row.insertTimeout = delay;
-        
-        this.isInitialized = true;
-        /**/
     },
     
     reattach: function(oldChrome)
