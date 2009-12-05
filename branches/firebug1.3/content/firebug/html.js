@@ -304,12 +304,24 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         fbPanel1 = $("fbPanel1");
         
         this.sidePanelBar.selectPanel("DOM2");
+        
+        // TODO: xxxpedro
+        addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
+        addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
     },
     
     shutdown: function()
     {
+        // TODO: xxxpedro
+        removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
+        removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
+        
         fbPanel1 = null;
+        
         Firebug.Panel.shutdown.apply(this, arguments);
     },
     
@@ -363,7 +375,7 @@ var selectElement= function selectElement(e)
                 }
                 
                 selectedDOMTS = new Date().getTime();
-                DOM.select(target);
+                DOM.select(target, true);
             }, 0)
         else
         {
@@ -375,7 +387,7 @@ var selectElement= function selectElement(e)
                 
             selectedDOMTimer = setTimeout(function(){
                 selectedDOMTS = new Date().getTime();
-                DOM.select(target);
+                DOM.select(target, true);
             }, 150)
         }
     }

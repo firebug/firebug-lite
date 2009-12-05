@@ -263,7 +263,9 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
 
         this.showMembers(members, update, scrollTop);
         //TODO: xxxpedro statusbar
-        updateStatusBar(this);
+        
+        if (!this.parentPanel)
+            updateStatusBar(this);
     },
 
     showMembers: function(members, update, scrollTop)
@@ -300,6 +302,8 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         //var rowCount = 1;
         
         var panel = this;
+        var result;
+        
         //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
         var timeouts = [];
         
@@ -550,6 +554,26 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
             setClassTimed(row, "jumpHighlight", this.context);
     },/**/
 
+    onMouseMove: function(event)
+    {
+        var target = event.srcElement || event.target;
+        
+        var object = getAncestorByClass(target, "objectLink-element");
+        object = object ? object.repObject : null;
+        
+        if(object && instanceOf(object, "Element") && object.nodeType == 1)
+        {
+            if(object != lastHighlightedObject)
+            {
+                Firebug.Inspector.drawBoxModel(object);
+                object = lastHighlightedObject;
+            }
+        }
+        else
+            Firebug.Inspector.hideBoxModel();
+        
+    },
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
@@ -565,6 +589,21 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         this.toggles = {};
 
         Firebug.Panel.create.apply(this, arguments);
+        
+        this.panelNode.style.padding = "0 1px";
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        addEvent(this.panelNode, "mousemove", this.onMouseMove);
+    },
+    
+    shutdown: function()
+    {
+        removeEvent(this.panelNode, "mousemove", this.onMouseMove);
+        
+        Firebug.Panel.shutdown.apply(this, arguments);
     },
 
     /*
@@ -976,7 +1015,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
-    name: "MainDOM",
+    name: "DOM",
     title: "DOM",
     searchable: true,
     statusSeparator: ">",
@@ -988,12 +1027,14 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
 
     create: function()
     {
+        Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
+        
         this.onClick = bind(this.onClick, this);
         
         //TODO: xxxpedro
         this.onClickStatusBar = bind(this.onClickStatusBar, this);
-
-        Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
+        
+        this.panelNode.style.padding = "0 1px";
     },
 
     initialize: function(oldPanelNode)
@@ -1001,7 +1042,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         //this.panelNode.addEventListener("click", this.onClick, false);
         //dispatch([Firebug.A11yModel], 'onInitializeNode', [this, 'console']);
         
-        Firebug.Panel.initialize.apply(this, arguments);
+        Firebug.DOMBasePanel.prototype.initialize.apply(this, arguments);
         
         addEvent(this.panelNode, "click", this.onClick);
         
@@ -1021,7 +1062,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         
         removeEvent(this.panelNode, "click", this.onClick);
         
-        Firebug.Panel.shutdown.apply(this, arguments);
+        Firebug.DOMBasePanel.prototype.shutdown.apply(this, arguments);
     }/*,
 
     search: function(text, reverse)
@@ -1064,6 +1105,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
 });
 
 Firebug.registerPanel(DOMMainPanel);
+
 
 // ************************************************************************************************
 
@@ -1379,105 +1421,9 @@ Firebug.registerModule(Firebug.DOM);
 
 
 // ************************************************************************************************
-// FBTrace Panel
-
-function DOMPanel(){};
-
-DOMPanel.prototype = extend(Firebug.Panel,
-{
-    name: "DOM",
-    title: "DOM",
-    
-    options: {
-        hasToolButtons: true
-    },
-    
-    isInitialized: false,
-    
-    create: function()
-    {
-        Firebug.Panel.create.apply(this, arguments);
-        
-        this.toggles = this.toggles || {};
-        this.panelNode.style.padding = "0 1px";
-    },
-    
-    initialize: function(){
-        Firebug.Panel.initialize.apply(this, arguments);
-        
-        /*
-        var target = this.contentNode;
-        var template = DirTablePlate;
-        
-        var panel = {};
-        var toggles = {};
-        
-        template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
-        /**/
-        
-        if (this.isInitialized) return;
-        
-        var target = this.contentNode;
-        var template = DirTablePlate;
-        
-        var panel = {};
-        var toggles = this.toggles;
-        
-        template.tableTag.replace({domPanel: panel, toggles: toggles, object: {}}, target);
-        
-        var row = $$("tr", target)[0];
-        
-        var value = Firebug.browser.window;
-        var members = getMembers(value, 0);
-        expandMembers(members, toggles, 0, 0);
-
-        var rowTag = template.rowTag;
-        var lastRow = row;
-
-        var delay = 30;
-        var setSize = members.length;
-        var rowCount = 1;
-        
-        while (members.length)
-        {
-            with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
-            {
-                setTimeout(function()
-                {
-                    if (lastRow.parentNode)
-                    {
-                        var result = rowTag.insertRows({members: slice}, lastRow);
-                        lastRow = result[1];
-                        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
-                        rowCount += insertSliceSize;
-                    }
-                    if (isLast)
-                        delete row.insertTimeout;
-                }, delay);
-            }
-
-            delay += insertInterval;
-        }
-
-        row.insertTimeout = delay;
-        
-        this.isInitialized = true;
-        /**/
-    },
-    
-    reattach: function(oldChrome)
-    {
-        //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
-        this.toggles = oldChrome.getPanel("DOM").toggles;
-    }
-    
-});
-
-//Firebug.registerPanel(DOMPanel);
-
-
-// ************************************************************************************************
 // DOM Panel
+
+var lastHighlightedObject;
 
 function DOMPanel2(){};
 
@@ -1505,14 +1451,43 @@ DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
         // it might find the object in the existing path and not refresh it
         //Firebug.chrome.clearStatusPath();
 
-        Firebug.chrome.selectPanel("MainDOM");
-        Firebug.chrome.getPanel("MainDOM").select(target.repObject, true);
+        var object = target.repObject;
+        
+        if (instanceOf(object, "Element") && object[cacheID])
+        {
+            Firebug.HTML.selectTreeNode(object[cacheID]);
+        }
+        else
+        {
+            Firebug.chrome.selectPanel("DOM");
+            Firebug.chrome.getPanel("DOM").select(object, true);
+        }
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
     onClick: function(event)
     {
+        /*
+        var target = event.srcElement || event.target;
+        
+        var object = getAncestorByClass(target, "objectLink");
+        object = object ? object.repObject : null;
+        
+        if(!object) return;
+        
+        if (instanceOf(object, "Element") && object[cacheID])
+        {
+            Firebug.HTML.selectTreeNode(object[cacheID]);
+        }
+        else
+        {
+            Firebug.chrome.selectPanel("DOM");
+            Firebug.chrome.getPanel("DOM").select(object, true);
+        }
+        /**/
+        
+        
         var target = event.srcElement || event.target;
         var repNode = Firebug.getRepNode(target);
         if (repNode)
@@ -1524,6 +1499,7 @@ DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
                 cancelEvent(event);
             }
         }
+        /**/
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1542,16 +1518,12 @@ DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
     create: function()
     {
         Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
-        //Firebug.Panel.create.apply(this, arguments);
         
         this.onClick = bind(this.onClick, this);
-        
-        this.toggles = this.toggles || {};
-        this.panelNode.style.padding = "0 1px";
     },
     
     initialize: function(){
-        Firebug.Panel.initialize.apply(this, arguments);
+        Firebug.DOMBasePanel.prototype.initialize.apply(this, arguments);
         
         addEvent(this.panelNode, "click", this.onClick);
     },
@@ -1560,7 +1532,7 @@ DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
     {
         removeEvent(this.panelNode, "click", this.onClick);
         
-        Firebug.Panel.shutdown.apply(this, arguments);
+        Firebug.DOMBasePanel.prototype.shutdown.apply(this, arguments);
     },
     
     reattach: function(oldChrome)
