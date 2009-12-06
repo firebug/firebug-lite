@@ -19,12 +19,13 @@ var reSplitFile = /:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
 // ************************************************************************************************
 // properties
 
-var userAgent = navigator.userAgent;
-this.isFirefox = userAgent.indexOf("Firefox") != -1;
-this.isOpera   = userAgent.indexOf("Opera") != -1;
-this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
-this.isIE      = userAgent.indexOf("MSIE") != -1;
+var userAgent = navigator.userAgent.toLowerCase();
+this.isFirefox = /firefox/.test(userAgent);
+this.isOpera   = /opera/.test(userAgent);
+this.isSafari  = /webkit/.test(userAgent);
+this.isIE      = /msie/.test(userAgent) && !/opera/.test(userAgent);
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
+this.browserVersion = (userAgent.match( /.+(?:rv|it|ra|ie)[\/: ]([\d.]+)/ ) || [0,'0'])[1];
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
