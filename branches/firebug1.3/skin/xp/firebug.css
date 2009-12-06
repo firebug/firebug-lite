@@ -673,6 +673,10 @@
     background: #fff;
 }
 
+.domTableIE {
+    width: auto;
+}
+
 .memberLabelCell {
     padding: 2px 0 2px 0;
     vertical-align: top;

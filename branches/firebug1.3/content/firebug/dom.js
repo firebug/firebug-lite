@@ -68,10 +68,11 @@ var SizerRow =
         TD({width: "70%"})
     );
 
+var domTableClass = isIE && (browserVersion-0 < 8) ? "domTable domTableIE" : "domTable";
 var DirTablePlate = domplate(Firebug.Rep,
 {
     tag:
-        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0, onclick: "$onClick", role :"tree"},
+        TABLE({"class": domTableClass, cellpadding: 0, cellspacing: 0, onclick: "$onClick", role :"tree"},
             TBODY({role: 'presentation'},
                 SizerRow,
                 FOR("member", "$object|memberIterator", RowTag)
@@ -79,7 +80,7 @@ var DirTablePlate = domplate(Firebug.Rep,
         ),
         
     watchTag:
-        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0,
+        TABLE({"class": domTableClass, cellpadding: 0, cellspacing: 0,
                _toggles: "$toggles", _domPanel: "$domPanel", onclick: "$onClick", role : 'tree'},
             TBODY({role : 'presentation'},
                 SizerRow,
@@ -88,7 +89,7 @@ var DirTablePlate = domplate(Firebug.Rep,
         ),
 
     tableTag:
-        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0,
+        TABLE({"class": domTableClass, cellpadding: 0, cellspacing: 0,
             _toggles: "$toggles", _domPanel: "$domPanel", onclick: "$onClick", role : 'tree'},
             TBODY({role : 'presentation'},
                 SizerRow
