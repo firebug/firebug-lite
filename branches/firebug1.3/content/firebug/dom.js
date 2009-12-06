@@ -315,6 +315,11 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
             {
                 timeouts.push(this.context.setTimeout(function()
                 {
+                    // TODO: xxxpedro can this be a timing error related to the
+                    // "iteration number" approach insted of "duration time"?
+                    // avoid error in IE8
+                    if (!tbody.lastChild) return;
+                    
                     result = rowTag.insertRows({members: slice}, tbody.lastChild);
                     //rowCount += insertSliceSize;
                     //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
