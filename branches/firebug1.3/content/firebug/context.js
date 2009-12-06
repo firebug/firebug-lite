@@ -352,7 +352,6 @@ FBL.Context.prototype =
         if (size.unit == "px") return size.value;
         
         // get font size, the dirty way
-        /*
         var computeDirtyFontSize = function(el, calibration)
         {
             var div = this.document.createElement("div");
@@ -370,6 +369,7 @@ FBL.Context.prototype =
             return value;
         }
         
+        /*
         var calibrationBase = 200;
         var calibrationValue = computeDirtyFontSize(el, calibrationBase);
         var rate = calibrationBase / calibrationValue;
