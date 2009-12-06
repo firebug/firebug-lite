@@ -68,7 +68,7 @@ var SizerRow =
         TD({width: "70%"})
     );
 
-var domTableClass = isIE && (browserVersion-0 < 8) ? "domTable domTableIE" : "domTable";
+var domTableClass = isIElt8 ? "domTable domTableIE" : "domTable";
 var DirTablePlate = domplate(Firebug.Rep,
 {
     tag:
@@ -263,8 +263,8 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         expandMembers(members, this.toggles, 0, 0);
 
         this.showMembers(members, update, scrollTop);
-        //TODO: xxxpedro statusbar
         
+        //TODO: xxxpedro statusbar
         if (!this.parentPanel)
             updateStatusBar(this);
     },
@@ -289,7 +289,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         // If we are asked to "update" the current view, then build the new table
         // offscreen and swap it in when it's done
         var offscreen = update && panelNode.firstChild;
-        var dest = offscreen ? this.document : panelNode;
+        var dest = offscreen ? panelNode.ownerDocument.createDocumentFragment() : panelNode;
 
         var table = this.tag.replace({domPanel: this, toggles: this.toggles}, dest);
         var tbody = table.lastChild;
@@ -337,7 +337,17 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
             timeouts.push(this.context.setTimeout(function()
             {
                 if (panelNode.firstChild)
-                    panelNode.replaceChild(table, panelNode.firstChild);
+                {
+                    // IE6 and IE7 has problems with replaceChild() method
+                    // so we should use removeChild/appendChild instead
+                    if(isIElt8)
+                    {
+                        panelNode.removeChild(panelNode.firstChild);
+                        panelNode.appendChild(table);
+                    }
+                    else
+                        panelNode.replaceChild(table, panelNode.firstChild);
+                }
                 else
                     panelNode.appendChild(table);
 
@@ -365,7 +375,10 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         var pathIndex = -1;
         for (var i = 0; i < this.objectPath.length; ++i)
         {
-            if (this.getPathObject(i) == object)
+            // IE needs === instead of == or otherwise some objects will
+            // be considered equal to different objects, returning the
+            // wrong index of the objectPath array
+            if (this.getPathObject(i) === object)
                 return i;
         }
 
@@ -798,7 +811,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
 
                 var win = Firebug.browser.window;
                 //var win = this.context.getGlobalScope();
-                if (object == win)
+                if (object === win)
                 {
                     this.pathIndex = 0;
                     this.objectPath = [win];

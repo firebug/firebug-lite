@@ -303,7 +303,11 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         fbPanel1 = $("fbPanel1");
         
-        this.sidePanelBar.selectPanel("DOM2");
+        if(!selectedElement)
+        {
+            Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID]);
+            this.sidePanelBar.selectPanel("DOM2");
+        }
         
         // TODO: xxxpedro
         addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
@@ -375,6 +379,10 @@ var selectElement= function selectElement(e)
                 }
                 
                 selectedDOMTS = new Date().getTime();
+                
+                //DOM.selection = target;
+                //DOM.rebuild(true);
+                
                 DOM.select(target, true);
             }, 0)
         else
@@ -387,6 +395,10 @@ var selectElement= function selectElement(e)
                 
             selectedDOMTimer = setTimeout(function(){
                 selectedDOMTS = new Date().getTime();
+                
+                //DOM.selection = target;
+                //DOM.rebuild(true);
+                
                 DOM.select(target, true);
             }, 150)
         }

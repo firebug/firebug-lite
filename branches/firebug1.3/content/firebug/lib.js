@@ -26,6 +26,7 @@ this.isSafari  = /webkit/.test(userAgent);
 this.isIE      = /msie/.test(userAgent) && !/opera/.test(userAgent);
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
 this.browserVersion = (userAgent.match( /.+(?:rv|it|ra|ie)[\/: ]([\d.]+)/ ) || [0,'0'])[1];
+this.isIElt8   = this.isIE && (this.browserVersion-0 < 8); 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
