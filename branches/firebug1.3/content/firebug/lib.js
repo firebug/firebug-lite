@@ -1655,8 +1655,17 @@ this.instanceOf = function(object, className)
     if (!object || typeof object != "object")
         return false;
     
-    if(className in window)
-        return object instanceof window[className];
+    // Try to use the native instanceof operator. We can only use it when we know
+    // exactly the window where the object is located at
+    if (object.ownerDocument)
+    {
+        // find the correct window of the object
+        var win = object.ownerDocument.defaultView || object.ownerDocument.parentWindow;
+        
+        // if the class is acessible in the window, uses the native instanceof operator
+        if (className in win)
+            return object instanceof win[className];
+    }
     
     var cache = instanceCheckMap[className];
     if (!cache)
