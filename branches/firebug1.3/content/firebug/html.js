@@ -369,39 +369,25 @@ var selectElement= function selectElement(e)
         
         var target = documentCache[e.id];
         var DOM = Firebug.chrome.getPanel("HTML").sidePanelBar.getPanel("DOM2");
+        var lazySelect = function()
+        {
+            selectedDOMTS = new Date().getTime();
+            
+            //DOM.selection = target;
+            //DOM.rebuild(true);
+            DOM.select(target, true);
+        };
+        
+        if (selectedDOMTimer)
+        {
+            clearTimeout(selectedDOMTimer);
+            selectedDOMTimer = null;
+        }
         
         if (new Date().getTime() - selectedDOMTS > 100)
-            setTimeout(function(){
-                if (selectedDOMTimer)
-                {
-                    clearTimeout(selectedDOMTimer);
-                    selectedDOMTimer = null;
-                }
-                
-                selectedDOMTS = new Date().getTime();
-                
-                DOM.selection = target;
-                DOM.rebuild(true);
-                
-                //DOM.select(target, true);
-            }, 0)
+            setTimeout(lazySelect, 0)
         else
-        {
-            if (selectedDOMTimer)
-            {
-                clearTimeout(selectedDOMTimer);
-                selectedDOMTimer = null;
-            }
-                
-            selectedDOMTimer = setTimeout(function(){
-                selectedDOMTS = new Date().getTime();
-                
-                DOM.selection = target;
-                DOM.rebuild(true);
-                
-                //DOM.select(target, true);
-            }, 150)
-        }
+            selectedDOMTimer = setTimeout(lazySelect, 150);
     }
 }
 

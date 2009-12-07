@@ -4,6 +4,8 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Inspector Module
 
+var inspectorTS, inspectorTimer;
+
 Firebug.Inspector =
 {
     create: function()
@@ -100,7 +102,26 @@ Firebug.Inspector =
             Firebug.Inspector.drawOutline(targ);
             
             if (targ[cacheID])
-                FBL.Firebug.HTML.selectTreeNode(""+targ[cacheID])
+            {
+                var target = ""+targ[cacheID];
+                var lazySelect = function()
+                {
+                    inspectorTS = new Date().getTime();
+                    
+                    Firebug.HTML.selectTreeNode(""+targ[cacheID])
+                };
+                
+                if (inspectorTimer)
+                {
+                    clearTimeout(inspectorTimer);
+                    inspectorTimer = null;
+                }
+                
+                if (new Date().getTime() - inspectorTS > 200)
+                    setTimeout(lazySelect, 0)
+                else
+                    inspectorTimer = setTimeout(lazySelect, 300);
+            }
             
             lastInspecting = new Date().getTime();
         }
