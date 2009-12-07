@@ -380,10 +380,10 @@ var selectElement= function selectElement(e)
                 
                 selectedDOMTS = new Date().getTime();
                 
-                //DOM.selection = target;
-                //DOM.rebuild(true);
+                DOM.selection = target;
+                DOM.rebuild(true);
                 
-                DOM.select(target, true);
+                //DOM.select(target, true);
             }, 0)
         else
         {
@@ -396,10 +396,10 @@ var selectElement= function selectElement(e)
             selectedDOMTimer = setTimeout(function(){
                 selectedDOMTS = new Date().getTime();
                 
-                //DOM.selection = target;
-                //DOM.rebuild(true);
+                DOM.selection = target;
+                DOM.rebuild(true);
                 
-                DOM.select(target, true);
+                //DOM.select(target, true);
             }, 150)
         }
     }

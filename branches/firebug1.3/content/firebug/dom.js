@@ -289,7 +289,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         // If we are asked to "update" the current view, then build the new table
         // offscreen and swap it in when it's done
         var offscreen = update && panelNode.firstChild;
-        var dest = offscreen ? panelNode.ownerDocument.createDocumentFragment() : panelNode;
+        var dest = offscreen ? panelNode.ownerDocument : panelNode;
 
         var table = this.tag.replace({domPanel: this, toggles: this.toggles}, dest);
         var tbody = table.lastChild;
@@ -337,17 +337,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
             timeouts.push(this.context.setTimeout(function()
             {
                 if (panelNode.firstChild)
-                {
-                    // IE6 and IE7 has problems with replaceChild() method
-                    // so we should use removeChild/appendChild instead
-                    if(isIElt8)
-                    {
-                        panelNode.removeChild(panelNode.firstChild);
-                        panelNode.appendChild(table);
-                    }
-                    else
-                        panelNode.replaceChild(table, panelNode.firstChild);
-                }
+                    panelNode.replaceChild(table, panelNode.firstChild);
                 else
                     panelNode.appendChild(table);
 
