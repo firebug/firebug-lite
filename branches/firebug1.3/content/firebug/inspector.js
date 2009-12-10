@@ -31,15 +31,12 @@ Firebug.Inspector =
     {
         Firebug.chrome.selectPanel("HTML");
         
-        
         createInspectorFrame();
         
         var size = Firebug.browser.getWindowScrollSize();
         
         fbInspectFrame.style.width = size.width + "px";
         fbInspectFrame.style.height = size.height + "px";
-        /**/
-
         
         //addEvent(Firebug.browser.document.documentElement, "mousemove", Firebug.Inspector.onInspectingBody);
         
@@ -127,6 +124,7 @@ Firebug.Inspector =
         }
     },
     
+    // TODO: xxxpedro remove this?
     onInspectingBody: function(e)
     {
         if (new Date().getTime() - lastInspecting > 30)

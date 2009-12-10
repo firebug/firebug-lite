@@ -111,13 +111,19 @@ FBL.Context.prototype =
     {
         var width=0, height=0, el;
 
+        // first try the document.documentElement scroll size
         if (!isIEQuiksMode && (el=this.document.documentElement) && 
            (el.scrollHeight || el.scrollWidth))
         {
             width = el.scrollWidth;
             height = el.scrollHeight;
         }
-        else if ((el=this.document.body) && (el.scrollHeight || el.scrollWidth))
+        
+        // then we need to check if document.body has a bigger scroll size value
+        // because sometimes depending on the browser and the page, the document.body
+        // scroll size returns a smaller (and wrong) measure
+        if ((el=this.document.body) && (el.scrollHeight || el.scrollWidth) &&
+            (el.scrollWidth > width || el.scrollHeight > height))
         {
             width = el.scrollWidth;
             height = el.scrollHeight;
