@@ -642,6 +642,11 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
         
+        this.document = Firebug.chrome.document; 
+        
+        if (!this.ioBox)
+            this.ioBox = new InsideOutBox(this, this.panelNode);
+        
         addEvent(this.contentNode, "click", this.onClick);
         addEvent(this.contentNode, "mousedown", this.onMouseDown);
     },    
@@ -862,9 +867,11 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         else
         {
             this.ioBox.select(object, true, false, this.noScrollIntoView);
-            this.inspectorHistory.unshift(object);
-            if (this.inspectorHistory.length > 5)
-                this.inspectorHistory.pop();
+            
+            // TODO: xxxpedro
+            //this.inspectorHistory.unshift(object);
+            //if (this.inspectorHistory.length > 5)
+            //    this.inspectorHistory.pop();
         }
     },
 
