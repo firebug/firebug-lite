@@ -818,6 +818,25 @@ this.getAncestorByClass = function(node, className)
     return null;
 };
 
+this.getElementByClass = function(node, className)  // className, className, ...
+{
+    var args = cloneArray(arguments); args.splice(0, 1);
+    for (var child = node.firstChild; child; child = child.nextSibling)
+    {
+        var args1 = cloneArray(args); args1.unshift(child);
+        if (FBL.hasClass.apply(null, args1))
+            return child;
+        else
+        {
+            var found = FBL.getElementByClass.apply(null, args1);
+            if (found)
+                return found;
+        }
+    }
+
+    return null;
+};
+
 // ************************************************************************************************
 // DOM creation
 
@@ -3890,6 +3909,47 @@ var calculatePixelsPerInch = function calculatePixelsPerInch(doc, body)
     };
     
     body.removeChild(inch);
+};
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+this.SourceLink = function(url, line, type, object, instance)
+{
+    this.href = url;
+    this.instance = instance;
+    this.line = line;
+    this.type = type;
+    this.object = object;
+};
+
+this.SourceLink.prototype =
+{
+    toString: function()
+    {
+        return this.href;
+    },
+    toJSON: function() // until 3.1...
+    {
+        return "{\"href\":\""+this.href+"\", "+
+            (this.line?("\"line\":"+this.line+","):"")+
+            (this.type?(" \"type\":\""+this.type+"\","):"")+
+                    "}";
+    }
+
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+this.SourceText = function(lines, owner)
+{
+    this.lines = lines;
+    this.owner = owner;
+};
+
+this.SourceText.getLineAsHTML = function(lineNo)
+{
+    return escapeForSourceLine(this.lines[lineNo-1]);
 };
 
 
