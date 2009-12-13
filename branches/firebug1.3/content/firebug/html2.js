@@ -629,7 +629,9 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
         
-        this.panelNode.style.padding = "0 1px";
+        var style = this.panelNode.style;
+        style.fontFamily = "Monaco,monospace";        
+        style.padding = "0 1px";
         
         this.onClick = bind(this.onClick, this);
         this.onMouseDown = bind(this.onMouseDown, this);

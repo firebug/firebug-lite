@@ -29,6 +29,8 @@ window.FBDev =
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Panels
         "firebug/html.js",
+        
+        //"firebug/insideOutBox.js", // too experimental
         //"firebug/html2.js", // too experimental
         
         "firebug/css.js",
