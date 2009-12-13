@@ -92,15 +92,27 @@ CSSPanel2.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
+        var style = this.contentNode.style;
+        style.padding = "4px 8px";
+        style.fontFamily = "Monaco,monospace";        
     },
     
     initialize: function()
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
+        /*
         var str = renderStylesheet(0);
         
         var panel = this;
+        panel.contentNode.innerHTML = str.join("");
+        panel.containerNode.scrollTop = 0;
+        /**/
+        
+        var str = renderStyles(document.getElementById('build'));
+        
+        var panel = this;
+        
         panel.contentNode.innerHTML = str.join("");
         panel.containerNode.scrollTop = 0;
     }
@@ -161,15 +173,60 @@ var renderRuleReplacer = function renderRuleReplacer(m, g1, g2)
         ";</span></div>"; 
 };
 
-var getFileName = function getFileName(_path)
+var getFileName = function getFileName(path)
 {
-    if (!_path) return "";
+    if (!path) return "";
     
-    var match = _path&&_path.match(/[^\/]+(\?.*)?(#.*)?$/);
+    var match = path && path.match(/[^\/]+(\?.*)?(#.*)?$/);
     
-    return match&&match[0]||_path;
+    return match&&match[0] || path;
 };
 
+// ************************************************************************************************
+
+var renderStyles = function renderStyles(node)
+{
+    var property = ["opacity","filter","azimuth","background","backgroundAttachment","backgroundColor","backgroundImage","backgroundPosition","backgroundRepeat","border","borderCollapse","borderColor","borderSpacing","borderStyle","borderTop","borderRight","borderBottom","borderLeft","borderTopColor","borderRightColor","borderBottomColor","borderLeftColor","borderTopStyle","borderRightStyle","borderBottomStyle","borderLeftStyle","borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth","borderWidth","bottom","captionSide","clear","clip","color","content","counterIncrement","counterReset","cue","cueAfter","cueBefore","cursor","direction","display","elevation","emptyCells","cssFloat","font","fontFamily","fontSize","fontSizeAdjust","fontStretch","fontStyle","fontVariant","fontWeight","height","left","letterSpacing","lineHeight","listStyle","listStyleImage","listStylePosition","listStyleType","margin","marginTop","marginRight","marginBottom","marginLeft","markerOffset","marks","maxHeight","maxWidth","minHeight","minWidth","orphans","outline","outlineColor","outlineStyle","outlineWidth","overflow","padding","paddingTop","paddingRight","paddingBottom","paddingLeft","page","pageBreakAfter","pageBreakBefore","pageBreakInside","pause","pauseAfter","pauseBefore","pitch","pitchRange","playDuring","position","quotes","richness","right","size","speak","speakHeader","speakNumeral","speakPunctuation","speechRate","stress","tableLayout","textAlign","textDecoration","textIndent","textShadow","textTransform","top","unicodeBidi","verticalAlign","visibility","voiceFamily","volume","whiteSpace","widows","width","wordSpacing","zIndex"].sort();
+    
+    var view = document.defaultView ? 
+            document.defaultView.getComputedStyle(node, null) :
+            node.currentStyle;
+
+    var str = [], sl = -1;
+    for(var i=0,len=property.length; i<len; i++)
+    {
+        var item = property[i];
+        if(!view[item]) continue;
+        
+        str[++sl] = "<div class='CSSItem'><span class='CSSProperty'>"; 
+        str[++sl] = toSelectorCase(item);
+        str[++sl] = "</span>:<span class='CSSValue'>"; 
+        str[++sl] = view[item];
+        str[++sl] = "</span>;</div>";
+    }
+    
+    return str;
+};
+
+// ************************************************************************************************
+
+var toCamelCase = function toCamelCase(s)
+{
+    return s.replace(reSelectorCase, toCamelCaseReplaceFn);
+}
+
+var toSelectorCase = function toSelectorCase(s)
+{
+  return s.replace(reCamelCase, "-$1").toLowerCase();
+  
+}
+
+var reCamelCase = /([A-Z])/g;
+var reSelectorCase = /\-(.)/g; 
+var toCamelCaseReplaceFn = function toCamelCaseReplaceFn(m,g)
+{
+    return g.toUpperCase();
+}
 
 // ************************************************************************************************
 }});
