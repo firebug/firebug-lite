@@ -635,8 +635,8 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         this.onMouseDown = bind(this.onMouseDown, this);
         this.onKeyPress = bind(this.onKeyPress, this);        
         
-        var object = Firebug.browser.document.documentElement;
-        Firebug.HTMLPanel.Element.tag.replace({object: object}, this.contentNode);
+        //var object = Firebug.browser.document.documentElement;
+        //Firebug.HTMLPanel.Element.tag.replace({object: object}, this.contentNode);
     },
     
     initialize: function(){
@@ -647,8 +647,11 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         if (!this.ioBox)
             this.ioBox = new InsideOutBox(this, this.panelNode);
         
-        addEvent(this.contentNode, "click", this.onClick);
-        addEvent(this.contentNode, "mousedown", this.onMouseDown);
+        var object = Firebug.browser.document.documentElement;
+        this.select(object);
+        
+        addEvent(this.panelNode, "click", this.onClick);
+        addEvent(this.panelNode, "mousedown", this.onMouseDown);
     },    
 
     /*
@@ -1542,12 +1545,14 @@ function isContainerElement(element)
     return false;
 }
 
-function hasNoElementChildren(element)
+var hasNoElementChildren = function hasNoElementChildren(element)
 {
     if (element.childElementCount != 0)  // FF 3.5+
         return false;
 
     // https://developer.mozilla.org/en/XBL/XBL_1.0_Reference/DOM_Interfaces
+    // TODO: xxxpedro
+    /*
     if (element.ownerDocument instanceof Ci.nsIDOMDocumentXBL)
     {
         var anonChildren = element.ownerDocument.getAnonymousNodes(element);
@@ -1560,13 +1565,14 @@ function hasNoElementChildren(element)
             }
         }
     }
+    /**/
     if (FBTrace.DBG_HTML)
         FBTrace.sysout("hasNoElementChildren TRUE "+element.tagName, element);
     return true;
 }
 
 // Duplicate of HTMLPanel.prototype isWhitespaceText
-function isWhitespaceText(node)
+var isWhitespaceText = function isWhitespaceText(node)
 {
     if (node instanceof HTMLAppletElement)
         return false;

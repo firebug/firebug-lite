@@ -681,6 +681,215 @@ this.getRootWindow = function(win)
 };
 
 // ************************************************************************************************
+// Graphics
+
+this.getClientOffset = function(elt)
+{
+    function addOffset(elt, coords, view)
+    {
+        var p = elt.offsetParent;
+
+        var style = view.getComputedStyle(elt, "");
+
+        if (elt.offsetLeft)
+            coords.x += elt.offsetLeft + parseInt(style.borderLeftWidth);
+        if (elt.offsetTop)
+            coords.y += elt.offsetTop + parseInt(style.borderTopWidth);
+
+        if (p)
+        {
+            if (p.nodeType == 1)
+                addOffset(p, coords, view);
+        }
+        else if (elt.ownerDocument.defaultView.frameElement)
+            addOffset(elt.ownerDocument.defaultView.frameElement, coords, elt.ownerDocument.defaultView);
+    }
+
+    var coords = {x: 0, y: 0};
+    if (elt)
+    {
+        var view = elt.ownerDocument.defaultView;
+        addOffset(elt, coords, view);
+    }
+
+    return coords;
+};
+
+this.getLTRBWH = function(elt)
+{
+    var bcrect,
+        dims = {"left": 0, "top": 0, "right": 0, "bottom": 0, "width": 0, "height": 0};
+
+    if (elt)
+    {
+        bcrect = elt.getBoundingClientRect();
+        dims.left = bcrect.left;
+        dims.top = bcrect.top;
+        dims.right = bcrect.right;
+        dims.bottom = bcrect.bottom;
+
+        if(bcrect.width)
+        {
+            dims.width = bcrect.width;
+            dims.height = bcrect.height;
+        }
+        else
+        {
+            dims.width = dims.right - dims.left;
+            dims.height = dims.bottom - dims.top;
+        }
+    }
+    return dims;
+};
+
+this.applyBodyOffsets = function(elt, clientRect)
+{
+    var od = elt.ownerDocument;
+    if (!od.body)
+        return clientRect;
+
+    var style = od.defaultView.getComputedStyle(od.body, null);
+
+    var pos = style.getPropertyValue('position');
+    if(pos === 'absolute' || pos === 'relative')
+    {
+        var borderLeft = parseInt(style.getPropertyValue('border-left-width').replace('px', ''),10) || 0;
+        var borderTop = parseInt(style.getPropertyValue('border-top-width').replace('px', ''),10) || 0;
+        var paddingLeft = parseInt(style.getPropertyValue('padding-left').replace('px', ''),10) || 0;
+        var paddingTop = parseInt(style.getPropertyValue('padding-top').replace('px', ''),10) || 0;
+        var marginLeft = parseInt(style.getPropertyValue('margin-left').replace('px', ''),10) || 0;
+        var marginTop = parseInt(style.getPropertyValue('margin-top').replace('px', ''),10) || 0;
+
+        var offsetX = borderLeft + paddingLeft + marginLeft;
+        var offsetY = borderTop + paddingTop + marginTop;
+
+        clientRect.left -= offsetX;
+        clientRect.top -= offsetY;
+        clientRect.right -= offsetX;
+        clientRect.bottom -= offsetY;
+    }
+
+    return clientRect;
+};
+
+this.getOffsetSize = function(elt)
+{
+    return {width: elt.offsetWidth, height: elt.offsetHeight};
+};
+
+this.getOverflowParent = function(element)
+{
+    for (var scrollParent = element.parentNode; scrollParent; scrollParent = scrollParent.offsetParent)
+    {
+        if (scrollParent.scrollHeight > scrollParent.offsetHeight)
+            return scrollParent;
+    }
+};
+
+this.isScrolledToBottom = function(element)
+{
+    var onBottom = (element.scrollTop + element.offsetHeight) == element.scrollHeight;
+    if (FBTrace.DBG_CONSOLE)
+        FBTrace.sysout("isScrolledToBottom offsetHeight: "+element.offsetHeight +" onBottom:"+onBottom);
+    return onBottom;
+};
+
+this.scrollToBottom = function(element)
+{
+        element.scrollTop = element.scrollHeight;
+
+        if (FBTrace.DBG_CONSOLE)
+        {
+            FBTrace.sysout("scrollToBottom reset scrollTop "+element.scrollTop+" = "+element.scrollHeight);
+            if (element.scrollHeight == element.offsetHeight)
+                FBTrace.sysout("scrollToBottom attempt to scroll non-scrollable element "+element, element);
+        }
+
+        return (element.scrollTop == element.scrollHeight);
+};
+
+this.move = function(element, x, y)
+{
+    element.style.left = x + "px";
+    element.style.top = y + "px";
+};
+
+this.resize = function(element, w, h)
+{
+    element.style.width = w + "px";
+    element.style.height = h + "px";
+};
+
+this.linesIntoCenterView = function(element, scrollBox)  // {before: int, after: int}
+{
+    if (!scrollBox)
+        scrollBox = this.getOverflowParent(element);
+
+    if (!scrollBox)
+        return;
+
+    var offset = this.getClientOffset(element);
+
+    var topSpace = offset.y - scrollBox.scrollTop;
+    var bottomSpace = (scrollBox.scrollTop + scrollBox.clientHeight)
+            - (offset.y + element.offsetHeight);
+
+    if (topSpace < 0 || bottomSpace < 0)
+    {
+        var split = (scrollBox.clientHeight/2);
+        var centerY = offset.y - split;
+        scrollBox.scrollTop = centerY;
+        topSpace = split;
+        bottomSpace = split -  element.offsetHeight;
+    }
+
+    return {before: Math.round((topSpace/element.offsetHeight) + 0.5),
+            after: Math.round((bottomSpace/element.offsetHeight) + 0.5) }
+};
+
+this.scrollIntoCenterView = function(element, scrollBox, notX, notY)
+{
+    if (!element)
+        return;
+
+    if (!scrollBox)
+        scrollBox = this.getOverflowParent(element);
+
+    if (!scrollBox)
+        return;
+
+    var offset = this.getClientOffset(element);
+
+    if (!notY)
+    {
+        var topSpace = offset.y - scrollBox.scrollTop;
+        var bottomSpace = (scrollBox.scrollTop + scrollBox.clientHeight)
+            - (offset.y + element.offsetHeight);
+
+        if (topSpace < 0 || bottomSpace < 0)
+        {
+            var centerY = offset.y - (scrollBox.clientHeight/2);
+            scrollBox.scrollTop = centerY;
+        }
+    }
+
+    if (!notX)
+    {
+        var leftSpace = offset.x - scrollBox.scrollLeft;
+        var rightSpace = (scrollBox.scrollLeft + scrollBox.clientWidth)
+            - (offset.x + element.clientWidth);
+
+        if (leftSpace < 0 || rightSpace < 0)
+        {
+            var centerX = offset.x - (scrollBox.clientWidth/2);
+            scrollBox.scrollLeft = centerX;
+        }
+    }
+    if (FBTrace.DBG_SOURCEFILES)
+        FBTrace.sysout("lib.scrollIntoCenterView ","Element:"+element.innerHTML);
+};
+
+// ************************************************************************************************
 // CSS classes
 
 this.hasClass = function(node, name) // className, className, ...
