@@ -344,7 +344,7 @@ var CommandLineAPI =
     $$: function(selector, context)
     {
         context = context || Firebug.browser.document;
-        return Firebug.Selector(selector, context)
+        return Firebug.Selector ? Firebug.Selector(selector, context) : context;
     },
     
     dir: Firebug.Console.dir,

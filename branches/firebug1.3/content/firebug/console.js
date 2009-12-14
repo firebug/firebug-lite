@@ -391,17 +391,23 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         this.clearButton.initialize();
         
         // TODO: xxxpedro
-        addEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
-        addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
-        addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        if (Firebug.HTML)
+        {
+            addEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
+            addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+            addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        }
     },
     
     shutdown: function()
     {
         // TODO: xxxpedro
-        removeEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
-        removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
-        removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        if (Firebug.HTML)
+        {
+            removeEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
+            removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+            removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        }
         
         Firebug.Panel.shutdown.apply(this, arguments);
     }    

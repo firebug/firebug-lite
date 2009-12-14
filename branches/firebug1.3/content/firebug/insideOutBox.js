@@ -47,14 +47,19 @@ FBL.InsideOutBox = function(view, box)
     this.highlightedObjectBox = null;
 
     this.onMouseDown = bind(this.onMouseDown, this);
-    box.addEventListener("mousedown", this.onMouseDown, false);
+    
+    addEvent(box, "mousedown", this.onMouseDown);
+    // TODO: xxxpedro event
+    //box.addEventListener("mousedown", this.onMouseDown, false);
 };
 
 InsideOutBox.prototype =
 {
     destroy: function()
     {
-        this.box.removeEventListener("mousedown", this.onMouseDown, false);
+        removeEvent(box, "mousedown", this.onMouseDown);
+        // TODO: xxxpedro event
+        //this.box.removeEventListener("mousedown", this.onMouseDown, false);
     },
 
     highlight: function(object)

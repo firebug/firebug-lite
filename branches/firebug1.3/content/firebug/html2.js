@@ -1257,7 +1257,7 @@ Firebug.HTMLPanel.WhitespaceNode = domplate(FirebugReps.Element,
             }
         }
         return arr;
-    },
+    }
 }),
 
 Firebug.HTMLPanel.CDATANode = domplate(FirebugReps.Element,

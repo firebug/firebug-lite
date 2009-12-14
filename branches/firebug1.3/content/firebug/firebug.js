@@ -45,7 +45,8 @@ window.Firebug = FBL.Firebug =
         // Document must be cached before chrome initialization
         cacheDocument();
         
-        Firebug.Inspector.create();
+        if (Firebug.Inspector)
+            Firebug.Inspector.create();
         
         FirebugChrome.initialize();
         
@@ -54,9 +55,24 @@ window.Firebug = FBL.Firebug =
   
     shutdown: function()
     {
-        documentCache = {};
-        
         dispatch(modules, "shutdown", []);
+        
+        for(var name in documentCache)
+        {
+            documentCache[name].removeAttribute(cacheID);
+            documentCache[name] = null;
+            delete documentCache[name];
+        }
+        
+        documentCache = null;
+        delete FBL.documentCache;
+        
+        var chromeMap = FirebugChrome.chromeMap;
+        
+        if (chromeMap.popup)
+            chromeMap.popup.destroy();
+        
+        chromeMap.frame.destroy();
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1056,7 +1072,7 @@ PanelOptions.prototype = extend(Firebug.Controller, {
 
 
 // ************************************************************************************************
-
+if (FBL.domplate)
 Firebug.Rep = domplate(
 {
     className: "",

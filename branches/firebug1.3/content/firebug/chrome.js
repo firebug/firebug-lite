@@ -298,14 +298,15 @@ var ChromeBase = extend(ChromeBase, {
     {
         Firebug.PanelBar.create.apply(this);
         
-        this.inspectButton = new Firebug.Button({
-            type: "toggle",
-            node: $("fbChrome_btInspect"),
-            owner: Firebug.Inspector,
-            
-            onPress: Firebug.Inspector.startInspecting,
-            onUnpress: Firebug.Inspector.stopInspecting          
-        });
+        if (Firebug.Inspector)
+            this.inspectButton = new Firebug.Button({
+                type: "toggle",
+                node: $("fbChrome_btInspect"),
+                owner: Firebug.Inspector,
+                
+                onPress: Firebug.Inspector.startInspecting,
+                onUnpress: Firebug.Inspector.stopInspecting          
+            });
     },
     
     destroy: function()
@@ -405,7 +406,8 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         // ************************************************************************************************
         
-        this.inspectButton.initialize();
+        if(Firebug.Inspector)
+            this.inspectButton.initialize();
         
         // ************************************************************************************************
         // ************************************************************************************************
@@ -430,7 +432,8 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         // ************************************************************************************************
         
-        this.inspectButton.shutdown();
+        if(Firebug.Inspector)
+            this.inspectButton.shutdown();
         
         // ************************************************************************************************
         // ************************************************************************************************
@@ -684,7 +687,7 @@ var ChromeFrameBase = extend(ChromeContext,
         
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
-            [Firebug.browser.window, "unload", this.destroy],
+            [Firebug.browser.window, "unload", Firebug.shutdown],
             
             [$("fbChrome_btClose"), "click", this.close],
             [$("fbChrome_btDetach"), "click", this.detach]       
@@ -904,8 +907,10 @@ var ChromePopupBase = extend(ChromeContext, {
         
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
-            [Firebug.chrome.window, "unload", this.destroy],
-            [Firebug.browser.window, "unload", this.close]
+            [Firebug.chrome.window, "unload", this.destroy]
+             
+             //,
+            //[Firebug.browser.window, "unload", Firebug.shutdown]
         );
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;

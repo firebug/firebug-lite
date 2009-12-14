@@ -117,7 +117,7 @@ Firebug.ConsoleBase =
     getPanel: function(context, noCreate)
     {
         return context.getPanel("console", noCreate);
-    },
+    }
 
 };
 
@@ -946,7 +946,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
 
         if (this.wasScrolledToBottom)
             scrollToBottom(this.panelNode);
-    },
+    }
 });
 
 // ************************************************************************************************
