@@ -478,6 +478,32 @@ function arrayInsert(array, index, other)
    return array;
 }
 
+// ************************************************************************************************
+
+this.createStyleSheet = function(doc, url)
+{
+    //TODO: xxxpedro
+    //var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
+    var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
+    style.setAttribute("charset","utf-8");
+    style.firebugIgnore = true;
+    style.setAttribute("rel", "stylesheet");
+    style.setAttribute("type", "text/css");
+    style.setAttribute("href", url);
+    
+    //TODO: xxxpedro
+    //style.innerHTML = this.getResource(url);
+    return style;
+}
+
+this.addStyleSheet = function(doc, style)
+{
+    var heads = doc.getElementsByTagName("head");
+    if (heads.length)
+        heads[0].appendChild(style);
+    else
+        doc.documentElement.appendChild(style);
+};
 
 // ************************************************************************************************
 // String Util
@@ -711,6 +737,84 @@ this.getClientOffset = function(elt)
         var view = elt.ownerDocument.defaultView;
         addOffset(elt, coords, view);
     }
+
+    return coords;
+};
+
+this.getViewOffset = function(elt, singleFrame)
+{
+    function addOffset(elt, coords, view)
+    {
+        var p = elt.offsetParent;
+        coords.x += elt.offsetLeft - (p ? p.scrollLeft : 0);
+        coords.y += elt.offsetTop - (p ? p.scrollTop : 0);
+
+        if (p)
+        {
+            if (p.nodeType == 1)
+            {
+                var parentStyle = view.getComputedStyle(p, "");
+                if (parentStyle.position != "static")
+                {
+                    coords.x += parseInt(parentStyle.borderLeftWidth);
+                    coords.y += parseInt(parentStyle.borderTopWidth);
+
+                    if (p.localName == "TABLE")
+                    {
+                        coords.x += parseInt(parentStyle.paddingLeft);
+                        coords.y += parseInt(parentStyle.paddingTop);
+                    }
+                    else if (p.localName == "BODY")
+                    {
+                        var style = view.getComputedStyle(elt, "");
+                        coords.x += parseInt(style.marginLeft);
+                        coords.y += parseInt(style.marginTop);
+                    }
+                }
+                else if (p.localName == "BODY")
+                {
+                    coords.x += parseInt(parentStyle.borderLeftWidth);
+                    coords.y += parseInt(parentStyle.borderTopWidth);
+                }
+
+                var parent = elt.parentNode;
+                while (p != parent)
+                {
+                    coords.x -= parent.scrollLeft;
+                    coords.y -= parent.scrollTop;
+                    parent = parent.parentNode;
+                }
+                addOffset(p, coords, view);
+            }
+        }
+        else
+        {
+            if (elt.localName == "BODY")
+            {
+                var style = view.getComputedStyle(elt, "");
+                coords.x += parseInt(style.borderLeftWidth);
+                coords.y += parseInt(style.borderTopWidth);
+
+                var htmlStyle = view.getComputedStyle(elt.parentNode, "");
+                coords.x -= parseInt(htmlStyle.paddingLeft);
+                coords.y -= parseInt(htmlStyle.paddingTop);
+            }
+
+            if (elt.scrollLeft)
+                coords.x += elt.scrollLeft;
+            if (elt.scrollTop)
+                coords.y += elt.scrollTop;
+
+            var win = elt.ownerDocument.defaultView;
+            if (win && (!singleFrame && win.frameElement))
+                addOffset(win.frameElement, coords, win);
+        }
+
+    }
+
+    var coords = {x: 0, y: 0};
+    if (elt)
+        addOffset(elt, coords, elt.ownerDocument.defaultView);
 
     return coords;
 };
@@ -1045,6 +1149,29 @@ this.getElementByClass = function(node, className)  // className, className, ...
 
     return null;
 };
+
+this.getBody = function(doc)
+{
+    if (doc.body)
+        return doc.body;
+
+    var body = doc.getElementsByTagName("body")[0];
+    if (body)
+        return body;
+
+    return doc.firstChild;  // For non-HTML docs
+};
+
+this.isElement = function(o)
+{
+    try {
+        return o && this.instanceOf(o, "Element");
+    }
+    catch (ex) {
+        return false;
+    }
+};
+
 
 // ************************************************************************************************
 // DOM creation
