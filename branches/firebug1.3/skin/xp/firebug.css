@@ -1496,7 +1496,9 @@ div.objectBox-element {
 
 .objectBox-string {
     color: red;
-    white-space: pre;
+    
+    /* TODO: xxxpedro make long strings break line */
+    /*white-space: pre; */ 
 }
 
 .objectBox-number {
