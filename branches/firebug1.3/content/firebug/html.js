@@ -305,8 +305,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if(!selectedElement)
         {
-            Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID]);
             this.sidePanelBar.selectPanel("DOM2");
+            Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID]);
         }
         
         // TODO: xxxpedro
@@ -345,7 +345,7 @@ var selectedElement = null
 var fbPanel1 = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
-var selectedDOMTS, selectedDOMTimer;
+var selectedSidePanelTS, selectedSidePanelTimer;
 
 var selectElement= function selectElement(e)
 {
@@ -354,7 +354,6 @@ var selectElement= function selectElement(e)
         if (selectedElement)
             selectedElement.className = "objectBox-element";
             
-        
         e.className = e.className + " selectedElement";
 
         if (FBL.isFirefox)
@@ -368,26 +367,25 @@ var selectElement= function selectElement(e)
         FirebugChrome.selectedElement = e.id;
         
         var target = documentCache[e.id];
-        var DOM = Firebug.chrome.getPanel("HTML").sidePanelBar.getPanel("DOM2");
+        var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
+        
         var lazySelect = function()
         {
-            selectedDOMTS = new Date().getTime();
+            selectedSidePanelTS = new Date().getTime();
             
-            //DOM.selection = target;
-            //DOM.rebuild(true);
-            DOM.select(target, true);
+            selectedSidePanel.select(target, true);
         };
         
-        if (selectedDOMTimer)
+        if (selectedSidePanelTimer)
         {
-            clearTimeout(selectedDOMTimer);
-            selectedDOMTimer = null;
+            clearTimeout(selectedSidePanelTimer);
+            selectedSidePanelTimer = null;
         }
         
-        if (new Date().getTime() - selectedDOMTS > 100)
+        if (new Date().getTime() - selectedSidePanelTS > 100)
             setTimeout(lazySelect, 0)
         else
-            selectedDOMTimer = setTimeout(lazySelect, 150);
+            selectedSidePanelTimer = setTimeout(lazySelect, 150);
     }
 }
 

@@ -28,9 +28,9 @@ Firebug.registerModule(Firebug.CSS);
 // ************************************************************************************************
 // CSS Panel
 
-function CSSPanel(){};
+function CSSStyleSheetPanel(){};
 
-CSSPanel.prototype = extend(Firebug.Panel,
+CSSStyleSheetPanel.prototype = extend(Firebug.Panel,
 {
     name: "CSS",
     title: "CSS",
@@ -70,17 +70,17 @@ CSSPanel.prototype = extend(Firebug.Panel,
     
 });
 
-Firebug.registerPanel(CSSPanel);
+Firebug.registerPanel(CSSStyleSheetPanel);
 
 
 // ************************************************************************************************
 // CSS Panel
 
-function CSSPanel2(){};
+function CSSElementPanel(){};
 
-CSSPanel2.prototype = extend(Firebug.Panel,
+CSSElementPanel.prototype = extend(Firebug.Panel,
 {
-    name: "CSS2",
+    name: "CSSElementPanel",
     parentPanel: "HTML",
     title: "CSS",
     
@@ -101,24 +101,27 @@ CSSPanel2.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
-        /*
-        var str = renderStylesheet(0);
+        var target = documentCache[FirebugChrome.selectedElement];
+        if (!target) return;
+        
+        var str = renderStyles(target);
         
         var panel = this;
         panel.contentNode.innerHTML = str.join("");
         panel.containerNode.scrollTop = 0;
-        /**/
-        
-        var str = renderStyles(document.getElementById('build'));
+    },
+    
+    select: function(node)
+    {
+        var str = renderStyles(node);
         
         var panel = this;
-        
         panel.contentNode.innerHTML = str.join("");
-        panel.containerNode.scrollTop = 0;
+        panel.containerNode.scrollTop = 0;        
     }
 });
 
-Firebug.registerPanel(CSSPanel2);
+Firebug.registerPanel(CSSElementPanel);
 
 // ************************************************************************************************
 
