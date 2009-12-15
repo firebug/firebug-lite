@@ -30,7 +30,7 @@ FBL.FirebugChrome =
         if (Env.chrome.type == "frame")
             ChromeMini.create(Env.chrome);
             
-        if (Firebug.browser.document.documentElement.getAttribute("debug") == "true")
+        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
             Env.openAtStartup = true;
 
         var chrome = Firebug.chrome = new Chrome(Env.chrome);

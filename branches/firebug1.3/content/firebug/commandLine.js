@@ -67,7 +67,9 @@ Firebug.CommandLine.prototype =
     {
         removeEvent(this.element, "keydown", this.onKeyDown);
         window.onerror = null;
+        
         this.element = null
+        delete this.element;
     },
 
     execute: function()
@@ -82,8 +84,9 @@ Firebug.CommandLine.prototype =
         {
             
             var result = this.evaluate(command);
-            // evita que seja repetido o log, caso o comando executado
-            // ja seja um log via linha de comando
+            
+            // avoid logging the console command twice, in case it is a console function
+            // that is being executed in the command line
             if (result != Console.LOG_COMMAND)
             {
                 var html = [];
@@ -344,7 +347,9 @@ var CommandLineAPI =
     $$: function(selector, context)
     {
         context = context || Firebug.browser.document;
-        return Firebug.Selector ? Firebug.Selector(selector, context) : context;
+        return Firebug.Selector ? 
+                Firebug.Selector(selector, context) : 
+                Firebug.Console.error("Firebug.Selector module not loaded.");
     },
     
     dir: Firebug.Console.dir,
@@ -359,8 +364,6 @@ var initializeCommandLineAPI = function initializeCommandLineAPI()
         if (!Firebug.browser.window[m])
             Firebug.CommandLine.API[m] = CommandLineAPI[m];
 }
-
-
 
 
 // ************************************************************************************************
