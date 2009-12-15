@@ -545,6 +545,7 @@ Firebug.Panel =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.initialize", this.name);
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (parentPanelMap.hasOwnProperty(this.name))
         {
             this.sidePanelBar.initialize();
@@ -576,6 +577,8 @@ Firebug.Panel =
             
         this.containerNode = this.panelNode.parentNode;
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // store persistent state
         this.containerNode.scrollTop = this.lastScrollTop;
     },
     
@@ -583,7 +586,39 @@ Firebug.Panel =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // free memory
+        if (parentPanelMap.hasOwnProperty(this.name))
+        {
+            this.sidePanelBar.shutdown();
+        }
+        
+        this.panelNode = null;
+        this.tabNode = null;
+        
+        var options = this.options;
+        
+        if (options.hasSidePanel)
+        {
+            //this.sidePanelNode = $(panelId + "StatusBar");
+        }
+        
+        if (options.hasStatusBar)
+        {
+            this.statusBarBox = null;
+            this.statusBarNode = null;
+        }
+        
+        if (options.hasToolButtons)
+        {
+            this.toolButtonsNode = null;
+        }
+            
+        this.containerNode = null;
     },
 
     detach: function(oldChrome, newChrome)
@@ -821,8 +856,8 @@ Firebug.PanelBar =
         if (selectedPanel)
         {
             removeClass(selectedPanel.tabNode, "fbSelectedTab");
-            selectedPanel.shutdown();
             selectedPanel.hide();
+            selectedPanel.shutdown();
         }
         
         this.selectedPanel = null;
@@ -853,8 +888,8 @@ Firebug.PanelBar =
             if (selectedPanel)
             {
                 removeClass(selectedPanel.tabNode, "fbSelectedTab");
-                selectedPanel.shutdown();
                 selectedPanel.hide();
+                selectedPanel.shutdown();
             }
             
             if (!panel.parentPanel)

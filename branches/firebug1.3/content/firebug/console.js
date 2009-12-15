@@ -409,6 +409,8 @@ ConsolePanel.prototype = extend(Firebug.Panel,
             removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         }
         
+        this.clearButton.shutdown();
+        
         Firebug.Panel.shutdown.apply(this, arguments);
     }    
     
