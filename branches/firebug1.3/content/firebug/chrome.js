@@ -20,7 +20,7 @@ FBL.FirebugChrome =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.create", "creating chrome window");
         
-        createChrome();
+        createChromeWindow();
     },
     
     initialize: function()
@@ -76,7 +76,7 @@ var ChromeDefaultOptions =
 // ************************************************************************************************
 // Chrome Window Creation
 
-var createChrome = function(options)
+var createChromeWindow = function(options)
 {
     options = options || {};
     options = extend(ChromeDefaultOptions, options);
@@ -245,7 +245,6 @@ var onChromeLoad = function onChromeLoad(chrome)
     }
 };
 
-
 var getChromeTemplate = function(isPopup)
 {
     var tpl = FirebugChrome.injected; 
@@ -292,8 +291,11 @@ var Chrome = function Chrome(chrome)
 // ChromeBase
 
 var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
-var ChromeBase = extend(ChromeBase, {
-    
+
+append(ChromeBase, Context.prototype);
+
+append(ChromeBase,
+{
     create: function()
     {
         Firebug.PanelBar.create.apply(this);
@@ -539,7 +541,7 @@ var ChromeBase = extend(ChromeBase, {
     {
         if(!FirebugChrome.chromeMap.popup)
         {     
-            createChrome({type: "popup"});
+            createChromeWindow({type: "popup"});
         }
     },
     
@@ -665,9 +667,7 @@ var ChromeBase = extend(ChromeBase, {
 // ************************************************************************************************
 // ChromeFrameBase
 
-var ChromeContext = extend(ChromeBase, Context.prototype); 
-
-var ChromeFrameBase = extend(ChromeContext,
+var ChromeFrameBase = extend(ChromeBase,
 {
     create: function()
     {
@@ -684,15 +684,23 @@ var ChromeFrameBase = extend(ChromeContext,
             FirebugChrome.isOpen = true;
             this.close();
         }
-        
-        //if (this.node.style.visibility != "visible")
-        //    this.node.style.visibility = "visible";
     },
     
     destroy: function()
     {
         ChromeBase.destroy.call(this);
+        
         removeGlobalEvent("keydown", onPressF12);
+        
+        this.document = null;
+        delete this.document;
+        
+        this.window = null;
+        delete this.window;
+        
+        this.node.parentNode.removeChild(this.node);
+        this.node = null;
+        delete this.node;
     },
     
     initialize: function()
@@ -912,7 +920,7 @@ var ChromeMini = extend(Firebug.Controller,
 // ************************************************************************************************
 // ChromePopupBase
 
-var ChromePopupBase = extend(ChromeContext, {
+var ChromePopupBase = extend(ChromeBase, {
     
     initialize: function()
     {
