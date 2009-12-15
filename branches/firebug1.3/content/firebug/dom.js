@@ -224,7 +224,7 @@ var DirTablePlate = domplate(Firebug.Rep,
                             //rowCount += insertSliceSize;
                         }
                         if (isLast)
-                            delete row.insertTimeout;
+                            row.removeAttribute("insertTimeout");
                     }, delay);
                 }
 
