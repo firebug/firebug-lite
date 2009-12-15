@@ -5,25 +5,71 @@
 -------------------------------------------------------------------------------
 Core
 -------------------------------------------------------------------------------
-    Loading performance improvement
-     
+    - Improved the performance of the application initial loading time
+    - Improved the performance of the popup loading time
+    - Refactored the chrome synchronization mechanism
+    - Fixed isFunction() problem with IE when dealing with external objects
     
+    - Improved the memory consumption. Now each panel only uses resources (listen
+      for events, etc) when is currently selected.
+    
+    - Implemented the "Duck Type Detection" system, to make possible identify
+      native classes (Document, Element, etc) in IE, and therefore, generate
+      the appropriate visual representation.
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - StatusBar
+    - SidePanel size and positioning
+    
+    - Long sequence of elements (like toolbar/statusbar buttons) don't "bleed" 
+      anymore (appears outside its container) when the chrome has small dimensions
+       
+    - Large panels now triggers automatically the appropriate scrollbars
+      (some huge scripts with long lines wans't triggering the horizontal scrollbar) 
+
+-------------------------------------------------------------------------------
+Console
+-------------------------------------------------------------------------------
+    - Fixed problem in console.time() and console.timeEnd().
+
+-------------------------------------------------------------------------------
+HTML
+-------------------------------------------------------------------------------
+    - Implemented a basic sidePanel synchronization to test the overall 
+      performance of the rendering when inspecting elements
+
 -------------------------------------------------------------------------------
 DOM
 -------------------------------------------------------------------------------
-    add
-    Initial rendering performance improvement
+    - Ported the main part of the original DOM Panel in Firebug
+    - Ported the DOM "views path" mechanism (click and "go into" DOM objects)
+    - Improved the performance of the initial rendering 
+    - Implemented a basic DOM Panel subclass used in as HTML side panel
 
 -------------------------------------------------------------------------------
 Script
 -------------------------------------------------------------------------------
-  import
+    - Implemented the basics of the Script panel, with some code ported from
+      the Firebug Lite 1.2 version.
+      
+    - Better number of lines detection
 
 -------------------------------------------------------------------------------
 CSS
 -------------------------------------------------------------------------------
-  import
-  lowercase rules and property names
+    - Implemented the basics of the CSS panel, with some code ported from
+      the Firebug Lite 1.2 version.
+      
+    - Adjusted the rules and property names styles to lowercase
+
+-------------------------------------------------------------------------------
+Domplate
+-------------------------------------------------------------------------------
+    - Removed the dependency on global variables (domplate, DomplateTag)
+    - Adjusted the code so it can run in external contexts (persistent mode)
+
 
 
 ###################################################################################################
@@ -33,41 +79,46 @@ CSS
 -------------------------------------------------------------------------------
 Core
 -------------------------------------------------------------------------------
-    Better implementation of the chrome synchronization (detach and reattach methods)
-    Find location
+    - Better implementation of the chrome synchronization (detach and reattach methods)
+    - Improvements the location detection
 
 -------------------------------------------------------------------------------
 Chrome
 -------------------------------------------------------------------------------
-    XML+XSL and XHTML support
-    Synchronization messages ("detach" and "reattach") are now dispatched to all panels 
-    Fixed problem with Chrome synchronization in Opera
-    Fixed weird bug in layout in IE
+    - XML+XSL and XHTML support
+    - Synchronization messages ("detach" and "reattach") are now dispatched to all panels 
+    - Fixed problem with Chrome synchronization in Opera
+    - Fixed weird bug in layout in IE (horizontal splitter was disappearing sometimes)
 
 -------------------------------------------------------------------------------
 Inspector
 -------------------------------------------------------------------------------
-    auto margin
-    pointsToPixels
-    pixelsPerInch
-    Outline Inspector is now "cropped" to avoid triggering the scrollbars
+    - Reimplemented the IE auto margin size calculator
+    - Reimplemented the pointsToPixels function
+    - Reimplemented the pixelsPerInch calculator
+    - Outline Inspector is now "cropped" to avoid triggering the scrollbars
 
 -------------------------------------------------------------------------------
 Bookmarlet
 -------------------------------------------------------------------------------
-    More robust and maintainable bookmarlet
+    - More robust and maintainable bookmarlet
 
 -------------------------------------------------------------------------------
 Domplate
 -------------------------------------------------------------------------------
+    - Ported the Domplate rendering engine
 
 -------------------------------------------------------------------------------
 Reps
 -------------------------------------------------------------------------------
+    - Ported the visual representation rules of objects (Reps module) 
 
 -------------------------------------------------------------------------------
 Persist
 -------------------------------------------------------------------------------
+    - Reimplemented the application core to support in the future persisted
+      Chromes, that is, UI windows that stays alive when the user reloads or
+      changes the page (considering that the following page is in the same domain).
 
 
 

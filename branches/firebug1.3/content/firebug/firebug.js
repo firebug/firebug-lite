@@ -586,39 +586,8 @@ Firebug.Panel =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // free memory
-        if (parentPanelMap.hasOwnProperty(this.name))
-        {
-            this.sidePanelBar.shutdown();
-        }
-        
-        this.panelNode = null;
-        this.tabNode = null;
-        
-        var options = this.options;
-        
-        if (options.hasSidePanel)
-        {
-            //this.sidePanelNode = $(panelId + "StatusBar");
-        }
-        
-        if (options.hasStatusBar)
-        {
-            this.statusBarBox = null;
-            this.statusBarNode = null;
-        }
-        
-        if (options.hasToolButtons)
-        {
-            this.toolButtonsNode = null;
-        }
-            
-        this.containerNode = null;
     },
 
     detach: function(oldChrome, newChrome)
@@ -898,8 +867,8 @@ Firebug.PanelBar =
             this.selectedPanel = panel;
             
             setClass(panel.tabNode, "fbSelectedTab");
-            panel.show();
             panel.initialize();
+            panel.show();
         }
     },
     
