@@ -317,7 +317,8 @@ var ChromeBase = extend(ChromeBase, {
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        Firebug.Console.flush();
+        if (Firebug.Console)
+            Firebug.Console.flush();
         
         if (Firebug.Trace)
             FBTrace.flush(Firebug.Trace);
@@ -375,17 +376,19 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
-        commandLine = new Firebug.CommandLine(fbCommandLine);
+        if (Firebug.CommandLine)
+            commandLine = new Firebug.CommandLine(fbCommandLine);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
-        if (isIE)
+        if (isIE && Firebug.Selector)
         {
-           var as = $$(".fbHover");
-           for (var i=0, a; a=as[i]; i++)
-           {
-               a.setAttribute("href", "javascript:void(0)");
-           }
+            // TODO: xxxpedro change to getElementsByClass
+            var as = $$(".fbHover");
+            for (var i=0, a; a=as[i]; i++)
+            {
+                a.setAttribute("href", "javascript:void(0)");
+            }
         }
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -440,6 +443,11 @@ var ChromeBase = extend(ChromeBase, {
         // ************************************************************************************************
         // ************************************************************************************************
 
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        // remove disableTextSelection event handlers
+        restoreTextSelection($("fbToolbar"));
+        restoreTextSelection($("fbPanelBarBox"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Remove the interface elements cache
@@ -487,7 +495,8 @@ var ChromeBase = extend(ChromeBase, {
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // destroy the instance of the CommandLine class
-        commandLine.destroy();
+        if (Firebug.CommandLine)
+            commandLine.destroy();
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -678,6 +687,12 @@ var ChromeFrameBase = extend(ChromeContext,
         
         //if (this.node.style.visibility != "visible")
         //    this.node.style.visibility = "visible";
+    },
+    
+    destroy: function()
+    {
+        ChromeBase.destroy.call(this);
+        removeGlobalEvent("keydown", onPressF12);
     },
     
     initialize: function()

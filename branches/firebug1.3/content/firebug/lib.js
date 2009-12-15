@@ -56,7 +56,10 @@ this.initialize = function()
     // initialize environment
 
     // point the FBTrace object to the local variable
-    FBTrace = FBL.FBTrace;
+    if (FBL.FBTrace)
+        FBTrace = FBL.FBTrace;
+    else
+        FBTrace = FBL.FBTrace = {};
     
     // check if the actual window is a persisted chrome context
     var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
@@ -1389,17 +1392,27 @@ this.dispatch = function(listeners, name, args)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+var disableTextSelectionHandler = function(){ return false };
+
 this.disableTextSelection = function(e)
 {
     if (typeof e.onselectstart != "undefined") // IE
-        e.onselectstart = function(){ return false };
+        this.addEvent(e, "selectstart", disableTextSelectionHandler);
         
     else // others
-        e.onmousedown = function(){ return false };
+        this.addEvent(e, "mousedown", disableTextSelectionHandler);
     
     e.style.cursor = "default";
 };
 
+this.restoreTextSelection = function(e)
+{
+    if (typeof e.onselectstart != "undefined") // IE
+        this.removeEvent(e, "selectstart", disableTextSelectionHandler);
+        
+    else // others
+        this.removeEvent(e, "mousedown", disableTextSelectionHandler);
+};
 
 // ************************************************************************************************
 // DOM Events
