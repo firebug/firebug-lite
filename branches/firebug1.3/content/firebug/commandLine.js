@@ -3,10 +3,8 @@ FBL.ns(function() { with (FBL) {
 
 var Console = Firebug.Console;
 
-
 // ************************************************************************************************
 // CommandLine
-
 
 Firebug.CommandLine = function(element)
 {
@@ -17,11 +15,12 @@ Firebug.CommandLine = function(element)
     
     this.clear = bind(this.clear, this);
     this.onKeyDown = bind(this.onKeyDown, this);
+    this.onError = bind(this.onError, this);
     
     addEvent(this.element, "keydown", this.onKeyDown);
     
-    var self = this
-    window.onerror = Firebug.chrome.window.onerror = Firebug.browser.window.onerror = function(){self.onError.apply(self, arguments)};
+    addEvent(Firebug.browser.window, "error", this.onError);
+    addEvent(Firebug.chrome.window, "error", this.onError);
     
     initializeCommandLineAPI();
 };
@@ -65,8 +64,10 @@ Firebug.CommandLine.prototype =
     
     destroy: function()
     {
+        removeEvent(Firebug.browser.window, "error", this.onError);
+        removeEvent(Firebug.chrome.window, "error", this.onError);
+        
         removeEvent(this.element, "keydown", this.onKeyDown);
-        window.onerror = null;
         
         this.element = null
         delete this.element;
@@ -355,7 +356,7 @@ var CommandLineAPI =
     dir: Firebug.Console.dir,
 
     dirxml: Firebug.Console.dirxml
-}
+};
 
 Firebug.CommandLine.API = {};
 var initializeCommandLineAPI = function initializeCommandLineAPI()
@@ -363,8 +364,7 @@ var initializeCommandLineAPI = function initializeCommandLineAPI()
     for (var m in CommandLineAPI)
         if (!Firebug.browser.window[m])
             Firebug.CommandLine.API[m] = CommandLineAPI[m];
-}
-
+};
 
 // ************************************************************************************************
 }});
