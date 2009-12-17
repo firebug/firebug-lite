@@ -272,7 +272,6 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     options: {
         hasSidePanel: true,
         //hasToolButtons: true,
-        //hasStatusBar: true,
         isPreRendered: true,
         innerHTMLSync: true
     },
@@ -284,6 +283,11 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if (Env.isPersistentMode || Firebug.chrome.type != "popup")
             this.createUI();
+        
+        if(!this.sidePanelBar.selectedPanel)
+        {
+            this.sidePanelBar.selectPanel("DOM2");
+        }            
     },
     
     createUI: function()
@@ -306,7 +310,6 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if(!selectedElement)
         {
-            this.sidePanelBar.selectPanel("DOM2");
             Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID]);
         }
         
@@ -368,13 +371,13 @@ var selectElement= function selectElement(e)
         FirebugChrome.selectedHTMLElementId = e.id;
         
         var target = documentCache[e.id];
-        //var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
+        var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
         
         var lazySelect = function()
         {
             selectedSidePanelTS = new Date().getTime();
             
-            //selectedSidePanel.select(target, true);
+            selectedSidePanel.select(target, true);
         };
         
         if (selectedSidePanelTimer)
