@@ -930,10 +930,8 @@ var ChromePopupBase = extend(ChromeBase, {
         
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
-            [Firebug.chrome.window, "unload", this.destroy]
-             
-             //,
-            //[Firebug.browser.window, "unload", Firebug.shutdown]
+            [Firebug.chrome.window, "unload", this.destroy],
+            [Firebug.browser.window, "unload", this.close]
         );
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
