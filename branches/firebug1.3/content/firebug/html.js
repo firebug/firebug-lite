@@ -64,12 +64,14 @@ Firebug.HTML = extend(Firebug.Module,
                     if (!attr.specified || attr.nodeName == cacheID)
                         continue;
                     
-                    html.push('&nbsp;<span class="nodeName">', attr.nodeName.toLowerCase(),
-                        '</span>=&quot;<span class="nodeValue">', escapeHTML(attr.nodeValue),
+                    var name = attr.nodeName.toLowerCase();
+                    var value = name == "style" ? node.style.cssText : attr.nodeValue;
+                    
+                    html.push('&nbsp;<span class="nodeName">', name,
+                        '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
                         '</span>&quot;')
                 }
-            
-
+                
                 /*
                 // source code nodes
                 if (nodeName == 'script' || nodeName == 'style')
@@ -103,7 +105,6 @@ Firebug.HTML = extend(Firebug.Module,
                       
                 
                 }/**/
-                
                 
                 // Just a single text node child
                 if (hasSingleTextChild)
