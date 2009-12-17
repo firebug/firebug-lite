@@ -112,6 +112,7 @@ var ConsoleAPI =
         var html = [];
         
         Firebug.Reps.appendNode(node, html);
+        
         return Firebug.Console.logRow(html, "dirxml");
     },
     
@@ -128,18 +129,21 @@ var ConsoleAPI =
     time: function(name)
     {
         Firebug.Console.timeMap[name] = new Date().getTime();
+        
         return Firebug.Console.LOG_COMMAND;
     },
     
     timeEnd: function(name)
     {
         var timeMap = Firebug.Console.timeMap;
+        
         if (name in timeMap)
         {
             var delta = new Date().getTime() - timeMap[name];
             Firebug.Console.logFormatted([name+ ":", delta+"ms"]);
             delete timeMap[name];
         }
+        
         return Firebug.Console.LOG_COMMAND;
     },
     
@@ -150,7 +154,40 @@ var ConsoleAPI =
     
     trace: function()
     {
-        return this.warn(["trace() not supported."]);
+        var getFuncName = function getFuncName (f)
+        {
+            if (f.getName instanceof Function)
+                return f.getName();
+            if (f.name) // in FireFox, Function objects have a name property...
+                return f.name;
+            
+            var name = f.toString().match(/function\s*(\w*)/)[1];
+            return name || "anonymous";
+        };
+    
+        var traceLabel = "Stack Trace";
+        
+        Firebug.Console.group(traceLabel);
+        
+        for (var fn = arguments.callee.caller; fn; fn = fn.caller)
+        {
+            var html = [ getFuncName(fn), "(" ];
+
+            for (var i = 0, l = fn.arguments.length; i < l; ++i)
+            {
+                if (i)
+                    html.push(", ");
+                
+                Firebug.Reps.appendObject(fn.arguments[i], html);
+            }
+
+            html.push(")");
+            Firebug.Console.logRow(html, "stackTrace");
+        }
+        
+        Firebug.Console.groupEnd(traceLabel);
+        
+        return Firebug.Console.LOG_COMMAND; 
     },
     
     profile: function()
@@ -160,18 +197,20 @@ var ConsoleAPI =
     
     profileEnd: function()
     {
-        return Firebug.Console.LOG_COMMAND;
+        return this.warn(["profileEnd() not supported."]);
     },
     
     clear: function()
     {
         Firebug.Console.getPanel().contentNode.innerHTML = "";
+        
         return Firebug.Console.LOG_COMMAND;
     },
 
     open: function()
     {
         toggleConsole(true);
+        
         return Firebug.Console.LOG_COMMAND;
     },
     
