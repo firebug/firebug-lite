@@ -41,13 +41,15 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
+        this.onChangeSelect = bind(this.onChangeSelect, this);
+        
         var doc = Firebug.browser.document;
         var scripts = doc.getElementsByTagName("script");
         var selectNode = this.selectNode = createElement("select");
         
         for(var i=0, script; script=scripts[i]; i++)
         {
-            var fileName = getFileName(script.src) || "..";
+            var fileName = getFileName(script.src) || getFileName(doc.location.href);
             var option = createElement("option", {value:i});
             
             option.appendChild(Firebug.chrome.document.createTextNode(fileName));
@@ -61,7 +63,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
-        addEvent(this.selectNode, "change", bind(this.onChangeSelect, this));
+        addEvent(this.selectNode, "change", this.onChangeSelect);
         
         this.selectSourceCode(this.sourceIndex);
     },
@@ -97,8 +99,6 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         if (this.lastSourceIndex != index)
         {
-            var self = this;
-            
             var renderProcess = function renderProcess(src)
             {
                 var html = [],
@@ -152,6 +152,8 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             {
                 renderProcess("Access to restricted URI denied");
             };
+            
+            var self = this;
             
             var doc = Firebug.browser.document;
             var script = doc.getElementsByTagName("script")[index];
@@ -265,13 +267,13 @@ var getScriptURL = function getScriptURL(script)
     }
 };
 
-var getFileName = function getFileName(_path)
+var getFileName = function getFileName(path)
 {
-    if (!_path) return "";
+    if (!path) return "";
     
-    var match = _path&&_path.match(/[^\/]+(\?.*)?(#.*)?$/);
+    var match = path && path.match(/[^\/]+(\?.*)?(#.*)?$/);
     
-    return match&&match[0]||_path;
+    return match && match[0] || path;
 };
 
 

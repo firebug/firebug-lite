@@ -11,15 +11,25 @@ Firebug.CSS = extend(Firebug.Module,
         return Firebug.chrome ? Firebug.chrome.getPanel("CSS") : null;
     },
     
-    renderStylesheet: function(index)
+    renderStyleSheet: function(index)
     {
-        var str = renderStylesheet(index);
-        
         var panel = this.getPanel();
-        panel.contentNode.innerHTML = str.join("");
-        panel.containerNode.scrollTop = 0;
+        
+        if (panel.lastStyleSheetIndex != index)
+        {
+            var str = renderStyleSheet(index);
+            
+            panel.contentNode.innerHTML = str.join("");
+            
+            // IE needs this timeout, otherwise the panel won't scroll
+            setTimeout(function(){
+                panel.synchronizeUI();
+            },0);
+            
+            panel.styleSheetIndex = index;
+            panel.lastStyleSheetIndex = index;
+        }
     }
-      
 });
 
 Firebug.registerModule(Firebug.CSS);
@@ -35,6 +45,9 @@ CSSStyleSheetPanel.prototype = extend(Firebug.Panel,
     name: "CSS",
     title: "CSS",
     
+    styleSheetIndex: 0,
+    lastStyleSheetIndex: -1,
+    
     options: {
         hasToolButtons: true
     },
@@ -43,18 +56,18 @@ CSSStyleSheetPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
-        var selectNode = createElement("select");
+        this.onChangeSelect = bind(this.onChangeSelect, this);
         
         var doc = Firebug.browser.document;
-        var collection = doc.styleSheets;
-        var options = "";
+        var styleSheets = doc.styleSheets;
+        var selectNode = this.selectNode = createElement("select");
         
-        for(var i=0,len=collection.length; i<len; i++)
+        for(var i=0, styleSheet; styleSheet=styleSheets[i]; i++)
         {
-            var uri = getFileName(collection[i].href) ||  getFileName(doc.location.href);
-            
+            var fileName = getFileName(styleSheet.href) || getFileName(doc.location.href);
             var option = createElement("option", {value:i});
-            option.appendChild(Firebug.chrome.document.createTextNode(uri));
+            
+            option.appendChild(Firebug.chrome.document.createTextNode(fileName));
             selectNode.appendChild(option);
         };
         
@@ -65,9 +78,37 @@ CSSStyleSheetPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
-        Firebug.CSS.renderStylesheet(0);
-    }
+        addEvent(this.selectNode, "change", this.onChangeSelect);
+        
+        this.selectStyleSheet(this.styleSheetIndex);
+    },
     
+    detach: function(oldChrome, newChrome)
+    {
+        Firebug.Panel.detach.apply(this, arguments);
+        
+        var oldPanel = oldChrome.getPanel("CSS");
+        var index = oldPanel.styleSheetIndex;
+        
+        this.selectNode.selectedIndex = index;
+        this.styleSheetIndex = index;
+        this.lastStyleSheetIndex = -1;
+    },
+    
+    onChangeSelect: function(event)
+    {
+        event = event || window.event;
+        var target = event.srcElement || event.currentTarget;
+        var index = target.selectedIndex;
+        
+        Firebug.CSS.renderStyleSheet(index);
+    },
+    
+    selectStyleSheet: function(index)
+    {
+        this.selectNode.selectedIndex = index;
+        Firebug.CSS.renderStyleSheet(index);
+    }    
 });
 
 Firebug.registerPanel(CSSStyleSheetPanel);
@@ -125,7 +166,7 @@ Firebug.registerPanel(CSSElementPanel);
 
 // ************************************************************************************************
 
-var renderStylesheet = function renderStylesheet(index)
+var renderStyleSheet = function renderStyleSheet(index)
 {
     var styleSheet = Firebug.browser.document.styleSheets[index],
         str = [], 
@@ -182,7 +223,7 @@ var getFileName = function getFileName(path)
     
     var match = path && path.match(/[^\/]+(\?.*)?(#.*)?$/);
     
-    return match&&match[0] || path;
+    return match && match[0] || path;
 };
 
 // ************************************************************************************************
