@@ -364,16 +364,16 @@ var selectElement= function selectElement(e)
         
         selectedElement = e;
         
-        FirebugChrome.selectedElement = e.id;
+        FirebugChrome.selectedHTMLElementId = e.id;
         
         var target = documentCache[e.id];
-        var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
+        //var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
         
         var lazySelect = function()
         {
             selectedSidePanelTS = new Date().getTime();
             
-            selectedSidePanel.select(target, true);
+            //selectedSidePanel.select(target, true);
         };
         
         if (selectedSidePanelTimer)

@@ -101,7 +101,7 @@ CSSElementPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
-        var target = documentCache[FirebugChrome.selectedElement];
+        var target = documentCache[FirebugChrome.selectedHTMLElementId];
         if (!target) return;
         
         var str = renderStyles(target);
