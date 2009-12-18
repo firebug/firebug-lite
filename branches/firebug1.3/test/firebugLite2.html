@@ -3,7 +3,8 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>FirebugLite 1.3 Testing</title>
-<script type="text/javascript" src="../content/firebug.dev.js"></script>
+<script type="text/javascript" src="getStackTrace.js"></script>
+<script type="text/javascript" src="../content/firebug.dev.js#trace"></script>
 <script type="text/javascript">
 (function(){
 var console = Firebug.Console;
@@ -14,6 +15,7 @@ console.warn("This is a test call to console.warn()");
 console.error("This is a test call to console.error()");
 
 })();
+/**/
 </script>
 <style type="text/css">
 body {
@@ -62,6 +64,11 @@ li {
 }
 #ui {
   background: #efd;
+}
+</style>
+<style type="text/css">
+#dummy {
+    color: yellow;
 }
 </style>
 </head>

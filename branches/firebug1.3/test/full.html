@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>FirebugLite 1.3 Testing</title>
-<script type="text/javascript" src="../build/firebug.full.js#remote,trace"></script>
+<script type="text/javascript" src="../build/firebug.js#remote,trace"></script>
 <script type="text/javascript">
 (function(){
 var console = Firebug.Console;
@@ -70,8 +70,8 @@ li {
     <div id="build" class="block">
       <h2>Bookmarlets</h2>
       <ul>
-        <li><a href="javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js#remote');">Normal application</a></li>
-        <li><a href="javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js#remote,trace');">Application with trace enabled</a></li>
+        <li><a href="javascript:(function(F,B,L,i,t,e){e=F[B]('script');e.id='FirebugLite';e.src=t+L;F.getElementsByTagName('head')[0].appendChild(e);e=F[B]('img');e.src=t+i;})(document,'createElement','build/firebug.js#remote','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/');">Normal application</a></li>
+        <li><a href="javascript:(function(F,B,L,i,t,e){e=F[B]('script');e.id='FirebugLite';e.src=t+L;F.getElementsByTagName('head')[0].appendChild(e);e=F[B]('img');e.src=t+i;})(document,'createElement','build/firebug.js#remote,trace','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/');">Application with trace enabled</a></li>
       </ul>
     </div>
     <div class="note">

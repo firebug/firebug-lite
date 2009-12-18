@@ -21,12 +21,14 @@ var reSplitFile = /:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
 // ************************************************************************************************
 // properties
 
-var userAgent = navigator.userAgent;
-this.isFirefox = userAgent.indexOf("Firefox") != -1;
-this.isOpera   = userAgent.indexOf("Opera") != -1;
-this.isSafari  = userAgent.indexOf("AppleWebKit") != -1;
-this.isIE      = userAgent.indexOf("MSIE") != -1;
+var userAgent = navigator.userAgent.toLowerCase();
+this.isFirefox = /firefox/.test(userAgent);
+this.isOpera   = /opera/.test(userAgent);
+this.isSafari  = /webkit/.test(userAgent);
+this.isIE      = /msie/.test(userAgent) && !/opera/.test(userAgent);
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
+this.browserVersion = (userAgent.match( /.+(?:rv|it|ra|ie)[\/: ]([\d.]+)/ ) || [0,'0'])[1];
+this.isIElt8   = this.isIE && (this.browserVersion-0 < 8); 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -53,46 +55,46 @@ var FBTrace = null;
 this.initialize = function()
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // initialize application
-    FBL.Env.Cache = {
-        Chrome: null
-    };
+    // initialize environment
+
+    // point the FBTrace object to the local variable
+    if (FBL.FBTrace)
+        FBTrace = FBL.FBTrace;
+    else
+        FBTrace = FBL.FBTrace = {};
     
-    var isChromeContext = typeof window.FirebugApplication == "object";
+    // check if the actual window is a persisted chrome context
+    var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
     
-    if (!isChromeContext)
-    {
-        findLocation();
-    }
-    
-    FBTrace = FBL.FBTrace;
-    
-    if (isChromeContext) // persistent application
+    // chrome context of the persistent application
+    if (isChromeContext)
     {
         // TODO: xxxpedro persist - make a better synchronization
-        FBL.Env = window.FirebugApplication;
+        FBL.Env = window.Firebug.SharedEnv;
         FBL.Env.isChromeContext = true;
         FBTrace.messageQueue = FBL.Env.traceMessageQueue;
     }
-    else // non-persistent application
+    // non-persistent application
+    else
     {
-        // TODO: get preferences here...
         FBL.NS = document.documentElement.namespaceURI;
         FBL.Env.browser = window;
         FBL.Env.destroy = destroyApplication;
+
+        // find the URL location of the loaded application
+        findLocation();
+        
+        // TODO: get preferences here...
     }
     
+    // check browser compatibilities
+    this.isQuiksMode = FBL.Env.browser.document.compatMode == "BackCompat";
+    this.isIEQuiksMode = this.isIE && this.isQuiksMode;
+    this.isIEStantandMode = this.isIE && !this.isQuiksMode;
     
+    this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
     
-    // TODO: xxxpedro why is these here?
-    FBL.isQuiksMode = FBL.Env.browser.document.compatMode == "BackCompat";
-    FBL.isIEQuiksMode = FBL.isIE && FBL.isQuiksMode;
-    FBL.isIEStantandMode = FBL.isIE && !FBL.isQuiksMode;
-    
-    FBL.noFixedPosition = FBL.isIE6 || FBL.isIEQuiksMode;
-    
-    
-    
+    // after creating/synchronizing the environment, initialize the FBTrace module
     if (FBL.Env.isTraceMode) FBTrace.initialize();
     
     if (FBTrace.DBG_INITIALIZE && isChromeContext) FBTrace.sysout("FBL.initialize - persistent application", "initialize chrome context");
@@ -115,21 +117,23 @@ this.initialize = function()
     }
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // finish environment initialization
 
     if (FBL.Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make a better synchronization
         if (isChromeContext)
         {
-            FBL.Env.Cache.Chrome.clone(FBL.Env._lastChromeCache);
+            FBL.FirebugChrome.clone(FBL.Env.FirebugChrome);
         }
         else
         {
-            FBL.Env._lastChromeCache = FBL.Env.Cache.Chrome;
+            FBL.Env.FirebugChrome = FBL.FirebugChrome;
             FBL.Env.traceMessageQueue = FBTrace.messageQueue;
         }
     }
     
+    // wait document load
     waitForDocument();
 };
 
@@ -137,8 +141,9 @@ var waitForDocument = function waitForDocument()
 {
     // document.body not available in XML+XSL documents in Firefox
     var doc = FBL.Env.browser.document;
-    var body = null;
-    if (body = doc.getElementsByTagName("body")[0])
+    var body = doc.getElementsByTagName("body")[0];
+    
+    if (body)
     {
         calculatePixelsPerInch(doc, body);
         onDocumentLoad();
@@ -151,29 +156,28 @@ var onDocumentLoad = function onDocumentLoad()
 {
     if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "document loaded");
     
+    // fix IE6 problem with cache of background images, causing a lot of flickering 
     if (FBL.isIE6)
         fixIE6BackgroundImageCache();
         
-    // persistent application - chrome document loaded
+    // chrome context of the persistent application
     if (FBL.Env.isPersistentMode && FBL.Env.isChromeContext)
     {
-        //FBL.Firebug.Inspector.create();
+        // finally, start the application in the chrome context
         FBL.Firebug.initialize();
         
+        // if is not development mode, remove the shared environment cache object
+        // used to synchronize the both persistent contexts
         if (!FBL.Env.isDevelopmentMode)
         {
-            window.FirebugApplication.destroy();
-        
-            if (FBL.isIE)
-                window.FirebugApplication = null;
-            else
-                delete window.FirebugApplication;
+            window.Firebug.SharedEnv.destroy();
+            delete window.Firebug.SharedEnv;
         }
     }
-    // main document loaded
+    // non-persistent application
     else
     {
-        FBL.Env.Cache.Chrome.create();
+        FBL.FirebugChrome.create();
     }    
 };
 
@@ -479,6 +483,32 @@ function arrayInsert(array, index, other)
    return array;
 }
 
+// ************************************************************************************************
+
+this.createStyleSheet = function(doc, url)
+{
+    //TODO: xxxpedro
+    //var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
+    var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
+    style.setAttribute("charset","utf-8");
+    style.firebugIgnore = true;
+    style.setAttribute("rel", "stylesheet");
+    style.setAttribute("type", "text/css");
+    style.setAttribute("href", url);
+    
+    //TODO: xxxpedro
+    //style.innerHTML = this.getResource(url);
+    return style;
+}
+
+this.addStyleSheet = function(doc, style)
+{
+    var heads = doc.getElementsByTagName("head");
+    if (heads.length)
+        heads[0].appendChild(style);
+    else
+        doc.documentElement.appendChild(style);
+};
 
 // ************************************************************************************************
 // String Util
@@ -584,6 +614,9 @@ this.isWhitespace = function(text)
 
 this.safeToString = function(ob)
 {
+    if (this.isIE)
+        return ob + "";
+    
     try
     {
         if (ob && "toString" in ob && typeof ob.toString == "function")
@@ -676,6 +709,293 @@ this.getRootWindow = function(win)
             return win;
     }
     return null;
+};
+
+// ************************************************************************************************
+// Graphics
+
+this.getClientOffset = function(elt)
+{
+    function addOffset(elt, coords, view)
+    {
+        var p = elt.offsetParent;
+
+        var style = view.getComputedStyle(elt, "");
+
+        if (elt.offsetLeft)
+            coords.x += elt.offsetLeft + parseInt(style.borderLeftWidth);
+        if (elt.offsetTop)
+            coords.y += elt.offsetTop + parseInt(style.borderTopWidth);
+
+        if (p)
+        {
+            if (p.nodeType == 1)
+                addOffset(p, coords, view);
+        }
+        else if (elt.ownerDocument.defaultView.frameElement)
+            addOffset(elt.ownerDocument.defaultView.frameElement, coords, elt.ownerDocument.defaultView);
+    }
+
+    var coords = {x: 0, y: 0};
+    if (elt)
+    {
+        var view = elt.ownerDocument.defaultView;
+        addOffset(elt, coords, view);
+    }
+
+    return coords;
+};
+
+this.getViewOffset = function(elt, singleFrame)
+{
+    function addOffset(elt, coords, view)
+    {
+        var p = elt.offsetParent;
+        coords.x += elt.offsetLeft - (p ? p.scrollLeft : 0);
+        coords.y += elt.offsetTop - (p ? p.scrollTop : 0);
+
+        if (p)
+        {
+            if (p.nodeType == 1)
+            {
+                var parentStyle = view.getComputedStyle(p, "");
+                if (parentStyle.position != "static")
+                {
+                    coords.x += parseInt(parentStyle.borderLeftWidth);
+                    coords.y += parseInt(parentStyle.borderTopWidth);
+
+                    if (p.localName == "TABLE")
+                    {
+                        coords.x += parseInt(parentStyle.paddingLeft);
+                        coords.y += parseInt(parentStyle.paddingTop);
+                    }
+                    else if (p.localName == "BODY")
+                    {
+                        var style = view.getComputedStyle(elt, "");
+                        coords.x += parseInt(style.marginLeft);
+                        coords.y += parseInt(style.marginTop);
+                    }
+                }
+                else if (p.localName == "BODY")
+                {
+                    coords.x += parseInt(parentStyle.borderLeftWidth);
+                    coords.y += parseInt(parentStyle.borderTopWidth);
+                }
+
+                var parent = elt.parentNode;
+                while (p != parent)
+                {
+                    coords.x -= parent.scrollLeft;
+                    coords.y -= parent.scrollTop;
+                    parent = parent.parentNode;
+                }
+                addOffset(p, coords, view);
+            }
+        }
+        else
+        {
+            if (elt.localName == "BODY")
+            {
+                var style = view.getComputedStyle(elt, "");
+                coords.x += parseInt(style.borderLeftWidth);
+                coords.y += parseInt(style.borderTopWidth);
+
+                var htmlStyle = view.getComputedStyle(elt.parentNode, "");
+                coords.x -= parseInt(htmlStyle.paddingLeft);
+                coords.y -= parseInt(htmlStyle.paddingTop);
+            }
+
+            if (elt.scrollLeft)
+                coords.x += elt.scrollLeft;
+            if (elt.scrollTop)
+                coords.y += elt.scrollTop;
+
+            var win = elt.ownerDocument.defaultView;
+            if (win && (!singleFrame && win.frameElement))
+                addOffset(win.frameElement, coords, win);
+        }
+
+    }
+
+    var coords = {x: 0, y: 0};
+    if (elt)
+        addOffset(elt, coords, elt.ownerDocument.defaultView);
+
+    return coords;
+};
+
+this.getLTRBWH = function(elt)
+{
+    var bcrect,
+        dims = {"left": 0, "top": 0, "right": 0, "bottom": 0, "width": 0, "height": 0};
+
+    if (elt)
+    {
+        bcrect = elt.getBoundingClientRect();
+        dims.left = bcrect.left;
+        dims.top = bcrect.top;
+        dims.right = bcrect.right;
+        dims.bottom = bcrect.bottom;
+
+        if(bcrect.width)
+        {
+            dims.width = bcrect.width;
+            dims.height = bcrect.height;
+        }
+        else
+        {
+            dims.width = dims.right - dims.left;
+            dims.height = dims.bottom - dims.top;
+        }
+    }
+    return dims;
+};
+
+this.applyBodyOffsets = function(elt, clientRect)
+{
+    var od = elt.ownerDocument;
+    if (!od.body)
+        return clientRect;
+
+    var style = od.defaultView.getComputedStyle(od.body, null);
+
+    var pos = style.getPropertyValue('position');
+    if(pos === 'absolute' || pos === 'relative')
+    {
+        var borderLeft = parseInt(style.getPropertyValue('border-left-width').replace('px', ''),10) || 0;
+        var borderTop = parseInt(style.getPropertyValue('border-top-width').replace('px', ''),10) || 0;
+        var paddingLeft = parseInt(style.getPropertyValue('padding-left').replace('px', ''),10) || 0;
+        var paddingTop = parseInt(style.getPropertyValue('padding-top').replace('px', ''),10) || 0;
+        var marginLeft = parseInt(style.getPropertyValue('margin-left').replace('px', ''),10) || 0;
+        var marginTop = parseInt(style.getPropertyValue('margin-top').replace('px', ''),10) || 0;
+
+        var offsetX = borderLeft + paddingLeft + marginLeft;
+        var offsetY = borderTop + paddingTop + marginTop;
+
+        clientRect.left -= offsetX;
+        clientRect.top -= offsetY;
+        clientRect.right -= offsetX;
+        clientRect.bottom -= offsetY;
+    }
+
+    return clientRect;
+};
+
+this.getOffsetSize = function(elt)
+{
+    return {width: elt.offsetWidth, height: elt.offsetHeight};
+};
+
+this.getOverflowParent = function(element)
+{
+    for (var scrollParent = element.parentNode; scrollParent; scrollParent = scrollParent.offsetParent)
+    {
+        if (scrollParent.scrollHeight > scrollParent.offsetHeight)
+            return scrollParent;
+    }
+};
+
+this.isScrolledToBottom = function(element)
+{
+    var onBottom = (element.scrollTop + element.offsetHeight) == element.scrollHeight;
+    if (FBTrace.DBG_CONSOLE)
+        FBTrace.sysout("isScrolledToBottom offsetHeight: "+element.offsetHeight +" onBottom:"+onBottom);
+    return onBottom;
+};
+
+this.scrollToBottom = function(element)
+{
+        element.scrollTop = element.scrollHeight;
+
+        if (FBTrace.DBG_CONSOLE)
+        {
+            FBTrace.sysout("scrollToBottom reset scrollTop "+element.scrollTop+" = "+element.scrollHeight);
+            if (element.scrollHeight == element.offsetHeight)
+                FBTrace.sysout("scrollToBottom attempt to scroll non-scrollable element "+element, element);
+        }
+
+        return (element.scrollTop == element.scrollHeight);
+};
+
+this.move = function(element, x, y)
+{
+    element.style.left = x + "px";
+    element.style.top = y + "px";
+};
+
+this.resize = function(element, w, h)
+{
+    element.style.width = w + "px";
+    element.style.height = h + "px";
+};
+
+this.linesIntoCenterView = function(element, scrollBox)  // {before: int, after: int}
+{
+    if (!scrollBox)
+        scrollBox = this.getOverflowParent(element);
+
+    if (!scrollBox)
+        return;
+
+    var offset = this.getClientOffset(element);
+
+    var topSpace = offset.y - scrollBox.scrollTop;
+    var bottomSpace = (scrollBox.scrollTop + scrollBox.clientHeight)
+            - (offset.y + element.offsetHeight);
+
+    if (topSpace < 0 || bottomSpace < 0)
+    {
+        var split = (scrollBox.clientHeight/2);
+        var centerY = offset.y - split;
+        scrollBox.scrollTop = centerY;
+        topSpace = split;
+        bottomSpace = split -  element.offsetHeight;
+    }
+
+    return {before: Math.round((topSpace/element.offsetHeight) + 0.5),
+            after: Math.round((bottomSpace/element.offsetHeight) + 0.5) }
+};
+
+this.scrollIntoCenterView = function(element, scrollBox, notX, notY)
+{
+    if (!element)
+        return;
+
+    if (!scrollBox)
+        scrollBox = this.getOverflowParent(element);
+
+    if (!scrollBox)
+        return;
+
+    var offset = this.getClientOffset(element);
+
+    if (!notY)
+    {
+        var topSpace = offset.y - scrollBox.scrollTop;
+        var bottomSpace = (scrollBox.scrollTop + scrollBox.clientHeight)
+            - (offset.y + element.offsetHeight);
+
+        if (topSpace < 0 || bottomSpace < 0)
+        {
+            var centerY = offset.y - (scrollBox.clientHeight/2);
+            scrollBox.scrollTop = centerY;
+        }
+    }
+
+    if (!notX)
+    {
+        var leftSpace = offset.x - scrollBox.scrollLeft;
+        var rightSpace = (scrollBox.scrollLeft + scrollBox.clientWidth)
+            - (offset.x + element.clientWidth);
+
+        if (leftSpace < 0 || rightSpace < 0)
+        {
+            var centerX = offset.x - (scrollBox.clientWidth/2);
+            scrollBox.scrollLeft = centerX;
+        }
+    }
+    if (FBTrace.DBG_SOURCEFILES)
+        FBTrace.sysout("lib.scrollIntoCenterView ","Element:"+element.innerHTML);
 };
 
 // ************************************************************************************************
@@ -816,6 +1136,48 @@ this.getAncestorByClass = function(node, className)
     return null;
 };
 
+this.getElementByClass = function(node, className)  // className, className, ...
+{
+    var args = cloneArray(arguments); args.splice(0, 1);
+    for (var child = node.firstChild; child; child = child.nextSibling)
+    {
+        var args1 = cloneArray(args); args1.unshift(child);
+        if (FBL.hasClass.apply(null, args1))
+            return child;
+        else
+        {
+            var found = FBL.getElementByClass.apply(null, args1);
+            if (found)
+                return found;
+        }
+    }
+
+    return null;
+};
+
+this.getBody = function(doc)
+{
+    if (doc.body)
+        return doc.body;
+
+    var body = doc.getElementsByTagName("body")[0];
+    if (body)
+        return body;
+
+    return doc.firstChild;  // For non-HTML docs
+};
+
+this.isElement = function(o)
+{
+    try {
+        return o && this.instanceOf(o, "Element");
+    }
+    catch (ex) {
+        return false;
+    }
+};
+
+
 // ************************************************************************************************
 // DOM creation
 
@@ -910,18 +1272,18 @@ this.isShift = function(event)
 
 this.addEvent = function(object, name, handler)
 {
-    if (document.all)
-        object.attachEvent("on"+name, handler);
-    else
+    if (object.addEventListener)
         object.addEventListener(name, handler, false);
+    else
+        object.attachEvent("on"+name, handler);
 };
 
 this.removeEvent = function(object, name, handler)
 {
-    if (document.all)
-        object.detachEvent("on"+name, handler);
-    else
+    if (object.removeEventListener)
         object.removeEventListener(name, handler, false);
+    else
+        object.detachEvent("on"+name, handler);
 };
 
 this.cancelEvent = function(e, preventDefault)
@@ -936,30 +1298,29 @@ this.cancelEvent = function(e, preventDefault)
                     e.returnValue = false;
     }
     
-    if (document.all)
-        e.cancelBubble = true;
-    else
+    if (e.stopPropagation)
         e.stopPropagation();
-                
+    else
+        e.cancelBubble = true;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 this.addGlobalEvent = function(name, handler)
 {
-    var doc = FBL.Firebug.browser.document;
-    var frames = FBL.Firebug.browser.window.frames;
+    var doc = this.Firebug.browser.document;
+    var frames = this.Firebug.browser.window.frames;
     
-    FBL.addEvent(doc, name, handler);
+    this.addEvent(doc, name, handler);
     
-    if (FBL.Firebug.chrome.type == "popup")
-        FBL.addEvent(FBL.Firebug.chrome.document, name, handler);
+    if (this.Firebug.chrome.type == "popup")
+        this.addEvent(this.Firebug.chrome.document, name, handler);
   
     for (var i = 0, frame; frame = frames[i]; i++)
     {
         try
         {
-            FBL.addEvent(frame.document, name, handler);
+            this.addEvent(frame.document, name, handler);
         }
         catch(E)
         {
@@ -970,19 +1331,19 @@ this.addGlobalEvent = function(name, handler)
 
 this.removeGlobalEvent = function(name, handler)
 {
-    var doc = FBL.Firebug.browser.document;
-    var frames = FBL.Firebug.browser.window.frames;
+    var doc = this.Firebug.browser.document;
+    var frames = this.Firebug.browser.window.frames;
     
-    FBL.removeEvent(doc, name, handler);
+    this.removeEvent(doc, name, handler);
     
-    if (FBL.Firebug.chrome.type == "popup")
-        FBL.removeEvent(FBL.Firebug.chrome.document, name, handler);
+    if (this.Firebug.chrome.type == "popup")
+        this.removeEvent(this.Firebug.chrome.document, name, handler);
   
     for (var i = 0, frame; frame = frames[i]; i++)
     {
         try
         {
-            FBL.removeEvent(frame.document, name, handler);
+            this.removeEvent(frame.document, name, handler);
         }
         catch(E)
         {
@@ -1033,16 +1394,122 @@ this.dispatch = function(listeners, name, args)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+var disableTextSelectionHandler = function(){ return false };
+
 this.disableTextSelection = function(e)
 {
     if (typeof e.onselectstart != "undefined") // IE
-        e.onselectstart = function(){ return false };
+        this.addEvent(e, "selectstart", disableTextSelectionHandler);
         
     else // others
-        e.onmousedown = function(){ return false };
+        this.addEvent(e, "mousedown", disableTextSelectionHandler);
     
     e.style.cursor = "default";
 };
+
+this.restoreTextSelection = function(e)
+{
+    if (typeof e.onselectstart != "undefined") // IE
+        this.removeEvent(e, "selectstart", disableTextSelectionHandler);
+        
+    else // others
+        this.removeEvent(e, "mousedown", disableTextSelectionHandler);
+};
+
+// ************************************************************************************************
+// DOM Events
+
+var eventTypes =
+{
+    composition: [
+        "composition",
+        "compositionstart",
+        "compositionend" ],
+    contextmenu: [
+        "contextmenu" ],
+    drag: [
+        "dragenter",
+        "dragover",
+        "dragexit",
+        "dragdrop",
+        "draggesture" ],
+    focus: [
+        "focus",
+        "blur" ],
+    form: [
+        "submit",
+        "reset",
+        "change",
+        "select",
+        "input" ],
+    key: [
+        "keydown",
+        "keyup",
+        "keypress" ],
+    load: [
+        "load",
+        "beforeunload",
+        "unload",
+        "abort",
+        "error" ],
+    mouse: [
+        "mousedown",
+        "mouseup",
+        "click",
+        "dblclick",
+        "mouseover",
+        "mouseout",
+        "mousemove" ],
+    mutation: [
+        "DOMSubtreeModified",
+        "DOMNodeInserted",
+        "DOMNodeRemoved",
+        "DOMNodeRemovedFromDocument",
+        "DOMNodeInsertedIntoDocument",
+        "DOMAttrModified",
+        "DOMCharacterDataModified" ],
+    paint: [
+        "paint",
+        "resize",
+        "scroll" ],
+    scroll: [
+        "overflow",
+        "underflow",
+        "overflowchanged" ],
+    text: [
+        "text" ],
+    ui: [
+        "DOMActivate",
+        "DOMFocusIn",
+        "DOMFocusOut" ],
+    xul: [
+        "popupshowing",
+        "popupshown",
+        "popuphiding",
+        "popuphidden",
+        "close",
+        "command",
+        "broadcast",
+        "commandupdate" ]
+};
+
+this.getEventFamily = function(eventType)
+{
+    if (!this.families)
+    {
+        this.families = {};
+
+        for (var family in eventTypes)
+        {
+            var types = eventTypes[family];
+            for (var i = 0; i < types.length; ++i)
+                this.families[types[i]] = family;
+        }
+    }
+
+    return this.families[eventType];
+};
+
 
 // ************************************************************************************************
 // URLs
@@ -1544,11 +2011,6 @@ this.isArray = function(object) {
     return toString.call(object) === '[object Array]'; 
 };
 
-this.isArrayLike = function(object) {
-    // TODO:
-    //return instanceOf(object, "Array");
-};
-
 this.isFunction = function(object) {
     return toString.call(object) === "[object Function]" || 
             this.isIE && typeof object != "string" && reFunction.test(""+object);
@@ -1562,6 +2024,18 @@ this.instanceOf = function(object, className)
 {
     if (!object || typeof object != "object")
         return false;
+    
+    // Try to use the native instanceof operator. We can only use it when we know
+    // exactly the window where the object is located at
+    if (object.ownerDocument)
+    {
+        // find the correct window of the object
+        var win = object.ownerDocument.defaultView || object.ownerDocument.parentWindow;
+        
+        // if the class is acessible in the window, uses the native instanceof operator
+        if (className in win)
+            return object instanceof win[className];
+    }
     
     var cache = instanceCheckMap[className];
     if (!cache)
@@ -1579,7 +2053,7 @@ this.instanceOf = function(object, className)
             
             if( n == "property" && !(value in object) ||
                 n == "method" && !this.isFunction(object[value]) ||
-                n == "value" && (""+object[name]).toLowerCase() != ""+value )
+                n == "value" && (""+object[name]).toLowerCase() != (""+value).toLowerCase() )
                     return false;
         }
     }
@@ -3789,186 +4263,49 @@ var calculatePixelsPerInch = function calculatePixelsPerInch(doc, body)
 };
 
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+this.SourceLink = function(url, line, type, object, instance)
+{
+    this.href = url;
+    this.instance = instance;
+    this.line = line;
+    this.type = type;
+    this.object = object;
+};
+
+this.SourceLink.prototype =
+{
+    toString: function()
+    {
+        return this.href;
+    },
+    toJSON: function() // until 3.1...
+    {
+        return "{\"href\":\""+this.href+"\", "+
+            (this.line?("\"line\":"+this.line+","):"")+
+            (this.type?(" \"type\":\""+this.type+"\","):"")+
+                    "}";
+    }
+
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+this.SourceText = function(lines, owner)
+{
+    this.lines = lines;
+    this.owner = owner;
+};
+
+this.SourceText.getLineAsHTML = function(lineNo)
+{
+    return escapeForSourceLine(this.lines[lineNo-1]);
+};
+
+
 // ************************************************************************************************
 }).apply(FBL);
-
-FBL.FBTrace = {};
-
-(function() {
-// ************************************************************************************************
-
-var traceOptions = {
-    DBG_TIMESTAMP: 1,
-    DBG_INITIALIZE: 1,
-    DBG_CHROME: 1,
-    DBG_ERRORS: 1,
-    DBG_DISPATCH: 1
-};
-
-this.module = null;
-
-this.initialize = function()
-{
-    if (!this.messageQueue)
-        this.messageQueue = [];
-    
-    for (var name in traceOptions)
-        this[name] = traceOptions[name]; 
-};
-
-// ************************************************************************************************
-// FBTrace API
-
-this.sysout = function()
-{
-    return this.logFormatted(arguments, "");
-};
-
-this.dumpProperties = function(title, object)
-{
-    return this.logFormatted("dumpProperties() not supported.", "warning");
-};
-
-this.dumpStack = function()
-{
-    return this.logFormatted("dumpStack() not supported.", "warning");
-};
-
-this.flush = function(module)
-{
-    this.module = module;
-    
-    var queue = this.messageQueue;
-    this.messageQueue = [];
-    
-    for (var i = 0; i < queue.length; ++i)
-        this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
-};
-
-this.getPanel = function()
-{
-    return this.module ? this.module.getPanel() : null;
-};
-
-//*************************************************************************************************
-
-this.logFormatted = function(objects, className)
-{
-    var html = this.DBG_TIMESTAMP ? [getTimestamp(), " | "] : [];
-    var length = objects.length;
-    
-    for (var i = 0; i < length; ++i)
-    {
-        appendText(" ", html);
-        
-        var object = objects[i];
-        
-        if (i == 0)
-        {
-            html.push("<b>");
-            appendText(object, html);
-            html.push("</b>");
-        }
-        else
-            appendText(object, html);
-    }
-    
-    return this.logRow(html, className);    
-};
-
-this.logRow = function(message, className)
-{
-    var panel = this.getPanel();
-    
-    if (panel && panel.contentNode)
-        this.writeMessage(message, className);
-    else
-    {
-        this.messageQueue.push([message, className]);
-    }
-    
-    return this.LOG_COMMAND;
-};
-
-this.writeMessage = function(message, className)
-{
-    var container = this.getPanel().containerNode;
-    var isScrolledToBottom =
-        container.scrollTop + container.offsetHeight >= container.scrollHeight;
-    
-    this.writeRow.call(this, message, className);
-    
-    if (isScrolledToBottom)
-        container.scrollTop = container.scrollHeight - container.offsetHeight;
-};
-
-this.appendRow = function(row)
-{
-    var container = this.getPanel().contentNode;
-    container.appendChild(row);
-};
-
-this.writeRow = function(message, className)
-{
-    var row = this.getPanel().contentNode.ownerDocument.createElement("div");
-    row.className = "logRow" + (className ? " logRow-"+className : "");
-    row.innerHTML = message.join("");
-    this.appendRow(row);
-};
-
-//*************************************************************************************************
-
-function appendText(object, html)
-{
-    html.push(escapeHTML(objectToString(object)));
-};
-
-function getTimestamp()
-{
-    var now = new Date();
-    var ms = "" + (now.getMilliseconds() / 1000).toFixed(3);
-    ms = ms.substr(2);
-    
-    return now.toLocaleTimeString() + "." + ms;
-};
-
-//*************************************************************************************************
-
-var HTMLtoEntity =
-{
-    "<": "&lt;",
-    ">": "&gt;",
-    "&": "&amp;",
-    "'": "&#39;",
-    '"': "&quot;"
-};
-
-function replaceChars(ch)
-{
-    return HTMLtoEntity[ch];
-};
-
-function escapeHTML(value)
-{
-    return (value+"").replace(/[<>&"']/g, replaceChars);
-};
-
-//*************************************************************************************************
-
-function objectToString(object)
-{
-    try
-    {
-        return object+"";
-    }
-    catch (exc)
-    {
-        return null;
-    }
-};
-
-// ************************************************************************************************
-}).apply(FBL.FBTrace);
 
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
@@ -3993,11 +4330,11 @@ var reps = [];
 // ************************************************************************************************
 // Firebug
 
-FBL.Firebug =  
+window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a3",
-    revision: "$Revision: 4979 $",
+    revision: "$Revision: 5272 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -4017,18 +4354,34 @@ FBL.Firebug =
         // Document must be cached before chrome initialization
         cacheDocument();
         
-        Firebug.Inspector.create();
+        if (Firebug.Inspector)
+            Firebug.Inspector.create();
         
-        Env.Cache.Chrome.initialize();
+        FirebugChrome.initialize();
         
         dispatch(modules, "initialize", []);
     },
   
     shutdown: function()
     {
-        documentCache = {};
-        
         dispatch(modules, "shutdown", []);
+        
+        for(var name in documentCache)
+        {
+            documentCache[name].removeAttribute(cacheID);
+            documentCache[name] = null;
+            delete documentCache[name];
+        }
+        
+        documentCache = null;
+        delete FBL.documentCache;
+        
+        var chromeMap = FirebugChrome.chromeMap;
+        
+        if (chromeMap.popup)
+            chromeMap.popup.destroy();
+        
+        chromeMap.frame.destroy();
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -4080,7 +4433,7 @@ FBL.Firebug =
 
     getRep: function(object)
     {
-        var type = typeof(object);
+        var type = typeof object;
         if (isIE && isFunction(object))
             type = "function";
         
@@ -4447,6 +4800,17 @@ Firebug.Panel =
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create StatusBar
+            if (options.hasStatusBar)
+            {
+                this.statusBarBox = $("fbStatusBarBox");
+                
+                this.statusBarNode = createElement("span", {
+                    id: panelId + "StatusBar",
+                    className: "fbToolbarButtons fbStatusBar"
+                });
+                
+                this.statusBarBox.appendChild(this.statusBarNode);
+            }
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create SidePanel
@@ -4490,6 +4854,7 @@ Firebug.Panel =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.initialize", this.name);
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (parentPanelMap.hasOwnProperty(this.name))
         {
             this.sidePanelBar.initialize();
@@ -4521,6 +4886,8 @@ Firebug.Panel =
             
         this.containerNode = this.panelNode.parentNode;
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // store persistent state
         this.containerNode.scrollTop = this.lastScrollTop;
     },
     
@@ -4528,6 +4895,7 @@ Firebug.Panel =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
         
+        // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
     },
 
@@ -4650,9 +5018,35 @@ Firebug.Panel =
         return 0;
     },
 
-    refresh: function()
+    hasObject: function(object)  // beyond type testing, is this object selectable?
     {
+        return false;
+    },
 
+    select: function(object, forceUpdate)
+    {
+        if (!object)
+            object = this.getDefaultSelection(this.context);
+
+        if(FBTrace.DBG_PANELS)
+            FBTrace.sysout("firebug.select "+this.name+" forceUpdate: "+forceUpdate+" "+object+((object==this.selection)?"==":"!=")+this.selection);
+
+        if (forceUpdate || object != this.selection)
+        {
+            this.selection = object;
+            this.updateSelection(object);
+
+            // TODO: xxxpedro
+            // XXXjoe This is kind of cheating, but, feh.
+            //Firebug.chrome.onPanelSelect(object, this);
+            //if (uiListeners.length > 0)
+            //    dispatch(uiListeners, "onPanelSelect", [object, this]);  // TODO: make Firebug.chrome a uiListener
+        }
+    },
+
+
+    updateSelection: function(object)
+    {
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -4665,6 +5059,13 @@ Firebug.Panel =
     {
     },
 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    getDefaultSelection: function(context)
+    {
+        return null;
+    },
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
     search: function(text)
@@ -4733,8 +5134,8 @@ Firebug.PanelBar =
         if (selectedPanel)
         {
             removeClass(selectedPanel.tabNode, "fbSelectedTab");
-            selectedPanel.shutdown();
             selectedPanel.hide();
+            selectedPanel.shutdown();
         }
         
         this.selectedPanel = null;
@@ -4765,18 +5166,18 @@ Firebug.PanelBar =
             if (selectedPanel)
             {
                 removeClass(selectedPanel.tabNode, "fbSelectedTab");
-                selectedPanel.shutdown();
                 selectedPanel.hide();
+                selectedPanel.shutdown();
             }
             
             if (!panel.parentPanel)
-                Env.Cache.Chrome.selectedPanel = panelName;
+                FirebugChrome.selectedPanelName = panelName;
             
             this.selectedPanel = panel;
             
             setClass(panel.tabNode, "fbSelectedTab");
-            panel.show();
             panel.initialize();
+            panel.show();
         }
     },
     
@@ -4874,7 +5275,7 @@ Firebug.Button.prototype = extend(Firebug.Controller,
     
     restore: function()
     {
-        this.changeState("unpressed");        
+        this.changeState("unpressed");
     },
     
     changeState: function(state)
@@ -4984,49 +5385,2922 @@ PanelOptions.prototype = extend(Firebug.Controller, {
 
 
 // ************************************************************************************************
+if (FBL.domplate)
+Firebug.Rep = domplate(
+{
+    className: "",
+    inspectable: true,
+
+    supportsObject: function(object, type)
+    {
+        return false;
+    },
+
+    inspectObject: function(object, context)
+    {
+        Firebug.chrome.select(object);
+    },
+
+    browseObject: function(object, context)
+    {
+    },
+
+    persistObject: function(object, context)
+    {
+    },
+
+    getRealObject: function(object, context)
+    {
+        return object;
+    },
+
+    getTitle: function(object)
+    {
+        var label = safeToString(object);
+
+        var re = /\[object (.*?)\]/;
+        var m = re.exec(label);
+        return m ? m[1] : label;
+    },
+
+    getTooltip: function(object)
+    {
+        return null;
+    },
+
+    getContextMenuItems: function(object, target, context)
+    {
+        return [];
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Convenience for domplates
+
+    STR: function(name)
+    {
+        return $STR(name);
+    },
+
+    cropString: function(text)
+    {
+        return cropString(text);
+    },
+
+    cropMultipleLines: function(text, limit)
+    {
+        return cropMultipleLines(text, limit);
+    },
+
+    toLowerCase: function(text)
+    {
+        return text ? text.toLowerCase() : text;
+    },
+
+    plural: function(n)
+    {
+        return n == 1 ? "" : "s";
+    }
+});
+
 // ************************************************************************************************
+
+
 // ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+
+// ************************************************************************************************
+// Context
+  
+FBL.Context = function(win){
+    this.window = win.window;
+    this.document = win.document;
+    
+    // Some windows in IE, like iframe, doesn't have the eval() method
+    if (isIE && !this.window.eval)
+    {
+        // But after executing the following line the method magically appears!
+        this.window.execScript("null");
+        // Just to make sure the "magic" really happened
+        if (!this.window.eval)
+            throw new Error("Firebug Error: eval() method not found in this window");
+    }
+    
+    // Create a new "black-box" eval() method that runs in the global namespace
+    // of the context window, without exposing the local variables declared
+    // by the function that calls it
+    this.eval = this.window.eval("new Function('" +
+            "try{ return window.eval.apply(window,arguments) }catch(E){ E."+evalError+"=true; return E }" +
+        "')");
+};
+
+FBL.Context.prototype =
+{  
+  
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Evalutation Method
+    
+    /**
+     * Evaluates an expression in the current context window.
+     * 
+     * @param {String}   expr           expression to be evaluated
+     * 
+     * @param {String}   context        string indicating the global location
+     *                                  of the object that will be used as the
+     *                                  context. The context is referred in
+     *                                  the expression as the "this" keyword.
+     *                                  If no context is informed, the "window"
+     *                                  context is used.
+     *                                  
+     * @param {String}   api            string indicating the global location
+     *                                  of the object that will be used as the
+     *                                  api of the evaluation.
+     *                                  
+     * @param {Function} errorHandler(message) error handler to be called
+     *                                         if the evaluation fails.
+     */
+    evaluate: function(expr, context, api, errorHandler)
+    {
+        context = context || "window";
+
+        var cmd = api ?
+            "(function(arguments){ with("+api+"){ return "+expr+" } }).call("+context+",undefined)" :
+            "(function(arguments){ return "+expr+" }).call("+context+",undefined)" ;
+        
+        var r = this.eval(cmd);
+        if (r && r[evalError])
+        {
+            cmd = api ?
+                "(function(arguments){ with("+api+"){ "+expr+" } }).call("+context+",undefined)" :
+                "(function(arguments){ "+expr+" }).call("+context+",undefined)" ;
+                
+            r = this.eval(cmd);
+            if (r && r[evalError])
+            {
+                if (errorHandler)
+                    r = errorHandler(r.message || r)
+                else
+                    r = r.message || r;
+            }
+        }
+        
+        return r;
+    },
+    
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Window Methods
+    
+    getWindowSize: function()
+    {
+        var width=0, height=0, el;
+        
+        if (typeof this.window.innerWidth == "number")
+        {
+            width = this.window.innerWidth;
+            height = this.window.innerHeight;
+        }
+        else if ((el=this.document.documentElement) && (el.clientHeight || el.clientWidth))
+        {
+            width = el.clientWidth;
+            height = el.clientHeight;
+        }
+        else if ((el=this.document.body) && (el.clientHeight || el.clientWidth))
+        {
+            width = el.clientWidth;
+            height = el.clientHeight;
+        }
+        
+        return {width: width, height: height};
+    },
+    
+    getWindowScrollSize: function()
+    {
+        var width=0, height=0, el;
+
+        // first try the document.documentElement scroll size
+        if (!isIEQuiksMode && (el=this.document.documentElement) && 
+           (el.scrollHeight || el.scrollWidth))
+        {
+            width = el.scrollWidth;
+            height = el.scrollHeight;
+        }
+        
+        // then we need to check if document.body has a bigger scroll size value
+        // because sometimes depending on the browser and the page, the document.body
+        // scroll size returns a smaller (and wrong) measure
+        if ((el=this.document.body) && (el.scrollHeight || el.scrollWidth) &&
+            (el.scrollWidth > width || el.scrollHeight > height))
+        {
+            width = el.scrollWidth;
+            height = el.scrollHeight;
+        }
+        
+        return {width: width, height: height};
+    },
+    
+    getWindowScrollPosition: function()
+    {
+        var top=0, left=0, el;
+        
+        if(typeof this.window.pageYOffset == "number")
+        {
+            top = this.window.pageYOffset;
+            left = this.window.pageXOffset;
+        }
+        else if((el=this.document.body) && (el.scrollTop || el.scrollLeft))
+        {
+            top = el.scrollTop;
+            left = el.scrollLeft;
+        }
+        else if((el=this.document.documentElement) && (el.scrollTop || el.scrollLeft))
+        {
+            top = el.scrollTop;
+            left = el.scrollLeft;
+        }
+        
+        return {top:top, left:left};
+    },
+    
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Element Methods
+
+    getElementFromPoint: function(x, y)
+    {
+        if (isOpera || isSafari)
+        {
+            var scroll = this.getWindowScrollPosition();
+            return this.document.elementFromPoint(x + scroll.left, y + scroll.top);
+        }
+        else
+            return this.document.elementFromPoint(x, y);
+    },
+    
+    getElementPosition: function(el)
+    {
+        var left = 0
+        var top = 0;
+        
+        do
+        {
+            left += el.offsetLeft;
+            top += el.offsetTop;
+        }
+        while (el = el.offsetParent);
+            
+        return {left:left, top:top};      
+    },
+    
+    getElementBox: function(el)
+    {
+        var result = {};
+        
+        if (el.getBoundingClientRect)
+        {
+            var rect = el.getBoundingClientRect();
+            
+            // fix IE problem with offset when not in fullscreen mode
+            var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
+            
+            var scroll = this.getWindowScrollPosition();
+            
+            result.top = Math.round(rect.top - offset + scroll.top);
+            result.left = Math.round(rect.left - offset + scroll.left);
+            result.height = Math.round(rect.bottom - rect.top);
+            result.width = Math.round(rect.right - rect.left);
+        }
+        else 
+        {
+            var position = this.getElementPosition(el);
+            
+            result.top = position.top;
+            result.left = position.left;
+            result.height = el.offsetHeight;
+            result.width = el.offsetWidth;
+        }
+        
+        return result;
+    },
+    
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Measurement Methods
+    
+    getMeasurement: function(el, name)
+    {
+        var result = {value: 0, unit: "px"};
+        
+        var cssValue = this.getCSS(el, name);
+        
+        if (!cssValue) return result;
+        if (cssValue.toLowerCase() == "auto") return result;
+        
+        var reMeasure = /(\d+\.?\d*)(.*)/;
+        var m = cssValue.match(reMeasure);
+        
+        if (m)
+        {
+            result.value = m[1]-0;
+            result.unit = m[2].toLowerCase();
+        }
+        
+        return result;        
+    },
+    
+    getMeasurementInPixels: function(el, name)
+    {
+        if (!el) return null;
+        
+        var m = this.getMeasurement(el, name);
+        var value = m.value;
+        var unit = m.unit;
+        
+        if (unit == "px")
+            return value;
+          
+        else if (unit == "pt")
+            return this.pointsToPixels(name, value);
+          
+        if (unit == "em")
+            return this.emToPixels(el, value);
+          
+        else if (unit == "%")
+            return this.percentToPixels(el, value);
+    },
+
+    getMeasurementBox1: function(el, name)
+    {
+        var sufixes = ["Top", "Left", "Bottom", "Right"];
+        var result = [];
+        
+        for(var i=0, sufix; sufix=sufixes[i]; i++)
+            result[i] = Math.round(this.getMeasurementInPixels(el, name + sufix));
+        
+        return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
+    },
+    
+    getMeasurementBox: function(el, name)
+    {
+        var sufixes = ["Top", "Left", "Bottom", "Right"];
+        var result = [];
+        
+        if (isIE)
+        {
+            var propName, cssValue;
+            var autoMargin = null;
+            
+            for(var i=0, sufix; sufix=sufixes[i]; i++)
+            {
+                propName = name + sufix;
+                
+                cssValue = el.currentStyle[propName] || el.style[propName]; 
+                
+                if (cssValue == "auto")
+                {
+                    if (!autoMargin)
+                        autoMargin = this.getCSSAutoMarginBox(el);
+                    
+                    result[i] = autoMargin[sufix.toLowerCase()];
+                }
+                else
+                    result[i] = this.getMeasurementInPixels(el, propName);
+                      
+            }
+        
+        }
+        else
+        {
+            for(var i=0, sufix; sufix=sufixes[i]; i++)
+                result[i] = this.getMeasurementInPixels(el, name + sufix);
+        }
+        
+        return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
+    }, 
+    
+    getCSSAutoMarginBox: function(el)
+    {
+        if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
+            return {top:0, left:0, bottom:0, right:0};
+            /**/
+            
+        if (isIE && " h1 h2 h3 h4 h5 h6 h7 ul p ".indexOf(" "+el.nodeName.toLowerCase()+" ") == -1)
+            return {top:0, left:0, bottom:0, right:0};
+            /**/
+            
+        var offsetTop = 0;
+        if (false && isIEStantandMode)
+        {
+            var scrollSize = Firebug.browser.getWindowScrollSize();
+            offsetTop = scrollSize.height;
+        }
+        
+        var box = this.document.createElement("div");
+        //box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
+        box.style.cssText = "margin:0; padding:1px; border: 0;";
+        
+        var clone = el.cloneNode(false);
+        var text = this.document.createTextNode("&nbsp;");
+        clone.appendChild(text);
+        
+        box.appendChild(clone);
+    
+        this.document.body.appendChild(box);
+        
+        var marginTop = clone.offsetTop - box.offsetTop - 1;
+        var marginBottom = box.offsetHeight - clone.offsetHeight - 2 - marginTop;
+        
+        var marginLeft = clone.offsetLeft - box.offsetLeft - 1;
+        var marginRight = box.offsetWidth - clone.offsetWidth - 2 - marginLeft;
+        
+        this.document.body.removeChild(box);
+        
+        return {top:marginTop+offsetTop, left:marginLeft, bottom:marginBottom-offsetTop, right:marginRight};
+    },
+    
+    getFontSizeInPixels: function(el)
+    {
+        var size = this.getMeasurement(el, "fontSize");
+        
+        if (size.unit == "px") return size.value;
+        
+        // get font size, the dirty way
+        var computeDirtyFontSize = function(el, calibration)
+        {
+            var div = this.document.createElement("div");
+            var divStyle = offscreenStyle;
+
+            if (calibration)
+                divStyle +=  " font-size:"+calibration+"px;";
+            
+            div.style.cssText = divStyle;
+            div.innerHTML = "A";
+            el.appendChild(div);
+            
+            var value = div.offsetHeight;
+            el.removeChild(div);
+            return value;
+        }
+        
+        /*
+        var calibrationBase = 200;
+        var calibrationValue = computeDirtyFontSize(el, calibrationBase);
+        var rate = calibrationBase / calibrationValue;
+        /**/
+        
+        // the "dirty technique" fails in some environments, so we're using a static value
+        // based in some tests.
+        var rate = 200 / 225;
+        
+        var value = computeDirtyFontSize(el);
+
+        return value * rate;
+    },
+    
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Unit Funtions
+  
+    pointsToPixels: function(name, value, returnFloat)
+    {
+        var axis = /Top$|Bottom$/.test(name) ? "y" : "x";
+        
+        var result = value * pixelsPerInch[axis] / 72;
+        
+        return returnFloat ? result : Math.round(result);
+    },
+    
+    emToPixels: function(el, value)
+    {
+        if (!el) return null;
+        
+        var fontSize = this.getFontSizeInPixels(el);
+        
+        return Math.round(value * fontSize);
+    },
+    
+    exToPixels: function(el, value)
+    {
+        if (!el) return null;
+        
+        // get ex value, the dirty way
+        var div = this.document.createElement("div");
+        div.style.cssText = offscreenStyle + "width:"+value + "ex;";
+        
+        el.appendChild(div);
+        var value = div.offsetWidth;
+        el.removeChild(div);
+        
+        return value;
+    },
+      
+    percentToPixels: function(el, value)
+    {
+        if (!el) return null;
+        
+        // get % value, the dirty way
+        var div = this.document.createElement("div");
+        div.style.cssText = offscreenStyle + "width:"+value + "%;";
+        
+        el.appendChild(div);
+        var value = div.offsetWidth;
+        el.removeChild(div);
+        
+        return value;
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    getCSS: isIE ? function(el, name)
+    {
+        return el.currentStyle[name] || el.style[name] || undefined;
+    }
+    : function(el, name)
+    {
+        return this.document.defaultView.getComputedStyle(el,null)[name] 
+            || el.style[name] || undefined;
+    }
+
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Internal variables
+
+var evalError = "___firebug_evaluation_error___";
+var pixelsPerInch;
+
+var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
+var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
+
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+FBL.FirebugChrome = 
+{
+    chromeMap: {},
+    
+    sidePanelWidth: 300,
+    
+    selectedPanelName: "Console",
+    selectedHTMLElementId: null,
+    
+    consoleMessageQueue: [],
+    
+    height: 250,
+    
+    isOpen: false,
+    
+    create: function()
+    {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.create", "creating chrome window");
+        
+        createChromeWindow();
+    },
+    
+    initialize: function()
+    {
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.initialize", "initializing chrome window");
+        
+        if (Env.chrome.type == "frame")
+            ChromeMini.create(Env.chrome);
+            
+        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
+            Env.openAtStartup = true;
+
+        var chrome = Firebug.chrome = new Chrome(Env.chrome);
+        FirebugChrome.chromeMap[chrome.type] = chrome;
+        
+        addGlobalEvent("keydown", onPressF12);
+        
+        if (Env.isPersistentMode && chrome.type == "popup")
+        {
+            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
+            var frame = FirebugChrome.chromeMap.frame;
+            if (frame)
+                frame.close();
+            
+            chrome.reattach(frame, chrome);
+        }
+    },
+    
+    clone: function(FBChrome)
+    {
+        for (var name in FBChrome)
+        {
+            var prop = FBChrome[name];
+            if (FBChrome.hasOwnProperty(name) && typeof prop != "function")
+            {
+                this[name] = prop;
+            }
+        }
+    }
+};
+
+
+// ************************************************************************************************
+// Chrome Window Options
+
+var ChromeDefaultOptions = 
+{
+    type: "frame",
+    id: "FirebugUI",
+    height: 250
+};
+
+// ************************************************************************************************
+// Chrome Window Creation
+
+var createChromeWindow = function(options)
+{
+    options = options || {};
+    options = extend(ChromeDefaultOptions, options);
+    
+    var context = options.context || Env.browser;
+    
+    var chrome = {};
+    
+    chrome.type = options.type;
+    
+    var isChromeFrame = chrome.type == "frame";
+    var isBookmarletMode = Env.isBookmarletMode;
+    var url = isBookmarletMode ? "about:blank" : Env.location.skin;
+    
+    if (isChromeFrame)
+    {
+        // Create the Chrome Frame
+        var node = chrome.node = createGlobalElement("iframe");
+        
+        node.setAttribute("id", options.id);
+        node.setAttribute("frameBorder", "0");
+        node.firebugIgnore = true;
+        node.style.border = "0";
+        node.style.visibility = "hidden";
+        node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
+        node.style.position = noFixedPosition ? "absolute" : "fixed";
+        node.style.width = "100%"; // "102%"; IE auto margin bug
+        node.style.left = "0";
+        node.style.bottom = noFixedPosition ? "-1px" : "0";
+        node.style.height = options.height + "px";
+        
+        // avoid flickering during chrome rendering
+        if (isFirefox)
+            node.style.display = "none";
+        
+        if (!isBookmarletMode)
+            node.setAttribute("src", Env.location.skin);
+        
+        // document.body not available in XML+XSL documents in Firefox
+        context.document.getElementsByTagName("body")[0].appendChild(node);
+    }
+    else
+    {
+        // Create the Chrome Popup
+        var height = FirebugChrome.height || options.height;
+        var options = [
+                "true,top=",
+                Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
+                ",left=0,height=",
+                height,
+                ",width=",
+                screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
+                ",resizable"          
+            ].join("");
+        
+        var node = chrome.node = context.window.open(
+            url, 
+            "popup", 
+            options
+          );
+        
+        if (node)
+        {
+            try
+            {
+                node.focus();
+            }
+            catch(E)
+            {
+                alert("Firebug Error: Firebug popup was blocked.");
+                return;
+            }
+        }
+        else
+        {
+            alert("Firebug Error: Firebug popup was blocked.");
+            return;
+        }
+    }
+    
+    if (isBookmarletMode)
+    {
+        var tpl = getChromeTemplate(!isChromeFrame);
+        var doc = isChromeFrame ? node.contentWindow.document : node.document;
+        doc.write(tpl);
+        doc.close();
+    }
+    
+    var win;
+    var waitDelay = !isBookmarletMode ? isChromeFrame ? 200 : 300 : 100;
+    var waitForChrome = function()
+    {
+        if ( // Frame loaded... OR
+             isChromeFrame && (win=node.contentWindow) &&
+             node.contentWindow.document.getElementById("fbCommandLine") ||
+             
+             // Popup loaded
+             !isChromeFrame && (win=node.window) && node.document &&
+             node.document.getElementById("fbCommandLine") )
+        {
+            chrome.window = win.window;
+            chrome.document = win.document;
+            
+            // Prevent getting the wrong chrome height in FF when opening a popup 
+            setTimeout(function(){
+                onChromeLoad(chrome);
+            },0);
+        }
+        else
+            setTimeout(waitForChrome, waitDelay);
+    }
+    
+    waitForChrome();
+};
+
+
+var onChromeLoad = function onChromeLoad(chrome)
+{
+    Env.chrome = chrome;
+    
+    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome window loaded");
+    
+    if (Env.isPersistentMode)
+    {
+        // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
+        Env.FirebugChrome = FirebugChrome;
+        
+        chrome.window.Firebug = chrome.window.Firebug || {};
+        chrome.window.Firebug.SharedEnv = Env;
+        
+        if (Env.isDevelopmentMode)
+        {
+            Env.browser.window.FBDev.loadChromeApplication(chrome);
+        }
+        else
+        {
+            var doc = chrome.document;
+            var script = doc.createElement("script");
+            script.src = Env.location.app;
+            doc.getElementsByTagName("head")[0].appendChild(script);
+        }
+    }
+    else
+    {
+        if (chrome.type == "frame")
+        {
+            // initialize the chrome application
+            setTimeout(function(){
+                FBL.Firebug.initialize();
+            },0);
+        }
+        else if (chrome.type == "popup")
+        {
+            var oldChrome = FirebugChrome.chromeMap.frame;
+            
+            var newChrome = new Chrome(chrome);
+        
+            // TODO: xxxpedro sync detach reattach attach
+            dispatch(newChrome.panelMap, "detach", [oldChrome, newChrome]);
+        
+            if (oldChrome)
+                oldChrome.close();
+            
+            newChrome.reattach(oldChrome, newChrome);
+        }
+    }
+};
+
+var getChromeTemplate = function(isPopup)
+{
+    var tpl = FirebugChrome.injected; 
+    var r = [], i = -1;
+    
+    r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
+    r[++i] = '<html><head><title>';
+    r[++i] = Firebug.version;
+    r[++i] = '</title><style>';
+    r[++i] = tpl.CSS;
+    r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
+    r[++i] = '</style>';
+    r[++i] = '</head><body class=' + (isPopup ? '"FirebugPopup"' : '') + '>';
+    r[++i] = tpl.HTML;
+    r[++i] = '</body></html>';
+    
+    return r.join("");
+};
+
+// ************************************************************************************************
+// Chrome Class
+    
+var Chrome = function Chrome(chrome)
+{
+    var type = chrome.type;
+    var Base = type == "frame" ? ChromeFrameBase : ChromePopupBase; 
+    
+    append(this, chrome); // inherit chrome window properties
+    append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
+    
+    FirebugChrome.chromeMap[type] = this;
+    Firebug.chrome = this;
+    Env.chrome = chrome.window;
+    
+    this.commandLineVisible = false;
+    this.sidePanelVisible = false;
+    
+    this.create();
+    
+    return this;
+};
+
+// ************************************************************************************************
+// ChromeBase
+
+var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
+
+append(ChromeBase, Context.prototype);
+
+append(ChromeBase,
+{
+    create: function()
+    {
+        Firebug.PanelBar.create.apply(this);
+        
+        if (Firebug.Inspector)
+            this.inspectButton = new Firebug.Button({
+                type: "toggle",
+                node: $("fbChrome_btInspect"),
+                owner: Firebug.Inspector,
+                
+                onPress: Firebug.Inspector.startInspecting,
+                onUnpress: Firebug.Inspector.stopInspecting          
+            });
+    },
+    
+    destroy: function()
+    {
+        this.shutdown();
+    },
+    
+    initialize: function()
+    {
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        if (Firebug.Console)
+            Firebug.Console.flush();
+        
+        if (Firebug.Trace)
+            FBTrace.flush(Firebug.Trace);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome application");
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // initialize inherited classes
+        Firebug.Controller.initialize.apply(this);
+        Firebug.PanelBar.initialize.apply(this);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create the interface elements cache
+        
+        fbTop = $("fbTop");
+        fbContent = $("fbContent");
+        fbContentStyle = fbContent.style;
+        fbBottom = $("fbBottom");
+        fbBtnInspect = $("fbBtnInspect");
+        
+        fbToolbar = $("fbToolbar");
+      
+        fbPanelBox1 = $("fbPanelBox1");
+        fbPanelBox1Style = fbPanelBox1.style;
+        fbPanelBox2 = $("fbPanelBox2");
+        fbPanelBox2Style = fbPanelBox2.style;
+        fbPanelBar2Box = $("fbPanelBar2Box");
+        fbPanelBar2BoxStyle = fbPanelBar2Box.style;
+      
+        fbHSplitter = $("fbHSplitter");
+        fbVSplitter = $("fbVSplitter");
+        fbVSplitterStyle = fbVSplitter.style;
+      
+        fbPanel1 = $("fbPanel1");
+        fbPanel1Style = fbPanel1.style;
+        fbPanel2 = $("fbPanel2");
+        fbPanel2Style = fbPanel2.style;
+      
+        fbConsole = $("fbConsole");
+        fbConsoleStyle = fbConsole.style;
+        fbHTML = $("fbHTML");
+      
+        fbCommandLine = $("fbCommandLine");
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // static values cache
+        topHeight = fbTop.offsetHeight;
+        topPartialHeight = fbToolbar.offsetHeight;
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        disableTextSelection($("fbToolbar"));
+        disableTextSelection($("fbPanelBarBox"));
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create a new instance of the CommandLine class
+        if (Firebug.CommandLine)
+            commandLine = new Firebug.CommandLine(fbCommandLine);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
+        if (isIE && Firebug.Selector)
+        {
+            // TODO: xxxpedro change to getElementsByClass
+            var as = $$(".fbHover");
+            for (var i=0, a; a=as[i]; i++)
+            {
+                a.setAttribute("href", "javascript:void(0)");
+            }
+        }
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // initialize all panels
+        /*
+        var panelMap = Firebug.panelTypes;
+        for (var i=0, p; p=panelMap[i]; i++)
+        {
+            if (!p.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
+        /**/
+        
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        
+        if(Firebug.Inspector)
+            this.inspectButton.initialize();
+        
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        
+        // Select the first registered panel
+        // TODO: BUG IE7
+        var self = this;
+        setTimeout(function(){
+            self.selectPanel(FirebugChrome.selectedPanelName);
+        },0);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        //this.draw();
+    },
+    
+    shutdown: function()
+    {
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        
+        if(Firebug.Inspector)
+            this.inspectButton.shutdown();
+        
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+        // ************************************************************************************************
+
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        // remove disableTextSelection event handlers
+        restoreTextSelection($("fbToolbar"));
+        restoreTextSelection($("fbPanelBarBox"));
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Remove the interface elements cache
+        
+        fbTop = null;
+        fbContent = null;
+        fbContentStyle = null;
+        fbBottom = null;
+        fbBtnInspect = null;
+        
+        fbToolbar = null;
+
+        fbPanelBox1 = null;
+        fbPanelBox1Style = null;
+        fbPanelBox2 = null;
+        fbPanelBox2Style = null;
+        fbPanelBar2Box = null;
+        fbPanelBar2BoxStyle = null;
+  
+        fbHSplitter = null;
+        fbVSplitter = null;
+        fbVSplitterStyle = null;
+  
+        fbPanel1 = null;
+        fbPanel1Style = null;
+        fbPanel2 = null;
+  
+        fbConsole = null;
+        fbConsoleStyle = null;
+        fbHTML = null;
+  
+        fbCommandLine = null;
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // static values cache
+        
+        topHeight = null;
+        topPartialHeight = null;
+        
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // shutdown inherited classes
+        Firebug.Controller.shutdown.apply(this);
+        Firebug.PanelBar.shutdown.apply(this);
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // destroy the instance of the CommandLine class
+        if (Firebug.CommandLine)
+            commandLine.destroy();
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    toggle: function(forceOpen, popup)
+    {
+        if(popup)
+        {
+            this.detach();
+        }
+        else
+        {
+            if (isOpera && Firebug.chrome.type == "popup" && Firebug.chrome.node.closed)
+            {
+                var frame = FirebugChrome.chromeMap.frame;
+                frame.reattach();
+                
+                FirebugChrome.chromeMap.popup = null;
+                
+                frame.open();
+                
+                return;
+            }
+                
+            // If the context is a popup, ignores the toggle process
+            if (Firebug.chrome.type == "popup") return;
+            
+            var shouldOpen = forceOpen || !FirebugChrome.isOpen;
+            
+            if(shouldOpen)
+               this.open();
+            else
+               this.close();
+        }       
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    detach: function()
+    {
+        if(!FirebugChrome.chromeMap.popup)
+        {     
+            createChromeWindow({type: "popup"});
+        }
+    },
+    
+    reattach: function(oldChrome, newChrome)
+    {
+        Firebug.browser.window.Firebug = Firebug;
+        
+        // chrome synchronization
+        var newPanelMap = newChrome.panelMap;
+        var oldPanelMap = oldChrome.panelMap;
+        
+        var panel;
+        for(var name in newPanelMap)
+        {
+            // TODO: xxxpedro innerHTML
+            panel = newPanelMap[name]; 
+            if (panel.options.innerHTMLSync)
+                panel.contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
+        }
+        
+        Firebug.chrome = newChrome;
+        
+        // TODO: xxxpedro sync detach reattach attach
+        //dispatch(Firebug.chrome.panelMap, "detach", [oldChrome, newChrome]);
+        
+        if (newChrome.type == "popup")
+        {
+            newChrome.initialize();
+            //dispatch(Firebug.modules, "initialize", []);
+        }
+        else
+        {
+            // TODO: xxxpedro only needed in persistent
+            // should use FirebugChrome.clone, but popup FBChrome
+            // isn't acessible 
+            FirebugChrome.selectedPanelName = oldChrome.selectedPanel.name;
+        }
+        
+        dispatch(newPanelMap, "reattach", [oldChrome, newChrome]);
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    draw: function()
+    {
+        var size = Firebug.chrome.getWindowSize();
+        
+        // Height related values
+        var commandLineHeight = Firebug.chrome.commandLineVisible ? fbCommandLine.offsetHeight : 0,
+            y = Math.max(size.height /* chrome height */, topHeight),
+            
+            height = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0)+ "px",
+            
+            
+            // Width related values
+            sideWidth = Firebug.chrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0,
+            
+            width = Math.max(size.width /* chrome width */ - sideWidth, 0) + "px";
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Height related rendering
+        fbPanelBox1Style.height = height;
+        fbPanel1Style.height = height;
+        
+        if (isIE || isOpera)
+        {
+            // Fix IE and Opera problems with auto resizing the verticall splitter
+            fbVSplitterStyle.height = Math.max(y - topPartialHeight - commandLineHeight, 0) + "px";
+        }
+        //xxxpedro FF2 only?
+        /*
+        else if (isFirefox)
+        {
+            // Fix Firefox problem with table rows with 100% height (fit height)
+            fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
+        }/**/
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Width related rendering
+        fbPanelBox1Style.width = width;
+        fbPanel1Style.width = width;
+        
+        // SidePanel rendering
+        if (Firebug.chrome.sidePanelVisible)
+        {
+            sideWidth = Math.max(sideWidth - 6, 0) + "px";
+            
+            fbPanel2Style.height = height;
+            fbPanel2Style.width = sideWidth;
+            
+            fbPanelBox2Style.width = sideWidth;
+            fbPanelBar2BoxStyle.width = sideWidth;
+            fbVSplitterStyle.right = sideWidth;
+        }
+    },
+    
+    resize: function()
+    {
+        var self = this;
+        // avoid partial resize when maximizing window
+        setTimeout(function(){
+            self.draw();
+            
+            if (noFixedPosition && self.type == "frame")
+                self.fixIEPosition();
+        }, 0);
+    },
+    
+    layout: function(panel)
+    {
+        if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
+        
+        var options = panel.options;
+        
+        changeCommandLineVisibility(options.hasCommandLine);
+        changeSidePanelVisibility(options.hasSidePanel);
+        
+        Firebug.chrome.draw();
+    }
+    
+});
+
+// ************************************************************************************************
+// ChromeFrameBase
+
+var ChromeFrameBase = extend(ChromeBase,
+{
+    create: function()
+    {
+        ChromeBase.create.call(this);
+        
+        // restore display for the anti-flicker trick
+        if (isFirefox)
+            this.node.style.display = "block";
+        
+        if (Env.openAtStartup)
+            this.open();
+        else
+        {
+            FirebugChrome.isOpen = true;
+            this.close();
+        }
+    },
+    
+    destroy: function()
+    {
+        ChromeBase.destroy.call(this);
+        
+        removeGlobalEvent("keydown", onPressF12);
+        
+        this.document = null;
+        delete this.document;
+        
+        this.window = null;
+        delete this.window;
+        
+        this.node.parentNode.removeChild(this.node);
+        this.node = null;
+        delete this.node;
+    },
+    
+    initialize: function()
+    {
+        //FBTrace.sysout("Frame", "initialize();")
+        ChromeBase.initialize.call(this);
+        
+        this.addController(
+            [Firebug.browser.window, "resize", this.resize],
+            [Firebug.browser.window, "unload", Firebug.shutdown],
+            
+            [$("fbChrome_btClose"), "click", this.close],
+            [$("fbChrome_btDetach"), "click", this.detach]       
+        );
+        
+        if (noFixedPosition)
+        {
+            this.addController(
+                [Firebug.browser.window, "scroll", this.fixIEPosition]
+            );
+        }
+        
+        fbVSplitter.onmousedown = onVSplitterMouseDown;
+        fbHSplitter.onmousedown = onHSplitterMouseDown;
+        
+        this.isInitialized = true;
+    },
+    
+    shutdown: function()
+    {
+        fbVSplitter.onmousedown = null;
+        fbHSplitter.onmousedown = null;
+        
+        ChromeBase.shutdown.apply(this);
+        
+        this.isInitialized = false;
+    },
+    
+    reattach: function()
+    {
+        var frame = FirebugChrome.chromeMap.frame;
+        
+        ChromeBase.reattach(FirebugChrome.chromeMap.popup, this);
+    },
+    
+    open: function()
+    {
+        if (!FirebugChrome.isOpen)
+        {
+            var node = this.node;
+            node.style.visibility = "hidden"; // Avoid flickering
+            
+            if (ChromeMini.isInitialized)
+            {
+                ChromeMini.shutdown();
+            }
+            
+            var main = $("fbChrome");
+            main.style.display = "block";
+            
+            FirebugChrome.isOpen = true;
+            
+            var self = this;
+            setTimeout(function(){
+                //dispatch(Firebug.modules, "initialize", []);
+                self.initialize();
+                
+                if (noFixedPosition)
+                    self.fixIEPosition();
+                
+                self.draw();
+        
+                node.style.visibility = "visible";
+            }, 10);
+        }
+    },
+    
+    close: function()
+    {
+        if (FirebugChrome.isOpen)
+        {
+            var node = this.node;
+            node.style.visibility = "hidden"; // Avoid flickering
+            
+            if (this.isInitialized)
+            {
+                //dispatch(Firebug.modules, "shutdown", []);
+                this.shutdown();
+            }
+            
+            // TODO: xxxpedro - persist IE fixed? 
+            var main = $("fbChrome", FirebugChrome.chromeMap.frame.document);
+            main.style.display = "none";
+                    
+            FirebugChrome.isOpen = false;
+            
+            ChromeMini.initialize();
+            
+            node.style.visibility = "visible";
+        }
+    },
+    
+    fixIEPosition: function()
+    {
+        // fix IE problem with offset when not in fullscreen mode
+        var doc = this.document;
+        var offset = isIE ? doc.body.clientTop || doc.documentElement.clientTop: 0;
+        
+        var size = Firebug.browser.getWindowSize();
+        var scroll = Firebug.browser.getWindowScrollPosition();
+        var maxHeight = size.height;
+        var height = this.node.offsetHeight;
+        
+        var bodyStyle = doc.body.currentStyle;
+        
+        this.node.style.top = maxHeight - height + scroll.top + "px";
+        
+        
+        if (this.type == "frame" && (bodyStyle.marginLeft || bodyStyle.marginRight))
+        {
+            this.node.style.width = size.width + "px";
+        }
+    }
+
+});
+
+
+// ************************************************************************************************
+// ChromeMini
+
+var ChromeMini = extend(Firebug.Controller, 
+{
+    create: function(chrome)
+    {
+        append(this, chrome);
+        this.type = "mini";
+    },
+    
+    initialize: function()
+    {
+        Firebug.Controller.initialize.apply(this);
+        
+        var doc = FirebugChrome.chromeMap.frame.document;
+        
+        var mini = $("fbMiniChrome", doc);
+        mini.style.display = "block";
+        
+        var miniIcon = $("fbMiniIcon", doc);
+        var width = miniIcon.offsetWidth + 10;
+        miniIcon.title = "Open " + Firebug.version;
+        
+        var errors = $("fbMiniErrors", doc);
+        if (errors.offsetWidth)
+            width += errors.offsetWidth + 10;
+        
+        var node = this.node;
+        node.style.height = "27px";
+        node.style.width = width + "px";
+        node.style.left = "";
+        node.style.right = 0;
+        node.setAttribute("allowTransparency", "true");
+
+        if (noFixedPosition)
+            this.fixIEPosition();
+        
+        this.document.body.style.backgroundColor = "transparent";
+        
+        
+        this.addController(
+            [$("fbMiniIcon", doc), "click", onMiniIconClick]       
+        );
+        
+        if (noFixedPosition)
+        {
+            this.addController(
+                [Firebug.browser.window, "scroll", this.fixIEPosition]
+            );
+        }
+        
+        this.isInitialized = true;
+    },
+    
+    shutdown: function()
+    {
+        var node = this.node;
+        node.style.height = FirebugChrome.height + "px";
+        node.style.width = "100%";
+        node.style.left = 0;
+        node.style.right = "";
+        node.setAttribute("allowTransparency", "false");
+        
+        if (noFixedPosition)
+            this.fixIEPosition();
+        
+        this.document.body.style.backgroundColor = "#fff";
+        
+        var doc = FirebugChrome.chromeMap.frame.document;
+        
+        var mini = $("fbMiniChrome", doc);
+        mini.style.display = "none";
+        
+        Firebug.Controller.shutdown.apply(this);
+        
+        this.isInitialized = false;
+    },
+    
+    draw: function()
+    {
+    
+    },
+    
+    fixIEPosition: ChromeFrameBase.fixIEPosition
+    
+});
+
+
+// ************************************************************************************************
+// ChromePopupBase
+
+var ChromePopupBase = extend(ChromeBase, {
+    
+    initialize: function()
+    {
+        this.document.body.className = "FirebugPopup";
+        
+        ChromeBase.initialize.call(this)
+        
+        this.addController(
+            [Firebug.chrome.window, "resize", this.resize],
+            [Firebug.chrome.window, "unload", this.destroy],
+            [Firebug.browser.window, "unload", this.close]
+        );
+        
+        fbVSplitter.onmousedown = onVSplitterMouseDown;
+    },
+    
+    destroy: function()
+    {
+        // TODO: xxxpedro sync detach reattach attach
+        var frame = FirebugChrome.chromeMap.frame;
+        
+        dispatch(frame.panelMap, "detach", [this, frame]);
+        
+        frame.reattach(this, frame);
+        
+        ChromeBase.destroy.apply(this);
+        
+        FirebugChrome.chromeMap.popup = null;
+        
+        this.node.close();
+    },
+    
+    close: function()
+    {
+        this.destroy();
+    }
+
+});
+
+
+
+// ************************************************************************************************
+// Internals
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+//
+var commandLine = null;
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Interface Elements Cache
+
+var fbTop = null;
+var fbContent = null;
+var fbContentStyle = null;
+var fbBottom = null;
+var fbBtnInspect = null;
+
+var fbToolbar = null;
+
+var fbPanelBox1 = null;
+var fbPanelBox1Style = null;
+var fbPanelBox2 = null;
+var fbPanelBox2Style = null;
+var fbPanelBar2Box = null;
+var fbPanelBar2BoxStyle = null;
+
+var fbHSplitter = null;
+var fbVSplitter = null;
+var fbVSplitterStyle = null;
+
+var fbPanel1 = null;
+var fbPanel1Style = null;
+var fbPanel2 = null;
+var fbPanel2Style = null;
+
+var fbConsole = null;
+var fbConsoleStyle = null;
+var fbHTML = null;
+
+var fbCommandLine = null;
+
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var topHeight = null;
+var topPartialHeight = null;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75;
+
+
+//************************************************************************************************
+// UI helpers
+
+var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
+{
+    var last = Firebug.chrome.commandLineVisible;
+    Firebug.chrome.commandLineVisible =  
+        typeof visibility == "boolean" ? visibility : !Firebug.chrome.commandLineVisible;
+    
+    if (Firebug.chrome.commandLineVisible != last)
+    {
+        fbBottom.className = Firebug.chrome.commandLineVisible ? "" : "hide";
+    }
+};
+
+var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
+{
+    var last = Firebug.chrome.sidePanelVisible;
+    Firebug.chrome.sidePanelVisible =  
+        typeof visibility == "boolean" ? visibility : !Firebug.chrome.sidePanelVisible;
+    
+    if (Firebug.chrome.sidePanelVisible != last)
+    {
+        fbPanelBox2.className = Firebug.chrome.sidePanelVisible ? "" : "hide"; 
+        fbPanelBar2Box.className = Firebug.chrome.sidePanelVisible ? "" : "hide";
+    }
+};
+
+
+// ************************************************************************************************
+// F12 Handler
+
+var onPressF12 = function onPressF12(event)
+{
+    if (event.keyCode == 123 /* F12 */ && 
+        (!isFirefox && !event.shiftKey || event.shiftKey && isFirefox))
+        {
+            Firebug.chrome.toggle(false, event.ctrlKey);
+            cancelEvent(event, true);
+        }
+};
+
+var onMiniIconClick = function onMiniIconClick(event)
+{
+    Firebug.chrome.toggle(false, event.ctrlKey);
+    cancelEvent(event, true);
+}
+    
+
+// ************************************************************************************************
+// Horizontal Splitter Handling
+
+var onHSplitterMouseDown = function onHSplitterMouseDown(event)
+{
+    addGlobalEvent("mousemove", onHSplitterMouseMove);
+    addGlobalEvent("mouseup", onHSplitterMouseUp);
+    
+    if (isIE)
+        addEvent(Firebug.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
+    
+    fbHSplitter.className = "fbOnMovingHSplitter";
+    
+    return false;
+};
+
+var lastHSplitterMouseMove = 0;
+var onHSplitterMouseMoveBuffer = null;
+var onHSplitterMouseMoveTimer = null;
+
+var onHSplitterMouseMove = function onHSplitterMouseMove(event)
+{
+    cancelEvent(event, true);
+    
+    var clientY = event.clientY;
+    var win = isIE
+        ? event.srcElement.ownerDocument.parentWindow
+        : event.target.ownerDocument && event.target.ownerDocument.defaultView;
+    
+    if (!win)
+        return;
+    
+    if (win != win.parent)
+    {
+        var frameElement = win.frameElement;
+        if (frameElement)
+        {
+            var framePos = Firebug.browser.getElementPosition(frameElement).top;
+            clientY += framePos;
+            
+            if (frameElement.style.position != "fixed")
+                clientY -= Firebug.browser.getWindowScrollPosition().top;
+        }
+    }
+    
+    if (isOpera && isQuiksMode && win.frameElement.id == "FirebugUI")
+    {
+        clientY = Firebug.browser.getWindowSize().height - win.frameElement.offsetHeight + clientY;
+    }
+    /*
+    console.log(
+            typeof win.FBL != "undefined" ? "no-Chrome" : "Chrome",
+            //win.frameElement.id,
+            event.target,
+            clientY
+        );/**/
+    
+    onHSplitterMouseMoveBuffer = clientY; // buffer
+    
+    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
+    {
+        lastHSplitterMouseMove = new Date().getTime();
+        handleHSplitterMouseMove();
+    }
+    else
+        if (!onHSplitterMouseMoveTimer)
+            onHSplitterMouseMoveTimer = setTimeout(handleHSplitterMouseMove, chromeRedrawSkipRate);
+    
+    return false;
+};
+
+var handleHSplitterMouseMove = function()
+{
+    if (onHSplitterMouseMoveTimer)
+    {
+        clearTimeout(onHSplitterMouseMoveTimer);
+        onHSplitterMouseMoveTimer = null;
+    }
+    
+    var clientY = onHSplitterMouseMoveBuffer;
+    
+    var windowSize = Firebug.browser.getWindowSize();
+    var scrollSize = Firebug.browser.getWindowScrollSize();
+    
+    // compute chrome fixed size (top bar and command line)
+    var commandLineHeight = Firebug.chrome.commandLineVisible ? fbCommandLine.offsetHeight : 0;
+    var fixedHeight = topHeight + commandLineHeight;
+    var chromeNode = Firebug.chrome.node;
+    
+    var scrollbarSize = !isIE && (scrollSize.width > windowSize.width) ? 17 : 0;
+    
+    //var height = !isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height;
+    var height =  windowSize.height;
+    
+    // compute the min and max size of the chrome
+    var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
+        chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
+
+    FirebugChrome.height = chromeHeight;
+    chromeNode.style.height = chromeHeight + "px";
+    
+    if (noFixedPosition)
+        Firebug.chrome.fixIEPosition();
+    
+    Firebug.chrome.draw();
+};
+
+var onHSplitterMouseUp = function onHSplitterMouseUp(event)
+{
+    removeGlobalEvent("mousemove", onHSplitterMouseMove);
+    removeGlobalEvent("mouseup", onHSplitterMouseUp);
+    
+    if (isIE)
+        removeEvent(Firebug.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
+    
+    fbHSplitter.className = "";
+    
+    Firebug.chrome.draw();
+    
+    // avoid text selection in IE when returning to the document
+    // after the mouse leaves the document during the resizing
+    return false;
+};
+
+
+// ************************************************************************************************
+// Vertical Splitter Handling
+
+var onVSplitterMouseDown = function onVSplitterMouseDown(event)
+{
+    addGlobalEvent("mousemove", onVSplitterMouseMove);
+    addGlobalEvent("mouseup", onVSplitterMouseUp);
+    
+    return false;
+};
+
+var lastVSplitterMouseMove = 0;
+
+var onVSplitterMouseMove = function onVSplitterMouseMove(event)
+{
+    if (new Date().getTime() - lastVSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
+    {
+        var target = event.target || event.srcElement;
+        if (target && target.ownerDocument) // avoid error when cursor reaches out of the chrome
+        {
+            var clientX = event.clientX;
+            var win = document.all
+                ? event.srcElement.ownerDocument.parentWindow
+                : event.target.ownerDocument.defaultView;
+          
+            if (win != win.parent)
+                clientX += win.frameElement ? win.frameElement.offsetLeft : 0;
+            
+            var size = Firebug.chrome.getWindowSize();
+            var x = Math.max(size.width - clientX + 3, 6);
+            
+            FirebugChrome.sidePanelWidth = x;
+            Firebug.chrome.draw();
+        }
+        
+        lastVSplitterMouseMove = new Date().getTime();
+    }
+    
+    cancelEvent(event, true);
+    return false;
+};
+
+var onVSplitterMouseUp = function onVSplitterMouseUp(event)
+{
+    removeGlobalEvent("mousemove", onVSplitterMouseMove);
+    removeGlobalEvent("mouseup", onVSplitterMouseUp);
+    
+    Firebug.chrome.draw();
+};
+
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+//----------------------------------------------------------------------------
+// Injected Chrome
+//----------------------------------------------------------------------------
+FirebugChrome.injected = 
+{
+    CSS: '.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}.twisty{background-position:2px 0;}.panelNode-console{overflow-x:hidden;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{padding:0;border:none;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;outline:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#F8F8F8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectPropValue{font-weight:normal;font-style:italic;color:#555555;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.arrayLeftBracket{margin-right:4px;}.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0px 0 1px 0;}.logRow-spy,.logRow-spy .objectLink-sourceLink{padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;}.logRow-spy.loading .spyHead .spyRow .spyIcon{}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:11px;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;white-space:nowrap;background-color:#FFFFFF;}.memberRow.hasChildren > .memberLabelCell > .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbCSS{font:11px Monaco,monospace;padding:0 7px;}#fbCSSButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;}.Selector{margin-top:10px}.CSSText{padding-left:20px;}.CSSProperty{color:#005500; margin-top:10px;}.CSSValue{padding-left:5px; color:#000088;}.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 1px 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 5px;margin:0 0 0 1px;cursor:default;}.fbToolbarButtonsa:hover{color:#333;padding:3px 4px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:fixed;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbChromeButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:50px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;position:relative;}#fbChromeButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#fbChrome_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#fbChrome_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#fbChrome_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#fbChrome_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;}div.lineNo{font:11px Monaco,monospace;position:absolute;top:0;left:0;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:11px Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbChromeButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbChromeButtons"><a id="fbChrome_btClose" class="fbHover" title="Minimize Firebug">&nbsp;</a><a id="fbChrome_btDetach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Style</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Layout</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
+};
+
+// ************************************************************************************************
+}});
+
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+Firebug.Reps = {
+
+    appendText: function(object, html)
+    {
+        html.push(escapeHTML(objectToString(object)));
+    },
+    
+    appendNull: function(object, html)
+    {
+        html.push('<span class="objectBox-null">', escapeHTML(objectToString(object)), '</span>');
+    },
+    
+    appendString: function(object, html)
+    {
+        html.push('<span class="objectBox-string">&quot;', escapeHTML(objectToString(object)),
+            '&quot;</span>');
+    },
+    
+    appendInteger: function(object, html)
+    {
+        html.push('<span class="objectBox-number">', escapeHTML(objectToString(object)), '</span>');
+    },
+    
+    appendFloat: function(object, html)
+    {
+        html.push('<span class="objectBox-number">', escapeHTML(objectToString(object)), '</span>');
+    },
+    
+    appendFunction: function(object, html)
+    {
+        var reName = /function ?(.*?)\(/;
+        var m = reName.exec(objectToString(object));
+        var name = m && m[1] ? m[1] : "function";
+        html.push('<span class="objectBox-function">', escapeHTML(name), '()</span>');
+    },
+    
+    appendObject: function(object, html)
+    {
+        try
+        {
+            if (object == undefined)
+                this.appendNull("undefined", html);
+            else if (object == null)
+                this.appendNull("null", html);
+            else if (typeof object == "string")
+                this.appendString(object, html);
+            else if (typeof object == "number")
+                this.appendInteger(object, html);
+            else if (typeof object == "boolean")
+                this.appendInteger(object, html);
+            else if (typeof object == "function")
+                this.appendFunction(object, html);
+            else if (object.nodeType == 1)
+                this.appendSelector(object, html);
+            else if (typeof object == "object")
+            {
+                if (typeof object.length != "undefined")
+                    this.appendArray(object, html);
+                else
+                    this.appendObjectFormatted(object, html);
+            }
+            else
+                this.appendText(object, html);
+        }
+        catch (exc)
+        {
+        }
+    },
+        
+    appendObjectFormatted: function(object, html)
+    {
+        var text = objectToString(object);
+        var reObject = /\[object (.*?)\]/;
+    
+        var m = reObject.exec(text);
+        html.push('<span class="objectBox-object">', m ? m[1] : text, '</span>')
+    },
+    
+    appendSelector: function(object, html)
+    {
+        var uid = object[cacheID];
+        var uidString = uid ? [cacheID, '="', uid, '" id="', uid, '"'].join("") : "";
+                        
+        html.push('<span class="objectBox-selector"', uidString, '>');
+    
+        html.push('<span class="selectorTag">', escapeHTML(object.nodeName.toLowerCase()), '</span>');
+        if (object.id)
+            html.push('<span class="selectorId">#', escapeHTML(object.id), '</span>');
+        if (object.className)
+            html.push('<span class="selectorClass">.', escapeHTML(object.className), '</span>');
+    
+        html.push('</span>');
+    },
+    
+    appendNode: function(node, html)
+    {
+        if (node.nodeType == 1)
+        {
+            var uid = node[cacheID];
+            var uidString = uid ? [cacheID, '="', uid, '" id="', uid, '"'].join("") : "";                
+            
+            html.push(
+                '<div class="objectBox-element"', uidString, '">',
+                '<span ', cacheID, '="', uid, '" class="nodeBox">',
+                '&lt;<span class="nodeTag">', node.nodeName.toLowerCase(), '</span>');
+    
+            for (var i = 0; i < node.attributes.length; ++i)
+            {
+                var attr = node.attributes[i];
+                if (!attr.specified || attr.nodeName == cacheID)
+                    continue;
+                
+                var name = attr.nodeName.toLowerCase();
+                var value = name == "style" ? node.style.cssText : attr.nodeValue;
+                
+                html.push('&nbsp;<span class="nodeName">', name,
+                    '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
+                    '</span>&quot;')
+            }
+    
+            if (node.firstChild)
+            {
+                html.push('&gt;</div><div class="nodeChildren">');
+    
+                for (var child = node.firstChild; child; child = child.nextSibling)
+                    this.appendNode(child, html);
+                    
+                html.push('</div><div class="objectBox-element">&lt;/<span class="nodeTag">', 
+                    node.nodeName.toLowerCase(), '&gt;</span></span></div>');
+            }
+            else
+                html.push('/&gt;</span></div>');
+        }
+        else if (node.nodeType == 3)
+        {
+            html.push('<div class="nodeText">', escapeHTML(node.nodeValue),
+                '</div>');
+        }
+    },
+    
+    appendArray: function(object, html)
+    {
+        html.push('<span class="objectBox-array"><b>[</b> ');
+        
+        for (var i = 0, l = object.length, obj; i < l; ++i)
+        {
+            this.appendObject(object[i], html);
+            
+            if (i < l-1)
+            html.push(', ');
+        }
+    
+        html.push(' <b>]</b></span>');
+    }
+
+};
+
 
 
 /*
+From firebug
 
-From Honza Tutorial
-----------------------------------------------------
-FBL.ns(function() { with (FBL) {
-var panelName = "HelloWorld";
-Firebug.HelloWorldModel = extend(Firebug.Module,
-{
-    showPanel: function(browser, panel) {
-        var isHwPanel = panel && panel.name == panelName;
-        var hwButtons = browser.chrome.$("fbHelloWorldButtons");
-        collapse(hwButtons, !isHwPanel);
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Reps
+
+    registerRep: function()
+    {
+        reps.push.apply(reps, arguments);
     },
-    onMyButton: function(context) {
-        alert("Hello World!");
-    }
-});
 
-function HelloWorldPanel() {}
-HelloWorldPanel.prototype = extend(Firebug.Panel,
-{
-    name: panelName,
-    title: "Hello World!",
+    setDefaultRep: function(rep)
+    {
+        defaultRep = rep;
+    },
 
-    initialize: function() {
-        Firebug.Panel.initialize.apply(this, arguments);
-    }
-});
 
-Firebug.registerModule(Firebug.HelloWorldModel);
-Firebug.registerPanel(HelloWorldPanel);
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Reps
 
+    getRep: function(object)
+    {
+        var type = typeof(object);
+        for (var i = 0; i < reps.length; ++i)
+        {
+            var rep = reps[i];
+            try
+            {
+                if (rep.supportsObject(object, type))
+                    return rep;
+            }
+            catch (exc)
+            {
+                if (FBTrace.dumpProperties)
+                {
+                    FBTrace.dumpProperties("firebug.getRep FAILS at i/reps.length: "+i+"/"+reps.length+" type:"+type+" exc:", exc);
+                    FBTrace.dumpProperties("firebug.getRep reps[i]", reps[i]);
+                    FBTrace.dumpStack("firebug.getRep");
+                }
+            }
+        }
+
+        return defaultRep;
+    },
+
+    getRepObject: function(node)
+    {
+        var target = null;
+        for (var child = node; child; child = child.parentNode)
+        {
+            if (hasClass(child, "repTarget"))
+                target = child;
+
+            if (child.repObject)
+            {
+                if (!target && hasClass(child, "repIgnore"))
+                    break;
+                else
+                    return child.repObject;
+            }
+        }
+    },
+
+    getRepNode: function(node)
+    {
+        for (var child = node; child; child = child.parentNode)
+        {
+            if (child.repObject)
+                return child;
+        }
+    },
+
+    getElementByRepObject: function(element, object)
+    {
+        for (var child = element.firstChild; child; child = child.nextSibling)
+        {
+            if (child.repObject == object)
+                return child;
+        }
+    },
+/**/
+
+
+// ************************************************************************************************
 }});
-----------------------------------------------------
 
-/**/  
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+
+// ************************************************************************************************
+// Console
+
+var ConsoleAPI = 
+{
+    firebuglite: Firebug.version,
+    
+    xxx: function(o)
+    {
+        var rep = Firebug.getRep(o);
+        var className = "";
+        
+        var panel = Firebug.DOM.getPanel();
+        var toggles = {};
+        
+        var row = Firebug.Console.getPanel().contentNode.ownerDocument.createElement("div");
+        var target = row;
+        var object = o;
+        
+        row.className = "logRow" + (className ? " logRow-"+className : "");
+        //row.innerHTML = message.join("");
+        
+        rep.tag.replace({domPanel: panel, toggles: toggles, object: object}, target);
+        
+        Firebug.Console.appendRow(row);
+    },
+
+    log: function()
+    {
+        return Firebug.Console.logFormatted(arguments, "");
+    },
+    
+    debug: function()
+    {
+        return Firebug.Console.logFormatted(arguments, "debug");
+    },
+    
+    info: function()
+    {
+        return Firebug.Console.logFormatted(arguments, "info");
+    },
+    
+    warn: function()
+    {
+        return Firebug.Console.logFormatted(arguments, "warning");
+    },
+    
+    error: function()
+    {
+        return Firebug.Console.logFormatted(arguments, "error");
+    },
+    
+    assert: function(truth, message)
+    {
+        if (!truth)
+        {
+            var args = [];
+            for (var i = 1; i < arguments.length; ++i)
+                args.push(arguments[i]);
+            
+            Firebug.Console.logFormatted(args.length ? args : ["Assertion Failure"], "error");
+            throw message ? message : "Assertion Failure";
+        }
+        
+        return Firebug.Console.LOG_COMMAND;        
+    },
+    
+    dir: function(object)
+    {
+        var html = [];
+                    
+        var pairs = [];
+        for (var name in object)
+        {
+            try
+            {
+                pairs.push([name, object[name]]);
+            }
+            catch (exc)
+            {
+            }
+        }
+        
+        pairs.sort(function(a, b) { return a[0] < b[0] ? -1 : 1; });
+        
+        html.push('<div class="log-object">');
+        for (var i = 0; i < pairs.length; ++i)
+        {
+            var name = pairs[i][0], value = pairs[i][1];
+            
+            html.push('<div class="property">', 
+                '<div class="propertyValueCell"><span class="propertyValue">');
+                
+            Firebug.Reps.appendObject(value, html);
+            
+            html.push('</span></div><div class="propertyNameCell"><span class="propertyName">',
+                escapeHTML(name), '</span></div>'); 
+            
+            html.push('</div>');
+        }
+        html.push('</div>');
+        
+        return Firebug.Console.logRow(html, "dir");
+    },
+    
+    dirxml: function(node)
+    {
+        var html = [];
+        
+        Firebug.Reps.appendNode(node, html);
+        
+        return Firebug.Console.logRow(html, "dirxml");
+    },
+    
+    group: function()
+    {
+        return Firebug.Console.logRow(arguments, "group", Firebug.Console.pushGroup);
+    },
+    
+    groupEnd: function()
+    {
+        return Firebug.Console.logRow(arguments, "", Firebug.Console.popGroup);
+    },
+    
+    time: function(name)
+    {
+        Firebug.Console.timeMap[name] = new Date().getTime();
+        
+        return Firebug.Console.LOG_COMMAND;
+    },
+    
+    timeEnd: function(name)
+    {
+        var timeMap = Firebug.Console.timeMap;
+        
+        if (name in timeMap)
+        {
+            var delta = new Date().getTime() - timeMap[name];
+            Firebug.Console.logFormatted([name+ ":", delta+"ms"]);
+            delete timeMap[name];
+        }
+        
+        return Firebug.Console.LOG_COMMAND;
+    },
+    
+    count: function()
+    {
+        return this.warn(["count() not supported."]);
+    },
+    
+    trace: function()
+    {
+        var getFuncName = function getFuncName (f)
+        {
+            if (f.getName instanceof Function)
+                return f.getName();
+            if (f.name) // in FireFox, Function objects have a name property...
+                return f.name;
+            
+            var name = f.toString().match(/function\s*(\w*)/)[1];
+            return name || "anonymous";
+        };
+    
+        var traceLabel = "Stack Trace";
+        
+        Firebug.Console.group(traceLabel);
+        
+        for (var fn = arguments.callee.caller; fn; fn = fn.caller)
+        {
+            var html = [ getFuncName(fn), "(" ];
+
+            for (var i = 0, l = fn.arguments.length; i < l; ++i)
+            {
+                if (i)
+                    html.push(", ");
+                
+                Firebug.Reps.appendObject(fn.arguments[i], html);
+            }
+
+            html.push(")");
+            Firebug.Console.logRow(html, "stackTrace");
+        }
+        
+        Firebug.Console.groupEnd(traceLabel);
+        
+        return Firebug.Console.LOG_COMMAND; 
+    },
+    
+    profile: function()
+    {
+        return this.warn(["profile() not supported."]);
+    },
+    
+    profileEnd: function()
+    {
+        return this.warn(["profileEnd() not supported."]);
+    },
+    
+    clear: function()
+    {
+        Firebug.Console.getPanel().contentNode.innerHTML = "";
+        
+        return Firebug.Console.LOG_COMMAND;
+    },
+
+    open: function()
+    {
+        toggleConsole(true);
+        
+        return Firebug.Console.LOG_COMMAND;
+    },
+    
+    close: function()
+    {
+        if (frameVisible)
+            toggleConsole();
+        
+        return Firebug.Console.LOG_COMMAND;
+    }
+};
+
+
+// ************************************************************************************************
+// Console Module
+
+var ConsoleModule = extend(Firebug.Module, ConsoleAPI);
+
+Firebug.Console = extend(ConsoleModule,
+{
+    LOG_COMMAND: {},
+    
+    groupStack: [],
+    timeMap: {},
+        
+    getPanel: function()
+    {
+        return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
+    },    
+
+    flush: function()
+    {
+        var queue = FirebugChrome.consoleMessageQueue;
+        FirebugChrome.consoleMessageQueue = [];
+        
+        for (var i = 0; i < queue.length; ++i)
+            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+    },
+    
+    // ********************************************************************************************
+    
+    logFormatted: function(objects, className)
+    {
+        var html = [];
+    
+        var format = objects[0];
+        var objIndex = 0;
+    
+        if (typeof(format) != "string")
+        {
+            format = "";
+            objIndex = -1;
+        }
+    
+        var parts = this.parseFormat(format);
+        for (var i = 0; i < parts.length; ++i)
+        {
+            var part = parts[i];
+            if (part && typeof(part) == "object")
+            {
+                var object = objects[++objIndex];
+                part.appender(object, html);
+            }
+            else
+                Firebug.Reps.appendText(part, html);
+        }
+    
+        for (var i = objIndex+1; i < objects.length; ++i)
+        {
+            Firebug.Reps.appendText(" ", html);
+            
+            var object = objects[i];
+            if (typeof(object) == "string")
+                Firebug.Reps.appendText(object, html);
+            else
+                Firebug.Reps.appendObject(object, html);
+        }
+        
+        return this.logRow(html, className);    
+    },
+    
+    parseFormat: function(format)
+    {
+        var parts = [];
+    
+        var reg = /((^%|[^\\]%)(\d+)?(\.)([a-zA-Z]))|((^%|[^\\]%)([a-zA-Z]))/;
+        var Reps = Firebug.Reps;
+        var appenderMap = {
+                s: Reps.appendText, 
+                d: Reps.appendInteger, 
+                i: Reps.appendInteger, 
+                f: Reps.appendFloat
+            };
+    
+        for (var m = reg.exec(format); m; m = reg.exec(format))
+        {
+            var type = m[8] ? m[8] : m[5];
+            var appender = type in appenderMap ? appenderMap[type] : Reps.appendObject;
+            var precision = m[3] ? parseInt(m[3]) : (m[4] == "." ? -1 : 0);
+    
+            parts.push(format.substr(0, m[0][0] == "%" ? m.index : m.index+1));
+            parts.push({appender: appender, precision: precision});
+    
+            format = format.substr(m.index+m[0].length);
+        }
+    
+        parts.push(format);
+    
+        return parts;
+    },
+    
+    // ********************************************************************************************
+    
+    logRow: function(message, className, handler)
+    {
+        var panel = this.getPanel();
+        
+        if (panel && panel.contentNode)
+            this.writeMessage(message, className, handler);
+        else
+        {
+            FirebugChrome.consoleMessageQueue.push([message, className, handler]);
+        }
+        
+        return this.LOG_COMMAND;
+    },
+    
+    writeMessage: function(message, className, handler)
+    {
+        var container = this.getPanel().containerNode;
+        var isScrolledToBottom =
+            container.scrollTop + container.offsetHeight >= container.scrollHeight;
+    
+        if (!handler)
+            handler = this.writeRow;
+        
+        handler.call(this, message, className);
+        
+        if (isScrolledToBottom)
+            container.scrollTop = container.scrollHeight - container.offsetHeight;
+    },
+    
+    appendRow: function(row)
+    {
+        if (this.groupStack.length > 0)
+            var container = this.groupStack[this.groupStack.length-1];
+        else
+            var container = this.getPanel().contentNode;
+        
+        container.appendChild(row);
+    },
+    
+    writeRow: function(message, className)
+    {
+        var row = this.getPanel().contentNode.ownerDocument.createElement("div");
+        row.className = "logRow" + (className ? " logRow-"+className : "");
+        row.innerHTML = message.join("");
+        this.appendRow(row);
+    },
+    
+    pushGroup: function(message, className)
+    {
+        this.logFormatted(message, className);
+    
+        var groupRow = this.getPanel().contentNode.ownerDocument.createElement("div");
+        groupRow.className = "logGroup";
+        var groupRowBox = this.getPanel().contentNode.ownerDocument.createElement("div");
+        groupRowBox.className = "logGroupBox";
+        groupRow.appendChild(groupRowBox);
+        this.appendRow(groupRowBox);
+        this.groupStack.push(groupRowBox);
+    },
+    
+    popGroup: function()
+    {
+        this.groupStack.pop();
+    }
+
+});
+
+Firebug.registerModule(Firebug.Console);
+
+
+// ************************************************************************************************
+// Console Panel
+
+function ConsolePanel(){};
+
+ConsolePanel.prototype = extend(Firebug.Panel,
+{
+    name: "Console",
+    title: "Console",
+    
+    options: 
+    {
+        hasCommandLine: true,
+        hasToolButtons: true,
+        isPreRendered: true,
+        innerHTMLSync: true
+    },
+
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        this.clearButton = new Firebug.Button({
+            node: $("fbConsole_btClear"),
+            owner: Firebug.Console,
+            onClick: Firebug.Console.clear
+        });
+    },
+    
+    initialize: function()
+    {
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        this.clearButton.initialize();
+        
+        // TODO: xxxpedro
+        if (Firebug.HTML)
+        {
+            addEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
+            addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+            addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        }
+    },
+    
+    shutdown: function()
+    {
+        // TODO: xxxpedro
+        if (Firebug.HTML)
+        {
+            removeEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
+            removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+            removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        }
+        
+        this.clearButton.shutdown();
+        
+        Firebug.Panel.shutdown.apply(this, arguments);
+    }    
+    
+});
+
+Firebug.registerPanel(ConsolePanel);
+
+// ************************************************************************************************
+
+FBL.onError = function(msg, href, lineNo)
+{
+    var html = [];
+    
+    var lastSlash = href.lastIndexOf("/");
+    var fileName = lastSlash == -1 ? href : href.substr(lastSlash+1);
+    
+    html.push(
+        '<span class="errorMessage">', msg, '</span>', 
+        '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
+    );
+    
+    Firebug.Console.logRow(html, "error");
+};
+
+// ************************************************************************************************
+// Register console namespace
+
+if (!isFirefox)
+    Env.browser.window.console = ConsoleAPI;        
+
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+var Console = Firebug.Console;
+
+// ************************************************************************************************
+// CommandLine
+
+Firebug.CommandLine = function(element)
+{
+    this.element = element;
+    
+    if (isOpera)
+      fixOperaTabKey(this.element);
+    
+    this.clear = bind(this.clear, this);
+    this.onKeyDown = bind(this.onKeyDown, this);
+    this.onError = bind(this.onError, this);
+    
+    addEvent(this.element, "keydown", this.onKeyDown);
+    
+    addEvent(Firebug.browser.window, "error", this.onError);
+    addEvent(Firebug.chrome.window, "error", this.onError);
+    
+    initializeCommandLineAPI();
+};
+
+Firebug.CommandLine.prototype = 
+{
+    element: null,
   
+    _buffer: [],
+    _bi: -1,
+    
+    _completing: null,
+    _completePrefix: null,
+    _completeExpr: null,
+    _completeBuffer: null,
+    _ci: null,
+    
+    _completion:
+    {
+        window:
+        [
+            "console"
+        ],
+        
+        document:
+        [
+            "getElementById", 
+            "getElementsByTagName"
+        ]
+    },
+  
+    _stack: function(command)
+    {
+        this._buffer.push(command);
+        this._bi = this._buffer.length;
+    },
+    
+    initialize: function(doc)
+    {
+    },
+    
+    destroy: function()
+    {
+        removeEvent(Firebug.browser.window, "error", this.onError);
+        removeEvent(Firebug.chrome.window, "error", this.onError);
+        
+        removeEvent(this.element, "keydown", this.onKeyDown);
+        
+        this.element = null
+        delete this.element;
+    },
+
+    execute: function()
+    {
+        var cmd = this.element;
+        var command = cmd.value;
+        
+        this._stack(command);
+        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
+        
+        try
+        {
+            
+            var result = this.evaluate(command);
+            
+            // avoid logging the console command twice, in case it is a console function
+            // that is being executed in the command line
+            if (result != Console.LOG_COMMAND)
+            {
+                var html = [];
+                Firebug.Reps.appendObject(result, html)
+                Firebug.Console.writeMessage(html, "command");
+            }
+                
+        }
+        catch (e)
+        {
+            Firebug.Console.writeMessage([e.message || e], "error");
+        }
+        
+        cmd.value = "";
+    },
+    
+    evaluate: function(expr)
+    {
+        // TODO: need to register the API in console.firebug.commandLineAPI
+        var api = "Firebug.CommandLine.API"
+            
+        //Firebug.context = Firebug.chrome;
+        //api = null;
+
+        return Firebug.context.evaluate(expr, "window", api, Console.error);
+    },
+    
+    //eval: new Function("return window.eval.apply(window, arguments)"),
+    
+    prevCommand: function()
+    {
+        var cmd = this.element;
+        var buffer = this._buffer;
+        
+        if (this._bi > 0 && buffer.length > 0)
+            cmd.value = buffer[--this._bi];
+    },
+  
+    nextCommand: function()
+    {
+        var cmd = this.element;
+        
+        var buffer = this._buffer;
+        var limit = buffer.length -1;
+        var i = this._bi;
+        
+        if (i < limit)
+          cmd.value = buffer[++this._bi];
+          
+        else if (i == limit)
+        {
+            ++this._bi;
+            cmd.value = "";
+        }
+    },
+  
+    autocomplete: function(reverse)
+    {
+        var cmd = this.element;
+        
+        var command = cmd.value;
+        var offset = getExpressionOffset(command);
+
+        var valBegin = offset ? command.substr(0, offset) : "";
+        var val = command.substr(offset);
+        
+        var buffer, obj, objName, commandBegin, result, prefix;
+        
+        // if it is the beginning of the completion
+        if(!this._completing)
+        {
+            
+            // group1 - command begin
+            // group2 - base object
+            // group3 - property prefix
+            var reObj = /(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
+            var r = reObj.exec(val);
+            
+            // parse command
+            if (r[1] || r[2] || r[3])
+            {
+                commandBegin = r[1] || "";
+                objName = r[2] || "";
+                prefix = r[3] || "";
+            }
+            else if (val == "")
+            {
+                commandBegin = objName = prefix = "";
+            } else
+                return;
+            
+            this._completing = true;
+      
+            // find base object
+            if(objName == "")
+                obj = window;
+              
+            else
+            {
+                objName = objName.replace(/\.$/, "");
+        
+                var n = objName.split(".");
+                var target = window, o;
+                
+                for (var i=0, ni; ni = n[i]; i++)
+                {
+                    if (o = target[ni])
+                      target = o;
+                      
+                    else
+                    {
+                        target = null;
+                        break;
+                    }
+                }
+                obj = target;
+            }
+            
+            // map base object
+            if(obj)
+            {
+                this._completePrefix = prefix;
+                this._completeExpr = valBegin + commandBegin + (objName ? objName + "." : "");
+                this._ci = -1;
+                
+                buffer = this._completeBuffer = isIE ?
+                    this._completion[objName || "window"] || [] : [];
+                
+                for(var p in obj)
+                    buffer.push(p);
+            }
+    
+        // if it is the continuation of the last completion
+        } else
+          buffer = this._completeBuffer;
+        
+        if (buffer)
+        {
+            prefix = this._completePrefix;
+            
+            var diff = reverse ? -1 : 1;
+            
+            for(var i=this._ci+diff, l=buffer.length, bi; i>=0 && i<l; i+=diff)
+            {
+                bi = buffer[i];
+                
+                if (bi.indexOf(prefix) == 0)
+                {
+                    this._ci = i;
+                    result = bi;
+                    break;
+                }
+            }
+        }
+        
+        if (result)
+            cmd.value = this._completeExpr + result;
+    },
+    
+    onError: function(msg, href, lineNo)
+    {
+        var html = [];
+        
+        var lastSlash = href.lastIndexOf("/");
+        var fileName = lastSlash == -1 ? href : href.substr(lastSlash+1);
+        
+        html.push(
+            '<span class="errorMessage">', msg, '</span>', 
+            '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
+          );
+        
+        Firebug.Console.writeRow(html, "error");
+    },
+    
+    clear: function()
+    {
+        this.element.value = "";
+    },
+    
+    onKeyDown: function(e)
+    {
+        e = e || event;
+        
+        var code = e.keyCode;
+        
+        /*tab, shift, control, alt*/
+        if (code != 9 && code != 16 && code != 17 && code != 18)
+            this._completing = false;
+    
+        if (code == 13 /* enter */)
+            this.execute();
+
+        else if (code == 27 /* ESC */)
+            setTimeout(this.clear, 0);
+          
+        else if (code == 38 /* up */)
+            this.prevCommand();
+          
+        else if (code == 40 /* down */)
+            this.nextCommand();
+          
+        else if (code == 9 /* tab */)
+            this.autocomplete(e.shiftKey);
+          
+        else
+            return;
+        
+        cancelEvent(e, true);
+        return false;
+    }
+};
 
 
+// ************************************************************************************************
+// 
+
+var reOpenBracket = /[\[\(\{]/;
+var reCloseBracket = /[\]\)\}]/;
+
+function getExpressionOffset(command)
+{
+    // XXXjoe This is kind of a poor-man's JavaScript parser - trying
+    // to find the start of the expression that the cursor is inside.
+    // Not 100% fool proof, but hey...
+
+    var bracketCount = 0;
+
+    var start = command.length-1;
+    for (; start >= 0; --start)
+    {
+        var c = command[start];
+        if ((c == "," || c == ";" || c == " ") && !bracketCount)
+            break;
+        if (reOpenBracket.test(c))
+        {
+            if (bracketCount)
+                --bracketCount;
+            else
+                break;
+        }
+        else if (reCloseBracket.test(c))
+            ++bracketCount;
+    }
+
+    return start + 1;
+}
+
+// ************************************************************************************************
+// CommandLine API
+
+var CommandLineAPI =
+{
+    $: function(id)
+    {
+        return Firebug.browser.document.getElementById(id)
+    },
+
+    $$: function(selector, context)
+    {
+        context = context || Firebug.browser.document;
+        return Firebug.Selector ? 
+                Firebug.Selector(selector, context) : 
+                Firebug.Console.error("Firebug.Selector module not loaded.");
+    },
+    
+    dir: Firebug.Console.dir,
+
+    dirxml: Firebug.Console.dirxml
+};
+
+Firebug.CommandLine.API = {};
+var initializeCommandLineAPI = function initializeCommandLineAPI()
+{
+    for (var m in CommandLineAPI)
+        if (!Firebug.browser.window[m])
+            Firebug.CommandLine.API[m] = CommandLineAPI[m];
+};
 
 // ************************************************************************************************
 }});
@@ -6094,252 +9368,6 @@ defineTags(
 })();
 
 
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-Firebug.Reps = {
-
-    appendText: function(object, html)
-    {
-        html.push(escapeHTML(objectToString(object)));
-    },
-    
-    appendNull: function(object, html)
-    {
-        html.push('<span class="objectBox-null">', escapeHTML(objectToString(object)), '</span>');
-    },
-    
-    appendString: function(object, html)
-    {
-        html.push('<span class="objectBox-string">&quot;', escapeHTML(objectToString(object)),
-            '&quot;</span>');
-    },
-    
-    appendInteger: function(object, html)
-    {
-        html.push('<span class="objectBox-number">', escapeHTML(objectToString(object)), '</span>');
-    },
-    
-    appendFloat: function(object, html)
-    {
-        html.push('<span class="objectBox-number">', escapeHTML(objectToString(object)), '</span>');
-    },
-    
-    appendFunction: function(object, html)
-    {
-        var reName = /function ?(.*?)\(/;
-        var m = reName.exec(objectToString(object));
-        var name = m && m[1] ? m[1] : "function";
-        html.push('<span class="objectBox-function">', escapeHTML(name), '()</span>');
-    },
-    
-    appendObject: function(object, html)
-    {
-        try
-        {
-            if (object == undefined)
-                this.appendNull("undefined", html);
-            else if (object == null)
-                this.appendNull("null", html);
-            else if (typeof object == "string")
-                this.appendString(object, html);
-            else if (typeof object == "number")
-                this.appendInteger(object, html);
-            else if (typeof object == "boolean")
-                this.appendInteger(object, html);
-            else if (typeof object == "function")
-                this.appendFunction(object, html);
-            else if (object.nodeType == 1)
-                this.appendSelector(object, html);
-            else if (typeof object == "object")
-            {
-                if (typeof object.length != "undefined")
-                    this.appendArray(object, html);
-                else
-                    this.appendObjectFormatted(object, html);
-            }
-            else
-                this.appendText(object, html);
-        }
-        catch (exc)
-        {
-        }
-    },
-        
-    appendObjectFormatted: function(object, html)
-    {
-        var text = objectToString(object);
-        var reObject = /\[object (.*?)\]/;
-    
-        var m = reObject.exec(text);
-        html.push('<span class="objectBox-object">', m ? m[1] : text, '</span>')
-    },
-    
-    appendSelector: function(object, html)
-    {
-        var uid = object[cacheID];
-        var uidString = uid ? [cacheID, '="', uid, '" id="', uid, '"'].join("") : "";
-                        
-        html.push('<span class="objectBox-selector"', uidString, '>');
-    
-        html.push('<span class="selectorTag">', escapeHTML(object.nodeName.toLowerCase()), '</span>');
-        if (object.id)
-            html.push('<span class="selectorId">#', escapeHTML(object.id), '</span>');
-        if (object.className)
-            html.push('<span class="selectorClass">.', escapeHTML(object.className), '</span>');
-    
-        html.push('</span>');
-    },
-    
-    appendNode: function(node, html)
-    {
-        if (node.nodeType == 1)
-        {
-            var uid = node[cacheID];
-            var uidString = uid ? [cacheID, '="', uid, '" id="', uid, '"'].join("") : "";                
-            
-            html.push(
-                '<div class="objectBox-element"', uidString, '">',
-                '<span ', cacheID, '="', uid, '" class="nodeBox">',
-                '&lt;<span class="nodeTag">', node.nodeName.toLowerCase(), '</span>');
-    
-            for (var i = 0; i < node.attributes.length; ++i)
-            {
-                var attr = node.attributes[i];
-                if (!attr.specified || attr.nodeName == cacheID)
-                    continue;
-                
-                html.push('&nbsp;<span class="nodeName">', attr.nodeName.toLowerCase(),
-                    '</span>=&quot;<span class="nodeValue">', escapeHTML(attr.nodeValue),
-                    '</span>&quot;')
-            }
-    
-            if (node.firstChild)
-            {
-                html.push('&gt;</div><div class="nodeChildren">');
-    
-                for (var child = node.firstChild; child; child = child.nextSibling)
-                    this.appendNode(child, html);
-                    
-                html.push('</div><div class="objectBox-element">&lt;/<span class="nodeTag">', 
-                    node.nodeName.toLowerCase(), '&gt;</span></span></div>');
-            }
-            else
-                html.push('/&gt;</span></div>');
-        }
-        else if (node.nodeType == 3)
-        {
-            html.push('<div class="nodeText">', escapeHTML(node.nodeValue),
-                '</div>');
-        }
-    },
-    
-    appendArray: function(object, html)
-    {
-        html.push('<span class="objectBox-array"><b>[</b> ');
-        
-        for (var i = 0, l = object.length, obj; i < l; ++i)
-        {
-            this.appendObject(object[i], html);
-            
-            if (i < l-1)
-            html.push(', ');
-        }
-    
-        html.push(' <b>]</b></span>');
-    }
-
-};
-
-
-
-/*
-From firebug
-
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Reps
-
-    registerRep: function()
-    {
-        reps.push.apply(reps, arguments);
-    },
-
-    setDefaultRep: function(rep)
-    {
-        defaultRep = rep;
-    },
-
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Reps
-
-    getRep: function(object)
-    {
-        var type = typeof(object);
-        for (var i = 0; i < reps.length; ++i)
-        {
-            var rep = reps[i];
-            try
-            {
-                if (rep.supportsObject(object, type))
-                    return rep;
-            }
-            catch (exc)
-            {
-                if (FBTrace.dumpProperties)
-                {
-                    FBTrace.dumpProperties("firebug.getRep FAILS at i/reps.length: "+i+"/"+reps.length+" type:"+type+" exc:", exc);
-                    FBTrace.dumpProperties("firebug.getRep reps[i]", reps[i]);
-                    FBTrace.dumpStack("firebug.getRep");
-                }
-            }
-        }
-
-        return defaultRep;
-    },
-
-    getRepObject: function(node)
-    {
-        var target = null;
-        for (var child = node; child; child = child.parentNode)
-        {
-            if (hasClass(child, "repTarget"))
-                target = child;
-
-            if (child.repObject)
-            {
-                if (!target && hasClass(child, "repIgnore"))
-                    break;
-                else
-                    return child.repObject;
-            }
-        }
-    },
-
-    getRepNode: function(node)
-    {
-        for (var child = node; child; child = child.parentNode)
-        {
-            if (child.repObject)
-                return child;
-        }
-    },
-
-    getElementByRepObject: function(element, object)
-    {
-        for (var child = element.firstChild; child; child = child.nextSibling)
-        {
-            if (child.repObject == object)
-                return child;
-        }
-    },
-/**/
-
-
-// ************************************************************************************************
-}});
-
 /* See license.txt for terms of usage */
 
 var FirebugReps = FBL.ns(function() { with (FBL) {
@@ -6360,79 +9388,6 @@ var OBJECTLINK = this.OBJECTLINK =
         _repObject: "$object"
     });
 
-
-// ************************************************************************************************
-
-Firebug.Rep = domplate(
-{
-    className: "",
-    inspectable: true,
-
-    supportsObject: function(object, type)
-    {
-        return false;
-    },
-
-    inspectObject: function(object, context)
-    {
-        Firebug.chrome.select(object);
-    },
-
-    browseObject: function(object, context)
-    {
-    },
-
-    persistObject: function(object, context)
-    {
-    },
-
-    getRealObject: function(object, context)
-    {
-        return object;
-    },
-
-    getTitle: function(object)
-    {
-        var label = safeToString(object);
-
-        var re = /\[object (.*?)\]/;
-        var m = re.exec(label);
-        return m ? m[1] : label;
-    },
-
-    getTooltip: function(object)
-    {
-        return null;
-    },
-
-    getContextMenuItems: function(object, target, context)
-    {
-        return [];
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Convenience for domplates
-
-    STR: function(name)
-    {
-        return $STR(name);
-    },
-
-    cropString: function(text)
-    {
-        return cropString(text);
-    },
-
-    toLowerCase: function(text)
-    {
-        return text ? text.toLowerCase() : text;
-    },
-
-    plural: function(n)
-    {
-        return n == 1 ? "" : "s";
-    }
-});
 
 // ************************************************************************************************
 
@@ -6575,7 +9530,7 @@ this.Func = domplate(Firebug.Rep,
 
     supportsObject: function(object, type)
     {
-        return type == "function";
+        return isFunction(object);
     },
 
     inspectObject: function(fn, context)
@@ -6727,9 +9682,9 @@ this.Obj = domplate(Firebug.Rep,
                     continue;
                 }
 
-                var t = typeof(val);
+                var t = typeof val;
                 if (t == "boolean" || t == "number" || (t == "string" && val)
-                    || (t == "object" && val && val.toString))
+                    || (t == "object" && !isFunction(val) && val && val.toString))
                 {
                     var title = (t == "object")
                         ? Firebug.getRep(val).getTitle(val)
@@ -6857,18 +9812,15 @@ this.Arr = domplate(Firebug.Rep,
         try {
             if (!obj)
                 return false;
-            //TODO: xxxpedro
-            //else if (obj instanceof Ci.nsIDOMHistory) // do this first to avoid security 1000 errors?
-            //    return false;
-            else if (isIE && typeof obj == "object" && isFinite(obj.length) && obj.nodeType != 8)
+            else if (isIE && !isFunction(obj) && typeof obj == "object" && isFinite(obj.length) && obj.nodeType != 8)
                 return true;
-            else if (isFinite(obj.length) && typeof obj.splice === 'function')
+            else if (isFinite(obj.length) && isFunction(obj.splice))
                 return true;
-            else if (isFinite(obj.length) && typeof obj.callee === 'function') // arguments
+            else if (isFinite(obj.length) && isFunction(obj.callee)) // arguments
                 return true;
-            else if (obj instanceof HTMLCollection)
+            else if (instanceOf(obj, "HTMLCollection"))
                 return true;
-            else if (obj instanceof NodeList)
+            else if (instanceOf(obj, "NodeList"))
                 return true;
             else
                 return false;
@@ -6987,16 +9939,12 @@ this.Element = domplate(Firebug.Rep,
 
      getSelectorId: function(elt)
      {
-         return elt.id ? ("#" + elt.id) : "";
+         return elt.id ? "#" + elt.id : "";
      },
 
      getSelectorClass: function(elt)
      {
-         // TODO: xxxpedro
-         return "";
-         return elt.getAttribute("class")
-             ? ("." + elt.getAttribute("class").split(" ")[0])
-             : "";
+         return elt.className ? "." + elt.className.split(" ")[0] : "";
      },
 
      getValue: function(elt)
@@ -7268,7 +10216,8 @@ this.StyleSheet = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
-        return object instanceof CSSStyleSheet;
+        //return object instanceof CSSStyleSheet;
+        return instanceOf(object, "CSSStyleSheet");
     },
 
     browseObject: function(styleSheet, context)
@@ -7392,7 +10341,8 @@ this.Event = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
-        return object instanceof Event || object instanceof EventCopy;
+        //return object instanceof Event || object instanceof EventCopy;
+        return instanceOf(object, "Event") || instanceOf(object, "EventCopy");
     },
 
     getTitle: function(event, context)
@@ -8092,2130 +11042,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * /
  */
 
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-
-// ************************************************************************************************
-// Context
-  
-FBL.Context = function(win){
-    this.window = win.window;
-    this.document = win.document;
-    
-    // Some windows in IE, like iframe, doesn't have the eval() method
-    if (isIE && !this.window.eval)
-    {
-        // But after executing the following line the method magically appears!
-        this.window.execScript("null");
-        // Just to make sure the "magic" really happened
-        if (!this.window.eval)
-            throw new Error("Firebug Error: eval() method not found in this window");
-    }
-    
-    // Create a new "black-box" eval() method that runs in the global namespace
-    // of the context window, without exposing the local variables declared
-    // by the function that calls it
-    this.eval = this.window.eval("new Function('" +
-            "try{ return window.eval.apply(window,arguments) }catch(E){ E."+evalError+"=true; return E }" +
-        "')");
-};
-
-FBL.Context.prototype =
-{  
-  
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Evalutation Method
-    
-    /**
-     * Evaluates an expression in the current context window.
-     * 
-     * @param {String}   expr           expression to be evaluated
-     * 
-     * @param {String}   context        string indicating the global location
-     *                                  of the object that will be used as the
-     *                                  context. The context is referred in
-     *                                  the expression as the "this" keyword.
-     *                                  If no context is informed, the "window"
-     *                                  context is used.
-     *                                  
-     * @param {String}   api            string indicating the global location
-     *                                  of the object that will be used as the
-     *                                  api of the evaluation.
-     *                                  
-     * @param {Function} errorHandler(message) error handler to be called
-     *                                         if the evaluation fails.
-     */
-    evaluate: function(expr, context, api, errorHandler)
-    {
-        context = context || "window";
-
-        var cmd = api ?
-            "(function(arguments){ with("+api+"){ return "+expr+" } }).call("+context+",undefined)" :
-            "(function(arguments){ return "+expr+" }).call("+context+",undefined)" ;
-        
-        var r = this.eval(cmd);
-        if (r && r[evalError])
-        {
-            cmd = api ?
-                "(function(arguments){ with("+api+"){ "+expr+" } }).call("+context+",undefined)" :
-                "(function(arguments){ "+expr+" }).call("+context+",undefined)" ;
-                
-            r = this.eval(cmd);
-            if (r && r[evalError])
-            {
-                if (errorHandler)
-                    r = errorHandler(r.message || r)
-                else
-                    r = r.message || r;
-            }
-        }
-        
-        return r;
-    },
-    
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Window Methods
-    
-    getWindowSize: function()
-    {
-        var width=0, height=0, el;
-        
-        if (typeof this.window.innerWidth == "number")
-        {
-            width = this.window.innerWidth;
-            height = this.window.innerHeight;
-        }
-        else if ((el=this.document.documentElement) && (el.clientHeight || el.clientWidth))
-        {
-            width = el.clientWidth;
-            height = el.clientHeight;
-        }
-        else if ((el=this.document.body) && (el.clientHeight || el.clientWidth))
-        {
-            width = el.clientWidth;
-            height = el.clientHeight;
-        }
-        
-        return {width: width, height: height};
-    },
-    
-    getWindowScrollSize: function()
-    {
-        var width=0, height=0, el;
-
-        if (!isIEQuiksMode && (el=this.document.documentElement) && 
-           (el.scrollHeight || el.scrollWidth))
-        {
-            width = el.scrollWidth;
-            height = el.scrollHeight;
-        }
-        else if ((el=this.document.body) && (el.scrollHeight || el.scrollWidth))
-        {
-            width = el.scrollWidth;
-            height = el.scrollHeight;
-        }
-        
-        return {width: width, height: height};
-    },
-    
-    getWindowScrollPosition: function()
-    {
-        var top=0, left=0, el;
-        
-        if(typeof this.window.pageYOffset == "number")
-        {
-            top = this.window.pageYOffset;
-            left = this.window.pageXOffset;
-        }
-        else if((el=this.document.body) && (el.scrollTop || el.scrollLeft))
-        {
-            top = el.scrollTop;
-            left = el.scrollLeft;
-        }
-        else if((el=this.document.documentElement) && (el.scrollTop || el.scrollLeft))
-        {
-            top = el.scrollTop;
-            left = el.scrollLeft;
-        }
-        
-        return {top:top, left:left};
-    },
-    
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Element Methods
-
-    getElementFromPoint: function(x, y)
-    {
-        if (isOpera || isSafari)
-        {
-            var scroll = this.getWindowScrollPosition();
-            return this.document.elementFromPoint(x + scroll.left, y + scroll.top);
-        }
-        else
-            return this.document.elementFromPoint(x, y);
-    },
-    
-    getElementPosition: function(el)
-    {
-        var left = 0
-        var top = 0;
-        
-        do
-        {
-            left += el.offsetLeft;
-            top += el.offsetTop;
-        }
-        while (el = el.offsetParent);
-            
-        return {left:left, top:top};      
-    },
-    
-    getElementBox: function(el)
-    {
-        var result = {};
-        
-        if (el.getBoundingClientRect)
-        {
-            var rect = el.getBoundingClientRect();
-            
-            // fix IE problem with offset when not in fullscreen mode
-            var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
-            
-            var scroll = this.getWindowScrollPosition();
-            
-            result.top = Math.round(rect.top - offset + scroll.top);
-            result.left = Math.round(rect.left - offset + scroll.left);
-            result.height = Math.round(rect.bottom - rect.top);
-            result.width = Math.round(rect.right - rect.left);
-        }
-        else 
-        {
-            var position = this.getElementPosition(el);
-            
-            result.top = position.top;
-            result.left = position.left;
-            result.height = el.offsetHeight;
-            result.width = el.offsetWidth;
-        }
-        
-        return result;
-    },
-    
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Measurement Methods
-    
-    getMeasurement: function(el, name)
-    {
-        var result = {value: 0, unit: "px"};
-        
-        var cssValue = this.getCSS(el, name);
-        
-        if (!cssValue) return result;
-        if (cssValue.toLowerCase() == "auto") return result;
-        
-        var reMeasure = /(\d+\.?\d*)(.*)/;
-        var m = cssValue.match(reMeasure);
-        
-        if (m)
-        {
-            result.value = m[1]-0;
-            result.unit = m[2].toLowerCase();
-        }
-        
-        return result;        
-    },
-    
-    getMeasurementInPixels: function(el, name)
-    {
-        if (!el) return null;
-        
-        var m = this.getMeasurement(el, name);
-        var value = m.value;
-        var unit = m.unit;
-        
-        if (unit == "px")
-            return value;
-          
-        else if (unit == "pt")
-            return this.pointsToPixels(name, value);
-          
-        if (unit == "em")
-            return this.emToPixels(el, value);
-          
-        else if (unit == "%")
-            return this.percentToPixels(el, value);
-    },
-
-    getMeasurementBox1: function(el, name)
-    {
-        var sufixes = ["Top", "Left", "Bottom", "Right"];
-        var result = [];
-        
-        for(var i=0, sufix; sufix=sufixes[i]; i++)
-            result[i] = Math.round(this.getMeasurementInPixels(el, name + sufix));
-        
-        return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
-    },
-    
-    getMeasurementBox: function(el, name)
-    {
-        var sufixes = ["Top", "Left", "Bottom", "Right"];
-        var result = [];
-        
-        if (isIE)
-        {
-            var propName, cssValue;
-            var autoMargin = null;
-            
-            for(var i=0, sufix; sufix=sufixes[i]; i++)
-            {
-                propName = name + sufix;
-                
-                cssValue = el.currentStyle[propName] || el.style[propName]; 
-                
-                if (cssValue == "auto")
-                {
-                    if (!autoMargin)
-                        autoMargin = this.getCSSAutoMarginBox(el);
-                    
-                    result[i] = autoMargin[sufix.toLowerCase()];
-                }
-                else
-                    result[i] = this.getMeasurementInPixels(el, propName);
-                      
-            }
-        
-        }
-        else
-        {
-            for(var i=0, sufix; sufix=sufixes[i]; i++)
-                result[i] = this.getMeasurementInPixels(el, name + sufix);
-        }
-        
-        return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
-    }, 
-    
-    getCSSAutoMarginBox: function(el)
-    {
-        if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
-            return {top:0, left:0, bottom:0, right:0};
-            /**/
-            
-        if (isIE && " h1 h2 h3 h4 h5 h6 h7 ul p ".indexOf(" "+el.nodeName.toLowerCase()+" ") == -1)
-            return {top:0, left:0, bottom:0, right:0};
-            /**/
-            
-        var offsetTop = 0;
-        if (false && isIEStantandMode)
-        {
-            var scrollSize = Firebug.browser.getWindowScrollSize();
-            offsetTop = scrollSize.height;
-        }
-        
-        var box = this.document.createElement("div");
-        //box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
-        box.style.cssText = "margin:0; padding:1px; border: 0;";
-        
-        var clone = el.cloneNode(false);
-        var text = this.document.createTextNode("&nbsp;");
-        clone.appendChild(text);
-        
-        box.appendChild(clone);
-    
-        this.document.body.appendChild(box);
-        
-        var marginTop = clone.offsetTop - box.offsetTop - 1;
-        var marginBottom = box.offsetHeight - clone.offsetHeight - 2 - marginTop;
-        
-        var marginLeft = clone.offsetLeft - box.offsetLeft - 1;
-        var marginRight = box.offsetWidth - clone.offsetWidth - 2 - marginLeft;
-        
-        this.document.body.removeChild(box);
-        
-        return {top:marginTop+offsetTop, left:marginLeft, bottom:marginBottom-offsetTop, right:marginRight};
-    },
-    
-    getFontSizeInPixels: function(el)
-    {
-        var size = this.getMeasurement(el, "fontSize");
-        
-        if (size.unit == "px") return size.value;
-        
-        // get font size, the dirty way
-        /*
-        var computeDirtyFontSize = function(el, calibration)
-        {
-            var div = this.document.createElement("div");
-            var divStyle = offscreenStyle;
-
-            if (calibration)
-                divStyle +=  " font-size:"+calibration+"px;";
-            
-            div.style.cssText = divStyle;
-            div.innerHTML = "A";
-            el.appendChild(div);
-            
-            var value = div.offsetHeight;
-            el.removeChild(div);
-            return value;
-        }
-        
-        var calibrationBase = 200;
-        var calibrationValue = computeDirtyFontSize(el, calibrationBase);
-        var rate = calibrationBase / calibrationValue;
-        /**/
-        
-        // the "dirty technique" fails in some environments, so we're using a static value
-        // based in some tests.
-        var rate = 200 / 225;
-        
-        var value = computeDirtyFontSize(el);
-
-        return value * rate;
-    },
-    
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Unit Funtions
-  
-    pointsToPixels: function(name, value, returnFloat)
-    {
-        var axis = /Top$|Bottom$/.test(name) ? "y" : "x";
-        
-        var result = value * pixelsPerInch[axis] / 72;
-        
-        return returnFloat ? result : Math.round(result);
-    },
-    
-    emToPixels: function(el, value)
-    {
-        if (!el) return null;
-        
-        var fontSize = this.getFontSizeInPixels(el);
-        
-        return Math.round(value * fontSize);
-    },
-    
-    exToPixels: function(el, value)
-    {
-        if (!el) return null;
-        
-        // get ex value, the dirty way
-        var div = this.document.createElement("div");
-        div.style.cssText = offscreenStyle + "width:"+value + "ex;";
-        
-        el.appendChild(div);
-        var value = div.offsetWidth;
-        el.removeChild(div);
-        
-        return value;
-    },
-      
-    percentToPixels: function(el, value)
-    {
-        if (!el) return null;
-        
-        // get % value, the dirty way
-        var div = this.document.createElement("div");
-        div.style.cssText = offscreenStyle + "width:"+value + "%;";
-        
-        el.appendChild(div);
-        var value = div.offsetWidth;
-        el.removeChild(div);
-        
-        return value;
-    },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
-    getCSS: isIE ? function(el, name)
-    {
-        return el.currentStyle[name] || el.style[name] || undefined;
-    }
-    : function(el, name)
-    {
-        return this.document.defaultView.getComputedStyle(el,null)[name] 
-            || el.style[name] || undefined;
-    }
-
-};
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// Internal variables
-
-var evalError = "___firebug_evaluation_error___";
-var pixelsPerInch;
-
-var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
-var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
-
-
-// ************************************************************************************************
-}});
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-
-FBL.chromeMap = {};
-
-var ChromeCache = FBL.Env.Cache.Chrome = 
-{
-    commandLineVisible: false,
-    sidePanelVisible: false,
-    sidePanelWidth: 300,
-    
-    selectedPanel: "Console",
-    selectedElement: null,
-    
-    consoleMessageQueue: [],    
-    
-    height: 250,
-    
-    isOpen: false,
-    
-    create: function()
-    {
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Env.Cache.Chrome.create", "creating chrome window");
-        
-        createChrome();
-    },
-    
-    initialize: function()
-    {
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Env.Cache.Chrome.initialize", "initializing chrome window");
-        
-        if (Env.chrome.type == "frame")
-            ChromeMini.create(Env.chrome);
-            
-        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
-            Env.openAtStartup = true;
-
-        var chrome = Firebug.chrome = new Chrome(Env.chrome);
-        chromeMap[chrome.type] = chrome;
-        
-        addGlobalEvent("keydown", onPressF12);
-        
-        if (Env.isPersistentMode && chrome.type == "popup")
-        {
-            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            chromeMap.frame = ChromeCache.chromeMap.frame;
-            ChromeCache.chromeMap.popup = chrome;
-            
-            var frame = chromeMap.frame;
-            if (frame)
-                frame.close();
-            
-            // initial UI state
-            ChromeCache.commandLineVisible = false;
-            ChromeCache.sidePanelVisible = false;
-
-            chrome.reattach(chromeMap.frame, chrome);
-        }
-    },
-    
-    clone: function(FBChrome)
-    {
-        for (var name in FBChrome)
-        {
-            var prop = FBChrome[name];
-            if (FBChrome.hasOwnProperty(name) && typeof prop != "function")
-            {
-                this[name] = prop;
-            }
-        }
-    }
-};
-
-
-// ************************************************************************************************
-// Chrome Window Options
-
-var ChromeDefaultOptions = 
-{
-    type: "frame",
-    id: "FirebugUI",
-    height: 250
-};
-
-// ************************************************************************************************
-// Chrome Window Creation
-
-var createChrome = function(options)
-{
-    options = options || {};
-    options = extend(ChromeDefaultOptions, options);
-    
-    var context = options.context || Env.browser;
-    
-    var chrome = {};
-    
-    chrome.type = options.type;
-    
-    var isChromeFrame = chrome.type == "frame";
-    var isBookmarletMode = Env.isBookmarletMode;
-    var url = isBookmarletMode ? "about:blank" : Env.location.skin;
-    
-    if (isChromeFrame)
-    {
-        // Create the Chrome Frame
-        var node = chrome.node = createGlobalElement("iframe");
-        
-        node.setAttribute("id", options.id);
-        node.setAttribute("frameBorder", "0");
-        node.style.border = "0";
-        node.style.visibility = "hidden";
-        node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
-        node.style.position = noFixedPosition ? "absolute" : "fixed";
-        node.style.width = "100%"; // "102%"; IE auto margin bug
-        node.style.left = "0";
-        node.style.bottom = noFixedPosition ? "-1px" : "0";
-        node.style.height = options.height + "px";
-        
-        // avoid flickering during chrome rendering
-        if (isFirefox)
-            node.style.display = "none";
-        
-        if (!isBookmarletMode)
-            node.setAttribute("src", Env.location.skin);
-        
-        // document.body not available in XML+XSL documents in Firefox
-        context.document.getElementsByTagName("body")[0].appendChild(node);
-    }
-    else
-    {
-        // Create the Chrome Popup
-        var height = ChromeCache.height || options.height;
-        var options = [
-                "true,top=",
-                Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
-                ",left=0,height=",
-                height,
-                ",width=",
-                screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
-                ",resizable"          
-            ].join("");
-        
-        var node = chrome.node = context.window.open(
-            url, 
-            "popup", 
-            options
-          );
-        
-        if (node)
-        {
-            try
-            {
-                node.focus();
-            }
-            catch(E)
-            {
-                alert("Firebug Error: Firebug popup was blocked.");
-                return;
-            }
-        }
-        else
-        {
-            alert("Firebug Error: Firebug popup was blocked.");
-            return;
-        }
-    }
-    
-    if (isBookmarletMode)
-    {
-        var tpl = getChromeTemplate(!isChromeFrame);
-        var doc = isChromeFrame ? node.contentWindow.document : node.document;
-        doc.write(tpl);
-        doc.close();
-    }
-    
-    var win;
-    var waitDelay = !isBookmarletMode ? isChromeFrame ? 200 : 300 : 100;
-    var waitForChrome = function()
-    {
-        if ( // Frame loaded... OR
-             isChromeFrame && (win=node.contentWindow) &&
-             node.contentWindow.document.getElementById("fbCommandLine") ||
-             
-             // Popup loaded
-             !isChromeFrame && (win=node.window) && node.document &&
-             node.document.getElementById("fbCommandLine") )
-        {
-            chrome.window = win.window;
-            chrome.document = win.document;
-            
-            // Prevent getting the wrong chrome height in FF when opening a popup 
-            setTimeout(function(){
-                onChromeLoad(chrome);
-            },0);
-        }
-        else
-            setTimeout(waitForChrome, waitDelay);
-    }
-    
-    waitForChrome();
-};
-
-
-var onChromeLoad = function onChromeLoad(chrome)
-{
-    Env.chrome = chrome;
-    
-    if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome window loaded");
-    
-    if (Env.isPersistentMode)
-    {
-        // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
-        Env._lastChromeCache = ChromeCache;
-        Env._lastChromeCache.chromeMap = FBL.chromeMap;
-        chrome.window.FirebugApplication = Env;
-    
-        if (Env.isDevelopmentMode)
-        {
-            Env.browser.window.FBDev.loadChromeApplication(chrome);
-        }
-        else
-        {
-            var doc = chrome.document;
-            var script = doc.createElement("script");
-            script.src = Env.location.app;
-            doc.getElementsByTagName("head")[0].appendChild(script);
-        }
-    }
-    else
-    {
-        if (chrome.type == "frame")
-        {
-            // initialize the chrome application
-            setTimeout(function(){
-                FBL.Firebug.initialize();
-            },0);
-        }
-        else if (chrome.type == "popup")
-        {
-            var frame = chromeMap.frame;
-            
-            // initial UI state
-            ChromeCache.commandLineVisible = false;
-            ChromeCache.sidePanelVisible = false;
-            
-            var newChrome = new Chrome(chrome);
-            var oldChrome = chromeMap.frame;
-        
-            // TODO: xxxpedro sync detach reattach attach
-            dispatch(newChrome.panelMap, "detach", [frame, newChrome]);
-        
-            if (frame)
-                frame.close();
-            
-            newChrome.reattach(frame, newChrome);
-        }
-    }
-};
-
-
-var getChromeTemplate = function(isPopup)
-{
-    var tpl = ChromeCache.injected; 
-    var r = [], i = -1;
-    
-    r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
-    r[++i] = '<html><head><title>';
-    r[++i] = Firebug.version;
-    r[++i] = '</title><style>';
-    r[++i] = tpl.CSS;
-    r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
-    r[++i] = '</style>';
-    r[++i] = '</head><body class=' + (isPopup ? '"FirebugPopup"' : '') + '>';
-    r[++i] = tpl.HTML;
-    r[++i] = '</body></html>';
-    
-    return r.join("");
-};
-
-// ************************************************************************************************
-// Chrome Class
-    
-var Chrome = function Chrome(chrome)
-{
-    var type = chrome.type;
-    var Base = type == "frame" ? ChromeFrameBase : ChromePopupBase; 
-    
-    append(this, chrome); // inherit chrome window properties
-    append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
-    
-    chromeMap[type] = this;
-    Firebug.chrome = this;
-    
-    this.create();
-    
-    return this;
-};
-
-// ************************************************************************************************
-// ChromeBase
-
-var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
-var ChromeBase = extend(ChromeBase, {
-    
-    create: function()
-    {
-        Firebug.PanelBar.create.apply(this);
-        
-        this.inspectButton = new Firebug.Button({
-            type: "toggle",
-            node: $("fbChrome_btInspect"),
-            owner: Firebug.Inspector,
-            
-            onPress: Firebug.Inspector.startInspecting,
-            onUnpress: Firebug.Inspector.stopInspecting          
-        });
-    },
-    
-    destroy: function()
-    {
-        this.shutdown();
-    },
-    
-    initialize: function()
-    {
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        Firebug.Console.flush();
-        
-        if (Firebug.Trace)
-            FBTrace.flush(Firebug.Trace);
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome application");
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // initialize inherited classes
-        Firebug.Controller.initialize.apply(this);
-        Firebug.PanelBar.initialize.apply(this);
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // create the interface elements cache
-        
-        fbTop = $("fbTop");
-        fbContent = $("fbContent");
-        fbContentStyle = fbContent.style;
-        fbBottom = $("fbBottom");
-        fbBtnInspect = $("fbBtnInspect");
-        
-        fbToolbar = $("fbToolbar");
-      
-        fbPanelBox1 = $("fbPanelBox1");
-        fbPanelBox1Style = fbPanelBox1.style;
-        fbPanelBox2 = $("fbPanelBox2");
-        fbPanelBox2Style = fbPanelBox2.style;
-        fbPanelBar2Box = $("fbPanelBar2Box");
-        fbPanelBar2BoxStyle = fbPanelBar2Box.style;
-      
-        fbHSplitter = $("fbHSplitter");
-        fbVSplitter = $("fbVSplitter");
-        fbVSplitterStyle = fbVSplitter.style;
-      
-        fbPanel1 = $("fbPanel1");
-        fbPanel1Style = fbPanel1.style;
-        fbPanel2 = $("fbPanel2");
-        fbPanel2Style = fbPanel2.style;
-      
-        fbConsole = $("fbConsole");
-        fbConsoleStyle = fbConsole.style;
-        fbHTML = $("fbHTML");
-      
-        fbCommandLine = $("fbCommandLine");
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // static values cache
-        topHeight = fbTop.offsetHeight;
-        topPartialHeight = fbToolbar.offsetHeight;
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
-        disableTextSelection($("fbToolbar"));
-        disableTextSelection($("fbPanelBarBox"));
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // create a new instance of the CommandLine class
-        commandLine = new Firebug.CommandLine(fbCommandLine);
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
-        if (isIE)
-        {
-           var as = $$(".fbHover");
-           for (var i=0, a; a=as[i]; i++)
-           {
-               a.setAttribute("href", "javascript:void(0)");
-           }
-        }
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // initialize all panels
-        /*
-        var panelMap = Firebug.panelTypes;
-        for (var i=0, p; p=panelMap[i]; i++)
-        {
-            if (!p.parentPanel)
-            {
-                this.addPanel(p.prototype.name);
-            }
-        }
-        /**/
-        
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        
-        this.inspectButton.initialize();
-        
-        addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        addEvent(fbContent, 'mouseout', Firebug.HTML.onListMouseMove);
-        addEvent(this.node, 'mouseout', Firebug.HTML.onListMouseMove);
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        
-        // Select the first registered panel
-        // TODO: BUG IE7
-        var self = this;
-        setTimeout(function(){
-            self.selectPanel(ChromeCache.selectedPanel);
-        },0);
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        //this.draw();
-    },
-    
-    shutdown: function()
-    {
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        this.inspectButton.shutdown();
-        
-        removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        removeEvent(fbContent, 'mouseout', Firebug.HTML.onListMouseMove);
-        removeEvent(this.node, 'mouseout', Firebug.HTML.onListMouseMove);
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-        // ************************************************************************************************
-
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Remove the interface elements cache
-        
-        fbTop = null;
-        fbContent = null;
-        fbContentStyle = null;
-        fbBottom = null;
-        fbBtnInspect = null;
-        
-        fbToolbar = null;
-
-        fbPanelBox1 = null;
-        fbPanelBox1Style = null;
-        fbPanelBox2 = null;
-        fbPanelBox2Style = null;
-        fbPanelBar2Box = null;
-        fbPanelBar2BoxStyle = null;
-  
-        fbHSplitter = null;
-        fbVSplitter = null;
-        fbVSplitterStyle = null;
-  
-        fbPanel1 = null;
-        fbPanel1Style = null;
-        fbPanel2 = null;
-  
-        fbConsole = null;
-        fbConsoleStyle = null;
-        fbHTML = null;
-  
-        fbCommandLine = null;
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // static values cache
-        
-        topHeight = null;
-        topPartialHeight = null;
-        
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // shutdown inherited classes
-        Firebug.Controller.shutdown.apply(this);
-        Firebug.PanelBar.shutdown.apply(this);
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // destroy the instance of the CommandLine class
-        commandLine.destroy();
-    },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
-    toggle: function(forceOpen, popup)
-    {
-        if(popup)
-        {
-            this.detach();
-        }
-        else
-        {
-            if (isOpera && Firebug.chrome.type == "popup" && Firebug.chrome.node.closed)
-            {
-                var frame = chromeMap.frame;
-                frame.reattach();
-                
-                chromeMap.popup = null;
-                
-                frame.open();
-                
-                return;
-            }
-                
-            // If the context is a popup, ignores the toggle process
-            if (Firebug.chrome.type == "popup") return;
-            
-            var shouldOpen = forceOpen || !ChromeCache.isOpen;
-            
-            if(shouldOpen)
-               this.open();
-            else
-               this.close();
-        }       
-    },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
-    detach: function()
-    {
-        //alert('detach');
-        if(!chromeMap.popup)
-        {     
-            createChrome({type: "popup"});
-        }
-    },
-    
-    reattach: function(oldChrome, newChrome)
-    {
-        // chrome synchronization
-        var newPanelMap = newChrome.panelMap;
-        var oldPanelMap = oldChrome.panelMap;
-        
-        var panel;
-        for(var name in newPanelMap)
-        {
-            // TODO: xxxpedro innerHTML
-            panel = newPanelMap[name]; 
-            if (panel.options.innerHTMLSync)
-                panel.contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
-        }
-        
-        Firebug.chrome = newChrome;
-        
-        // TODO: xxxpedro sync detach reattach attach
-        //dispatch(Firebug.chrome.panelMap, "detach", [oldChrome, newChrome]);
-        
-        if (newChrome.type == "popup")
-        {
-            newChrome.initialize();
-            dispatch(Firebug.modules, "initialize", []);
-        }
-        
-        dispatch(newPanelMap, "reattach", [oldChrome, newChrome]);
-    },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    draw: function()
-    {
-        var size = Firebug.chrome.getWindowSize();
-        
-        // Height related values
-        var commandLineHeight = ChromeCache.commandLineVisible ? fbCommandLine.offsetHeight : 0,
-            y = Math.max(size.height /* chrome height */, topHeight),
-            
-            height = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0)+ "px",
-            
-            
-            // Width related values
-            sideWidth = ChromeCache.sidePanelVisible ? ChromeCache.sidePanelWidth : 0,
-            
-            width = Math.max(size.width /* chrome width */ - sideWidth, 0) + "px";
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Height related rendering
-        fbPanelBox1Style.height = height;
-        fbPanel1Style.height = height;
-        
-        if (isIE || isOpera)
-        {
-            // Fix IE and Opera problems with auto resizing the verticall splitter
-            fbVSplitterStyle.height = Math.max(y - topPartialHeight - commandLineHeight, 0) + "px";
-        }
-        //xxxpedro FF2 only?
-        /*
-        else if (isFirefox)
-        {
-            // Fix Firefox problem with table rows with 100% height (fit height)
-            fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
-        }/**/
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Width related rendering
-        fbPanelBox1Style.width = width;
-        fbPanel1Style.width = width;
-        
-        // SidePanel rendering
-        if (ChromeCache.sidePanelVisible)
-        {
-            sideWidth = Math.max(sideWidth - 6, 0) + "px";
-            
-            fbPanel2Style.height = height;
-            fbPanel2Style.width = sideWidth;
-            
-            fbPanelBox2Style.width = sideWidth;
-            fbPanelBar2BoxStyle.width = sideWidth;
-            fbVSplitterStyle.right = sideWidth;
-        }
-    },
-    
-    resize: function()
-    {
-        var self = this;
-        // avoid partial resize when maximizing window
-        setTimeout(function(){
-            self.draw();
-            
-            if (noFixedPosition && self.type == "frame")
-                self.fixIEPosition();
-        }, 0);
-    },
-    
-    layout: function(panel)
-    {
-        if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
-        
-        var options = panel.options;
-        changeCommandLineVisibility(options.hasCommandLine);
-        changeSidePanelVisibility(options.hasSidePanel);
-        Firebug.chrome.draw();
-    }
-    
-});
-
-// ************************************************************************************************
-// ChromeFrameBase
-
-var ChromeContext = extend(ChromeBase, Context.prototype); 
-
-var ChromeFrameBase = extend(ChromeContext,
-{
-    create: function()
-    {
-        ChromeBase.create.call(this);
-        
-        // restore display for the anti-flicker trick
-        if (isFirefox)
-            this.node.style.display = "block";
-        
-        if (Env.openAtStartup)
-            this.open();
-        else
-        {
-            ChromeCache.isOpen = true;
-            this.close();
-        }
-        
-        //if (this.node.style.visibility != "visible")
-        //    this.node.style.visibility = "visible";
-    },
-    
-    initialize: function()
-    {
-        //FBTrace.sysout("Frame", "initialize();")
-        ChromeBase.initialize.call(this);
-        
-        this.addController(
-            [Firebug.browser.window, "resize", this.resize],
-            [Firebug.browser.window, "unload", this.destroy],
-            
-            [$("fbChrome_btClose"), "click", this.close],
-            [$("fbChrome_btDetach"), "click", this.detach]       
-        );
-        
-        if (noFixedPosition)
-        {
-            this.addController(
-                [Firebug.browser.window, "scroll", this.fixIEPosition]
-            );
-        }
-        
-        fbVSplitter.onmousedown = onVSplitterMouseDown;
-        fbHSplitter.onmousedown = onHSplitterMouseDown;
-        
-        this.isInitialized = true;
-    },
-    
-    shutdown: function()
-    {
-        fbVSplitter.onmousedown = null;
-        fbHSplitter.onmousedown = null;
-        
-        ChromeBase.shutdown.apply(this);
-        
-        this.isInitialized = false;
-    },
-    
-    reattach: function()
-    {
-        var frame = chromeMap.frame;
-        
-        // last UI state
-        ChromeCache.commandLineVisible = this.commandLineVisible;
-        ChromeCache.sidePanelVisible = this.sidePanelVisible;
-        
-        ChromeBase.reattach(chromeMap.popup, this);
-    },
-    
-    open: function()
-    {
-        if (!ChromeCache.isOpen)
-        {
-            var node = this.node;
-            node.style.visibility = "hidden"; // Avoid flickering
-            
-            if (ChromeMini.isInitialized)
-            {
-                ChromeMini.shutdown();
-            }
-            
-            var main = $("fbChrome");
-            main.style.display = "block";
-            
-            ChromeCache.isOpen = true;
-            
-            var self = this;
-            setTimeout(function(){
-                //dispatch(Firebug.modules, "initialize", []);
-                self.initialize();
-                
-                if (noFixedPosition)
-                    self.fixIEPosition();
-                
-                self.draw();
-        
-                node.style.visibility = "visible";
-            }, 10);
-        }
-    },
-    
-    close: function()
-    {
-        if (ChromeCache.isOpen)
-        {
-            var node = this.node;
-            node.style.visibility = "hidden"; // Avoid flickering
-            
-            if (this.isInitialized)
-            {
-                //dispatch(Firebug.modules, "shutdown", []);
-                this.shutdown();
-            }
-            
-            // TODO: xxxpedro - persist IE fixed? 
-            var main = $("fbChrome", chromeMap.frame.document);
-            main.style.display = "none";
-                    
-            ChromeCache.isOpen = false;
-            
-            ChromeMini.initialize();
-            
-            node.style.visibility = "visible";
-        }
-    },
-    
-    fixIEPosition: function()
-    {
-        // fix IE problem with offset when not in fullscreen mode
-        var doc = this.document;
-        var offset = isIE ? doc.body.clientTop || doc.documentElement.clientTop: 0;
-        
-        var size = Firebug.browser.getWindowSize();
-        var scroll = Firebug.browser.getWindowScrollPosition();
-        var maxHeight = size.height;
-        var height = this.node.offsetHeight;
-        
-        var bodyStyle = doc.body.currentStyle;
-        
-        this.node.style.top = maxHeight - height + scroll.top + "px";
-        
-        
-        if (this.type == "frame" && (bodyStyle.marginLeft || bodyStyle.marginRight))
-        {
-            this.node.style.width = size.width + "px";
-        }
-    }
-
-});
-
-
-// ************************************************************************************************
-// ChromeMini
-
-var ChromeMini = extend(Firebug.Controller, 
-{
-    create: function(chrome)
-    {
-        append(this, chrome);
-        this.type = "mini";
-    },
-    
-    initialize: function()
-    {
-        Firebug.Controller.initialize.apply(this);
-        
-        // TODO: xxxpedro - persist IE fixed? 
-        var doc = chromeMap.frame.document;
-        
-        var mini = $("fbMiniChrome", doc);
-        mini.style.display = "block";
-        
-        var miniIcon = $("fbMiniIcon", doc);
-        var width = miniIcon.offsetWidth + 10;
-        miniIcon.title = "Open " + Firebug.version;
-        
-        var errors = $("fbMiniErrors", doc);
-        if (errors.offsetWidth)
-            width += errors.offsetWidth + 10;
-        
-        var node = this.node;
-        node.style.height = "27px";
-        node.style.width = width + "px";
-        node.style.left = "";
-        node.style.right = 0;
-        node.setAttribute("allowTransparency", "true");
-
-        if (noFixedPosition)
-            this.fixIEPosition();
-        
-        this.document.body.style.backgroundColor = "transparent";
-        
-        
-        this.addController(
-            [$("fbMiniIcon", doc), "click", onMiniIconClick]       
-        );
-        
-        if (noFixedPosition)
-        {
-            this.addController(
-                [Firebug.browser.window, "scroll", this.fixIEPosition]
-            );
-        }
-        
-        this.isInitialized = true;
-    },
-    
-    shutdown: function()
-    {
-        var node = this.node;
-        node.style.height = ChromeCache.height + "px";
-        node.style.width = "100%";
-        node.style.left = 0;
-        node.style.right = "";
-        node.setAttribute("allowTransparency", "false");
-        
-        if (noFixedPosition)
-            this.fixIEPosition();
-        
-        this.document.body.style.backgroundColor = "#fff";
-        
-        // TODO: xxxpedro - persist IE fixed? 
-        var doc = chromeMap.frame.document;
-        
-        var mini = $("fbMiniChrome", doc);
-        mini.style.display = "none";
-        
-        Firebug.Controller.shutdown.apply(this);
-        
-        this.isInitialized = false;
-    },
-    
-    draw: function()
-    {
-    
-    },
-    
-    fixIEPosition: ChromeFrameBase.fixIEPosition
-    
-});
-
-
-// ************************************************************************************************
-// ChromePopupBase
-
-var ChromePopupBase = extend(ChromeContext, {
-    
-    initialize: function()
-    {
-        this.document.body.className = "FirebugPopup";
-        
-        ChromeBase.initialize.call(this)
-        
-        this.addController(
-            [Firebug.chrome.window, "resize", this.resize],
-            [Firebug.chrome.window, "unload", this.destroy],
-            [Firebug.browser.window, "unload", this.close]
-        );
-        
-        fbVSplitter.onmousedown = onVSplitterMouseDown;
-    },
-    
-    destroy: function()
-    {
-        // TODO: xxxpedro sync detach reattach attach
-        var frame = chromeMap.frame;
-        
-        dispatch(frame.panelMap, "detach", [this, frame]);
-            
-        if (Env.isPersistentMode)
-        {
-            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Env._lastChromeCache.selectedElement = ChromeCache.selectedElement;
-        }
-        
-        frame.reattach(this, frame);
-        
-        ChromeBase.destroy.apply(this);
-        
-        if (Env.isPersistentMode)
-        {
-            // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
-            Env._lastChromeCache.chromeMap = ChromeCache.chromeMap;
-            Env._lastChromeCache.chromeMap.popup = null;
-        }
-        chromeMap.popup = null;
-        
-        this.node.close();
-    },
-    
-    close: function()
-    {
-        this.destroy();
-    }
-
-});
-
-
-
-// ************************************************************************************************
-// Internals
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-//
-var commandLine = null;
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// Interface Elements Cache
-
-var fbTop = null;
-var fbContent = null;
-var fbContentStyle = null;
-var fbBottom = null;
-var fbBtnInspect = null;
-
-var fbToolbar = null;
-
-var fbPanelBox1 = null;
-var fbPanelBox1Style = null;
-var fbPanelBox2 = null;
-var fbPanelBox2Style = null;
-var fbPanelBar2Box = null;
-var fbPanelBar2BoxStyle = null;
-
-var fbHSplitter = null;
-var fbVSplitter = null;
-var fbVSplitterStyle = null;
-
-var fbPanel1 = null;
-var fbPanel1Style = null;
-var fbPanel2 = null;
-var fbPanel2Style = null;
-
-var fbConsole = null;
-var fbConsoleStyle = null;
-var fbHTML = null;
-
-var fbCommandLine = null;
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var topHeight = null;
-var topPartialHeight = null;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75;
-
-
-//************************************************************************************************
-// UI helpers
-
-var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
-{
-    var last = ChromeCache.commandLineVisible;
-    Firebug.chrome.commandLineVisible = ChromeCache.commandLineVisible = 
-        typeof visibility == "boolean" ? visibility : !ChromeCache.commandLineVisible;
-    
-    if (ChromeCache.commandLineVisible != last)
-    {
-        fbBottom.className = ChromeCache.commandLineVisible ? "" : "hide";
-    }
-};
-
-var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
-{
-    var last = ChromeCache.sidePanelVisible;
-    Firebug.chrome.sidePanelVisible = ChromeCache.sidePanelVisible = 
-        typeof visibility == "boolean" ? visibility : !ChromeCache.sidePanelVisible;
-    
-    if (ChromeCache.sidePanelVisible != last)
-    {
-        fbPanelBox2.className = ChromeCache.sidePanelVisible ? "" : "hide"; 
-        fbPanelBar2Box.className = ChromeCache.sidePanelVisible ? "" : "hide";
-    }
-};
-
-
-// ************************************************************************************************
-// F12 Handler
-
-var onPressF12 = function onPressF12(event)
-{
-    if (event.keyCode == 123 /* F12 */ && 
-        (!isFirefox && !event.shiftKey || event.shiftKey && isFirefox))
-        {
-            Firebug.chrome.toggle(false, event.ctrlKey);
-            cancelEvent(event, true);
-        }
-};
-
-var onMiniIconClick = function onMiniIconClick(event)
-{
-    Firebug.chrome.toggle(false, event.ctrlKey);
-    cancelEvent(event, true);
-}
-    
-
-// ************************************************************************************************
-// Horizontal Splitter Handling
-
-var onHSplitterMouseDown = function onHSplitterMouseDown(event)
-{
-    addGlobalEvent("mousemove", onHSplitterMouseMove);
-    addGlobalEvent("mouseup", onHSplitterMouseUp);
-    
-    if (isIE)
-        addEvent(Env.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
-    
-    fbHSplitter.className = "fbOnMovingHSplitter";
-    
-    return false;
-};
-
-var lastHSplitterMouseMove = 0;
-var onHSplitterMouseMoveBuffer = null;
-var onHSplitterMouseMoveTimer = null;
-
-var onHSplitterMouseMove = function onHSplitterMouseMove(event)
-{
-    cancelEvent(event, true);
-    
-    var clientY = event.clientY;
-    var win = isIE
-        ? event.srcElement.ownerDocument.parentWindow
-        : event.target.ownerDocument && event.target.ownerDocument.defaultView;
-    
-    if (!win)
-        return;
-    
-    if (win != win.parent)
-    {
-        var frameElement = win.frameElement;
-        if (frameElement)
-        {
-            var framePos = Firebug.browser.getElementPosition(frameElement).top;
-            clientY += framePos;
-            
-            if (frameElement.style.position != "fixed")
-                clientY -= Firebug.browser.getWindowScrollPosition().top;
-        }
-    }
-    
-    if (isOpera && isQuiksMode && win.frameElement.id == "FirebugUI")
-    {
-        clientY = Firebug.browser.getWindowSize().height - win.frameElement.offsetHeight + clientY;
-    }
-    /*
-    console.log(
-            typeof win.FBL != "undefined" ? "no-Chrome" : "Chrome",
-            //win.frameElement.id,
-            event.target,
-            clientY
-        );/**/
-    
-    onHSplitterMouseMoveBuffer = clientY; // buffer
-    
-    if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
-    {
-        lastHSplitterMouseMove = new Date().getTime();
-        handleHSplitterMouseMove();
-    }
-    else
-        if (!onHSplitterMouseMoveTimer)
-            onHSplitterMouseMoveTimer = setTimeout(handleHSplitterMouseMove, chromeRedrawSkipRate);
-    
-    return false;
-};
-
-var handleHSplitterMouseMove = function()
-{
-    if (onHSplitterMouseMoveTimer)
-    {
-        clearTimeout(onHSplitterMouseMoveTimer);
-        onHSplitterMouseMoveTimer = null;
-    }
-    
-    var clientY = onHSplitterMouseMoveBuffer;
-    
-    var windowSize = Firebug.browser.getWindowSize();
-    var scrollSize = Firebug.browser.getWindowScrollSize();
-    
-    // compute chrome fixed size (top bar and command line)
-    var commandLineHeight = ChromeCache.commandLineVisible ? fbCommandLine.offsetHeight : 0;
-    var fixedHeight = topHeight + commandLineHeight;
-    var chromeNode = Firebug.chrome.node;
-    
-    var scrollbarSize = !isIE && (scrollSize.width > windowSize.width) ? 17 : 0;
-    
-    //var height = !isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height;
-    var height =  windowSize.height;
-    
-    // compute the min and max size of the chrome
-    var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
-        chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
-
-    ChromeCache.height = chromeHeight;
-    chromeNode.style.height = chromeHeight + "px";
-    
-    if (noFixedPosition)
-        Firebug.chrome.fixIEPosition();
-    
-    Firebug.chrome.draw();
-};
-
-var onHSplitterMouseUp = function onHSplitterMouseUp(event)
-{
-    removeGlobalEvent("mousemove", onHSplitterMouseMove);
-    removeGlobalEvent("mouseup", onHSplitterMouseUp);
-    
-    if (isIE)
-        removeEvent(Env.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
-    
-    fbHSplitter.className = "";
-    
-    Firebug.chrome.draw();
-    
-    // avoid text selection in IE when returning to the document
-    // after the mouse leaves the document during the resizing
-    return false;
-};
-
-
-// ************************************************************************************************
-// Vertical Splitter Handling
-
-var onVSplitterMouseDown = function onVSplitterMouseDown(event)
-{
-    addGlobalEvent("mousemove", onVSplitterMouseMove);
-    addGlobalEvent("mouseup", onVSplitterMouseUp);
-    
-    return false;
-};
-
-var lastVSplitterMouseMove = 0;
-
-var onVSplitterMouseMove = function onVSplitterMouseMove(event)
-{
-    if (new Date().getTime() - lastVSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
-    {
-        var target = event.target || event.srcElement;
-        if (target && target.ownerDocument) // avoid error when cursor reaches out of the chrome
-        {
-            var clientX = event.clientX;
-            var win = document.all
-                ? event.srcElement.ownerDocument.parentWindow
-                : event.target.ownerDocument.defaultView;
-          
-            if (win != win.parent)
-                clientX += win.frameElement ? win.frameElement.offsetLeft : 0;
-            
-            var size = Firebug.chrome.getWindowSize();
-            var x = Math.max(size.width - clientX + 3, 6);
-            
-            ChromeCache.sidePanelWidth = x;
-            Firebug.chrome.draw();
-        }
-        
-        lastVSplitterMouseMove = new Date().getTime();
-    }
-    
-    cancelEvent(event, true);
-    return false;
-};
-
-var onVSplitterMouseUp = function onVSplitterMouseUp(event)
-{
-    removeGlobalEvent("mousemove", onVSplitterMouseMove);
-    removeGlobalEvent("mouseup", onVSplitterMouseUp);
-    
-    Firebug.chrome.draw();
-};
-
-
-// ************************************************************************************************
-}});
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-//----------------------------------------------------------------------------
-// Injected Chrome
-//----------------------------------------------------------------------------
-Env.Cache.Chrome.injected = 
-{
-    CSS: '.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}.twisty{background-position:2px 0;}.panelNode-console{overflow-x:hidden;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{padding:0;border:none;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;outline:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#F8F8F8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectPropValue{font-weight:normal;font-style:italic;color:#555555;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.arrayLeftBracket{margin-right:4px;}.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0px 0 1px 0;}.logRow-spy,.logRow-spy .objectLink-sourceLink{padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;}.logRow-spy.loading .spyHead .spyRow .spyIcon{}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:11px;width:100%;table-layout:fixed;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;white-space:nowrap;background-color:#FFFFFF;}.memberRow.hasChildren > .memberLabelCell > .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbCSS{font:11px Monaco,monospace;padding:0 7px;}#fbCSSButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;}.Selector{margin-top:10px}.CSSText{padding-left:20px;}.CSSProperty{color:#005500; margin-top:10px;}.CSSValue{padding-left:5px; color:#000088;}.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 0 0 1px;_margin:1px -1px 0 1px;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}.fbToolbarButtons{display:none;position:absolute;top:4px;}#fbStatusBarBox{display:none;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:4px 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{float:left;padding:4px 2px 0 5px;position:absolute;left:30px;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{position:relative;top:5px;line-height:19px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:10px 6px 0 0;float:left;}.fbStatusBar span{color:#808080;padding:0 4px 0 0;}.fbStatusBar span a{text-decoration:none;color:black;}.fbStatusBar span a:hover{color:blue;cursor:pointer;}#fbChromeButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:50px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:10px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{padding-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;position:relative;}#fbChromeButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#fbChrome_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#fbChrome_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#fbChrome_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#fbChrome_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;_width:6px;}div.lineNo{font:11px Monaco,monospace;position:absolute;top:0;left:0;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:11px Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;white-space:pre;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbChromeButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
-    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbHSplitter">&nbsp;</div><div id="fbChromeButtons"><a id="fbChrome_btClose" class="fbHover" title="Minimize Firebug">&nbsp;</a><a id="fbChrome_btDetach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a></div><div id="fbToolbar"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span><span id="fbHTMLStatusBar" class="fbStatusBar"><span><a class="fbHover"><b>body</b></a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div.class</a></span><span>&lt;</span><span><a class="fbHover">iframe</a></span><span>&lt;</span><span><a class="fbHover">body</a></span><span>&lt;</span><span><a class="fbHover">html</a></span><span>&lt;</span><span><a class="fbHover">div</a></span><span>&lt;</span><span><a class="fbHover">div</a></span></span></span></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Style</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Layout</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div></div></div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div></td></tr><tr id="fbBottom"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
-};
-
-// ************************************************************************************************
-}});
-
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-
-// ************************************************************************************************
-// Console
-
-var ConsoleAPI = 
-{
-    firebuglite: Firebug.version,
-
-    log: function()
-    {
-        return Firebug.Console.logFormatted(arguments, "");
-    },
-    
-    debug: function()
-    {
-        return Firebug.Console.logFormatted(arguments, "debug");
-    },
-    
-    info: function()
-    {
-        return Firebug.Console.logFormatted(arguments, "info");
-    },
-    
-    warn: function()
-    {
-        return Firebug.Console.logFormatted(arguments, "warning");
-    },
-    
-    error: function()
-    {
-        return Firebug.Console.logFormatted(arguments, "error");
-    },
-    
-    assert: function(truth, message)
-    {
-        if (!truth)
-        {
-            var args = [];
-            for (var i = 1; i < arguments.length; ++i)
-                args.push(arguments[i]);
-            
-            Firebug.Console.logFormatted(args.length ? args : ["Assertion Failure"], "error");
-            throw message ? message : "Assertion Failure";
-        }
-        
-        return Firebug.Console.LOG_COMMAND;        
-    },
-    
-    dir: function(object)
-    {
-        var html = [];
-                    
-        var pairs = [];
-        for (var name in object)
-        {
-            try
-            {
-                pairs.push([name, object[name]]);
-            }
-            catch (exc)
-            {
-            }
-        }
-        
-        pairs.sort(function(a, b) { return a[0] < b[0] ? -1 : 1; });
-        
-        html.push('<div class="log-object">');
-        for (var i = 0; i < pairs.length; ++i)
-        {
-            var name = pairs[i][0], value = pairs[i][1];
-            
-            html.push('<div class="property">', 
-                '<div class="propertyValueCell"><span class="propertyValue">');
-                
-            Firebug.Reps.appendObject(value, html);
-            
-            html.push('</span></div><div class="propertyNameCell"><span class="propertyName">',
-                escapeHTML(name), '</span></div>'); 
-            
-            html.push('</div>');
-        }
-        html.push('</div>');
-        
-        return Firebug.Console.logRow(html, "dir");
-    },
-    
-    dirxml: function(node)
-    {
-        var html = [];
-        
-        Firebug.Reps.appendNode(node, html);
-        return Firebug.Console.logRow(html, "dirxml");
-    },
-    
-    group: function()
-    {
-        return Firebug.Console.logRow(arguments, "group", Firebug.Console.pushGroup);
-    },
-    
-    groupEnd: function()
-    {
-        return Firebug.Console.logRow(arguments, "", Firebug.Console.popGroup);
-    },
-    
-    time: function(name)
-    {
-        this.timeMap[name] = (new Date()).getTime();
-        return Firebug.Console.LOG_COMMAND;
-    },
-    
-    timeEnd: function(name)
-    {
-        if (name in this.timeMap)
-        {
-            var delta = (new Date()).getTime() - this.timeMap[name];
-            Firebug.Console.logFormatted([name+ ":", delta+"ms"]);
-            delete this.timeMap[name];
-        }
-        return Firebug.Console.LOG_COMMAND;
-    },
-    
-    count: function()
-    {
-        return this.warn(["count() not supported."]);
-    },
-    
-    trace: function()
-    {
-        return this.warn(["trace() not supported."]);
-    },
-    
-    profile: function()
-    {
-        return this.warn(["profile() not supported."]);
-    },
-    
-    profileEnd: function()
-    {
-        return Firebug.Console.LOG_COMMAND;
-    },
-    
-    clear: function()
-    {
-        Firebug.Console.getPanel().contentNode.innerHTML = "";
-        return Firebug.Console.LOG_COMMAND;
-    },
-
-    open: function()
-    {
-        toggleConsole(true);
-        return Firebug.Console.LOG_COMMAND;
-    },
-    
-    close: function()
-    {
-        if (frameVisible)
-            toggleConsole();
-        
-        return Firebug.Console.LOG_COMMAND;
-    }
-};
-
-
-// ************************************************************************************************
-// Console Module
-
-var ConsoleModule = extend(Firebug.Module, ConsoleAPI);
-
-Firebug.Console = extend(ConsoleModule,
-{
-    LOG_COMMAND: {},
-    
-    groupStack: [],
-    timeMap: {},
-        
-    getPanel: function()
-    {
-        return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
-    },    
-
-    flush: function()
-    {
-        var queue = Env.Cache.Chrome.consoleMessageQueue;
-        Env.Cache.Chrome.consoleMessageQueue = [];
-        
-        for (var i = 0; i < queue.length; ++i)
-            this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
-    },
-    
-    // ********************************************************************************************
-    
-    logFormatted: function(objects, className)
-    {
-        var html = [];
-    
-        var format = objects[0];
-        var objIndex = 0;
-    
-        if (typeof(format) != "string")
-        {
-            format = "";
-            objIndex = -1;
-        }
-    
-        var parts = this.parseFormat(format);
-        for (var i = 0; i < parts.length; ++i)
-        {
-            var part = parts[i];
-            if (part && typeof(part) == "object")
-            {
-                var object = objects[++objIndex];
-                part.appender(object, html);
-            }
-            else
-                Firebug.Reps.appendText(part, html);
-        }
-    
-        for (var i = objIndex+1; i < objects.length; ++i)
-        {
-            Firebug.Reps.appendText(" ", html);
-            
-            var object = objects[i];
-            if (typeof(object) == "string")
-                Firebug.Reps.appendText(object, html);
-            else
-                Firebug.Reps.appendObject(object, html);
-        }
-        
-        return this.logRow(html, className);    
-    },
-    
-    parseFormat: function(format)
-    {
-        var parts = [];
-    
-        var reg = /((^%|[^\\]%)(\d+)?(\.)([a-zA-Z]))|((^%|[^\\]%)([a-zA-Z]))/;
-        var Reps = Firebug.Reps;
-        var appenderMap = {
-                s: Reps.appendText, 
-                d: Reps.appendInteger, 
-                i: Reps.appendInteger, 
-                f: Reps.appendFloat
-            };
-    
-        for (var m = reg.exec(format); m; m = reg.exec(format))
-        {
-            var type = m[8] ? m[8] : m[5];
-            var appender = type in appenderMap ? appenderMap[type] : Reps.appendObject;
-            var precision = m[3] ? parseInt(m[3]) : (m[4] == "." ? -1 : 0);
-    
-            parts.push(format.substr(0, m[0][0] == "%" ? m.index : m.index+1));
-            parts.push({appender: appender, precision: precision});
-    
-            format = format.substr(m.index+m[0].length);
-        }
-    
-        parts.push(format);
-    
-        return parts;
-    },
-    
-    // ********************************************************************************************
-    
-    logRow: function(message, className, handler)
-    {
-        var panel = this.getPanel();
-        
-        if (panel && panel.contentNode)
-            this.writeMessage(message, className, handler);
-        else
-        {
-            Env.Cache.Chrome.consoleMessageQueue.push([message, className, handler]);
-        }
-        
-        return this.LOG_COMMAND;
-    },
-    
-    writeMessage: function(message, className, handler)
-    {
-        var container = this.getPanel().containerNode;
-        var isScrolledToBottom =
-            container.scrollTop + container.offsetHeight >= container.scrollHeight;
-    
-        if (!handler)
-            handler = this.writeRow;
-        
-        handler.call(this, message, className);
-        
-        if (isScrolledToBottom)
-            container.scrollTop = container.scrollHeight - container.offsetHeight;
-    },
-    
-    appendRow: function(row)
-    {
-        if (this.groupStack.length > 0)
-            var container = this.groupStack[this.groupStack.length-1];
-        else
-            var container = this.getPanel().contentNode;
-        
-        container.appendChild(row);
-    },
-    
-    writeRow: function(message, className)
-    {
-        var row = this.getPanel().contentNode.ownerDocument.createElement("div");
-        row.className = "logRow" + (className ? " logRow-"+className : "");
-        row.innerHTML = message.join("");
-        this.appendRow(row);
-    },
-    
-    pushGroup: function(message, className)
-    {
-        this.logFormatted(message, className);
-    
-        var groupRow = this.getPanel().contentNode.ownerDocument.createElement("div");
-        groupRow.className = "logGroup";
-        var groupRowBox = this.getPanel().contentNode.ownerDocument.createElement("div");
-        groupRowBox.className = "logGroupBox";
-        groupRow.appendChild(groupRowBox);
-        this.appendRow(groupRowBox);
-        this.groupStack.push(groupRowBox);
-    },
-    
-    popGroup: function()
-    {
-        this.groupStack.pop();
-    }
-
-});
-
-Firebug.registerModule(Firebug.Console);
-
-
-// ************************************************************************************************
-// Console Panel
-
-function ConsolePanel(){};
-
-ConsolePanel.prototype = extend(Firebug.Panel,
-{
-    name: "Console",
-    title: "Console",
-    
-    options: 
-    {
-        hasCommandLine: true,
-        hasToolButtons: true,
-        isPreRendered: true,
-        innerHTMLSync: true
-    },
-
-    create: function()
-    {
-        Firebug.Panel.create.apply(this, arguments);
-        
-        this.clearButton = new Firebug.Button({
-            node: $("fbConsole_btClear"),
-            owner: Firebug.Console,
-            onClick: Firebug.Console.clear
-        });
-    },
-    
-    initialize: function()
-    {
-        Firebug.Panel.initialize.apply(this, arguments);
-        
-        this.clearButton.initialize();
-    }
-    
-});
-
-Firebug.registerPanel(ConsolePanel);
-
-// ************************************************************************************************
-
-FBL.onError = function(msg, href, lineNo)
-{
-    var html = [];
-    
-    var lastSlash = href.lastIndexOf("/");
-    var fileName = lastSlash == -1 ? href : href.substr(lastSlash+1);
-    
-    html.push(
-        '<span class="errorMessage">', msg, '</span>', 
-        '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
-    );
-    
-    Firebug.Console.logRow(html, "error");
-};
-
-// ************************************************************************************************
-// Register console namespace
-
-if (!isFirefox)
-    Env.browser.window.console = ConsoleAPI;        
-
-
-// ************************************************************************************************
-}});
 
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
@@ -11242,6 +12068,8 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Inspector Module
 
+var inspectorTS, inspectorTimer;
+
 Firebug.Inspector =
 {
     create: function()
@@ -11267,20 +12095,17 @@ Firebug.Inspector =
     {
         Firebug.chrome.selectPanel("HTML");
         
-        
         createInspectorFrame();
         
         var size = Firebug.browser.getWindowScrollSize();
         
         fbInspectFrame.style.width = size.width + "px";
         fbInspectFrame.style.height = size.height + "px";
-        /**/
-
         
         //addEvent(Firebug.browser.document.documentElement, "mousemove", Firebug.Inspector.onInspectingBody);
         
-        addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
-        addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
+        addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
+        addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
     },
     
     stopInspecting: function()
@@ -11290,8 +12115,11 @@ Firebug.Inspector =
         Firebug.chrome.inspectButton.restore();
         
         if (outlineVisible) this.hideOutline();
-        removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting)
-        removeEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick)
+        removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
+        removeEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
+        
+        if (Firebug.chrome.type == "popup")
+            Firebug.chrome.node.focus();
     },
     
     
@@ -11335,12 +12163,32 @@ Firebug.Inspector =
             Firebug.Inspector.drawOutline(targ);
             
             if (targ[cacheID])
-                FBL.Firebug.HTML.selectTreeNode(""+targ[cacheID])
+            {
+                var target = ""+targ[cacheID];
+                var lazySelect = function()
+                {
+                    inspectorTS = new Date().getTime();
+                    
+                    Firebug.HTML.selectTreeNode(""+targ[cacheID])
+                };
+                
+                if (inspectorTimer)
+                {
+                    clearTimeout(inspectorTimer);
+                    inspectorTimer = null;
+                }
+                
+                if (new Date().getTime() - inspectorTS > 200)
+                    setTimeout(lazySelect, 0)
+                else
+                    inspectorTimer = setTimeout(lazySelect, 300);
+            }
             
             lastInspecting = new Date().getTime();
         }
     },
     
+    // TODO: xxxpedro remove this?
     onInspectingBody: function(e)
     {
         if (new Date().getTime() - lastInspecting > 30)
@@ -11485,7 +12333,7 @@ Firebug.Inspector =
         var scrollPosition = Firebug.browser.getWindowScrollPosition();
         
         // element may be occluded by the chrome, when in frame mode
-        var offsetHeight = Firebug.chrome.type == "frame" ? Env.Cache.Chrome.height : 0;
+        var offsetHeight = Firebug.chrome.type == "frame" ? FirebugChrome.height : 0;
         
         // if element box is not inside the viewport, don't draw the box model
         if (box.top > scrollPosition.top + windowSize.height - offsetHeight ||
@@ -11570,7 +12418,8 @@ var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; backgr
 
 //if (Env.isTraceMode) inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
 
-var inspectModelStyle = inspectStyle + "opacity:0.8; _filter:alpha(opacity=80);";
+var inspectModelOpacity = isIE ? "filter:alpha(opacity=80);" : "opacity:0.8;";
+var inspectModelStyle = inspectStyle + inspectModelOpacity;
 var inspectMarginStyle = inspectStyle + "background: #EDFF64; height:100%; width:100%;";
 var inspectPaddingStyle = inspectStyle + "background: SlateBlue;";
 var inspectContentStyle = inspectStyle + "background: SkyBlue;";
@@ -11611,11 +12460,12 @@ var createInspectorFrame = function createInspectorFrame()
 {
     fbInspectFrame = createGlobalElement("div");
     fbInspectFrame.id = "fbInspectFrame";
+    fbInspectFrame.firebugIgnore = true;
     fbInspectFrame.style.cssText = inspectFrameStyle;
     Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectFrame);
 };
 
-var destroyInspectorFrame = function createInspectorFrame()
+var destroyInspectorFrame = function destroyInspectorFrame()
 {
     Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
 };
@@ -11626,6 +12476,7 @@ var createOutlineInspector = function createOutlineInspector()
     {
         var el = outlineElements[name] = createGlobalElement("div");
         el.id = name;
+        el.firebugIgnore = true;
         el.style.cssText = inspectStyle + outlineStyle[outline[name]];
         offlineFragment.appendChild(el);
     }
@@ -11644,6 +12495,7 @@ var createBoxModelInspector = function createBoxModelInspector()
 {
     boxModel = createGlobalElement("div");
     boxModel.id = "fbBoxModel";
+    boxModel.firebugIgnore = true;
     boxModelStyle = boxModel.style;
     boxModelStyle.cssText = inspectModelStyle;
     
@@ -11685,378 +12537,6 @@ var destroyBoxModelInspector = function destroyBoxModelInspector()
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-var Console = Firebug.Console;
-
-
-// ************************************************************************************************
-// CommandLine
-
-
-Firebug.CommandLine = function(element)
-{
-    this.element = element;
-    
-    if (isOpera)
-      fixOperaTabKey(this.element);
-    
-    this.clear = bind(this.clear, this);
-    this.onKeyDown = bind(this.onKeyDown, this);
-    
-    addEvent(this.element, "keydown", this.onKeyDown);
-    
-    //Env.browser.onerror = this.onError;
-    var self = this
-    Env.browser.onerror = function(){self.onError.apply(self, arguments)};
-
-    //Env.browser.onerror = this.onError;
-    window.onerror = this.onError;
-    
-    initializeCommandLineAPI();
-};
-
-Firebug.CommandLine.prototype = 
-{
-    element: null,
-  
-    _buffer: [],
-    _bi: -1,
-    
-    _completing: null,
-    _completePrefix: null,
-    _completeExpr: null,
-    _completeBuffer: null,
-    _ci: null,
-    
-    _completion:
-    {
-        window:
-        [
-            "console"
-        ],
-        
-        document:
-        [
-            "getElementById", 
-            "getElementsByTagName"
-        ]
-    },
-  
-    _stack: function(command)
-    {
-        this._buffer.push(command);
-        this._bi = this._buffer.length;
-    },
-    
-    initialize: function(doc)
-    {
-    },
-    
-    destroy: function()
-    {
-        removeEvent(this.element, "keydown", this.onKeyDown);
-        window.onerror = null;
-        this.element = null
-    },
-
-    execute: function()
-    {
-        var cmd = this.element;
-        var command = cmd.value;
-        
-        this._stack(command);
-        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
-        
-        try
-        {
-            
-            var result = this.evaluate(command);
-            // evita que seja repetido o log, caso o comando executado
-            // j? seja um log via linha de comando
-            if (result != Console.LOG_COMMAND)
-            {
-                var html = [];
-                Firebug.Reps.appendObject(result, html)
-                Firebug.Console.writeMessage(html, "command");
-            }
-                
-        }
-        catch (e)
-        {
-            Firebug.Console.writeMessage([e.message || e], "error");
-        }
-        
-        cmd.value = "";
-    },
-    
-    evaluate: function(expr)
-    {
-        // TODO: need to register the API in console.firebug.commandLineAPI
-        var api = "Firebug.CommandLine.API"
-            
-        //Firebug.context = Firebug.chrome;
-        //api = null;
-
-        return Firebug.context.evaluate(expr, "window", api, Console.error);
-    },
-    
-    //eval: new Function("return window.eval.apply(window, arguments)"),
-    
-    prevCommand: function()
-    {
-        var cmd = this.element;
-        var buffer = this._buffer;
-        
-        if (this._bi > 0 && buffer.length > 0)
-            cmd.value = buffer[--this._bi];
-    },
-  
-    nextCommand: function()
-    {
-        var cmd = this.element;
-        
-        var buffer = this._buffer;
-        var limit = buffer.length -1;
-        var i = this._bi;
-        
-        if (i < limit)
-          cmd.value = buffer[++this._bi];
-          
-        else if (i == limit)
-        {
-            ++this._bi;
-            cmd.value = "";
-        }
-    },
-  
-    autocomplete: function(reverse)
-    {
-        var cmd = this.element;
-        
-        var command = cmd.value;
-        var offset = getExpressionOffset(command);
-
-        var valBegin = offset ? command.substr(0, offset) : "";
-        var val = command.substr(offset);
-        
-        var buffer, obj, objName, commandBegin, result, prefix;
-        
-        // if it is the beginning of the completion
-        if(!this._completing)
-        {
-            
-            // group1 - command begin
-            // group2 - base object
-            // group3 - property prefix
-            var reObj = /(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
-            var r = reObj.exec(val);
-            
-            // parse command
-            if (r[1] || r[2] || r[3])
-            {
-                commandBegin = r[1] || "";
-                objName = r[2] || "";
-                prefix = r[3] || "";
-            }
-            else if (val == "")
-            {
-                commandBegin = objName = prefix = "";
-            } else
-                return;
-            
-            this._completing = true;
-      
-            // find base object
-            if(objName == "")
-                obj = window;
-              
-            else
-            {
-                objName = objName.replace(/\.$/, "");
-        
-                var n = objName.split(".");
-                var target = window, o;
-                
-                for (var i=0, ni; ni = n[i]; i++)
-                {
-                    if (o = target[ni])
-                      target = o;
-                      
-                    else
-                    {
-                        target = null;
-                        break;
-                    }
-                }
-                obj = target;
-            }
-            
-            // map base object
-            if(obj)
-            {
-                this._completePrefix = prefix;
-                this._completeExpr = valBegin + commandBegin + (objName ? objName + "." : "");
-                this._ci = -1;
-                
-                buffer = this._completeBuffer = isIE ?
-                    this._completion[objName || "window"] || [] : [];
-                
-                for(var p in obj)
-                    buffer.push(p);
-            }
-    
-        // if it is the continuation of the last completion
-        } else
-          buffer = this._completeBuffer;
-        
-        if (buffer)
-        {
-            prefix = this._completePrefix;
-            
-            var diff = reverse ? -1 : 1;
-            
-            for(var i=this._ci+diff, l=buffer.length, bi; i>=0 && i<l; i+=diff)
-            {
-                bi = buffer[i];
-                
-                if (bi.indexOf(prefix) == 0)
-                {
-                    this._ci = i;
-                    result = bi;
-                    break;
-                }
-            }
-        }
-        
-        if (result)
-            cmd.value = this._completeExpr + result;
-    },
-    
-    onError: function(msg, href, lineNo)
-    {
-        var html = [];
-        
-        var lastSlash = href.lastIndexOf("/");
-        var fileName = lastSlash == -1 ? href : href.substr(lastSlash+1);
-        
-        html.push(
-            '<span class="errorMessage">', msg, '</span>', 
-            '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
-          );
-        
-        Firebug.Console.writeRow(html, "error");
-    },
-    
-    clear: function()
-    {
-        this.element.value = "";
-    },
-    
-    onKeyDown: function(e)
-    {
-        e = e || event;
-        
-        var code = e.keyCode;
-        
-        /*tab, shift, control, alt*/
-        if (code != 9 && code != 16 && code != 17 && code != 18)
-            this._completing = false;
-    
-        if (code == 13 /* enter */)
-            this.execute();
-
-        else if (code == 27 /* ESC */)
-            setTimeout(this.clear, 0);
-          
-        else if (code == 38 /* up */)
-            this.prevCommand();
-          
-        else if (code == 40 /* down */)
-            this.nextCommand();
-          
-        else if (code == 9 /* tab */)
-            this.autocomplete(e.shiftKey);
-          
-        else
-            return;
-        
-        cancelEvent(e, true);
-        return false;
-    }
-};
-
-
-// ************************************************************************************************
-// 
-
-var reOpenBracket = /[\[\(\{]/;
-var reCloseBracket = /[\]\)\}]/;
-
-function getExpressionOffset(command)
-{
-    // XXXjoe This is kind of a poor-man's JavaScript parser - trying
-    // to find the start of the expression that the cursor is inside.
-    // Not 100% fool proof, but hey...
-
-    var bracketCount = 0;
-
-    var start = command.length-1;
-    for (; start >= 0; --start)
-    {
-        var c = command[start];
-        if ((c == "," || c == ";" || c == " ") && !bracketCount)
-            break;
-        if (reOpenBracket.test(c))
-        {
-            if (bracketCount)
-                --bracketCount;
-            else
-                break;
-        }
-        else if (reCloseBracket.test(c))
-            ++bracketCount;
-    }
-
-    return start + 1;
-}
-
-// ************************************************************************************************
-// CommandLine API
-
-var CommandLineAPI =
-{
-    $: function(id)
-    {
-        return Firebug.browser.document.getElementById(id)
-    },
-
-    $$: function(selector, context)
-    {
-        context = context || Firebug.browser.document;
-        return Firebug.Selector(selector, context)
-    },
-    
-    dir: Firebug.Console.dir,
-
-    dirxml: Firebug.Console.dirxml
-}
-
-Firebug.CommandLine.API = {};
-var initializeCommandLineAPI = function initializeCommandLineAPI()
-{
-    for (var m in CommandLineAPI)
-        if (!Firebug.browser.window[m])
-            Firebug.CommandLine.API[m] = CommandLineAPI[m];
-}
-
-
-
-
-// ************************************************************************************************
-}});
-
-FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
 
 // ************************************************************************************************
 // HTML Module
@@ -12073,6 +12553,8 @@ Firebug.HTML = extend(Firebug.Module,
         {
             if (node.nodeType == 1)
             {
+                if (node.firebugIgnore) continue;
+                
                 var uid = node[cacheID];
                 var child = node.childNodes;
                 var childLength = child.length;
@@ -12118,12 +12600,14 @@ Firebug.HTML = extend(Firebug.Module,
                     if (!attr.specified || attr.nodeName == cacheID)
                         continue;
                     
-                    html.push('&nbsp;<span class="nodeName">', attr.nodeName.toLowerCase(),
-                        '</span>=&quot;<span class="nodeValue">', escapeHTML(attr.nodeValue),
+                    var name = attr.nodeName.toLowerCase();
+                    var value = name == "style" ? node.style.cssText : attr.nodeValue;
+                    
+                    html.push('&nbsp;<span class="nodeName">', name,
+                        '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
                         '</span>&quot;')
                 }
-            
-
+                
                 /*
                 // source code nodes
                 if (nodeName == 'script' || nodeName == 'style')
@@ -12157,7 +12641,6 @@ Firebug.HTML = extend(Firebug.Module,
                       
                 
                 }/**/
-                
                 
                 // Just a single text node child
                 if (hasSingleTextChild)
@@ -12325,8 +12808,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     options: {
         hasSidePanel: true,
         //hasToolButtons: true,
-        //hasStatusBar: true,
-        isPreRendered: true
+        isPreRendered: true,
+        innerHTMLSync: true
     },
 
     create: function(){
@@ -12336,6 +12819,11 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if (Env.isPersistentMode || Firebug.chrome.type != "popup")
             this.createUI();
+        
+        if(!this.sidePanelBar.selectedPanel)
+        {
+            this.sidePanelBar.selectPanel("DOM2");
+        }            
     },
     
     createUI: function()
@@ -12355,20 +12843,37 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
         fbPanel1 = $("fbPanel1");
+        
+        if(!selectedElement)
+        {
+            Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID]);
+        }
+        
+        // TODO: xxxpedro
+        addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
+        addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
     },
     
     shutdown: function()
     {
+        // TODO: xxxpedro
+        removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
+        removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
+        
         fbPanel1 = null;
+        
         Firebug.Panel.shutdown.apply(this, arguments);
     },
     
     reattach: function()
     {
         // TODO: panel reattach
-        if(Env.Cache.Chrome.selectedElement)
-            Firebug.HTML.selectTreeNode(Env.Cache.Chrome.selectedElement);
+        if(FirebugChrome.selectedHTMLElementId)
+            Firebug.HTML.selectTreeNode(FirebugChrome.selectedHTMLElementId);
     }
 });
 
@@ -12380,6 +12885,7 @@ var selectedElement = null
 var fbPanel1 = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+var selectedSidePanelTS, selectedSidePanelTimer;
 
 var selectElement= function selectElement(e)
 {
@@ -12388,7 +12894,6 @@ var selectElement= function selectElement(e)
         if (selectedElement)
             selectedElement.className = "objectBox-element";
             
-        
         e.className = e.className + " selectedElement";
 
         if (FBL.isFirefox)
@@ -12399,7 +12904,28 @@ var selectElement= function selectElement(e)
         
         selectedElement = e;
         
-        Env.Cache.Chrome.selectedElement = e.id;
+        FirebugChrome.selectedHTMLElementId = e.id;
+        
+        var target = documentCache[e.id];
+        var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
+        
+        var lazySelect = function()
+        {
+            selectedSidePanelTS = new Date().getTime();
+            
+            selectedSidePanel.select(target, true);
+        };
+        
+        if (selectedSidePanelTimer)
+        {
+            clearTimeout(selectedSidePanelTimer);
+            selectedSidePanelTimer = null;
+        }
+        
+        if (new Date().getTime() - selectedSidePanelTS > 100)
+            setTimeout(lazySelect, 0)
+        else
+            selectedSidePanelTimer = setTimeout(lazySelect, 150);
     }
 }
 
@@ -12581,15 +13107,25 @@ Firebug.CSS = extend(Firebug.Module,
         return Firebug.chrome ? Firebug.chrome.getPanel("CSS") : null;
     },
     
-    renderStylesheet: function(index)
+    renderStyleSheet: function(index)
     {
-        var str = renderStylesheet(index);
-        
         var panel = this.getPanel();
-        panel.contentNode.innerHTML = str.join("");
-        panel.containerNode.scrollTop = 0;
+        
+        if (panel.lastStyleSheetIndex != index)
+        {
+            var str = renderStyleSheet(index);
+            
+            panel.contentNode.innerHTML = str.join("");
+            
+            // IE needs this timeout, otherwise the panel won't scroll
+            setTimeout(function(){
+                panel.synchronizeUI();
+            },0);
+            
+            panel.styleSheetIndex = index;
+            panel.lastStyleSheetIndex = index;
+        }
     }
-      
 });
 
 Firebug.registerModule(Firebug.CSS);
@@ -12598,12 +13134,15 @@ Firebug.registerModule(Firebug.CSS);
 // ************************************************************************************************
 // CSS Panel
 
-function CSSPanel(){};
+function CSSStyleSheetPanel(){};
 
-CSSPanel.prototype = extend(Firebug.Panel,
+CSSStyleSheetPanel.prototype = extend(Firebug.Panel,
 {
     name: "CSS",
     title: "CSS",
+    
+    styleSheetIndex: 0,
+    lastStyleSheetIndex: -1,
     
     options: {
         hasToolButtons: true
@@ -12613,18 +13152,18 @@ CSSPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
-        var selectNode = createElement("select");
+        this.onChangeSelect = bind(this.onChangeSelect, this);
         
         var doc = Firebug.browser.document;
-        var collection = doc.styleSheets;
-        var options = "";
+        var styleSheets = doc.styleSheets;
+        var selectNode = this.selectNode = createElement("select");
         
-        for(var i=0,len=collection.length; i<len; i++)
+        for(var i=0, styleSheet; styleSheet=styleSheets[i]; i++)
         {
-            var uri = getFileName(collection[i].href) ||  getFileName(doc.location.href);
-            
+            var fileName = getFileName(styleSheet.href) || getFileName(doc.location.href);
             var option = createElement("option", {value:i});
-            option.appendChild(Firebug.chrome.document.createTextNode(uri));
+            
+            option.appendChild(Firebug.chrome.document.createTextNode(fileName));
             selectNode.appendChild(option);
         };
         
@@ -12635,22 +13174,50 @@ CSSPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
-        Firebug.CSS.renderStylesheet(0);
-    }
+        addEvent(this.selectNode, "change", this.onChangeSelect);
+        
+        this.selectStyleSheet(this.styleSheetIndex);
+    },
     
+    detach: function(oldChrome, newChrome)
+    {
+        Firebug.Panel.detach.apply(this, arguments);
+        
+        var oldPanel = oldChrome.getPanel("CSS");
+        var index = oldPanel.styleSheetIndex;
+        
+        this.selectNode.selectedIndex = index;
+        this.styleSheetIndex = index;
+        this.lastStyleSheetIndex = -1;
+    },
+    
+    onChangeSelect: function(event)
+    {
+        event = event || window.event;
+        var target = event.srcElement || event.currentTarget;
+        var index = target.selectedIndex;
+        
+        Firebug.CSS.renderStyleSheet(index);
+    },
+    
+    selectStyleSheet: function(index)
+    {
+        this.selectNode.selectedIndex = index;
+        Firebug.CSS.renderStyleSheet(index);
+    }    
 });
 
-Firebug.registerPanel(CSSPanel);
+Firebug.registerPanel(CSSStyleSheetPanel);
 
 
 // ************************************************************************************************
 // CSS Panel
 
-function CSSPanel2(){};
+function CSSElementPanel(){};
 
-CSSPanel2.prototype = extend(Firebug.Panel,
+CSSElementPanel.prototype = extend(Firebug.Panel,
 {
-    name: "CSS2",
+    name: "CSSElementPanel",
     parentPanel: "HTML",
     title: "CSS",
     
@@ -12662,25 +13229,40 @@ CSSPanel2.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
+        var style = this.contentNode.style;
+        style.padding = "4px 8px";
+        style.fontFamily = "Monaco,monospace";        
     },
     
     initialize: function()
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
-        var str = renderStylesheet(0);
+        var target = documentCache[FirebugChrome.selectedHTMLElementId];
+        if (!target) return;
+        
+        var str = renderStyles(target);
         
         var panel = this;
         panel.contentNode.innerHTML = str.join("");
         panel.containerNode.scrollTop = 0;
+    },
+    
+    select: function(node)
+    {
+        var str = renderStyles(node);
+        
+        var panel = this;
+        panel.contentNode.innerHTML = str.join("");
+        panel.containerNode.scrollTop = 0;        
     }
 });
 
-Firebug.registerPanel(CSSPanel2);
+Firebug.registerPanel(CSSElementPanel);
 
 // ************************************************************************************************
 
-var renderStylesheet = function renderStylesheet(index)
+var renderStyleSheet = function renderStyleSheet(index)
 {
     var styleSheet = Firebug.browser.document.styleSheets[index],
         str = [], 
@@ -12731,15 +13313,60 @@ var renderRuleReplacer = function renderRuleReplacer(m, g1, g2)
         ";</span></div>"; 
 };
 
-var getFileName = function getFileName(_path)
+var getFileName = function getFileName(path)
 {
-    if (!_path) return "";
+    if (!path) return "";
     
-    var match = _path&&_path.match(/[^\/]+(\?.*)?(#.*)?$/);
+    var match = path && path.match(/[^\/]+(\?.*)?(#.*)?$/);
     
-    return match&&match[0]||_path;
+    return match && match[0] || path;
 };
 
+// ************************************************************************************************
+
+var renderStyles = function renderStyles(node)
+{
+    var property = ["opacity","filter","azimuth","background","backgroundAttachment","backgroundColor","backgroundImage","backgroundPosition","backgroundRepeat","border","borderCollapse","borderColor","borderSpacing","borderStyle","borderTop","borderRight","borderBottom","borderLeft","borderTopColor","borderRightColor","borderBottomColor","borderLeftColor","borderTopStyle","borderRightStyle","borderBottomStyle","borderLeftStyle","borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth","borderWidth","bottom","captionSide","clear","clip","color","content","counterIncrement","counterReset","cue","cueAfter","cueBefore","cursor","direction","display","elevation","emptyCells","cssFloat","font","fontFamily","fontSize","fontSizeAdjust","fontStretch","fontStyle","fontVariant","fontWeight","height","left","letterSpacing","lineHeight","listStyle","listStyleImage","listStylePosition","listStyleType","margin","marginTop","marginRight","marginBottom","marginLeft","markerOffset","marks","maxHeight","maxWidth","minHeight","minWidth","orphans","outline","outlineColor","outlineStyle","outlineWidth","overflow","padding","paddingTop","paddingRight","paddingBottom","paddingLeft","page","pageBreakAfter","pageBreakBefore","pageBreakInside","pause","pauseAfter","pauseBefore","pitch","pitchRange","playDuring","position","quotes","richness","right","size","speak","speakHeader","speakNumeral","speakPunctuation","speechRate","stress","tableLayout","textAlign","textDecoration","textIndent","textShadow","textTransform","top","unicodeBidi","verticalAlign","visibility","voiceFamily","volume","whiteSpace","widows","width","wordSpacing","zIndex"].sort();
+    
+    var view = document.defaultView ? 
+            document.defaultView.getComputedStyle(node, null) :
+            node.currentStyle;
+
+    var str = [], sl = -1;
+    for(var i=0,len=property.length; i<len; i++)
+    {
+        var item = property[i];
+        if(!view[item]) continue;
+        
+        str[++sl] = "<div class='CSSItem'><span class='CSSProperty'>"; 
+        str[++sl] = toSelectorCase(item);
+        str[++sl] = "</span>:<span class='CSSValue'>"; 
+        str[++sl] = view[item];
+        str[++sl] = "</span>;</div>";
+    }
+    
+    return str;
+};
+
+// ************************************************************************************************
+
+var toCamelCase = function toCamelCase(s)
+{
+    return s.replace(reSelectorCase, toCamelCaseReplaceFn);
+}
+
+var toSelectorCase = function toSelectorCase(s)
+{
+  return s.replace(reCamelCase, "-$1").toLowerCase();
+  
+}
+
+var reCamelCase = /([A-Z])/g;
+var reSelectorCase = /\-(.)/g; 
+var toCamelCaseReplaceFn = function toCamelCaseReplaceFn(m,g)
+{
+    return g.toUpperCase();
+}
 
 // ************************************************************************************************
 }});
@@ -12787,13 +13414,15 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
+        this.onChangeSelect = bind(this.onChangeSelect, this);
+        
         var doc = Firebug.browser.document;
         var scripts = doc.getElementsByTagName("script");
         var selectNode = this.selectNode = createElement("select");
         
         for(var i=0, script; script=scripts[i]; i++)
         {
-            var fileName = getFileName(script.src) || "..";
+            var fileName = getFileName(script.src) || getFileName(doc.location.href);
             var option = createElement("option", {value:i});
             
             option.appendChild(Firebug.chrome.document.createTextNode(fileName));
@@ -12807,7 +13436,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.initialize.apply(this, arguments);
         
-        addEvent(this.selectNode, "change", bind(this.onChangeSelect, this));
+        addEvent(this.selectNode, "change", this.onChangeSelect);
         
         this.selectSourceCode(this.sourceIndex);
     },
@@ -12843,8 +13472,6 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         if (this.lastSourceIndex != index)
         {
-            var self = this;
-            
             var renderProcess = function renderProcess(src)
             {
                 var html = [],
@@ -12898,6 +13525,8 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             {
                 renderProcess("Access to restricted URI denied");
             };
+            
+            var self = this;
             
             var doc = Firebug.browser.document;
             var script = doc.getElementsByTagName("script")[index];
@@ -13011,13 +13640,13 @@ var getScriptURL = function getScriptURL(script)
     }
 };
 
-var getFileName = function getFileName(_path)
+var getFileName = function getFileName(path)
 {
-    if (!_path) return "";
+    if (!path) return "";
     
-    var match = _path&&_path.match(/[^\/]+(\?.*)?(#.*)?$/);
+    var match = path && path.match(/[^\/]+(\?.*)?(#.*)?$/);
     
-    return match&&match[0]||_path;
+    return match && match[0] || path;
 };
 
 
@@ -13067,7 +13696,16 @@ var RowTag =
         )
     );
 
-var $STR = function(){};
+// TODO: xxxpedro localization
+var oSTR =
+{
+    NoMembersWarning: "There are no properties to show for this object."    
+}
+
+FBL.$STR = function(name)
+{
+    return oSTR.hasOwnProperty(name) ? oSTR[name] : "";
+};
 
 var WatchRowTag =
     TR({"class": "watchNewRow", level: 0},
@@ -13085,12 +13723,11 @@ var SizerRow =
         TD({width: "70%"})
     );
 
-Firebug.Rep={};  // TODO: xxxpedro
-
+var domTableClass = isIElt8 ? "domTable domTableIE" : "domTable";
 var DirTablePlate = domplate(Firebug.Rep,
 {
     tag:
-        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0, onclick: "$onClick", role :"tree"},
+        TABLE({"class": domTableClass, cellpadding: 0, cellspacing: 0, onclick: "$onClick", role :"tree"},
             TBODY({role: 'presentation'},
                 SizerRow,
                 FOR("member", "$object|memberIterator", RowTag)
@@ -13098,7 +13735,7 @@ var DirTablePlate = domplate(Firebug.Rep,
         ),
         
     watchTag:
-        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0,
+        TABLE({"class": domTableClass, cellpadding: 0, cellspacing: 0,
                _toggles: "$toggles", _domPanel: "$domPanel", onclick: "$onClick", role : 'tree'},
             TBODY({role : 'presentation'},
                 SizerRow,
@@ -13107,7 +13744,7 @@ var DirTablePlate = domplate(Firebug.Rep,
         ),
 
     tableTag:
-        TABLE({"class": "domTable", cellpadding: 0, cellspacing: 0,
+        TABLE({"class": domTableClass, cellpadding: 0, cellspacing: 0,
             _toggles: "$toggles", _domPanel: "$domPanel", onclick: "$onClick", role : 'tree'},
             TBODY({role : 'presentation'},
                 SizerRow
@@ -13226,8 +13863,8 @@ var DirTablePlate = domplate(Firebug.Rep,
             var lastRow = row;
 
             var delay = 0;
-            var setSize = members.length;
-            var rowCount = 1;
+            //var setSize = members.length;
+            //var rowCount = 1;
             while (members.length)
             {
                 with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
@@ -13239,10 +13876,10 @@ var DirTablePlate = domplate(Firebug.Rep,
                             var result = rowTag.insertRows({members: slice}, lastRow);
                             lastRow = result[1];
                             //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
-                            rowCount += insertSliceSize;
+                            //rowCount += insertSliceSize;
                         }
                         if (isLast)
-                            delete row.insertTimeout;
+                            row.removeAttribute("insertTimeout");
                     }, delay);
                 }
 
@@ -13254,6 +13891,887 @@ var DirTablePlate = domplate(Firebug.Rep,
     }
 });
 
+
+
+// ************************************************************************************************
+
+Firebug.DOMBasePanel = function() {}
+
+Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
+{
+    tag: DirTablePlate.tableTag,
+
+    getRealObject: function(object)
+    {
+        // TODO: Move this to some global location
+        // TODO: Unwrapping should be centralized rather than sprinkling it around ad hoc.
+        // TODO: We might be able to make this check more authoritative with QueryInterface.
+        if (!object) return object;
+        if (object.wrappedJSObject) return object.wrappedJSObject;
+        return object;
+    },
+
+    rebuild: function(update, scrollTop)
+    {
+        //dispatch([Firebug.A11yModel], 'onBeforeDomUpdateSelection', [this]);
+        var members = getMembers(this.selection);
+        expandMembers(members, this.toggles, 0, 0);
+
+        this.showMembers(members, update, scrollTop);
+        
+        //TODO: xxxpedro statusbar
+        if (!this.parentPanel)
+            updateStatusBar(this);
+    },
+
+    showMembers: function(members, update, scrollTop)
+    {
+        // If we are still in the midst of inserting rows, cancel all pending
+        // insertions here - this is a big speedup when stepping in the debugger
+        if (this.timeouts)
+        {
+            for (var i = 0; i < this.timeouts.length; ++i)
+                this.context.clearTimeout(this.timeouts[i]);
+            delete this.timeouts;
+        }
+
+        if (!members.length)
+            return this.showEmptyMembers();
+
+        var panelNode = this.panelNode;
+        var priorScrollTop = scrollTop == undefined ? panelNode.scrollTop : scrollTop;
+
+        // If we are asked to "update" the current view, then build the new table
+        // offscreen and swap it in when it's done
+        var offscreen = update && panelNode.firstChild;
+        var dest = offscreen ? panelNode.ownerDocument : panelNode;
+
+        var table = this.tag.replace({domPanel: this, toggles: this.toggles}, dest);
+        var tbody = table.lastChild;
+        var rowTag = DirTablePlate.rowTag;
+
+        // Insert the first slice immediately
+        //var slice = members.splice(0, insertSliceSize);
+        //var result = rowTag.insertRows({members: slice}, tbody.lastChild);
+        
+        //var setSize = members.length;
+        //var rowCount = 1;
+        
+        var panel = this;
+        var result;
+        
+        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
+        var timeouts = [];
+        
+        var delay = 0;
+        while (members.length)
+        {
+            with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
+            {
+                timeouts.push(this.context.setTimeout(function()
+                {
+                    // TODO: xxxpedro can this be a timing error related to the
+                    // "iteration number" approach insted of "duration time"?
+                    // avoid error in IE8
+                    if (!tbody.lastChild) return;
+                    
+                    result = rowTag.insertRows({members: slice}, tbody.lastChild);
+                    //rowCount += insertSliceSize;
+                    //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
+    
+                    if ((panelNode.scrollHeight+panelNode.offsetHeight) >= priorScrollTop)
+                        panelNode.scrollTop = priorScrollTop;
+                }, delay));
+    
+                delay += insertInterval;
+            }
+        }
+
+        if (offscreen)
+        {
+            timeouts.push(this.context.setTimeout(function()
+            {
+                if (panelNode.firstChild)
+                    panelNode.replaceChild(table, panelNode.firstChild);
+                else
+                    panelNode.appendChild(table);
+
+                // Scroll back to where we were before
+                panelNode.scrollTop = priorScrollTop;
+            }, delay));
+        }
+        else
+        {
+            timeouts.push(this.context.setTimeout(function()
+            {
+                panelNode.scrollTop = scrollTop == undefined ? 0 : scrollTop;
+            }, delay));
+        }
+        this.timeouts = timeouts;
+    },
+
+    showEmptyMembers: function()
+    {
+        FirebugReps.Warning.tag.replace({object: "NoMembersWarning"}, this.panelNode);
+    },
+
+    findPathObject: function(object)
+    {
+        var pathIndex = -1;
+        for (var i = 0; i < this.objectPath.length; ++i)
+        {
+            // IE needs === instead of == or otherwise some objects will
+            // be considered equal to different objects, returning the
+            // wrong index of the objectPath array
+            if (this.getPathObject(i) === object)
+                return i;
+        }
+
+        return -1;
+    },
+
+    getPathObject: function(index)
+    {
+        var object = this.objectPath[index];
+        
+        if (object instanceof Property)
+            return object.getObject();
+        else
+            return object;
+    },
+
+    getRowObject: function(row)
+    {
+        var object = getRowOwnerObject(row);
+        return object ? object : this.selection;
+    },
+
+    getRowPropertyValue: function(row)
+    {
+        var object = this.getRowObject(row);
+        object = this.getRealObject(object);
+        if (object)
+        {
+            var propName = getRowName(row);
+
+            if (object instanceof jsdIStackFrame)
+                return Firebug.Debugger.evaluate(propName, this.context);
+            else
+                return object[propName];
+        }
+    },
+    /*
+    copyProperty: function(row)
+    {
+        var value = this.getRowPropertyValue(row);
+        copyToClipboard(value);
+    },
+
+    editProperty: function(row, editValue)
+    {
+        if (hasClass(row, "watchNewRow"))
+        {
+            if (this.context.stopped)
+                Firebug.Editor.startEditing(row, "");
+            else if (Firebug.Console.isAlwaysEnabled())  // not stopped in debugger, need command line
+            {
+                if (Firebug.CommandLine.onCommandLineFocus())
+                    Firebug.Editor.startEditing(row, "");
+                else
+                    row.innerHTML = $STR("warning.Command line blocked?");
+            }
+            else
+                row.innerHTML = $STR("warning.Console must be enabled");
+        }
+        else if (hasClass(row, "watchRow"))
+            Firebug.Editor.startEditing(row, getRowName(row));
+        else
+        {
+            var object = this.getRowObject(row);
+            this.context.thisValue = object;
+
+            if (!editValue)
+            {
+                var propValue = this.getRowPropertyValue(row);
+
+                var type = typeof(propValue);
+                if (type == "undefined" || type == "number" || type == "boolean")
+                    editValue = propValue;
+                else if (type == "string")
+                    editValue = "\"" + escapeJS(propValue) + "\"";
+                else if (propValue == null)
+                    editValue = "null";
+                else if (object instanceof Window || object instanceof jsdIStackFrame)
+                    editValue = getRowName(row);
+                else
+                    editValue = "this." + getRowName(row);
+            }
+
+
+            Firebug.Editor.startEditing(row, editValue);
+        }
+    },
+
+    deleteProperty: function(row)
+    {
+        if (hasClass(row, "watchRow"))
+            this.deleteWatch(row);
+        else
+        {
+            var object = getRowOwnerObject(row);
+            if (!object)
+                object = this.selection;
+            object = this.getRealObject(object);
+
+            if (object)
+            {
+                var name = getRowName(row);
+                try
+                {
+                    delete object[name];
+                }
+                catch (exc)
+                {
+                    return;
+                }
+
+                this.rebuild(true);
+                this.markChange();
+            }
+        }
+    },
+
+    setPropertyValue: function(row, value)  // value must be string
+    {
+        if(FBTrace.DBG_DOM)
+        {
+            FBTrace.sysout("row: "+row);
+            FBTrace.sysout("value: "+value+" type "+typeof(value), value);
+        }
+
+        var name = getRowName(row);
+        if (name == "this")
+            return;
+
+        var object = this.getRowObject(row);
+        object = this.getRealObject(object);
+        if (object && !(object instanceof jsdIStackFrame))
+        {
+             // unwrappedJSObject.property = unwrappedJSObject
+             Firebug.CommandLine.evaluate(value, this.context, object, this.context.getGlobalScope(),
+                 function success(result, context)
+                 {
+                     if (FBTrace.DBG_DOM)
+                         FBTrace.sysout("setPropertyValue evaluate success object["+name+"]="+result+" type "+typeof(result), result);
+                     object[name] = result;
+                 },
+                 function failed(exc, context)
+                 {
+                     try
+                     {
+                         if (FBTrace.DBG_DOM)
+                              FBTrace.sysout("setPropertyValue evaluate failed with exc:"+exc+" object["+name+"]="+value+" type "+typeof(value), exc);
+                         // If the value doesn't parse, then just store it as a string.  Some users will
+                         // not realize they're supposed to enter a JavaScript expression and just type
+                         // literal text
+                         object[name] = String(value);  // unwrappedJSobject.property = string
+                     }
+                     catch (exc)
+                     {
+                         return;
+                     }
+                  }
+             );
+        }
+        else if (this.context.stopped)
+        {
+            try
+            {
+                Firebug.CommandLine.evaluate(name+"="+value, this.context);
+            }
+            catch (exc)
+            {
+                try
+                {
+                    // See catch block above...
+                    object[name] = String(value); // unwrappedJSobject.property = string
+                }
+                catch (exc)
+                {
+                    return;
+                }
+            }
+        }
+
+        this.rebuild(true);
+        this.markChange();
+    },
+
+    highlightRow: function(row)
+    {
+        if (this.highlightedRow)
+            cancelClassTimed(this.highlightedRow, "jumpHighlight", this.context);
+
+        this.highlightedRow = row;
+
+        if (row)
+            setClassTimed(row, "jumpHighlight", this.context);
+    },/**/
+
+    onMouseMove: function(event)
+    {
+        var target = event.srcElement || event.target;
+        
+        var object = getAncestorByClass(target, "objectLink-element");
+        object = object ? object.repObject : null;
+        
+        if(object && instanceOf(object, "Element") && object.nodeType == 1)
+        {
+            if(object != lastHighlightedObject)
+            {
+                Firebug.Inspector.drawBoxModel(object);
+                object = lastHighlightedObject;
+            }
+        }
+        else
+            Firebug.Inspector.hideBoxModel();
+        
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // extends Panel
+
+    create: function()
+    {
+        // TODO: xxxpedro
+        this.context = Firebug.browser.window;
+        
+        this.objectPath = [];
+        this.propertyPath = [];
+        this.viewPath = [];
+        this.pathIndex = -1;
+        this.toggles = {};
+
+        Firebug.Panel.create.apply(this, arguments);
+        
+        this.panelNode.style.padding = "0 1px";
+    },
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        addEvent(this.panelNode, "mousemove", this.onMouseMove);
+    },
+    
+    shutdown: function()
+    {
+        removeEvent(this.panelNode, "mousemove", this.onMouseMove);
+        
+        Firebug.Panel.shutdown.apply(this, arguments);
+    },
+
+    /*
+    destroy: function(state)
+    {
+        var view = this.viewPath[this.pathIndex];
+        if (view && this.panelNode.scrollTop)
+            view.scrollTop = this.panelNode.scrollTop;
+
+        if (this.pathIndex)
+            state.pathIndex = this.pathIndex;
+        if (this.viewPath)
+            state.viewPath = this.viewPath;
+        if (this.propertyPath)
+            state.propertyPath = this.propertyPath;
+
+        if (this.propertyPath.length > 0 && !this.propertyPath[1])
+            state.firstSelection = persistObject(this.getPathObject(1), this.context);
+
+        Firebug.Panel.destroy.apply(this, arguments);
+    },
+    /**/
+    
+    ishow: function(state)
+    {
+        if (this.context.loaded && !this.selection)
+        {
+            if (!state)
+            {
+                this.select(null);
+                return;
+            }
+            if (state.viewPath)
+                this.viewPath = state.viewPath;
+            if (state.propertyPath)
+                this.propertyPath = state.propertyPath;
+
+            var selectObject = defaultObject = this.getDefaultSelection(this.context);
+
+            if (state.firstSelection)
+            {
+                var restored = state.firstSelection(this.context);
+                if (restored)
+                {
+                    selectObject = restored;
+                    this.objectPath = [defaultObject, restored];
+                }
+                else
+                    this.objectPath = [defaultObject];
+            }
+            else
+                this.objectPath = [defaultObject];
+
+            if (this.propertyPath.length > 1)
+            {
+                for (var i = 1; i < this.propertyPath.length; ++i)
+                {
+                    var name = this.propertyPath[i];
+                    if (!name)
+                        continue;
+
+                    var object = selectObject;
+                    try
+                    {
+                        selectObject = object[name];
+                    }
+                    catch (exc)
+                    {
+                        selectObject = null;
+                    }
+
+                    if (selectObject)
+                    {
+                        this.objectPath.push(new Property(object, name));
+                    }
+                    else
+                    {
+                        // If we can't access a property, just stop
+                        this.viewPath.splice(i);
+                        this.propertyPath.splice(i);
+                        this.objectPath.splice(i);
+                        selectObject = this.getPathObject(this.objectPath.length-1);
+                        break;
+                    }
+                }
+            }
+
+            var selection = state.pathIndex <= this.objectPath.length-1
+                ? this.getPathObject(state.pathIndex)
+                : this.getPathObject(this.objectPath.length-1);
+
+            this.select(selection);
+        }
+    },
+    /*
+    hide: function()
+    {
+        var view = this.viewPath[this.pathIndex];
+        if (view && this.panelNode.scrollTop)
+            view.scrollTop = this.panelNode.scrollTop;
+    },
+    /**/
+
+    supportsObject: function(object)
+    {
+        if (object == null)
+            return 1000;
+
+        if (typeof(object) == "undefined")
+            return 1000;
+        else if (object instanceof SourceLink)
+            return 0;
+        else
+            return 1; // just agree to support everything but not agressively.
+    },
+
+    refresh: function()
+    {
+        this.rebuild(true);
+    },
+
+    updateSelection: function(object)
+    {
+        var previousIndex = this.pathIndex;
+        var previousView = previousIndex == -1 ? null : this.viewPath[previousIndex];
+
+        var newPath = this.pathToAppend;
+        delete this.pathToAppend;
+
+        var pathIndex = this.findPathObject(object);
+        if (newPath || pathIndex == -1)
+        {
+            this.toggles = {};
+
+            if (newPath)
+            {
+                // Remove everything after the point where we are inserting, so we
+                // essentially replace it with the new path
+                if (previousView)
+                {
+                    if (this.panelNode.scrollTop)
+                        previousView.scrollTop = this.panelNode.scrollTop;
+
+                    var start = previousIndex + 1, 
+                        // Opera needs the length argument in splice(), otherwise
+                        // it will consider that only one element should be removed
+                        length = this.objectPath.length - start;
+                    
+                    this.objectPath.splice(start, length);
+                    this.propertyPath.splice(start, length);
+                    this.viewPath.splice(start, length);
+                }
+
+                var value = this.getPathObject(previousIndex);
+                if (!value)
+                {
+                    if (FBTrace.DBG_ERRORS)
+                        FBTrace.sysout("dom.updateSelection no pathObject for "+previousIndex+"\n");
+                    return;
+                }
+
+                for (var i = 0, length = newPath.length; i < length; ++i)
+                {
+                    var name = newPath[i];
+                    var object = value;
+                    try
+                    {
+                        value = value[name];
+                    }
+                    catch(exc)
+                    {
+                        if (FBTrace.DBG_ERRORS)
+                                FBTrace.sysout("dom.updateSelection FAILS at path_i="+i+" for name:"+name+"\n");
+                        return;
+                    }
+
+                    ++this.pathIndex;
+                    this.objectPath.push(new Property(object, name));
+                    this.propertyPath.push(name);
+                    this.viewPath.push({toggles: this.toggles, scrollTop: 0});
+                }
+            }
+            else
+            {
+                this.toggles = {};
+
+                var win = Firebug.browser.window;
+                //var win = this.context.getGlobalScope();
+                if (object === win)
+                {
+                    this.pathIndex = 0;
+                    this.objectPath = [win];
+                    this.propertyPath = [null];
+                    this.viewPath = [{toggles: this.toggles, scrollTop: 0}];
+                }
+                else
+                {
+                    this.pathIndex = 1;
+                    this.objectPath = [win, object];
+                    this.propertyPath = [null, null];
+                    this.viewPath = [
+                        {toggles: {}, scrollTop: 0},
+                        {toggles: this.toggles, scrollTop: 0}
+                    ];
+                }
+            }
+
+            this.panelNode.scrollTop = 0;
+            this.rebuild();
+        }
+        else
+        {
+            this.pathIndex = pathIndex;
+
+            var view = this.viewPath[pathIndex];
+            this.toggles = view.toggles;
+
+            // Persist the current scroll location
+            if (previousView && this.panelNode.scrollTop)
+                previousView.scrollTop = this.panelNode.scrollTop;
+
+            this.rebuild(false, view.scrollTop);
+        }
+    },
+
+    getObjectPath: function(object)
+    {
+        return this.objectPath;
+    },
+
+    getDefaultSelection: function()
+    {
+        return Firebug.browser.window;
+        //return this.context.getGlobalScope();
+    }/*,
+
+    updateOption: function(name, value)
+    {
+        const optionMap = {showUserProps: 1, showUserFuncs: 1, showDOMProps: 1,
+            showDOMFuncs: 1, showDOMConstants: 1};
+        if ( optionMap.hasOwnProperty(name) )
+            this.rebuild(true);
+    },
+
+    getOptionsMenuItems: function()
+    {
+        return [
+            optionMenu("ShowUserProps", "showUserProps"),
+            optionMenu("ShowUserFuncs", "showUserFuncs"),
+            optionMenu("ShowDOMProps", "showDOMProps"),
+            optionMenu("ShowDOMFuncs", "showDOMFuncs"),
+            optionMenu("ShowDOMConstants", "showDOMConstants"),
+            "-",
+            {label: "Refresh", command: bindFixed(this.rebuild, this, true) }
+        ];
+    },
+
+    getContextMenuItems: function(object, target)
+    {
+        var row = getAncestorByClass(target, "memberRow");
+
+        var items = [];
+
+        if (row)
+        {
+            var rowName = getRowName(row);
+            var rowObject = this.getRowObject(row);
+            var rowValue = this.getRowPropertyValue(row);
+
+            var isWatch = hasClass(row, "watchRow");
+            var isStackFrame = rowObject instanceof jsdIStackFrame;
+
+            if (typeof(rowValue) == "string" || typeof(rowValue) == "number")
+            {
+                // Functions already have a copy item in their context menu
+                items.push(
+                    "-",
+                    {label: "CopyValue",
+                        command: bindFixed(this.copyProperty, this, row) }
+                );
+            }
+
+            items.push(
+                "-",
+                {label: isWatch ? "EditWatch" : (isStackFrame ? "EditVariable" : "EditProperty"),
+                    command: bindFixed(this.editProperty, this, row) }
+            );
+
+            if (isWatch || (!isStackFrame && !isDOMMember(rowObject, rowName)))
+            {
+                items.push(
+                    {label: isWatch ? "DeleteWatch" : "DeleteProperty",
+                        command: bindFixed(this.deleteProperty, this, row) }
+                );
+            }
+        }
+
+        items.push(
+            "-",
+            {label: "Refresh", command: bindFixed(this.rebuild, this, true) }
+        );
+
+        return items;
+    },
+
+    getEditor: function(target, value)
+    {
+        if (!this.editor)
+            this.editor = new DOMEditor(this.document);
+
+        return this.editor;
+    }/**/
+});
+
+// ************************************************************************************************
+
+// TODO: xxxpedro statusbar
+var updateStatusBar = function(panel)
+{
+    var path = panel.propertyPath;
+    var index = panel.pathIndex;
+    
+    var r = [];
+    
+    for (var i=0, l=path.length; i<l; i++)
+    {
+        r.push(i==index ? '<a class="fbHover fbBtnSelected" ' : '<a class="fbHover" ');
+        r.push('pathIndex=');
+        r.push(i);
+        
+        if(isIE6)
+            r.push(' href="javascript:void(0)"');
+        
+        r.push('>');
+        r.push(i==0 ? "window" : path[i] || "Object");
+        r.push('</a>');
+        
+        if(i < l-1)
+            r.push('<span class="fbStatusSeparator">&gt;</span>');
+    }
+    panel.statusBarNode.innerHTML = r.join("");
+};
+
+
+var DOMMainPanel = Firebug.DOMPanel = function () {};
+
+Firebug.DOMPanel.DirTable = DirTablePlate;
+
+DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
+{
+    onClickStatusBar: function(event)
+    {
+        var target = event.srcElement || event.target;
+        var element = getAncestorByClass(target, "fbHover");
+        
+        if(element)
+        {
+            var pathIndex = element.getAttribute("pathIndex");
+            
+            if(pathIndex)
+            {
+                this.select(this.getPathObject(pathIndex));
+            }
+        }
+    },
+    
+    selectRow: function(row, target)
+    {
+        if (!target)
+            target = row.lastChild.firstChild;
+
+        if (!target || !target.repObject)
+            return;
+
+        this.pathToAppend = getPath(row);
+
+        // If the object is inside an array, look up its index
+        var valueBox = row.lastChild.firstChild;
+        if (hasClass(valueBox, "objectBox-array"))
+        {
+            var arrayIndex = FirebugReps.Arr.getItemIndex(target);
+            this.pathToAppend.push(arrayIndex);
+        }
+
+        // Make sure we get a fresh status path for the object, since otherwise
+        // it might find the object in the existing path and not refresh it
+        //Firebug.chrome.clearStatusPath();
+
+        this.select(target.repObject, true);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    onClick: function(event)
+    {
+        var target = event.srcElement || event.target;
+        var repNode = Firebug.getRepNode(target);
+        if (repNode)
+        {
+            var row = getAncestorByClass(target, "memberRow");
+            if (row)
+            {
+                this.selectRow(row, repNode);
+                cancelEvent(event);
+            }
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // extends Panel
+
+    name: "DOM",
+    title: "DOM",
+    searchable: true,
+    statusSeparator: ">",
+    
+    options: {
+        hasToolButtons: true,
+        hasStatusBar: true
+    },    
+
+    create: function()
+    {
+        Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
+        
+        this.onClick = bind(this.onClick, this);
+        
+        //TODO: xxxpedro
+        this.onClickStatusBar = bind(this.onClickStatusBar, this);
+        
+        this.panelNode.style.padding = "0 1px";
+    },
+
+    initialize: function(oldPanelNode)
+    {
+        //this.panelNode.addEventListener("click", this.onClick, false);
+        //dispatch([Firebug.A11yModel], 'onInitializeNode', [this, 'console']);
+        
+        Firebug.DOMBasePanel.prototype.initialize.apply(this, arguments);
+        
+        addEvent(this.panelNode, "click", this.onClick);
+        
+        //this.select(Firebug.browser.window);
+        
+        this.context.loaded = true;
+        this.ishow();
+        
+        //TODO: xxxpedro
+        addEvent(this.statusBarNode, "click", this.onClickStatusBar);        
+    },
+
+    shutdown: function()
+    {
+        //this.panelNode.removeEventListener("click", this.onClick, false);
+        //dispatch([Firebug.A11yModel], 'onDestroyNode', [this, 'console']);
+        
+        removeEvent(this.panelNode, "click", this.onClick);
+        
+        Firebug.DOMBasePanel.prototype.shutdown.apply(this, arguments);
+    }/*,
+
+    search: function(text, reverse)
+    {
+        if (!text)
+        {
+            delete this.currentSearch;
+            this.highlightRow(null);
+            return false;
+        }
+
+        var row;
+        if (this.currentSearch && text == this.currentSearch.text)
+            row = this.currentSearch.findNext(true, undefined, reverse, Firebug.searchCaseSensitive);
+        else
+        {
+            function findRow(node) { return getAncestorByClass(node, "memberRow"); }
+            this.currentSearch = new TextSearch(this.panelNode, findRow);
+            row = this.currentSearch.find(text, reverse, Firebug.searchCaseSensitive);
+        }
+
+        if (row)
+        {
+            var sel = this.document.defaultView.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(this.currentSearch.range);
+
+            scrollIntoCenterView(row, this.panelNode);
+
+            this.highlightRow(row);
+            dispatch([Firebug.A11yModel], 'onDomSearchMatchFound', [this, text, row]);
+            return true;
+        }
+        else
+        {
+            dispatch([Firebug.A11yModel], 'onDomSearchMatchFound', [this, text, null]);
+            return false;
+        }
+    }/**/
+});
+
+Firebug.registerPanel(DOMMainPanel);
+
+
+// ************************************************************************************************
 
 
 
@@ -13280,7 +14798,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
             var insecureObject = object;
 
         // IE function prototype is not listed in (for..in)
-        if (isIE && typeof object == "function")
+        if (isIE && isFunction(object))
             addMember("user", userProps, "prototype", object.prototype, level);            
             
         for (var name in insecureObject)  // enumeration is safe
@@ -13305,7 +14823,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
             {
                 addMember("ordinal", ordinals, name, val, level);
             }
-            else if (typeof(val) == "function")
+            else if (isFunction(val))
             {
                 if (isClassFunction(val))
                     addMember("userClass", userClasses, name, val, level);
@@ -13341,10 +14859,10 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
     {
         // Sometimes we get exceptions just from trying to iterate the members
         // of certain objects, like StorageList, but don't let that gum up the works
-        //throw exc;
-        //if (FBTrace.DBG_ERRORS && FBTrace.DBG_DOM)
-        //    FBTrace.sysout("dom.getMembers FAILS: ", exc);
         throw exc;
+        if (FBTrace.DBG_ERRORS && FBTrace.DBG_DOM)
+            FBTrace.sysout("dom.getMembers FAILS: ", exc);
+        //throw exc;
     }
 
     function sortName(a, b) { return a.name > b.name ? 1 : -1; }
@@ -13443,7 +14961,7 @@ function isClassFunction(fn)
     return false;
 }
 
-function hasProperties(ob)
+var hasProperties = function hasProperties(ob)
 {
     try
     {
@@ -13452,7 +14970,7 @@ function hasProperties(ob)
     } catch (exc) {}
     
     // IE function prototype is not listed in (for..in)
-    if (typeof ob == "function") return true;
+    if (isFunction(ob)) return true;
     
     return false;
 }
@@ -13462,7 +14980,7 @@ FBL.ErrorCopy = function(message)
     this.message = message;
 };
 
-function addMember(type, props, name, value, level, order)
+var addMember = function addMember(type, props, name, value, level, order)
 {
     var rep = Firebug.getRep(value);    // do this first in case a call to instanceof reveals contents
     var tag = rep.shortTag ? rep.shortTag : rep.tag;
@@ -13471,7 +14989,7 @@ function addMember(type, props, name, value, level, order)
     
     var valueType = typeof(value);
     var hasChildren = hasProperties(value) && !(value instanceof ErrorCopy) &&
-        (valueType == "function" || (valueType == "object" && value != null)
+        (isFunction(value) || (valueType == "object" && value != null)
         || (valueType == "string" && value.length > Firebug.stringCropLength));
 
     props.push({
@@ -13488,7 +15006,7 @@ function addMember(type, props, name, value, level, order)
     });
 }
 
-function getWatchRowIndex(row)
+var getWatchRowIndex = function getWatchRowIndex(row)
 {
     var index = -1;
     for (; row && hasClass(row, "watchRow"); row = row.previousSibling)
@@ -13496,24 +15014,25 @@ function getWatchRowIndex(row)
     return index;
 }
 
-function getRowName(row)
+var getRowName = function getRowName(row)
 {
-    return row.firstChild.textContent;
+    var node = row.firstChild;
+    return node.textContent ? node.textContent : node.innerText;
 }
 
-function getRowValue(row)
+var getRowValue = function getRowValue(row)
 {
     return row.lastChild.firstChild.repObject;
 }
 
-function getRowOwnerObject(row)
+var getRowOwnerObject = function getRowOwnerObject(row)
 {
     var parentRow = getParentRow(row);
     if (parentRow)
         return getRowValue(parentRow);
 }
 
-function getParentRow(row)
+var getParentRow = function getParentRow(row)
 {
     var level = parseInt(row.getAttribute("level"))-1;
     for (row = row.previousSibling; row; row = row.previousSibling)
@@ -13523,7 +15042,7 @@ function getParentRow(row)
     }
 }
 
-function getPath(row)
+var getPath = function getPath(row)
 {
     var name = getRowName(row);
     var path = [name];
@@ -13566,110 +15085,90 @@ Firebug.registerModule(Firebug.DOM);
 
 
 // ************************************************************************************************
-// FBTrace Panel
-
-function DOMPanel(){};
-
-DOMPanel.prototype = extend(Firebug.Panel,
-{
-    name: "DOM",
-    title: "DOM",
-    
-    options: {
-        hasToolButtons: true
-    },
-    
-    isInitialized: false,
-    
-    create: function()
-    {
-        Firebug.Panel.create.apply(this, arguments);
-        
-        this.toggles = this.toggles || {};
-        this.panelNode.style.padding = "0 1px";
-    },
-    
-    initialize: function(){
-        Firebug.Panel.initialize.apply(this, arguments);
-        
-        /*
-        var target = this.contentNode;
-        var template = DirTablePlate;
-        
-        var panel = {};
-        var toggles = {};
-        
-        template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
-        /**/
-        
-        //if (this.isInitialized) return;
-        
-        var target = this.contentNode;
-        var template = DirTablePlate;
-        
-        var panel = {};
-        var toggles = this.toggles;
-        
-        template.tableTag.replace({domPanel: panel, toggles: toggles, object: {}}, target);
-        
-        var row = $$("tr", target)[0];
-        
-        var value = window;
-        var members = getMembers(value, 0);
-        expandMembers(members, toggles, 0, 0);
-
-        var rowTag = template.rowTag;
-        var lastRow = row;
-
-        var delay = 30;
-        var setSize = members.length;
-        var rowCount = 1;
-        
-        while (members.length)
-        {
-            with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
-            {
-                setTimeout(function()
-                {
-                    if (lastRow.parentNode)
-                    {
-                        var result = rowTag.insertRows({members: slice}, lastRow);
-                        lastRow = result[1];
-                        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
-                        rowCount += insertSliceSize;
-                    }
-                    if (isLast)
-                        delete row.insertTimeout;
-                }, delay);
-            }
-
-            delay += insertInterval;
-        }
-
-        row.insertTimeout = delay;
-        
-        this.isInitialized = true;
-        /**/
-    },
-    
-    reattach: function(oldChrome)
-    {
-        //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
-        this.toggles = oldChrome.getPanel("DOM").toggles;
-    }
-    
-});
-
-Firebug.registerPanel(DOMPanel);
-
-
-// ************************************************************************************************
 // DOM Panel
+
+var lastHighlightedObject;
 
 function DOMPanel2(){};
 
-DOMPanel2.prototype = extend(Firebug.Panel,
+DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
 {
+    selectRow: function(row, target)
+    {
+        if (!target)
+            target = row.lastChild.firstChild;
+
+        if (!target || !target.repObject)
+            return;
+
+        this.pathToAppend = getPath(row);
+
+        // If the object is inside an array, look up its index
+        var valueBox = row.lastChild.firstChild;
+        if (hasClass(valueBox, "objectBox-array"))
+        {
+            var arrayIndex = FirebugReps.Arr.getItemIndex(target);
+            this.pathToAppend.push(arrayIndex);
+        }
+
+        // Make sure we get a fresh status path for the object, since otherwise
+        // it might find the object in the existing path and not refresh it
+        //Firebug.chrome.clearStatusPath();
+
+        var object = target.repObject;
+        
+        if (instanceOf(object, "Element") && object[cacheID])
+        {
+            Firebug.HTML.selectTreeNode(object[cacheID]);
+        }
+        else
+        {
+            Firebug.chrome.selectPanel("DOM");
+            Firebug.chrome.getPanel("DOM").select(object, true);
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    onClick: function(event)
+    {
+        /*
+        var target = event.srcElement || event.target;
+        
+        var object = getAncestorByClass(target, "objectLink");
+        object = object ? object.repObject : null;
+        
+        if(!object) return;
+        
+        if (instanceOf(object, "Element") && object[cacheID])
+        {
+            Firebug.HTML.selectTreeNode(object[cacheID]);
+        }
+        else
+        {
+            Firebug.chrome.selectPanel("DOM");
+            Firebug.chrome.getPanel("DOM").select(object, true);
+        }
+        /**/
+        
+        
+        var target = event.srcElement || event.target;
+        var repNode = Firebug.getRepNode(target);
+        if (repNode)
+        {
+            var row = getAncestorByClass(target, "memberRow");
+            if (row)
+            {
+                this.selectRow(row, repNode);
+                cancelEvent(event);
+            }
+        }
+        /**/
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // extends Panel
+
     name: "DOM2",
     parentPanel: "HTML",
     title: "DOM",
@@ -13682,73 +15181,22 @@ DOMPanel2.prototype = extend(Firebug.Panel,
     
     create: function()
     {
-        Firebug.Panel.create.apply(this, arguments);
+        Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
         
-        this.toggles = this.toggles || {};
-        this.panelNode.style.padding = "0 1px";
+        this.onClick = bind(this.onClick, this);
     },
     
     initialize: function(){
-        Firebug.Panel.initialize.apply(this, arguments);
+        Firebug.DOMBasePanel.prototype.initialize.apply(this, arguments);
         
-        /*
-        var target = this.contentNode;
-        var template = DirTablePlate;
+        addEvent(this.panelNode, "click", this.onClick);
+    },
+    
+    shutdown: function()
+    {
+        removeEvent(this.panelNode, "click", this.onClick);
         
-        var panel = {};
-        var toggles = {};
-        
-        template.tag.replace({domPanel: panel, toggles: toggles, object: window}, target);
-        /**/
-        
-        //if (this.isInitialized) return;
-        
-        var target = this.contentNode;
-        var template = DirTablePlate;
-        
-        var panel = {};
-        var toggles = this.toggles;
-        
-        template.tableTag.replace({domPanel: panel, toggles: toggles, object: {}}, target);
-        
-        var row = $$("tr", target)[0];
-        
-        var value = window;
-        var members = getMembers(value, 0);
-        expandMembers(members, toggles, 0, 0);
-
-        var rowTag = template.rowTag;
-        var lastRow = row;
-
-        var delay = 30;
-        var setSize = members.length;
-        var rowCount = 1;
-        
-        while (members.length)
-        {
-            with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
-            {
-                setTimeout(function()
-                {
-                    if (lastRow.parentNode)
-                    {
-                        var result = rowTag.insertRows({members: slice}, lastRow);
-                        lastRow = result[1];
-                        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [null, result, rowCount, setSize]);
-                        rowCount += insertSliceSize;
-                    }
-                    if (isLast)
-                        delete row.insertTimeout;
-                }, delay);
-            }
-
-            delay += insertInterval;
-        }
-
-        row.insertTimeout = delay;
-        
-        this.isInitialized = true;
-        /**/
+        Firebug.DOMBasePanel.prototype.shutdown.apply(this, arguments);
     },
     
     reattach: function(oldChrome)
@@ -13764,6 +15212,184 @@ Firebug.registerPanel(DOMPanel2);
 
 // ************************************************************************************************
 }});
+
+FBL.FBTrace = {};
+
+(function() {
+// ************************************************************************************************
+
+var traceOptions = {
+    DBG_TIMESTAMP: 1,
+    DBG_INITIALIZE: 1,
+    DBG_CHROME: 1,
+    DBG_ERRORS: 1,
+    DBG_DISPATCH: 1
+};
+
+this.module = null;
+
+this.initialize = function()
+{
+    if (!this.messageQueue)
+        this.messageQueue = [];
+    
+    for (var name in traceOptions)
+        this[name] = traceOptions[name]; 
+};
+
+// ************************************************************************************************
+// FBTrace API
+
+this.sysout = function()
+{
+    return this.logFormatted(arguments, "");
+};
+
+this.dumpProperties = function(title, object)
+{
+    return this.logFormatted("dumpProperties() not supported.", "warning");
+};
+
+this.dumpStack = function()
+{
+    return this.logFormatted("dumpStack() not supported.", "warning");
+};
+
+this.flush = function(module)
+{
+    this.module = module;
+    
+    var queue = this.messageQueue;
+    this.messageQueue = [];
+    
+    for (var i = 0; i < queue.length; ++i)
+        this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
+};
+
+this.getPanel = function()
+{
+    return this.module ? this.module.getPanel() : null;
+};
+
+//*************************************************************************************************
+
+this.logFormatted = function(objects, className)
+{
+    var html = this.DBG_TIMESTAMP ? [getTimestamp(), " | "] : [];
+    var length = objects.length;
+    
+    for (var i = 0; i < length; ++i)
+    {
+        appendText(" ", html);
+        
+        var object = objects[i];
+        
+        if (i == 0)
+        {
+            html.push("<b>");
+            appendText(object, html);
+            html.push("</b>");
+        }
+        else
+            appendText(object, html);
+    }
+    
+    return this.logRow(html, className);    
+};
+
+this.logRow = function(message, className)
+{
+    var panel = this.getPanel();
+    
+    if (panel && panel.contentNode)
+        this.writeMessage(message, className);
+    else
+    {
+        this.messageQueue.push([message, className]);
+    }
+    
+    return this.LOG_COMMAND;
+};
+
+this.writeMessage = function(message, className)
+{
+    var container = this.getPanel().containerNode;
+    var isScrolledToBottom =
+        container.scrollTop + container.offsetHeight >= container.scrollHeight;
+    
+    this.writeRow.call(this, message, className);
+    
+    if (isScrolledToBottom)
+        container.scrollTop = container.scrollHeight - container.offsetHeight;
+};
+
+this.appendRow = function(row)
+{
+    var container = this.getPanel().contentNode;
+    container.appendChild(row);
+};
+
+this.writeRow = function(message, className)
+{
+    var row = this.getPanel().contentNode.ownerDocument.createElement("div");
+    row.className = "logRow" + (className ? " logRow-"+className : "");
+    row.innerHTML = message.join("");
+    this.appendRow(row);
+};
+
+//*************************************************************************************************
+
+function appendText(object, html)
+{
+    html.push(escapeHTML(objectToString(object)));
+};
+
+function getTimestamp()
+{
+    var now = new Date();
+    var ms = "" + (now.getMilliseconds() / 1000).toFixed(3);
+    ms = ms.substr(2);
+    
+    return now.toLocaleTimeString() + "." + ms;
+};
+
+//*************************************************************************************************
+
+var HTMLtoEntity =
+{
+    "<": "&lt;",
+    ">": "&gt;",
+    "&": "&amp;",
+    "'": "&#39;",
+    '"': "&quot;"
+};
+
+function replaceChars(ch)
+{
+    return HTMLtoEntity[ch];
+};
+
+function escapeHTML(value)
+{
+    return (value+"").replace(/[<>&"']/g, replaceChars);
+};
+
+//*************************************************************************************************
+
+function objectToString(object)
+{
+    try
+    {
+        return object+"";
+    }
+    catch (exc)
+    {
+        return null;
+    }
+};
+
+// ************************************************************************************************
+}).apply(FBL.FBTrace);
 
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
