@@ -1199,29 +1199,6 @@ this.createElement = function(tagName, properties)
     return element;
 };
 
-this.createGlobalElement = function (tagName, properties) {
-    
-    properties = properties || {};
-    var doc = document;
-    
-    var element = this.NS && doc.createElementNS ? 
-            doc.createElementNS(FBL.NS, tagName) : 
-            doc.createElement(tagName);
-            
-    for (var name in properties)
-    {
-        var propname = name;
-        if (FBL.isIE && name == "class") {
-            propname = "className"
-        }
-        if (name != "document") {
-            element.setAttribute(propname, properties[name])
-        }
-    }
-    
-    return element
-};
-/*
 this.createGlobalElement = function(tagName, properties)
 {
     properties = properties || {};
@@ -1244,7 +1221,6 @@ this.createGlobalElement = function(tagName, properties)
     
     return element;
 };
-/**/
 
 // ************************************************************************************************
 // Events
