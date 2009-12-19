@@ -6723,14 +6723,14 @@ var ChromeFrameBase = extend(ChromeBase,
     {
         if (FirebugChrome.isOpen)
         {
-            var node = this.node;
-            node.style.visibility = "hidden"; // Avoid flickering
-            
             if (this.isInitialized)
             {
                 //dispatch(Firebug.modules, "shutdown", []);
                 this.shutdown();
             }
+            
+            var node = this.node;
+            node.style.visibility = "hidden"; // Avoid flickering
             
             // TODO: xxxpedro - persist IE fixed? 
             var main = $("fbChrome", FirebugChrome.chromeMap.frame.document);
@@ -7886,7 +7886,7 @@ ConsolePanel.prototype = extend(Firebug.Panel,
             addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         
             // TODO: xxxpedro FF error event removeEvent
-            //addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+            addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         }
     },
     
@@ -7896,10 +7896,10 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         if (Firebug.HTML)
         {
             removeEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
-            //removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+            removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         
             // TODO: xxxpedro FF error event removeEvent
-            //removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+            removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         }
         
         this.clearButton.shutdown();
@@ -8006,7 +8006,7 @@ Firebug.CommandLine.prototype =
     {
         removeEvent(Firebug.browser.window, "error", this.onError);
         // TODO: xxxpedro FF error event removeEvent
-        //removeEvent(Firebug.chrome.window, "error", this.onError);
+        removeEvent(Firebug.chrome.window, "error", this.onError);
         
         removeEvent(this.element, "keydown", this.onKeyDown);
         
@@ -12859,17 +12859,17 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         
         // TODO: xxxpedro FF error event removeEvent
-        //addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
+        addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
     },
     
     shutdown: function()
     {
         // TODO: xxxpedro
         removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        //removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         
         // TODO: xxxpedro FF error event removeEvent
-        //removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
