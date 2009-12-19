@@ -6016,7 +6016,82 @@ var ChromeDefaultOptions =
 
 // ************************************************************************************************
 // Chrome Window Creation
-
+var createChromeWindow = function (options)
+{
+    options = options || {};
+    options = extend(ChromeDefaultOptions, options);
+    
+    var context = options.context || Env.browser;
+    
+    var chrome = {};
+    
+    chrome.type = options.type;
+    
+    var isChromeFrame = chrome.type == "frame";
+    var isBookmarletMode = Env.isBookmarletMode;
+    var url = isBookmarletMode ? "about:blank" : Env.location.skin;
+    
+    if (isChromeFrame)
+    {
+        
+        var node = chrome.node = createGlobalElement("iframe");
+        
+        node.setAttribute("id", options.id);
+        node.setAttribute("frameBorder", "0");
+        
+        node.style.border = "0";
+        node.style.visibility = "hidden";
+        node.style.zIndex = "2147483647";
+        node.style.position = noFixedPosition ? "absolute" : "fixed";
+        node.style.width = "100%";
+        node.style.left = "0";
+        node.style.bottom = noFixedPosition ? "-1px" : "0";
+        node.style.height = options.height + "px";
+        
+        
+        if (isFirefox) {
+            node.style.display = "none"
+        }
+        if (!isBookmarletMode) {
+            node.setAttribute("src", Env.location.skin)
+        }
+        context.document.getElementsByTagName("body")[0].appendChild(node)
+    } else {
+        var height = FirebugChrome.height || options.height;
+        var options = ["true,top=", Math.max(screen.availHeight - height - 61, 0), ",left=0,height=", height, ",width=", screen.availWidth - 10, ",resizable"].join("");
+        var node = chrome.node = context.window.open(url, "popup", options);
+        if (node) {
+            try {
+                node.focus()
+            } catch(E) {
+                alert("Firebug Error: Firebug popup was blocked.");
+                return
+            }
+        } else {
+            alert("Firebug Error: Firebug popup was blocked.");
+            return
+        }
+    }
+    if (isBookmarletMode) {
+        var tpl = getChromeTemplate(!isChromeFrame);
+        var doc = isChromeFrame ? node.contentWindow.document : node.document;
+        doc.write(tpl);
+        doc.close()
+    }
+    var win;
+    var waitDelay = !isBookmarletMode ? isChromeFrame ? 200 : 300 : 100;
+    var waitForChrome = function () {
+        if (isChromeFrame && (win = node.contentWindow) && node.contentWindow.document.getElementById("fbCommandLine") || !isChromeFrame && (win = node.window) && node.document && node.document.getElementById("fbCommandLine")) {
+            chrome.window = win.window;
+            chrome.document = win.document;
+            onChromeLoad(chrome)
+        } else {
+            setTimeout(waitForChrome, waitDelay)
+        }
+    };
+    waitForChrome()
+};
+/*
 var createChromeWindow = function(options)
 {
     options = options || {};
@@ -6039,7 +6114,7 @@ var createChromeWindow = function(options)
         
         node.setAttribute("id", options.id);
         node.setAttribute("frameBorder", "0");
-        //node.firebugIgnore = true;
+        node.firebugIgnore = true;
         node.style.border = "0";
         node.style.visibility = "hidden";
         node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
@@ -6065,7 +6140,7 @@ var createChromeWindow = function(options)
         var height = FirebugChrome.height || options.height;
         var options = [
                 "true,top=",
-                Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
+                Math.max(screen.availHeight - height - 61 /* Google Chrome bug *-/, 0),
                 ",left=0,height=",
                 height,
                 ",width=",
@@ -6132,6 +6207,7 @@ var createChromeWindow = function(options)
     
     waitForChrome();
 };
+/**/
 
 
 var onChromeLoad = function onChromeLoad(chrome)
