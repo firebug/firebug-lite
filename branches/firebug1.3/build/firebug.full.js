@@ -7884,7 +7884,9 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         {
             addEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
             addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
-            addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        
+            // TODO: xxxpedro FF error event removeEvent
+            //addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         }
     },
     
@@ -7895,7 +7897,9 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         {
             removeEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
             removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
-            removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        
+            // TODO: xxxpedro FF error event removeEvent
+            //removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         }
         
         this.clearButton.shutdown();
