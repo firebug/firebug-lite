@@ -7896,7 +7896,7 @@ ConsolePanel.prototype = extend(Firebug.Panel,
         if (Firebug.HTML)
         {
             removeEvent($("fbPanel1"), 'mousemove', Firebug.HTML.onListMouseMove);
-            removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+            //removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         
             // TODO: xxxpedro FF error event removeEvent
             //removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
@@ -12865,7 +12865,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     {
         // TODO: xxxpedro
         removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        //removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         
         // TODO: xxxpedro FF error event removeEvent
         //removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);

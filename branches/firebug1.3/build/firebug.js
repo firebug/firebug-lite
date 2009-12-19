@@ -1961,8 +1961,7 @@ this.clearButton=new Firebug.Button({node:$("fbConsole_btClear"),owner:Firebug.C
 this.clearButton.initialize();
 if(Firebug.HTML){addEvent($("fbPanel1"),"mousemove",Firebug.HTML.onListMouseMove);
 addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove)
-}},shutdown:function(){if(Firebug.HTML){removeEvent($("fbPanel1"),"mousemove",Firebug.HTML.onListMouseMove);
-removeEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove)
+}},shutdown:function(){if(Firebug.HTML){removeEvent($("fbPanel1"),"mousemove",Firebug.HTML.onListMouseMove)
 }this.clearButton.shutdown();
 Firebug.Panel.shutdown.apply(this,arguments)
 }});
@@ -3559,7 +3558,6 @@ if(!selectedElement){Firebug.HTML.selectTreeNode(Firebug.browser.document.body[c
 }addEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
 addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove)
 },shutdown:function(){removeEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
-removeEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
 removeEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
 fbPanel1=null;
 Firebug.Panel.shutdown.apply(this,arguments)
