@@ -12852,7 +12852,9 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         // TODO: xxxpedro
         addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
         addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
-        addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
+        
+        // TODO: xxxpedro FF error event removeEvent
+        //addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
     },
     
     shutdown: function()
@@ -12860,7 +12862,9 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         // TODO: xxxpedro
         removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
         removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
-        removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
+        
+        // TODO: xxxpedro FF error event removeEvent
+        //removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         

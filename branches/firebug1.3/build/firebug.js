@@ -3559,11 +3559,9 @@ addEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
 fbPanel1=$("fbPanel1");
 if(!selectedElement){Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID])
 }addEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
-addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
-addEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
+addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove)
 },shutdown:function(){removeEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
 removeEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
-removeEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove);
 removeEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
 fbPanel1=null;
 Firebug.Panel.shutdown.apply(this,arguments)
