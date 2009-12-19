@@ -6073,7 +6073,8 @@ var createChromeWindow = function (options)
         }
     }
     if (isBookmarletMode) {
-        var tpl = getChromeTemplate(!isChromeFrame);
+        //var tpl = getChromeTemplate(!isChromeFrame);
+        var tpl = "";
         var doc = isChromeFrame ? node.contentWindow.document : node.document;
         doc.write(tpl);
         doc.close()
