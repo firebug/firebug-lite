@@ -13158,8 +13158,9 @@ CSSStyleSheetPanel.prototype = extend(Firebug.Panel,
         var styleSheets = doc.styleSheets;
         var selectNode = this.selectNode = createElement("select");
         
-        for(var i=0, styleSheet; styleSheet=styleSheets[i]; i++)
+        for(var i=0, length=styleSheets.length; i<length; i++)
         {
+            var styleSheet = styleSheets[i];
             var fileName = getFileName(styleSheet.href) || getFileName(doc.location.href);
             var option = createElement("option", {value:i});
             

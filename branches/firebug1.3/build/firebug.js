@@ -3661,9 +3661,10 @@ this.onChangeSelect=bind(this.onChangeSelect,this);
 var doc=Firebug.browser.document;
 var styleSheets=doc.styleSheets;
 var selectNode=this.selectNode=createElement("select");
-for(var i=0,styleSheet;
-styleSheet=styleSheets[i];
-i++){var fileName=getFileName(styleSheet.href)||getFileName(doc.location.href);
+for(var i=0,length=styleSheets.length;
+i<length;
+i++){var styleSheet=styleSheets[i];
+var fileName=getFileName(styleSheet.href)||getFileName(doc.location.href);
 var option=createElement("option",{value:i});
 option.appendChild(Firebug.chrome.document.createTextNode(fileName));
 selectNode.appendChild(option)
