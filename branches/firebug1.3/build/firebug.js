@@ -1988,7 +1988,6 @@ initializeCommandLineAPI()
 Firebug.CommandLine.prototype={element:null,_buffer:[],_bi:-1,_completing:null,_completePrefix:null,_completeExpr:null,_completeBuffer:null,_ci:null,_completion:{window:["console"],document:["getElementById","getElementsByTagName"]},_stack:function(command){this._buffer.push(command);
 this._bi=this._buffer.length
 },initialize:function(doc){},destroy:function(){removeEvent(Firebug.browser.window,"error",this.onError);
-removeEvent(Firebug.chrome.window,"error",this.onError);
 removeEvent(this.element,"keydown",this.onKeyDown);
 this.element=null;
 delete this.element

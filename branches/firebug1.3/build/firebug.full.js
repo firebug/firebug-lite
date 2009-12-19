@@ -8005,7 +8005,8 @@ Firebug.CommandLine.prototype =
     destroy: function()
     {
         removeEvent(Firebug.browser.window, "error", this.onError);
-        removeEvent(Firebug.chrome.window, "error", this.onError);
+        // TODO: xxxpedro FF error event removeEvent
+        //removeEvent(Firebug.chrome.window, "error", this.onError);
         
         removeEvent(this.element, "keydown", this.onKeyDown);
         
