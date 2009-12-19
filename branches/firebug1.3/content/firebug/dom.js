@@ -1434,9 +1434,9 @@ Firebug.registerModule(Firebug.DOM);
 
 var lastHighlightedObject;
 
-function DOMPanel2(){};
+function DOMSidePanel(){};
 
-DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
+DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
 {
     selectRow: function(row, target)
     {
@@ -1514,7 +1514,7 @@ DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
-    name: "DOM2",
+    name: "DOMSide",
     parentPanel: "HTML",
     title: "DOM",
     
@@ -1547,12 +1547,12 @@ DOMPanel2.prototype = extend(Firebug.DOMBasePanel.prototype,
     reattach: function(oldChrome)
     {
         //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
-        this.toggles = oldChrome.getPanel("DOM2").toggles;
+        this.toggles = oldChrome.getPanel("DOMSide").toggles;
     }
     
 });
 
-Firebug.registerPanel(DOMPanel2);
+Firebug.registerPanel(DOMSidePanel);
 
 
 // ************************************************************************************************

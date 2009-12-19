@@ -3547,7 +3547,7 @@ Firebug.registerModule(Firebug.HTML);
 function HTMLPanel(){}HTMLPanel.prototype=extend(Firebug.Panel,{name:"HTML",title:"HTML",options:{hasSidePanel:true,isPreRendered:true,innerHTMLSync:true},create:function(){Firebug.Panel.create.apply(this,arguments);
 this.panelNode.style.padding="4px 3px 1px 15px";
 if(Env.isPersistentMode||Firebug.chrome.type!="popup"){this.createUI()
-}if(!this.sidePanelBar.selectedPanel){this.sidePanelBar.selectPanel("DOM2")
+}if(!this.sidePanelBar.selectedPanel){this.sidePanelBar.selectPanel("DOMSide")
 }},createUI:function(){var rootNode=Firebug.browser.document.documentElement;
 var html=[];
 Firebug.HTML.appendTreeNode(rootNode,html);
@@ -4211,7 +4211,7 @@ Firebug.DOM=extend(Firebug.Module,{getPanel:function(){return Firebug.chrome?Fir
 }});
 Firebug.registerModule(Firebug.DOM);
 var lastHighlightedObject;
-function DOMPanel2(){}DOMPanel2.prototype=extend(Firebug.DOMBasePanel.prototype,{selectRow:function(row,target){if(!target){target=row.lastChild.firstChild
+function DOMSidePanel(){}DOMSidePanel.prototype=extend(Firebug.DOMBasePanel.prototype,{selectRow:function(row,target){if(!target){target=row.lastChild.firstChild
 }if(!target||!target.repObject){return
 }this.pathToAppend=getPath(row);
 var valueBox=row.lastChild.firstChild;
@@ -4226,15 +4226,15 @@ var repNode=Firebug.getRepNode(target);
 if(repNode){var row=getAncestorByClass(target,"memberRow");
 if(row){this.selectRow(row,repNode);
 cancelEvent(event)
-}}},name:"DOM2",parentPanel:"HTML",title:"DOM",options:{hasToolButtons:true},isInitialized:false,create:function(){Firebug.DOMBasePanel.prototype.create.apply(this,arguments);
+}}},name:"DOMSide",parentPanel:"HTML",title:"DOM",options:{hasToolButtons:true},isInitialized:false,create:function(){Firebug.DOMBasePanel.prototype.create.apply(this,arguments);
 this.onClick=bind(this.onClick,this)
 },initialize:function(){Firebug.DOMBasePanel.prototype.initialize.apply(this,arguments);
 addEvent(this.panelNode,"click",this.onClick)
 },shutdown:function(){removeEvent(this.panelNode,"click",this.onClick);
 Firebug.DOMBasePanel.prototype.shutdown.apply(this,arguments)
-},reattach:function(oldChrome){this.toggles=oldChrome.getPanel("DOM2").toggles
+},reattach:function(oldChrome){this.toggles=oldChrome.getPanel("DOMSide").toggles
 }});
-Firebug.registerPanel(DOMPanel2)
+Firebug.registerPanel(DOMSidePanel)
 }});
 FBL.FBTrace={};
 (function(){var traceOptions={DBG_TIMESTAMP:1,DBG_INITIALIZE:1,DBG_CHROME:1,DBG_ERRORS:1,DBG_DISPATCH:1};

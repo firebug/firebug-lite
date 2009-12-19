@@ -286,7 +286,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if(!this.sidePanelBar.selectedPanel)
         {
-            this.sidePanelBar.selectPanel("DOM2");
+            this.sidePanelBar.selectPanel("DOMSide");
         }            
     },
     
