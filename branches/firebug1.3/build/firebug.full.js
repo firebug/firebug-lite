@@ -1202,7 +1202,7 @@ this.createElement = function(tagName, properties)
 this.createGlobalElement = function (tagName, properties) {
     
     properties = properties || {};
-    var doc = FBL.Env.browser.document;
+    var doc = document;
     
     var element = this.NS && doc.createElementNS ? 
             doc.createElementNS(FBL.NS, tagName) : 
