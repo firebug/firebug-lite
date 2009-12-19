@@ -1340,7 +1340,6 @@ var url=isBookmarletMode?"about:blank":Env.location.skin;
 if(isChromeFrame){var node=chrome.node=createGlobalElement("iframe");
 node.setAttribute("id",options.id);
 node.setAttribute("frameBorder","0");
-node.firebugIgnore=true;
 node.style.border="0";
 node.style.visibility="hidden";
 node.style.zIndex="2147483647";
