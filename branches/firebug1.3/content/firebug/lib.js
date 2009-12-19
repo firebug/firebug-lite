@@ -412,7 +412,7 @@ this.values = function(map)
             {
                 // Sometimes we get exceptions trying to access properties
                 if (FBTrace.DBG_ERRORS)
-                    FBTrace.dumpPropreties("lib.values FAILED ", exc);
+                    FBTrace.sysout("lib.values FAILED ", exc);
             }
 
         }
@@ -421,7 +421,7 @@ this.values = function(map)
     {
         // Sometimes we get exceptions trying to iterate properties
         if (FBTrace.DBG_ERRORS)
-            FBTrace.dumpPropreties("lib.values FAILED ", exc);
+            FBTrace.sysout("lib.values FAILED ", exc);
     }
 
     return values;
@@ -1278,10 +1278,18 @@ this.addEvent = function(object, name, handler)
 
 this.removeEvent = function(object, name, handler)
 {
-    if (object.removeEventListener)
-        object.removeEventListener(name, handler, false);
-    else
-        object.detachEvent("on"+name, handler);
+    try
+    {
+        if (object.removeEventListener)
+            object.removeEventListener(name, handler, false);
+        else
+            object.detachEvent("on"+name, handler);
+    }
+    catch(e)
+    {
+        if (FBTrace.DBG_ERRORS)
+            FBTrace.sysout("FBL.removeEvent error: ", object, name);
+    }
 };
 
 this.cancelEvent = function(e, preventDefault)

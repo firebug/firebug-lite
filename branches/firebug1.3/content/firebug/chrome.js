@@ -782,14 +782,14 @@ var ChromeFrameBase = extend(ChromeBase,
     {
         if (FirebugChrome.isOpen)
         {
-            var node = this.node;
-            node.style.visibility = "hidden"; // Avoid flickering
-            
             if (this.isInitialized)
             {
                 //dispatch(Firebug.modules, "shutdown", []);
                 this.shutdown();
             }
+            
+            var node = this.node;
+            node.style.visibility = "hidden"; // Avoid flickering
             
             // TODO: xxxpedro - persist IE fixed? 
             var main = $("fbChrome", FirebugChrome.chromeMap.frame.document);

@@ -134,8 +134,8 @@ try{for(var name in map){keys.push(name)
 };
 this.values=function(map){var values=[];
 try{for(var name in map){try{values.push(map[name])
-}catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.dumpPropreties("lib.values FAILED ",exc)
-}}}}catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.dumpPropreties("lib.values FAILED ",exc)
+}catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.sysout("lib.values FAILED ",exc)
+}}}}catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.sysout("lib.values FAILED ",exc)
 }}return values
 };
 this.remove=function(list,item){for(var i=0;
@@ -473,9 +473,10 @@ this.isShift=function(event){return event.shiftKey&&!event.metaKey&&!event.ctrlK
 this.addEvent=function(object,name,handler){if(object.addEventListener){object.addEventListener(name,handler,false)
 }else{object.attachEvent("on"+name,handler)
 }};
-this.removeEvent=function(object,name,handler){if(object.removeEventListener){object.removeEventListener(name,handler,false)
+this.removeEvent=function(object,name,handler){try{if(object.removeEventListener){object.removeEventListener(name,handler,false)
 }else{object.detachEvent("on"+name,handler)
-}};
+}}catch(e){if(FBTrace.DBG_ERRORS){FBTrace.sysout("FBL.removeEvent error: ",object,name)
+}}};
 this.cancelEvent=function(e,preventDefault){if(!e){return
 }if(preventDefault){if(e.preventDefault){e.preventDefault()
 }else{e.returnValue=false
@@ -1576,10 +1577,10 @@ if(noFixedPosition){self.fixIEPosition()
 }self.draw();
 node.style.visibility="visible"
 },10)
-}},close:function(){if(FirebugChrome.isOpen){var node=this.node;
+}},close:function(){if(FirebugChrome.isOpen){if(this.isInitialized){this.shutdown()
+}var node=this.node;
 node.style.visibility="hidden";
-if(this.isInitialized){this.shutdown()
-}var main=$("fbChrome",FirebugChrome.chromeMap.frame.document);
+var main=$("fbChrome",FirebugChrome.chromeMap.frame.document);
 main.style.display="none";
 FirebugChrome.isOpen=false;
 ChromeMini.initialize();
@@ -1960,8 +1961,11 @@ this.clearButton=new Firebug.Button({node:$("fbConsole_btClear"),owner:Firebug.C
 },initialize:function(){Firebug.Panel.initialize.apply(this,arguments);
 this.clearButton.initialize();
 if(Firebug.HTML){addEvent($("fbPanel1"),"mousemove",Firebug.HTML.onListMouseMove);
-addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove)
-}},shutdown:function(){if(Firebug.HTML){removeEvent($("fbPanel1"),"mousemove",Firebug.HTML.onListMouseMove)
+addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
+addEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
+}},shutdown:function(){if(Firebug.HTML){removeEvent($("fbPanel1"),"mousemove",Firebug.HTML.onListMouseMove);
+removeEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
+removeEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
 }this.clearButton.shutdown();
 Firebug.Panel.shutdown.apply(this,arguments)
 }});
@@ -1988,6 +1992,7 @@ initializeCommandLineAPI()
 Firebug.CommandLine.prototype={element:null,_buffer:[],_bi:-1,_completing:null,_completePrefix:null,_completeExpr:null,_completeBuffer:null,_ci:null,_completion:{window:["console"],document:["getElementById","getElementsByTagName"]},_stack:function(command){this._buffer.push(command);
 this._bi=this._buffer.length
 },initialize:function(doc){},destroy:function(){removeEvent(Firebug.browser.window,"error",this.onError);
+removeEvent(Firebug.chrome.window,"error",this.onError);
 removeEvent(this.element,"keydown",this.onKeyDown);
 this.element=null;
 delete this.element
@@ -3555,8 +3560,11 @@ addEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
 fbPanel1=$("fbPanel1");
 if(!selectedElement){Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID])
 }addEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
-addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove)
+addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
+addEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
 },shutdown:function(){removeEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
+removeEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
+removeEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove);
 removeEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
 fbPanel1=null;
 Firebug.Panel.shutdown.apply(this,arguments)
