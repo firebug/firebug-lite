@@ -989,9 +989,12 @@ var ChromePopupBase = extend(ChromeBase, {
         // TODO: xxxpedro sync detach reattach attach
         var frame = FirebugChrome.chromeMap.frame;
         
-        dispatch(frame.panelMap, "detach", [this, frame]);
-        
-        frame.reattach(this, frame);
+        if(frame)
+        {
+            dispatch(frame.panelMap, "detach", [this, frame]);
+            
+            frame.reattach(this, frame);
+        }
         
         ChromeBase.destroy.apply(this);
         
