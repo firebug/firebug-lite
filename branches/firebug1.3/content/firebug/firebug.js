@@ -534,7 +534,20 @@ Firebug.Panel =
     destroy: function(state) // Panel may store info on state
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.destroy", this.name);
-
+        
+        if (parentPanelMap.hasOwnProperty(this.name))
+        {
+            this.sidePanelBar.destroy();
+            this.sidePanelBar = null;
+        }
+        
+        this.options = null;
+        this.name = null;
+        this.parentPanel = null;
+        
+        this.contentNode = null;
+        this.containerNode = null;
+        
         //if (this.panelNode)
         //    delete this.panelNode.ownerPanel;
 
@@ -588,6 +601,12 @@ Firebug.Panel =
         
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
+        
+        this.panelNode = null;
+        this.tabNode = null;
+        this.toolButtonsNode = null;
+        this.statusBarBox = null;
+        this.statusBarNode = null;
     },
 
     detach: function(oldChrome, newChrome)
@@ -799,6 +818,24 @@ Firebug.PanelBar =
         }
     },
     
+    destroy: function()
+    {
+        this.shutdown();
+        
+        for (var name in this.panelMap)
+        {
+            this.removePanel(name);
+            
+            var panel = this.panelMap[name];
+            panel.destroy();
+            
+            this.panelMap[name] = null;
+            delete this.panelMap[name];
+        }
+        
+        this.panelMap = null;
+    },
+    
     initialize: function()
     {
         for(var name in this.panelMap)
@@ -844,7 +881,9 @@ Firebug.PanelBar =
     
     removePanel: function(panelName)
     {
-        
+        var panel = this.panelMap[panelName];
+        if (panel.hasOwnProperty(panelName))
+            panel.destroy();
     },
     
     selectPanel: function(panelName)

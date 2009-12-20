@@ -290,6 +290,17 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         }            
     },
     
+    destroy: function()
+    {
+        selectedElement = null
+        fbPanel1 = null;
+        
+        selectedSidePanelTS = null;
+        selectedSidePanelTimer = null;
+        
+        Firebug.Panel.destroy.apply(this, arguments);
+    },
+    
     createUI: function()
     {
         var rootNode = Firebug.browser.document.documentElement;
@@ -450,24 +461,6 @@ Firebug.HTML.onTreeClick = function (e)
         input.focus(); 
         /**/
     }
-}
-
-var OLD_chromeLoad = function OLD_chromeLoad(doc)
-{
-    //Firebug.Inspector.onChromeReady();
-    
-    var rootNode = document.documentElement;
-    
-    /* Console event handlers */
-    addEvent(fbConsole, 'mousemove', onListMouseMove);
-    addEvent(fbConsole, 'mouseout', onListMouseOut);
-    
-    
-    // HTML event handlers
-    addEvent(fbHTML, 'click', Firebug.HTML.onTreeClick);
-    
-    addEvent(fbHTML, 'mousemove', onListMouseMove);
-    addEvent(fbHTML, 'mouseout', onListMouseOut);
 }
 
 function onListMouseOut(e)

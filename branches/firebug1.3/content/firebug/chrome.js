@@ -313,7 +313,9 @@ append(ChromeBase,
     
     destroy: function()
     {
-        this.shutdown();
+        this.inspectButton.destroy();
+        
+        Firebug.PanelBar.destroy.apply(this);
     },
     
     initialize: function()
