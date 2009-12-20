@@ -68,7 +68,10 @@ this.initialize = function()
     if (isChromeContext)
     {
         // TODO: xxxpedro persist - make a better synchronization
-        FBL.Env = window.Firebug.SharedEnv;
+        sharedEnv = window.Firebug.SharedEnv;
+        delete window.Firebug.SharedEnv;
+        
+        FBL.Env = sharedEnv;
         FBL.Env.isChromeContext = true;
         FBTrace.messageQueue = FBL.Env.traceMessageQueue;
     }
@@ -168,8 +171,8 @@ var onDocumentLoad = function onDocumentLoad()
         // used to synchronize the both persistent contexts
         if (!FBL.Env.isDevelopmentMode)
         {
-            window.Firebug.SharedEnv.destroy();
-            delete window.Firebug.SharedEnv;
+            sharedEnv.destroy();
+            sharedEnv = null;
         }
     }
     // non-persistent application
@@ -181,6 +184,8 @@ var onDocumentLoad = function onDocumentLoad()
 
 // ************************************************************************************************
 // Env
+
+var sharedEnv;
 
 this.Env = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 

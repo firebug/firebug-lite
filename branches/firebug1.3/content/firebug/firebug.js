@@ -55,7 +55,17 @@ window.Firebug = FBL.Firebug =
   
     shutdown: function()
     {
+        if (Firebug.Inspector)
+            Firebug.Inspector.destroy();
+        
         dispatch(modules, "shutdown", []);
+        
+        var chromeMap = FirebugChrome.chromeMap;
+        
+        if (chromeMap.popup)
+            chromeMap.popup.destroy();
+        
+        chromeMap.frame.destroy();
         
         for(var name in documentCache)
         {
@@ -67,12 +77,8 @@ window.Firebug = FBL.Firebug =
         documentCache = null;
         delete FBL.documentCache;
         
-        var chromeMap = FirebugChrome.chromeMap;
-        
-        if (chromeMap.popup)
-            chromeMap.popup.destroy();
-        
-        chromeMap.frame.destroy();
+        Firebug.browser = null;
+        Firebug.context = null;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -200,7 +206,7 @@ if (!Env.isPersistentMode ||
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Other methods
 
-var cacheDocument = function cacheDocument()
+FBL.cacheDocument = function cacheDocument()
 {
     var els = Firebug.browser.document.getElementsByTagName("*");
     for (var i=0, l=els.length, el; i<l; i++)
@@ -545,6 +551,8 @@ Firebug.Panel =
         this.name = null;
         this.parentPanel = null;
         
+        this.tabNode = null;
+        this.panelNode = null;
         this.contentNode = null;
         this.containerNode = null;
         
@@ -602,8 +610,6 @@ Firebug.Panel =
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
         
-        this.panelNode = null;
-        this.tabNode = null;
         this.toolButtonsNode = null;
         this.statusBarBox = null;
         this.statusBarNode = null;
@@ -820,7 +826,7 @@ Firebug.PanelBar =
     
     destroy: function()
     {
-        this.shutdown();
+        Firebug.PanelBar.shutdown.call(this);
         
         for (var name in this.panelMap)
         {

@@ -45,7 +45,9 @@ FBL.FirebugChrome =
             if (frame)
                 frame.close();
             
-            chrome.reattach(frame, chrome);
+            //chrome.reattach(frame, chrome);
+            //TODO: xxxpedro persist synchronize?
+            chrome.initialize();
         }
     },
     
@@ -54,7 +56,7 @@ FBL.FirebugChrome =
         for (var name in FBChrome)
         {
             var prop = FBChrome[name];
-            if (FBChrome.hasOwnProperty(name) && typeof prop != "function")
+            if (FBChrome.hasOwnProperty(name) && !isFunction(prop))
             {
                 this[name] = prop;
             }
@@ -85,7 +87,7 @@ var createChromeWindow = function(options)
     
     var chrome = {};
     
-    chrome.type = options.type;
+    chrome.type = Env.isPersistentMode ? "popup" : options.type;
     
     var isChromeFrame = chrome.type == "frame";
     var isBookmarletMode = Env.isBookmarletMode;
@@ -213,10 +215,41 @@ var onChromeLoad = function onChromeLoad(chrome)
         }
         else
         {
+            
+            
             var doc = chrome.document;
             var script = doc.createElement("script");
-            script.src = Env.location.app;
+            script.src = Env.location.app + "#remote,persist";
             doc.getElementsByTagName("head")[0].appendChild(script);
+            /**/
+            
+            
+            
+            /*
+            alert("write");
+            
+            var doc = chrome.document;
+            doc.write('<scr'+
+                    'ipt type="text/javascript" src="' + Env.location.app +
+                    '#trace,persist"></scr' +
+                    'ipt>');
+            
+            alert("write ok");
+            /**/
+            
+            
+            
+            /*
+            var str = 'var doc = document;'+
+            'var script = doc.createElement("script");'+
+            'script.src = "' + Env.location.app + '#remote,persist";'+
+            'doc.getElementsByTagName("head")[0].appendChild(script);';
+            
+            alert("eval");
+            var context = new Context(chrome);
+            context.eval(str);
+            alert("eval ok");
+            /**/
         }
     }
     else
@@ -690,9 +723,11 @@ var ChromeFrameBase = extend(ChromeBase,
     
     destroy: function()
     {
-        ChromeBase.destroy.call(this);
-        
         removeGlobalEvent("keydown", onPressF12);
+        
+        this.shutdown();
+        
+        ChromeBase.destroy.call(this);
         
         this.document = null;
         delete this.document;
@@ -712,11 +747,12 @@ var ChromeFrameBase = extend(ChromeBase,
         
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
-            [Firebug.browser.window, "unload", Firebug.shutdown],
-            
             [$("fbChrome_btClose"), "click", this.close],
             [$("fbChrome_btDetach"), "click", this.detach]       
         );
+        
+        if (!Env.isPersistentMode)
+            this.addController([Firebug.browser.window, "unload", Firebug.shutdown]);
         
         if (noFixedPosition)
         {
@@ -932,9 +968,18 @@ var ChromePopupBase = extend(ChromeBase, {
         
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
-            [Firebug.chrome.window, "unload", this.destroy],
-            [Firebug.browser.window, "unload", this.close]
+            [Firebug.chrome.window, "unload", this.destroy]
         );
+        
+        if (Env.isPersistentMode)
+        {
+            this.persist = bind(this.persist, this);
+            addEvent(Firebug.browser.window, "unload", this.persist)
+        }
+        else
+            this.addController(
+                [Firebug.browser.window, "unload", this.close]
+            );
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
     },
@@ -953,6 +998,70 @@ var ChromePopupBase = extend(ChromeBase, {
         FirebugChrome.chromeMap.popup = null;
         
         this.node.close();
+    },
+    
+    persist: function()
+    {
+        persistTimeStart = new Date().getTime();
+        
+        removeEvent(Firebug.browser.window, "unload", this.persist);
+        
+        Firebug.Inspector.destroy();
+        Firebug.browser.window.FirebugOldBrowser = true;
+        
+        var persistTimeStart = new Date().getTime();
+        
+        var waitMainWindow = function()
+        {
+            var doc, head;
+        
+            try
+            {
+                if (window.opener && !window.opener.FirebugOldBrowser && (doc = window.opener.document)/* && 
+                    doc.documentElement && (head = doc.documentElement.firstChild)*/)
+                {
+                    
+                    try
+                    {
+                        var persistDelay = new Date().getTime() - persistTimeStart;
+                
+                        window.Firebug = Firebug;
+                        window.opener.Firebug = Firebug;
+                
+                        Env.browser = window.opener;
+                        Firebug.browser = new Context(Env.browser);
+                
+                        registerConsole();
+                
+                        var chrome = Firebug.chrome;
+                        addEvent(Firebug.browser.window, "unload", chrome.persist)
+                
+                        FBL.cacheDocument();
+                        Firebug.Inspector.create();
+                
+                        var htmlPanel = chrome.getPanel("HTML");
+                        htmlPanel.createUI();
+                
+                        Firebug.Console.info("Firebug could not capture console calls during " + 
+                                persistDelay + "ms");
+                    }
+                    catch(pE)
+                    {
+                        alert("persist error: " + (pE.message || pE));
+                    }
+                    
+                }
+                else
+                {
+                    window.setTimeout(waitMainWindow, 0);
+                }
+            
+            } catch (E) {
+                window.close();
+            }
+        };
+        
+        waitMainWindow();    
     },
     
     close: function()
