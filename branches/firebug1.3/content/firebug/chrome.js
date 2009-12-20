@@ -1029,7 +1029,7 @@ var ChromePopupBase = extend(ChromeBase, {
                         window.opener.Firebug = Firebug;
                 
                         Env.browser = window.opener;
-                        Firebug.browser = new Context(Env.browser);
+                        Firebug.browser = Firebug.context = new Context(Env.browser);
                 
                         registerConsole();
                 
@@ -1041,7 +1041,7 @@ var ChromePopupBase = extend(ChromeBase, {
                 
                         var htmlPanel = chrome.getPanel("HTML");
                         htmlPanel.createUI();
-                
+                        
                         Firebug.Console.info("Firebug could not capture console calls during " + 
                                 persistDelay + "ms");
                     }
