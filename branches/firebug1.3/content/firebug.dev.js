@@ -13,6 +13,8 @@ window.FBDev =
         // Application Core
         "firebug/lib.js",
         "firebug/firebug.js",
+        "firebug/gui.js",
+        
         "firebug/context.js",
         "firebug/chrome.js",
         "firebug/chrome.injected2.js",

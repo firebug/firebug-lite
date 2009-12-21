@@ -323,7 +323,7 @@ var Chrome = function Chrome(chrome)
 // ************************************************************************************************
 // ChromeBase
 
-var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
+var ChromeBase = extend(Controller, PanelBar);
 
 append(ChromeBase, Context.prototype);
 
@@ -331,10 +331,10 @@ append(ChromeBase,
 {
     create: function()
     {
-        Firebug.PanelBar.create.apply(this);
+        PanelBar.create.apply(this);
         
         if (Firebug.Inspector)
-            this.inspectButton = new Firebug.Button({
+            this.inspectButton = new Button({
                 type: "toggle",
                 node: $("fbChrome_btInspect"),
                 owner: Firebug.Inspector,
@@ -348,7 +348,7 @@ append(ChromeBase,
     {
         this.inspectButton.destroy();
         
-        Firebug.PanelBar.destroy.apply(this);
+        PanelBar.destroy.apply(this);
     },
     
     initialize: function()
@@ -365,8 +365,8 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
-        Firebug.Controller.initialize.apply(this);
-        Firebug.PanelBar.initialize.apply(this);
+        Controller.initialize.apply(this);
+        PanelBar.initialize.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
@@ -527,8 +527,8 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
-        Firebug.Controller.shutdown.apply(this);
-        Firebug.PanelBar.shutdown.apply(this);
+        Controller.shutdown.apply(this);
+        PanelBar.shutdown.apply(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // destroy the instance of the CommandLine class
@@ -869,7 +869,7 @@ var ChromeFrameBase = extend(ChromeBase,
 // ************************************************************************************************
 // ChromeMini
 
-var ChromeMini = extend(Firebug.Controller, 
+var ChromeMini = extend(Controller, 
 {
     create: function(chrome)
     {
@@ -879,7 +879,7 @@ var ChromeMini = extend(Firebug.Controller,
     
     initialize: function()
     {
-        Firebug.Controller.initialize.apply(this);
+        Controller.initialize.apply(this);
         
         var doc = FirebugChrome.chromeMap.frame.document;
         
@@ -940,7 +940,7 @@ var ChromeMini = extend(Firebug.Controller,
         var mini = $("fbMiniChrome", doc);
         mini.style.display = "none";
         
-        Firebug.Controller.shutdown.apply(this);
+        Controller.shutdown.apply(this);
         
         this.isInitialized = false;
     },

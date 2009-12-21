@@ -41,7 +41,7 @@ TracePanel.prototype = extend(Firebug.Panel,
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
         
-        this.clearButton = new Firebug.Button({
+        this.clearButton = new Button({
             caption: "Clear",
             title: "Clear FBTrace logs",            
             module: Firebug.Trace,

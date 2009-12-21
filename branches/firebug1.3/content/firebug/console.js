@@ -416,7 +416,7 @@ ConsolePanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
-        this.clearButton = new Firebug.Button({
+        this.clearButton = new Button({
             node: $("fbConsole_btClear"),
             owner: Firebug.Console,
             onClick: Firebug.Console.clear
