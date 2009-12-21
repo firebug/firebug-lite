@@ -932,31 +932,42 @@
     border: 1px solid #a9a9a9;
     top: -6px;
     left: -6px;
-    padding: 4px;
+    padding: 2px;
 }
 
-.fbMenuShortcut
+.fbMenuOption
 {
     display: block;
     position: relative;
-    padding: 2px 6px;
+    padding: 2px 18px;
     text-decoration: none;
     color: #000;
     cursor: default;
 }
 
-.fbMenuShortcut:hover
+.fbMenuOption:hover
 {
     color: #fff;
     background: #316AC5;
 }
 
-.fbShortcut {
-    position: absolute;
-    right: 0;
-    width: 65px;
+.fbSavedOptions .fbMenuOption {
+    color: #999;
 }
 
+.fbMenuShortcut {
+    position: absolute;
+    right: 0;
+    width: 77px;
+}
+
+.fbMenuChecked  {
+    background: transparent url(tabMenuCheckbox.png) no-repeat 4px 0;
+}
+
+.fbMenuChecked:hover {
+    background: #316AC5 url(tabMenuCheckbox.png) no-repeat 4px -17px;
+}
 
 .fbMenuButtons {
     height: 22px;
@@ -969,7 +980,7 @@
     zdisplay: none;
     top: 22px;
     left: 0;
-    width: 200px;
+    width: 254px;
 }
 
 #fbConsoleMenu {
