@@ -958,7 +958,7 @@ Firebug.Button = function(options)
         this.container = this.panel.toolButtonsNode;
     
         this.node = createElement("a", {
-            className: "fbHover",
+            className: "fbButton fbHover",
             title: title,
             innerHTML: caption
         });

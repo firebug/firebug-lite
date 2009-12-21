@@ -34,7 +34,7 @@
         
           <!-- Firebug Button -->
           <span id="fbToolbarIcon">
-            <a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html" target="_blank">&nbsp;</a>
+            <a class="fbIconButton" title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html" target="_blank">&nbsp;</a>
           </span>
           
           <!-- 
@@ -45,12 +45,12 @@
           <span id="fbToolbarButtons">
             <!-- Fixed Toolbar Buttons -->
             <span id="fbFixedButtons">
-                <a id="fbChrome_btInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a>
+                <a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a>
             </span>
             
             <!-- Console Panel Toolbar Buttons -->
             <span id="fbConsoleButtons" class="fbToolbarButtons">
-              <a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a>
+              <a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a>
             </span>
             
             <!-- HTML Panel Toolbar Buttons -->
@@ -83,6 +83,7 @@
             <a id="fbConsoleTab" class="fbTab fbHover">
                 <span class="fbTabL"></span>
                 <span class="fbTabText">Console</span>
+                <span class="fbTabMenuTarget"></span>
                 <span class="fbTabR"></span>
             </a>
             <a id="fbHTMLTab" class="fbTab fbHover">
@@ -105,6 +106,36 @@
                 <span class="fbTabText">DOM</span>
                 <span class="fbTabR"></span>
             </a>
+          </div>
+
+          <div id="fbFirebugMenu" class="fbTabMenu fbMenuShadow">
+              <div class="fbTabMenuContent fbMenuShadowContent">
+                  <input type="checkbox">Start visible<br/>
+                  <input type="checkbox">Open in popup<br/>
+                  <input type="checkbox">Test Menu
+                  
+                  <div class="fbTabMenuSeparator"></div>
+                  
+                  <div class="fbMenuButtons">
+                      <a class="fbButton fbHover">Menu</a><br/>
+                  </div>
+                  
+                  <div class="fbTabMenuSeparator"></div>
+                  
+                  <a class="fbMenuShortcut fbHover">Inspect Element<span class="fbShortcut">Ctrl+Shift+C</span></a>
+                  <a class="fbMenuShortcut fbHover">Command Line<span class="fbShortcut">Ctrl+Shift+L</span></a>
+                  <a class="fbMenuShortcut fbHover">Menu <span class="fbShortcut">F12</span></a>
+                  
+              </div>
+          </div>
+          
+          <div id="fbConsoleMenu" class="fbTabMenu fbMenuShadow">
+              <div class="fbTabMenuContent fbMenuShadowContent">
+                  <input type="checkbox">Test<br/>
+                  <input type="checkbox">Test Menu
+                  <div class="fbTabMenuSeparator"></div>
+                  Menu
+              </div>
           </div>
           
           <!-- Side PanelBars -->
