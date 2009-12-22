@@ -7243,16 +7243,12 @@ append(ChromeBase,
             {
                 var options = getElementsByClass(target.parentNode, "fbMenuOption");
                 
-                /*
                 var firstOption = options[0]; 
-                var state = !!firstOption.getAttribute("checked");
                 var enabled = Firebug.saveCookies;
-                
-                if (state != enabled)
-                    firstOption.setAttribute("checked", enabled ? "true" : "");
-                /**/
-                
-                var enabled = options[0].getAttribute("checked");
+                if (enabled)
+                    Menu.check(firstOption);
+                else
+                    Menu.uncheck(firstOption);
                 
                 for (var i = 1, length = options.length; i < length; i++)
                 {

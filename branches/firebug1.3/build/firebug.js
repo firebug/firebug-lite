@@ -1675,8 +1675,11 @@ Firebug.savePrefs();
 if(target){this.updateMenu(target)
 }return false
 },updateMenu:function(target){var options=getElementsByClass(target.parentNode,"fbMenuOption");
-var enabled=options[0].getAttribute("checked");
-for(var i=1,length=options.length;
+var firstOption=options[0];
+var enabled=Firebug.saveCookies;
+if(enabled){Menu.check(firstOption)
+}else{Menu.uncheck(firstOption)
+}for(var i=1,length=options.length;
 i<length;
 i++){var option=options[i];
 var value=option.getAttribute("value");
