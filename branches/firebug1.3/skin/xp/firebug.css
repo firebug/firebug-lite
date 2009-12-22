@@ -11,24 +11,25 @@
 /************************************************************************************************/
 /* Twisties */
 
-.twisty,
+/* IE6 has problems with > operator, and multiple classes */
+/*.twisty,
 .logRow-errorMessage > .hasTwisty > .errorTitle,
 .logRow-spy .spyHead .spyTitle,
-.logGroup > .logRow,
-.memberRow.hasChildren > .memberLabelCell > .memberLabel,
+.logGroup > .logRow, /* avoid rule not being parsed IE6 */
+.hasChildren .memberLabelCell .memberLabel,
 .hasHeaders .netHrefLabel {
     background-image: url(tree_open.gif);
     background-repeat: no-repeat;
     background-position: 2px 2px;
 }
-
+/*
 .logRow-errorMessage > .hasTwisty.opened > .errorTitle,
 .logRow-spy.opened .spyHead .spyTitle,
-.logGroup.opened > .logRow,
-.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,
+.logGroup.opened > .logRow, /* avoid rule not being parsed IE6 */
+.opened .memberLabelCell .memberLabel/*,
 .nodeBox.highlightOpen > .nodeLabel > .twisty,
 .nodeBox.open > .nodeLabel > .twisty,
-.netRow.opened > .netCol > .netHrefLabel {
+.netRow.opened > .netCol > .netHrefLabel /* avoid rule not being parsed IE6 */ {
     background-image: url(tree_close.gif);
 }
 
@@ -54,6 +55,10 @@
 
 .panelNode-console {
     overflow-x: hidden;
+}
+
+.objectLink {
+    text-decoration: none;
 }
 
 .objectLink:hover {
@@ -689,6 +694,7 @@
 }
 
 .memberLabel {
+    display: block;
     cursor: default;
     -moz-user-select:  none;
     overflow: hidden;
@@ -697,11 +703,12 @@
     /*max-width: 30%;*/
     white-space: nowrap;
     background-color: #FFFFFF;
+    text-decoration: none;
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-.memberRow.hasChildren > .memberLabelCell > .memberLabel:hover {
+.memberRow.hasChildren .memberLabelCell .memberLabel:hover {
     cursor: pointer;
     color: blue;
     text-decoration: underline;
@@ -849,24 +856,6 @@
     display: none;
 }
 
-.fbToolbarButtons a {
-    text-decoration: none;
-    display: block;
-    float: left;
-    color: #000;
-    padding: 4px 5px;
-    margin: 0 0 0 1px;
-    cursor: default;
-}
-
-.fbToolbarButtons  a:hover {
-    color: #333;
-    padding: 3px 4px;
-    border: 1px solid #fff;
-    border-bottom: 1px solid #bbb;
-    border-right: 1px solid #bbb;
-}
-
 .fbStatusSeparator{
     display: block;
     float: left;
@@ -888,6 +877,7 @@
 }
 
 .fbTabMenuTarget {
+    display: none !important;
     float: left;
     width: 10px;
     height: 10px;
@@ -899,40 +889,42 @@
     background: url(tabMenuTargetHover.png);   
 }
 
-.fbTabMenu {
-    position: absolute;
+.fbShadow {
     float: left;
-    z-index: 999;
-}
-
-.fbTabMenuContent {
-    padding: 2px;
-}
-
-.fbTabMenuSeparator {
-    overflow: none;
-    font-size: 1px;
-    height: 0;
-    border-bottom: 1px solid #ACA899;
-    margin: 4px 0;
-}
-
-.fbMenuShadow{
-    float:left;
     background: url(shadowAlpha.png) no-repeat bottom right !important;
     background: url(shadow2.gif) no-repeat bottom right;
     margin: 10px 0 0 10px !important;
     margin: 10px 0 0 5px;
 }
 
-.fbMenuShadowContent {
+.fbShadowContent {
     display: block;
     position: relative;
     background-color: #fff;
     border: 1px solid #a9a9a9;
     top: -6px;
     left: -6px;
+}
+
+.fbMenu {
+    display: none;
+    position: absolute;
+    z-index: 999;
+}
+
+.fbMenuContent {
     padding: 2px;
+}
+
+.fbMenuSeparator {
+    display: block;
+    position: relative;
+    padding: 1px 18px 0;
+    text-decoration: none;
+    color: #000;
+    cursor: default;    
+    background: #ACA899;
+    margin: 4px 0;
 }
 
 .fbMenuOption
@@ -951,14 +943,17 @@
     background: #316AC5;
 }
 
-.fbSavedOptions .fbMenuOption {
-    color: #999;
+.fbMenuGroup {
+    background: transparent url(tabMenuPin.png) no-repeat right 0;
 }
 
-.fbMenuShortcut {
-    position: absolute;
-    right: 0;
-    width: 77px;
+.fbMenuGroup:hover {
+    background: #316AC5 url(tabMenuPin.png) no-repeat right -17px;
+}
+
+.fbMenuGroupSelected {
+    color: #fff;
+    background: #316AC5 url(tabMenuPin.png) no-repeat right -17px;
 }
 
 .fbMenuChecked  {
@@ -969,25 +964,42 @@
     background: #316AC5 url(tabMenuCheckbox.png) no-repeat 4px -17px;
 }
 
-.fbMenuButtons {
-    height: 22px;
+.fbMenuRadioSelected {
+    background: transparent url(tabMenuRadio.png) no-repeat 4px 0;
 }
-.fbMenuButtons .fbButton {
-    background: #f1f1f1;
+
+.fbMenuRadioSelected:hover {
+    background: #316AC5 url(tabMenuRadio.png) no-repeat 4px -17px;
+}
+
+.fbMenuShortcut {
+    padding-right: 85px; 
+}
+
+.fbMenuShortcutKey {
+    position: absolute;
+    right: 0;
+    top: 2px;
+    width: 77px;
 }
 
 #fbFirebugMenu {
-    zdisplay: none;
     top: 22px;
     left: 0;
-    width: 254px;
+}
+
+.fbMenuDisabled {
+    color: #ACA899 !important;
+}
+
+#fbFirebugSettingsMenu {
+    left: 245px;
+    top: 99px;
 }
 
 #fbConsoleMenu {
-    display: none;
     top: 42px;
     left: 48px;
-    width: 100px;
 }
 
 .fbIconButton {
@@ -1014,6 +1026,7 @@
     top: -1px;
     left: -1px;
     margin-right: 0;
+    _margin-right: 1px;
     color: #333;
     border: 1px solid #fff;
     border-bottom: 1px solid #bbb;
@@ -1025,10 +1038,11 @@
     margin-right: 0;
     top: 0 !important;
     left: 0 !important;
+    height: 19px;
     color: #333 !important;
     border: 1px solid #bbb !important;
-    border-bottom: 1px solid #ccc !important;
-    border-right: 1px solid #ccc !important;
+    border-bottom: 1px solid #cfcfcf !important;
+    border-right: 1px solid #ddd !important;
 }
 
 
@@ -1243,7 +1257,7 @@ body {
 .fbBtnPressed {
     background: #ECEBE3;
     padding: 3px 6px 2px 7px !important;
-    margin: 1px 1px 0 1px !important;
+    margin: 1px 0 0 1px !important;
     border: 1px solid #ACA899 !important;
     border-color: #ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;
 }

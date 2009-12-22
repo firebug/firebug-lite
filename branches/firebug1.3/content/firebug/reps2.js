@@ -12,7 +12,13 @@ var OBJECTBOX = this.OBJECTBOX =
 var OBJECTBLOCK = this.OBJECTBLOCK =
     DIV({"class": "objectBox objectBox-$className"});
 
-var OBJECTLINK = this.OBJECTLINK =
+var OBJECTLINK = this.OBJECTLINK = isIE6 ? // IE6 object link representation
+    A({
+        "class": "objectLink objectLink-$className a11yFocus",
+        href: "javascript:void(0)",
+        _repObject: "$object"
+    })
+    : // Other browsers
     A({
         "class": "objectLink objectLink-$className a11yFocus",
         _repObject: "$object"

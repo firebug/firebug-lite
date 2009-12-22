@@ -1139,6 +1139,20 @@ this.getAncestorByClass = function(node, className)
     return null;
 };
 
+
+this.getElementsByClass = function(node, className)
+{
+    var result = [];
+    
+    for (var child = node.firstChild; child; child = child.nextSibling)
+    {
+        if (this.hasClass(child, className))
+            result.push(child);
+    }
+
+    return result;
+};
+
 this.getElementByClass = function(node, className)  // className, className, ...
 {
     var args = cloneArray(arguments); args.splice(0, 1);
@@ -1405,7 +1419,12 @@ this.dispatch = function(listeners, name, args)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var disableTextSelectionHandler = function(){ return false };
+var disableTextSelectionHandler = function(event)
+{
+    FBL.cancelEvent(event, true);
+    
+    return false;
+};
 
 this.disableTextSelection = function(e)
 {
@@ -1413,7 +1432,14 @@ this.disableTextSelection = function(e)
         this.addEvent(e, "selectstart", disableTextSelectionHandler);
         
     else // others
-        this.addEvent(e, "mousedown", disableTextSelectionHandler);
+    {
+        e.style.cssText = "user-select: none; -khtml-user-select: none; -moz-user-select: none;"
+        
+        // canceling the event in FF will prevent the menu popups to close when clicking over 
+        // text-disabled elements
+        if (!this.isFirefox) 
+            this.addEvent(e, "mousedown", disableTextSelectionHandler);
+    }
     
     e.style.cursor = "default";
 };
@@ -1424,7 +1450,14 @@ this.restoreTextSelection = function(e)
         this.removeEvent(e, "selectstart", disableTextSelectionHandler);
         
     else // others
-        this.removeEvent(e, "mousedown", disableTextSelectionHandler);
+    {
+        e.style.cssText = "cursor: default;"
+            
+        // canceling the event in FF will prevent the menu popups to close when clicking over 
+        // text-disabled elements
+        if (!this.isFirefox)
+            this.removeEvent(e, "mousedown", disableTextSelectionHandler);
+    }
 };
 
 // ************************************************************************************************

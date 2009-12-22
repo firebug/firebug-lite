@@ -34,7 +34,7 @@
         
           <!-- Firebug Button -->
           <span id="fbToolbarIcon">
-            <a class="fbIconButton" title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html" target="_blank">&nbsp;</a>
+            <a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a>
           </span>
           
           <!-- 
@@ -108,54 +108,69 @@
             </a>
           </div>
 
-          <div id="fbFirebugMenu" class="fbTabMenu fbMenuShadow">
-              <div class="fbTabMenuContent fbMenuShadowContent">
-                  <!-- 
-                  <input type="checkbox">Start visible<br/>
-                  <input type="checkbox">Open in popup<br/>
-                  <input type="checkbox">Test Menu
+          <div id="fbFirebugMenu" class="fbMenu fbShadow">
+              <div class="fbMenuContent fbShadowContent">
+              
+                  <a class="fbMenuOption fbMenuShortcut fbHover">Open Firebug <span class="fbMenuShortcutKey">F12</span></a>
+                  <a class="fbMenuOption fbMenuShortcut fbHover">Open Firebug in New Window <span class="fbMenuShortcutKey">Ctrl+F12</span></a>
+                  <a class="fbMenuOption fbMenuShortcut fbHover">Inspect Element <span class="fbMenuShortcutKey">Ctrl+Shift+C</span></a>
+                  <a class="fbMenuOption fbMenuShortcut fbHover">Command Line <span class="fbMenuShortcutKey">Ctrl+Shift+L</span></a>
                   
-                  <div class="fbTabMenuSeparator"></div>
+                  <span class="fbMenuSeparator"></span>
                   
-                  <div class="fbMenuButtons">
-                      <a class="fbButton fbHover">Menu</a><br/>
-                  </div>
+                  <a class="fbMenuOption fbMenuGroup fbHover" child="fbFirebugSettingsMenu">Settings</a>
                   
-                  <div class="fbTabMenuSeparator"></div>
-                   -->
-                  <a class="fbMenuOption fbHover">Open Firebug<span class="fbMenuShortcut">F12</span></a>
-                  <a class="fbMenuOption fbHover">Open Firebug in New Window<span class="fbMenuShortcut">Ctrl+F12</span></a>
-                  <a class="fbMenuOption fbHover">Inspect Element<span class="fbMenuShortcut">Ctrl+Shift+C</span></a>
-                  <a class="fbMenuOption fbHover">Command Line<span class="fbMenuShortcut">Ctrl+Shift+L</span></a>
+                  <span class="fbMenuSeparator"></span>
                   
-                  <div class="fbTabMenuSeparator"></div>
+                  <a class="fbMenuOption fbMenuGroup fbHover" child="fbConsoleMenu">Settings2</a>
                   
-                  <a class="fbMenuOption fbHover">Save Settings in Cookies</a>
+                  <span class="fbMenuSeparator"></span>
                   
-                  <div class="fbSavedOptions">
-                      <div class="fbTabMenuSeparator"></div>
-                      
-                      <a class="fbMenuOption fbMenuChecked fbHover">Start Visible</a>
-                      <a class="fbMenuOption fbHover">Start in Popup</a>
-                      <a class="fbMenuOption fbHover">Override Console Object</a>
-                      
-                      <div class="fbTabMenuSeparator"></div>
-                      
-                      <a class="fbMenuOption fbHover">Enable Trace Mode</a>
-                      <a class="fbMenuOption fbHover">Enable Persistent Mode</a>                  
-                  </div>
+                  <a class="fbMenuOption fbHover">Firebug Lite Homepage</a>
+                  <a class="fbMenuOption fbHover">Discussion List</a>
+                  <a class="fbMenuOption fbHover">Report Bug</a>
                   
               </div>
           </div>
           
-          <div id="fbConsoleMenu" class="fbTabMenu fbMenuShadow">
-              <div class="fbTabMenuContent fbMenuShadowContent">
-                  <input type="checkbox">Test<br/>
-                  <input type="checkbox">Test Menu
-                  <div class="fbTabMenuSeparator"></div>
-                  Menu
+          <div id="fbFirebugSettingsMenu" class="fbMenu fbShadow">
+              <div class="fbMenuContent fbShadowContent">
+              
+                  <a type="checkbox" class="fbMenuOption fbHover">Save Settings in Cookies</a>
+                  
+                  <span class="fbMenuSeparator"></span>
+                  
+                  <a class="fbMenuOption fbMenuGroup fbHover" child="fbSubMenu">Settings2</a>
+                  
+                  <span class="fbMenuSeparator"></span>
+                  
+                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbMenuDisabled fbHover">Start Visible</a>
+                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbMenuDisabled fbHover">Start in Popup</a>
+                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbMenuDisabled fbMenuChecked fbHover">Override Console Object</a>
+                  
+                  <span class="fbMenuSeparator"></span>
+                  
+                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Enable Trace Mode</a>
+                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Enable Persistent Mode</a>
+                  
               </div>
           </div>
+                   
+          <div id="fbConsoleMenu" class="fbMenu fbShadow">
+              <div class="fbMenuContent fbShadowContent">
+                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Test Option</a>
+                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Another Test Option</a>
+                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Just nothing</a>
+              </div>
+          </div>
+          
+          <div id="fbSubMenu" class="fbMenu fbShadow">
+              <div class="fbMenuContent fbShadowContent">
+                  <a type="radiobutton" class="fbMenuOption fbMenuRadioButton fbMenuRadioSelected fbHover">Sub</a>
+                  <a type="radiobutton" class="fbMenuOption fbMenuRadioButton fbHover">Option</a>
+                  <a type="radiobutton" class="fbMenuOption fbMenuRadioButton fbHover">Hello</a>
+              </div>
+          </div>          
           
           <!-- Side PanelBars -->
           <div id="fbPanelBar2Box" class="hide">
