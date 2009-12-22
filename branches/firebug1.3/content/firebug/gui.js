@@ -18,6 +18,9 @@ FBL.Controller = {
     shutdown: function()
     {
         this.removeControllers();
+        
+        //this.controllers = null;
+        //this.controllerContext = null;
     },
     
     addController: function()
@@ -198,41 +201,46 @@ FBL.PanelBar =
 //************************************************************************************************
 // Button
 
+/**
+ *
+ * options.element
+ * options.caption
+ * options.title
+ * 
+ * options.owner
+ * options.className
+ * options.pressedClassName
+ * 
+ * options.onPress
+ * options.onUnpress
+ * options.onClick
+ * 
+ */
+
 FBL.Button = function(options)
 {
     options = options || {};
     
+    append(this, options);
+    
     this.state = "unpressed";
     this.display = "unpressed";
     
-    this.type = options.type || "normal";
-    
-    this.onClick = options.onClick;
-    this.onPress = options.onPress;
-    this.onUnpress = options.onUnpress;
-    
-    if (options.node)
+    if (this.element)
     {
-        this.node = options.node
-        this.owner = options.owner;
-        this.container = this.node.parentNode;
+        this.container = this.element.parentNode;
     }
     else
     {
-        var caption = options.caption || "caption";
-        var title = options.title || "title";
+        this.container = this.owner.getPanel().toolButtonsNode;
         
-        this.owner = this.module = options.module;
-        this.panel = options.panel || this.module.getPanel();
-        this.container = this.panel.toolButtonsNode;
-    
-        this.node = createElement("a", {
-            className: "fbButton fbHover",
-            title: title,
-            innerHTML: caption
+        this.element = createElement("a", {
+            className: this.className + " fbHover",
+            title: this.title,
+            innerHTML: this.caption
         });
         
-        this.container.appendChild(this.node);
+        this.container.appendChild(this.element);
     }
 };
 
@@ -240,15 +248,16 @@ FBL.Button = function(options)
 
 Button.prototype = extend(Controller,
 {
-    type: null,
+    type: "normal",
+    caption: "caption",
+    title: "title",
     
-    node: null,
-    owner: null,
+    className: "fbButton",
+    pressedClassName: "fbBtnPressed",
     
-    module: null,
-    
-    panel: null,
+    element: null,
     container: null,
+    owner: null,
     
     state: null,
     display: null,
@@ -257,21 +266,26 @@ Button.prototype = extend(Controller,
     {
         this.shutdown();
         
-        this.container.removeChild(this.node);
+        this.container.removeChild(this.element);
+        
+        this.element = null;
+        this.container = null;
+        this.owner = null;
     },
     
     initialize: function()
     {
         Controller.initialize.apply(this);
-        var node = this.node;
         
-        this.addController([node, "mousedown", this.handlePress]);
+        var element = this.element;
+        
+        this.addController([element, "mousedown", this.handlePress]);
         
         if (this.type == "normal")
             this.addController(
-                [node, "mouseup", this.handleUnpress],
-                [node, "mouseout", this.handleUnpress],
-                [node, "click", this.handleClick]
+                [element, "mouseup", this.handleUnpress],
+                [element, "mouseout", this.handleUnpress],
+                [element, "click", this.handleClick]
             );
     },
     
@@ -297,11 +311,11 @@ Button.prototype = extend(Controller,
         {
             if (display == "pressed")
             {
-                setClass(this.node, "fbBtnPressed");
+                setClass(this.element, this.pressedClassName);
             }
             else if (display == "unpressed")
             {
-                removeClass(this.node, "fbBtnPressed");
+                removeClass(this.element, this.pressedClassName);
             }
             this.display = display;
         }
@@ -323,16 +337,18 @@ Button.prototype = extend(Controller,
                 this.changeState("unpressed");
                 
                 if (this.onUnpress)
-                    this.onUnpress.apply(this.owner);
+                    this.onUnpress.apply(this.owner, arguments);
             }
             else
             {
                 this.changeState("pressed");
                 
                 if (this.onPress)
-                    this.onPress.apply(this.owner);
-                
+                    this.onPress.apply(this.owner, arguments);
             }
+            
+            if (this.onClick)
+                this.onClick.apply(this.owner, arguments);
         }
         
         return false;
@@ -363,19 +379,541 @@ Button.prototype = extend(Controller,
         this.beforeClick = false;
         
         return false;
-    },
-    
-    // should be place inside module
-    addButton: function(caption, title, handler)
+    }
+});
+
+FBL.IconButton = function()
+{
+    Button.apply(this, arguments);
+};
+
+IconButton.prototype = extend(Button.prototype, 
+{
+    className: "fbIconButton",
+    pressedClassName: "fbIconPressed"
+});
+
+
+FBL.IconMenuButton = function()
+{
+    Button.apply(this, arguments);
+};
+
+IconMenuButton.prototype = extend(IconButton.prototype, 
+{
+    hide: function()
     {
-    },
+        IconButton.prototype.hide.apply(this, arguments);
+    }
+});
+
+//************************************************************************************************
+// Menu
+
+var menuItemProps = {"class": "$item.className", type: "$item.type", value: "$item.value",
+        command: "$item.command"};
     
-    removeAllButtons: function()
-    {
+MenuPlate = domplate(Firebug.Rep,
+{
+    tag:
+        DIV({"class": "fbMenu fbShadow"},
+            DIV({"class": "fbMenuContent fbShadowContent"},
+                FOR("item", "$object.items|memberIterator",
+                    TAG("$item.tag", {item: "$item"})
+                )
+            )
+        ),
         
+    itemTag:
+        A(menuItemProps,
+            "$item.label"
+        ),
+        
+    checkBoxTag:
+        A(extend(menuItemProps, {checked : "$item.checked"}),
+           
+            "$item.label"
+        ),
+        
+    radioButtonTag:
+        A(extend(menuItemProps, {selected : "$item.selected"}),
+           
+            "$item.label"
+        ),
+        
+    groupTag:
+        A(extend(menuItemProps, {child: "$item.child"}),
+            "$item.label"
+        ),
+        
+    shortcutTag:
+        A(menuItemProps,
+            "$item.label",
+            SPAN({"class": "fbMenuShortcutKey"},
+                "$item.key"
+            )
+        ),
+        
+    separatorTag:
+        SPAN({"class": "fbMenuSeparator"}),
+        
+    memberIterator: function(items)
+    {
+    
+        for (var i=0, length=items.length; i<length; i++)
+        {
+            var item = items[i];
+            
+            item.type = item.type || "";
+            item.value = item.value || "";
+            
+            var type = item.type;
+            
+            // separator representation
+            if (typeof item == "string" && item.indexOf("-") == 0)
+            {
+                items[i]= {tag: this.separatorTag};
+                continue;
+            }
+            
+            // default item representation
+            item.tag = this.itemTag;
+            
+            var className = item.className || ""; 
+            
+            className += "fbMenuOption fbHover ";
+            
+            // specific representations
+            if (type == "checkbox")
+            {
+                className += "fbMenuCheckBox ";
+                item.tag = this.checkBoxTag;
+            }
+            else if (type == "radiobutton")
+            {
+                className += "fbMenuRadioButton ";
+                item.tag = this.radioButtonTag;
+            }
+            else if (type == "group")
+            {
+                className += "fbMenuGroup ";
+                item.tag = this.groupTag;
+            }
+            else if (type == "shortcut")
+            {
+                className += "fbMenuShortcut ";
+                item.tag = this.shortcutTag;
+            }
+            
+            if (item.checked)
+                className += "fbMenuChecked ";
+            else if (item.selected)
+                className += "fbMenuRadioSelected ";
+            
+            if (item.disabled)
+                className += "fbMenuDisabled ";
+            
+            item.className = className;
+        }
+        
+        return items;
+    }
+});
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+/**
+ * options
+ * options.element
+ * options.id
+ * options.items
+ * 
+ * item.label
+ * item.className
+ * item.type
+ * item.value
+ * item.disabled
+ * item.checked
+ * item.selected
+ * item.command
+ * item.child
+ */
+FBL.Menu = function(options)
+{
+    // if element is not pre-rendered, we must render it now
+    if (!options.element)
+    {
+        options.element = MenuPlate.tag.append(
+                {object: options},
+                Firebug.chrome.document.body, 
+                MenuPlate
+            );
     }
     
+    // extend itself with the provided options
+    append(this, options);
+    
+    if (typeof this.element == "string")
+        this.element = $(this.element);
+    
+    this.elementStyle = this.element.style;
+    
+    this.isVisible = false;
+    
+    this.onClick = bind(this.onClick, this);
+    this.onMouseMove = bind(this.onMouseMove, this);
+    this.onMouseOut = bind(this.onMouseOut, this);
+    
+    this.onWindowClick = bind(this.onWindowClick, this);
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+Menu.prototype =  extend(Controller,
+{
+    destroy: function()
+    {
+        //if (this.element) console.log("destroy", this.element.id);
+        
+        this.hide();
+        
+        this.element = null;
+        this.elementStyle = null;
+        this.parentMenu = null;
+        this.parentTarget = null;
+    },
+    
+    initialize: function()
+    {
+        Controller.initialize.call(this);
+        
+        this.addController(
+                [this.element, "click", this.onClick],
+                [this.element, "mouseover", this.onMouseMove]
+             );
+    },
+    
+    shutdown: function()
+    {
+        Controller.shutdown.call(this);
+    },
+    
+    show: function(x, y)
+    {
+        this.initialize();
+        
+        if (this.isVisible) return;
+        
+        //console.log("show", this.element.id);
+        
+        x = x || 0;
+        y = y || 0;
+        
+        if (this.parentMenu)
+        {
+            var oldChildMenu = this.parentMenu.childMenu;
+            if (oldChildMenu && oldChildMenu != this)
+            {
+                oldChildMenu.destroy();
+            }
+            
+            this.parentMenu.childMenu = this;
+        }
+        else
+            addEvent(Firebug.chrome.document, "mousedown", this.onWindowClick);
+        
+        this.elementStyle.display = "block";
+        this.elementStyle.visibility = "hidden";
+        
+        var size = Firebug.chrome.getWindowSize();
+        
+        x = Math.min(x, size.width - this.element.clientWidth - 10);
+        x = Math.max(x, 0);
+        
+        y = Math.min(y, size.height - this.element.clientHeight - 10);
+        y = Math.max(y, 0);
+        
+        this.elementStyle.left = x + "px";
+        this.elementStyle.top = y + "px";
+        
+        this.elementStyle.visibility = "visible";
+        
+        this.isVisible = true;
+        
+        if (this.onShow)
+            this.onShow.apply(this, arguments);
+    },
+    
+    hide: function()
+    {
+        this.clearHideTimeout();
+        this.clearShowChildTimeout();
+        
+        if (!this.isVisible) return;
+        
+        //console.log("hide", this.element.id);
+        
+        this.elementStyle.display = "none";
+        
+        if(this.childMenu)
+        {
+            this.childMenu.destroy();
+            this.childMenu = null;
+        }
+        
+        if(this.parentTarget)
+            removeClass(this.parentTarget, "fbMenuGroupSelected");
+        
+        this.isVisible = false;
+        
+        this.shutdown();
+        
+        if (this.onHide)
+            this.onHide.apply(this, arguments);
+    },
+    
+    showChildMenu: function(target)
+    {
+        var id = target.getAttribute("child");
+        var self = this;
+        
+        this.showChildTimeout = Firebug.chrome.window.setTimeout(function(){
+            
+            //if (!self.isVisible) return;
+            
+            var childMenu = new Menu(
+                {
+                    element: $(id),
+                    parentMenu: self,
+                    parentTarget: target
+                });
+            
+            var box = Firebug.chrome.getElementBox(target);
+            
+            childMenu.show(box.left + box.width -6, box.top);
+            setClass(target, "fbMenuGroupSelected");
+            
+        },350);
+    },
+    
+    clearHideTimeout: function()
+    {
+        if (this.hideTimeout)
+        {
+            Firebug.chrome.window.clearTimeout(this.hideTimeout);
+            delete this.hideTimeout;
+        }
+    },
+    
+    clearShowChildTimeout: function()
+    {
+        if(this.showChildTimeout)
+        {
+            Firebug.chrome.window.clearTimeout(this.showChildTimeout);
+            this.showChildTimeout = null;
+        }
+    },
+    
+    onClick: function(event)
+    {
+        var topParent = this;
+        while (topParent.parentMenu)
+            topParent = topParent.parentMenu;
+        
+        var target = event.target || event.srcElement;
+        
+        target = getAncestorByClass(target, "fbMenuOption");
+        
+        if(!target || hasClass(target, "fbMenuGroup"))
+        {
+            cancelEvent(event);
+            return false;
+        }
+        
+        if (target && !hasClass(target, "fbMenuDisabled"))
+        {
+            var type = target.getAttribute("type");
+            
+            if (type == "checkbox")
+            {
+                var checked = target.getAttribute("checked");
+                
+                if (hasClass(target, "fbMenuChecked"))
+                {
+                    removeClass(target, "fbMenuChecked");
+                    target.setAttribute("checked", "");
+                }
+                else
+                {
+                    setClass(target, "fbMenuChecked");
+                    target.setAttribute("checked", "true");
+                }
+            }            
+            
+            if (type == "radiobutton")
+            {
+                var selectedRadios = getElementsByClass(target.parentNode, "fbMenuRadioSelected");
+                
+                var group = target.getAttribute("group");
+                
+                for (var i = 0, length = selectedRadios.length; i < length; i++)
+                {
+                    radio = selectedRadios[i];
+                    
+                    if (radio.getAttribute("group") == group)
+                    {
+                        removeClass(radio, "fbMenuRadioSelected");
+                        radio.setAttribute("selected", "");
+                    }
+                }
+                
+                setClass(target, "fbMenuRadioSelected");
+                target.setAttribute("selected", "true");
+            }            
+            
+            var cmd = target.getAttribute("command");
+            var handler = this[cmd];
+            var closeMenu = true;
+            
+            if (handler)
+                closeMenu = handler.call(this, target);
+            
+            if (closeMenu)
+                topParent.hide();
+        }
+    },
+    
+    onWindowClick: function(event)
+    {
+        //console.log("onWindowClick");
+        
+        var target = event.target || event.srcElement;
+        
+        target = getAncestorByClass(target, "fbMenu");
+        
+        if (!target)
+        {
+            removeEvent(Firebug.chrome.document, "mousedown", this.onWindowClick);
+            this.hide();
+        }
+    },
+
+    onMouseMove: function(event)
+    {
+        //console.log("onMouseMove", this.element.id);
+        
+        this.clearHideTimeout();
+        this.clearShowChildTimeout();
+        
+        var target = event.target || event.srcElement;
+        
+        target = getAncestorByClass(target, "fbMenuOption");
+        
+        if(!target)
+            return;
+        
+        var childMenu = this.childMenu;
+        if(childMenu) 
+        {
+            removeClass(childMenu.parentTarget, "fbMenuGroupSelected");
+            
+            if (childMenu.parentTarget != target && childMenu.isVisible)
+            {
+                childMenu.clearHideTimeout(); 
+                childMenu.hideTimeout = Firebug.chrome.window.setTimeout(function(){
+                    childMenu.destroy();
+                },300);
+            }
+        }
+        
+        if(hasClass(target, "fbMenuGroup"))
+        {
+            this.showChildMenu(target);
+        }
+    }
 });
+
+
+/*
+
+SAMPLE
+
+    getContextMenuItems: function(fn, target)
+    {
+        if (getAncestorByClass(target, "sourceLine"))
+            return;
+
+        var sourceRow = getAncestorByClass(target, "sourceRow");
+        if (!sourceRow)
+            return;
+
+        var sourceLine = getChildByClass(sourceRow, "sourceLine");
+        var lineNo = parseInt(sourceLine.textContent);
+
+        var items = [];
+
+        var selection = this.document.defaultView.getSelection();
+        if (selection.toString())
+        {
+            items.push(
+                {label: "CopySourceCode", command: bind(this.copySource, this) },
+                "-",
+                {label: "AddWatch", command: bind(this.addSelectionWatch, this) }
+            );
+        }
+
+        var hasBreakpoint = sourceRow.getAttribute("breakpoint") == "true";
+
+        items.push(
+            "-",
+            {label: "SetBreakpoint", type: "checkbox", checked: hasBreakpoint,
+                command: bindFixed(this.toggleBreakpoint, this, lineNo) }
+        );
+        if (hasBreakpoint)
+        {
+            var isDisabled = fbs.isBreakpointDisabled(this.location.href, lineNo);
+            items.push(
+                {label: "DisableBreakpoint", type: "checkbox", checked: isDisabled,
+                    command: bindFixed(this.toggleDisableBreakpoint, this, lineNo) }
+            );
+        }
+        items.push(
+            {label: "EditBreakpointCondition",
+                command: bindFixed(this.editBreakpointCondition, this, lineNo) }
+        );
+
+        if (this.context.stopped)
+        {
+            var sourceRow = getAncestorByClass(target, "sourceRow");
+            if (sourceRow)
+            {
+                var sourceFile = getAncestorByClass(sourceRow, "sourceBox").repObject;
+                var lineNo = parseInt(sourceRow.firstChild.textContent);
+
+                var debuggr = Firebug.Debugger;
+                items.push(
+                    "-",
+                    {label: "Continue",
+                        command: bindFixed(debuggr.resume, debuggr, this.context) },
+                    {label: "StepOver",
+                        command: bindFixed(debuggr.stepOver, debuggr, this.context) },
+                    {label: "StepInto",
+                        command: bindFixed(debuggr.stepInto, debuggr, this.context) },
+                    {label: "StepOut",
+                        command: bindFixed(debuggr.stepOut, debuggr, this.context) },
+                    {label: "RunUntil",
+                        command: bindFixed(debuggr.runUntil, debuggr, this.context,
+                        sourceFile, lineNo) }
+                );
+            }
+        }
+
+        return items;
+    },
+
+
+
+ */
 
 
 //************************************************************************************************
@@ -386,17 +924,6 @@ function StatusBar(){};
 StatusBar.prototype = extend(Controller, {
     
 });
-
-
-//************************************************************************************************
-// Panel Menus
-
-function PanelOptions(){};
-
-PanelOptions.prototype = extend(Controller, {
-    
-});
-
 
 // ************************************************************************************************
 

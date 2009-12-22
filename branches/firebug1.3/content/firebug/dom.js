@@ -28,11 +28,17 @@ var ignoreVars =
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+var memberPanelRep =
+    isIE6 ?
+    {"class": "memberLabel $member.type\\Label", href: "javacript:void(0)"}
+    :
+    {"class": "memberLabel $member.type\\Label"};
+
 var RowTag =
     TR({"class": "memberRow $member.open $member.type\\Row", $hasChildren: "$member.hasChildren", role : 'presentation',
         level: "$member.level"},
         TD({"class": "memberLabelCell", style: "padding-left: $member.indent\\px", role : 'presentation'},
-            DIV({"class": "memberLabel $member.type\\Label"},
+            A(memberPanelRep,
                 SPAN({}, "$member.name")
             )
         ),
@@ -143,6 +149,8 @@ var DirTablePlate = domplate(Firebug.Rep,
                 }
             }
         }
+        
+        return false;
     },
 
     toggleRow: function(row)
@@ -1514,7 +1522,7 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
-    name: "DOMSide",
+    name: "DOMSidePanel",
     parentPanel: "HTML",
     title: "DOM",
     
@@ -1547,7 +1555,7 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     reattach: function(oldChrome)
     {
         //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
-        this.toggles = oldChrome.getPanel("DOMSide").toggles;
+        this.toggles = oldChrome.getPanel("DOMSidePanel").toggles;
     }
     
 });

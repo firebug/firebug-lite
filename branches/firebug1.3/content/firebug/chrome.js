@@ -331,12 +331,12 @@ append(ChromeBase,
 {
     create: function()
     {
-        PanelBar.create.apply(this);
+        PanelBar.create.call(this);
         
         if (Firebug.Inspector)
             this.inspectButton = new Button({
                 type: "toggle",
-                node: $("fbChrome_btInspect"),
+                element: $("fbChrome_btInspect"),
                 owner: Firebug.Inspector,
                 
                 onPress: Firebug.Inspector.startInspecting,
@@ -348,7 +348,85 @@ append(ChromeBase,
     {
         this.inspectButton.destroy();
         
-        PanelBar.destroy.apply(this);
+        PanelBar.destroy.call(this);
+        
+        this.shutdown();
+    },
+    
+    testMenu: function()
+    {
+        var testMenu = new Menu(
+        {
+            id: "myId",
+            
+            items:
+            [
+                {label: "Click me", command: "clickMe"},
+                "-",
+                {label: "Group", type: "group", child: "fbFirebugSettingsMenu"},
+                "-",
+                {label: "CheckBox1", type: "checkbox"},
+                {label: "CheckBox2", type: "checkbox", checked: true},
+                {label: "CheckBox3", type: "checkbox", disabled: true},
+                "-",
+                //{label: "Reload", type: "shortcut", key: "F5"},
+                //"-",
+                {label: "RadioButton1", type: "radiobutton", value:"val1", command: "clickMe"},
+                {label: "RadioButton1", type: "radiobutton", value:"val2", selected: true, command: "clickMe"},
+                {label: "RadioButton1", type: "radiobutton", value:"val3", command: "clickMe"}
+            ],
+            
+            clickMe: function(target)
+            {
+                var val=target.getAttribute("value");
+                alert(val);
+            }
+        });
+        
+        testMenu.show();
+        /**/
+        
+            
+        var menu = new Menu(
+        {
+            element: $("fbFirebugMenu"),
+            
+            onHide: function()
+            {
+                iconButton.restore();
+            }            
+        })
+        
+        var testMenuClick = function(event)
+        {
+            //console.log("testMenuClick");
+            cancelEvent(event, true);
+            
+            var target = event.target || event.srcElement;
+            
+            if (menu.isVisible)
+                menu.hide();
+            else
+            {
+                var box = Firebug.chrome.getElementBox(target);
+                menu.show(box.left -4, box.top + box.height -5);
+            }
+            
+            return false;
+        };
+        
+        var iconButton = new IconButton({
+            type: "toggle",
+            element: $("fbFirebugButton"),
+            
+            onClick: testMenuClick
+        });
+        
+        iconButton.initialize();
+        
+        
+        
+        //addEvent($("fbToolbarIcon"), "click", testMenuClick);
     },
     
     initialize: function()
@@ -365,8 +443,8 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
-        Controller.initialize.apply(this);
-        PanelBar.initialize.apply(this);
+        Controller.initialize.call(this);
+        PanelBar.initialize.call(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
@@ -410,6 +488,8 @@ append(ChromeBase,
         
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
+        disableTextSelection($("fbPanelBar1"));
+        disableTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
@@ -418,7 +498,7 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
-        if (isIE && Firebug.Selector)
+        if (isIE6 && Firebug.Selector)
         {
             // TODO: xxxpedro change to getElementsByClass
             var as = $$(".fbHover");
@@ -463,6 +543,8 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //this.draw();
+        
+        this.testMenu();
     },
     
     shutdown: function()
@@ -485,6 +567,8 @@ append(ChromeBase,
         // remove disableTextSelection event handlers
         restoreTextSelection($("fbToolbar"));
         restoreTextSelection($("fbPanelBarBox"));
+        restoreTextSelection($("fbPanelBar1"));
+        restoreTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Remove the interface elements cache
@@ -527,8 +611,8 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
-        Controller.shutdown.apply(this);
-        PanelBar.shutdown.apply(this);
+        Controller.shutdown.call(this);
+        PanelBar.shutdown.call(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // destroy the instance of the CommandLine class
@@ -725,8 +809,6 @@ var ChromeFrameBase = extend(ChromeBase,
     {
         removeGlobalEvent("keydown", onPressF12);
         
-        this.shutdown();
-        
         ChromeBase.destroy.call(this);
         
         this.document = null;
@@ -856,11 +938,15 @@ var ChromeFrameBase = extend(ChromeBase,
         
         this.node.style.top = maxHeight - height + scroll.top + "px";
         
-        
         if (this.type == "frame" && (bodyStyle.marginLeft || bodyStyle.marginRight))
         {
             this.node.style.width = size.width + "px";
         }
+        
+        if (fbVSplitterStyle)
+            fbVSplitterStyle.right = FirebugChrome.sidePanelWidth + "px";
+        
+        this.draw();
     }
 
 });
@@ -974,7 +1060,7 @@ var ChromePopupBase = extend(ChromeBase, {
         if (Env.isPersistentMode)
         {
             this.persist = bind(this.persist, this);
-            addEvent(Firebug.browser.window, "unload", this.persist)
+            addEvent(Firebug.browser.window, "unload", this.persist);
         }
         else
             this.addController(
@@ -994,6 +1080,11 @@ var ChromePopupBase = extend(ChromeBase, {
             dispatch(frame.panelMap, "detach", [this, frame]);
             
             frame.reattach(this, frame);
+        }
+        
+        if (Env.isPersistentMode)
+        {
+            removeEvent(Firebug.browser.window, "unload", this.persist);
         }
         
         ChromeBase.destroy.apply(this);
