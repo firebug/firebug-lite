@@ -30,9 +30,6 @@ FBL.FirebugChrome =
         if (Env.chrome.type == "frame")
             ChromeMini.create(Env.chrome);
             
-        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
-            Env.openAtStartup = true;
-
         var chrome = Firebug.chrome = new Chrome(Env.chrome);
         FirebugChrome.chromeMap[chrome.type] = chrome;
         
@@ -215,41 +212,10 @@ var onChromeLoad = function onChromeLoad(chrome)
         }
         else
         {
-            
-            
             var doc = chrome.document;
             var script = doc.createElement("script");
             script.src = Env.location.app + "#remote,persist";
             doc.getElementsByTagName("head")[0].appendChild(script);
-            /**/
-            
-            
-            
-            /*
-            alert("write");
-            
-            var doc = chrome.document;
-            doc.write('<scr'+
-                    'ipt type="text/javascript" src="' + Env.location.app +
-                    '#trace,persist"></scr' +
-                    'ipt>');
-            
-            alert("write ok");
-            /**/
-            
-            
-            
-            /*
-            var str = 'var doc = document;'+
-            'var script = doc.createElement("script");'+
-            'script.src = "' + Env.location.app + '#remote,persist";'+
-            'doc.getElementsByTagName("head")[0].appendChild(script);';
-            
-            alert("eval");
-            var context = new Context(chrome);
-            context.eval(str);
-            alert("eval ok");
-            /**/
         }
     }
     else
@@ -355,47 +321,206 @@ append(ChromeBase,
     
     testMenu: function()
     {
-        var testMenu = new Menu(
+        var firebugMenu = new Menu(
         {
-            id: "myId",
+            id: "fbFirebugMenu2",
             
             items:
             [
-                {label: "Click me", command: "clickMe"},
+                {
+                    label: "Open Firebug",
+                    type: "shortcut",
+                    key: isFirefox ? "Shift+F12" : "F12",
+                    checked: true,
+                    command: "toggleChrome"
+                },
+                {
+                    label: "Open Firebug in New Window", 
+                    type: "shortcut",
+                    key: isFirefox ? "Ctrl+Shift+F12" : "Ctrl+F12",
+                    command: "openPopup"
+                },
+                {
+                    label: "Inspect Element", 
+                    type: "shortcut",
+                    key: "Ctrl+Shift+C",
+                    command: "toggleInspect"
+                },
+                {
+                    label: "Command Line", 
+                    type: "shortcut",
+                    key: "Ctrl+Shift+L",
+                    command: "focusCommandLine"
+                },
                 "-",
-                {label: "Group", type: "group", child: "fbFirebugSettingsMenu"},
+                {
+                    label: "Options", 
+                    type: "group", 
+                    child: "fbFirebugOptionsMenu"
+                },
                 "-",
-                {label: "CheckBox1", type: "checkbox"},
-                {label: "CheckBox2", type: "checkbox", checked: true},
-                {label: "CheckBox3", type: "checkbox", disabled: true},
-                "-",
-                //{label: "Reload", type: "shortcut", key: "F5"},
-                //"-",
-                {label: "RadioButton1", type: "radiobutton", value:"val1", command: "clickMe"},
-                {label: "RadioButton1", type: "radiobutton", value:"val2", selected: true, command: "clickMe"},
-                {label: "RadioButton1", type: "radiobutton", value:"val3", command: "clickMe"}
+                {
+                    label: "Firebug Lite Homepage"
+                },
+                {
+                    label: "Discussion List"
+                },
+                {
+                    label: "Report Bug"
+                }
             ],
+            
+            onHide: function()
+            {
+                iconButton.restore();
+            },            
+            
+            clickMe: function(target)
+            {
+                var val=target.getAttribute("value");
+                alert(val);
+            },
+            
+            focusCommandLine: function()
+            {
+                alert("fcml");
+            }        
+        });
+        
+        var firebugOptionsMenu =
+        {
+            id: "fbFirebugOptionsMenu",
+            
+            getItems: function()
+            {
+                var cookiesDisabled = !Firebug.saveCookies;
+                
+                return [
+                    {
+                        label: "Save Options in Cookies",
+                        type: "checkbox",
+                        value: "saveCookies",
+                        checked: Firebug.saveCookies,
+                        command: "saveOptions"
+                    },
+                    "-",
+                    {
+                        label: "Start Opened",
+                        type: "checkbox",
+                        value: "startOpened",
+                        checked: Firebug.startOpened,
+                        disabled: cookiesDisabled
+                    },
+                    {
+                        label: "Start in New Window",
+                        type: "checkbox",
+                        value: "startInNewWindow",
+                        checked: Firebug.startInNewWindow,
+                        disabled: cookiesDisabled
+                    },
+                    {
+                        label: "Override Console Object",
+                        type: "checkbox",
+                        value: "overrideConsole",
+                        checked: Firebug.overrideConsole,
+                        disabled: cookiesDisabled
+                    },
+                    "-",
+                    {
+                        label: "Enable Trace Mode",
+                        type: "checkbox",
+                        value: "enableTrace",
+                        checked: Firebug.enableTrace,
+                        disabled: cookiesDisabled
+                    },
+                    {
+                        label: "Enable Persistent Mode (experimental)",
+                        type: "checkbox",
+                        value: "enablePersistent",
+                        checked: Firebug.enablePersistent,
+                        disabled: cookiesDisabled
+                    },
+                    "-",
+                    {
+                        label: "Restore Preferences",
+                        command: "restorePrefs",
+                        disabled: cookiesDisabled
+                    }
+                ];
+            },
+            
+            onCheck: function(target, value, checked)
+            {
+                Firebug.setPref(value, checked);
+            },           
+            
+            saveOptions: function(target)
+            {
+                var saveEnabled = target.getAttribute("checked");
+                
+                if (!saveEnabled) this.restorePrefs();
+                
+                this.updateMenu(target);
+                
+                return false;
+            },
+            
+            restorePrefs: function(target)
+            {
+                Firebug.restorePrefs();
+                Firebug.savePrefs();
+                
+                if (target)
+                    this.updateMenu(target);
+                
+                return false;
+            },
+            
+            updateMenu: function(target)
+            {
+                var options = getElementsByClass(target.parentNode, "fbMenuOption");
+                
+                /*
+                var firstOption = options[0]; 
+                var state = !!firstOption.getAttribute("checked");
+                var enabled = Firebug.saveCookies;
+                
+                if (state != enabled)
+                    firstOption.setAttribute("checked", enabled ? "true" : "");
+                /**/
+                
+                var enabled = options[0].getAttribute("checked");
+                
+                for (var i = 1, length = options.length; i < length; i++)
+                {
+                    var option = options[i];
+                    
+                    var value = option.getAttribute("value");
+                    var pref = Firebug[value];
+                    
+                    if (pref)
+                        Menu.check(option);
+                    else
+                        Menu.uncheck(option);
+                    
+                    if (enabled)
+                        Menu.enable(option);
+                    else
+                        Menu.disable(option);
+                }
+            },
             
             clickMe: function(target)
             {
                 var val=target.getAttribute("value");
                 alert(val);
             }
-        });
+        };
         
-        testMenu.show();
-        /**/
+        Menu.register(firebugOptionsMenu);
         
-            
-        var menu = new Menu(
-        {
-            element: $("fbFirebugMenu"),
-            
-            onHide: function()
-            {
-                iconButton.restore();
-            }            
-        })
+        
+        var menu = firebugMenu;
         
         var testMenuClick = function(event)
         {
@@ -796,7 +921,7 @@ var ChromeFrameBase = extend(ChromeBase,
         if (isFirefox)
             this.node.style.display = "block";
         
-        if (Env.openAtStartup)
+        if (Env.startOpened)
             this.open();
         else
         {

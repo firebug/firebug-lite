@@ -82,10 +82,21 @@ this.initialize = function()
         FBL.Env.browser = window;
         FBL.Env.destroy = destroyApplication;
 
+        if (document.documentElement.getAttribute("debug") == "true")
+            FBL.Env.startOpened = true;
+
         // find the URL location of the loaded application
         findLocation();
         
         // TODO: get preferences here...
+    }
+    
+    var prefs = eval("(" + FBL.readCookie("FirebugLite") + ")");
+    if (prefs)
+    {
+        FBL.Env.startOpened = prefs.startOpened;
+        FBL.Env.isTraceMode = prefs.enableTrace;
+        FBL.Env.isPersistentMode = prefs.enablePersistent;
     }
     
     // check browser compatibilities
@@ -120,6 +131,11 @@ this.initialize = function()
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // finish environment initialization
 
+    Firebug.startOpened = FBL.Env.startOpened;
+    Firebug.enableTrace = FBL.Env.isTraceMode;
+    Firebug.enablePersistent = FBL.Env.isPersistentMode;
+    Firebug.loadPrefs(prefs);
+    
     if (FBL.Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make a better synchronization
@@ -190,7 +206,7 @@ var sharedEnv;
 this.Env = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Env preferences
-    openAtStartup: false,
+    startOpened: false,
     
     isBookmarletMode: false,
     isPersistentMode: false,
@@ -329,12 +345,11 @@ var findLocation =  function findLocation()
         if (fileOptions)
         {
             if (fileOptions.indexOf("open") != -1)
-                App.openAtStartup = true;
+                App.startOpened = true;
             
             if (fileOptions.indexOf("remote") != -1)
             {
                 App.isBookmarletMode = true;
-                App.openAtStartup = true;
             }
             
             if (fileOptions.indexOf("trace") != -1)
@@ -2056,6 +2071,8 @@ this.isArray = function(object) {
 };
 
 this.isFunction = function(object) {
+    if (!object) return false;
+    
     return toString.call(object) === "[object Function]" || 
             this.isIE && typeof object != "string" && reFunction.test(""+object);
 };

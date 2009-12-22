@@ -235,7 +235,7 @@ FBL.Button = function(options)
         this.container = this.owner.getPanel().toolButtonsNode;
         
         this.element = createElement("a", {
-            className: this.className + " fbHover",
+            className: this.baseClassName + " " + this.className + " fbHover",
             title: this.title,
             innerHTML: this.caption
         });
@@ -252,8 +252,9 @@ Button.prototype = extend(Controller,
     caption: "caption",
     title: "title",
     
-    className: "fbButton",
-    pressedClassName: "fbBtnPressed",
+    className: "", // custom class
+    baseClassName: "fbButton", // control class
+    pressedClassName: "fbBtnPressed", // control pressed class
     
     element: null,
     container: null,
@@ -382,6 +383,8 @@ Button.prototype = extend(Controller,
     }
 });
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
 FBL.IconButton = function()
 {
     Button.apply(this, arguments);
@@ -389,23 +392,10 @@ FBL.IconButton = function()
 
 IconButton.prototype = extend(Button.prototype, 
 {
-    className: "fbIconButton",
+    baseClassName: "fbIconButton",
     pressedClassName: "fbIconPressed"
 });
 
-
-FBL.IconMenuButton = function()
-{
-    Button.apply(this, arguments);
-};
-
-IconMenuButton.prototype = extend(IconButton.prototype, 
-{
-    hide: function()
-    {
-        IconButton.prototype.hide.apply(this, arguments);
-    }
-});
 
 //************************************************************************************************
 // Menu
@@ -459,22 +449,25 @@ MenuPlate = domplate(Firebug.Rep,
         
     memberIterator: function(items)
     {
-    
+        var result = [];
+        
         for (var i=0, length=items.length; i<length; i++)
         {
             var item = items[i];
+            
+            // separator representation
+            if (typeof item == "string" && item.indexOf("-") == 0)
+            {
+                result.push({tag: this.separatorTag});
+                continue;
+            }
+            
+            item = extend(item, {});
             
             item.type = item.type || "";
             item.value = item.value || "";
             
             var type = item.type;
-            
-            // separator representation
-            if (typeof item == "string" && item.indexOf("-") == 0)
-            {
-                items[i]= {tag: this.separatorTag};
-                continue;
-            }
             
             // default item representation
             item.tag = this.itemTag;
@@ -514,9 +507,11 @@ MenuPlate = domplate(Firebug.Rep,
                 className += "fbMenuDisabled ";
             
             item.className = className;
+            
+            result.push(item);
         }
         
-        return items;
+        return result;
     }
 });
 
@@ -543,6 +538,9 @@ FBL.Menu = function(options)
     // if element is not pre-rendered, we must render it now
     if (!options.element)
     {
+        if (options.getItems)
+            options.items = options.getItems();
+        
         options.element = MenuPlate.tag.append(
                 {object: options},
                 Firebug.chrome.document.body, 
@@ -554,18 +552,29 @@ FBL.Menu = function(options)
     append(this, options);
     
     if (typeof this.element == "string")
-        this.element = $(this.element);
+    {
+        this.id = this.element;
+        this.element = $(this.id);
+    }
+    else if (this.id)
+    {
+        this.element.id = this.id;
+    }
     
     this.elementStyle = this.element.style;
     
     this.isVisible = false;
     
-    this.onClick = bind(this.onClick, this);
-    this.onMouseMove = bind(this.onMouseMove, this);
-    this.onMouseOut = bind(this.onMouseOut, this);
+    this.handleClick = bind(this.handleClick, this);
+    this.handleMouseMove = bind(this.handleMouseMove, this);
+    this.handleMouseOut = bind(this.handleMouseOut, this);
     
-    this.onWindowClick = bind(this.onWindowClick, this);
+    this.handleWindowClick = bind(this.handleWindowClick, this);
 };
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var menuMap = {};
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -588,8 +597,8 @@ Menu.prototype =  extend(Controller,
         Controller.initialize.call(this);
         
         this.addController(
-                [this.element, "click", this.onClick],
-                [this.element, "mouseover", this.onMouseMove]
+                [this.element, "click", this.handleClick],
+                [this.element, "mouseover", this.handleMouseMove]
              );
     },
     
@@ -620,7 +629,7 @@ Menu.prototype =  extend(Controller,
             this.parentMenu.childMenu = this;
         }
         else
-            addEvent(Firebug.chrome.document, "mousedown", this.onWindowClick);
+            addEvent(Firebug.chrome.document, "mousedown", this.handleWindowClick);
         
         this.elementStyle.display = "block";
         this.elementStyle.visibility = "hidden";
@@ -640,7 +649,7 @@ Menu.prototype =  extend(Controller,
         
         this.isVisible = true;
         
-        if (this.onShow)
+        if (isFunction(this.onShow))
             this.onShow.apply(this, arguments);
     },
     
@@ -668,25 +677,29 @@ Menu.prototype =  extend(Controller,
         
         this.shutdown();
         
-        if (this.onHide)
+        if (isFunction(this.onHide))
             this.onHide.apply(this, arguments);
     },
     
     showChildMenu: function(target)
     {
         var id = target.getAttribute("child");
-        var self = this;
+        
+        var parent = this;
+        var target = target;
         
         this.showChildTimeout = Firebug.chrome.window.setTimeout(function(){
             
-            //if (!self.isVisible) return;
+            //if (!parent.isVisible) return;
             
-            var childMenu = new Menu(
+            var childMenuObject = menuMap.hasOwnProperty(id) ?
+                    menuMap[id] : {element: $(id)};
+            
+            var childMenu = new Menu(extend(childMenuObject, 
                 {
-                    element: $(id),
-                    parentMenu: self,
+                    parentMenu: parent,
                     parentTarget: target
-                });
+                }));
             
             var box = Firebug.chrome.getElementBox(target);
             
@@ -714,7 +727,7 @@ Menu.prototype =  extend(Controller,
         }
     },
     
-    onClick: function(event)
+    handleClick: function(event)
     {
         var topParent = this;
         while (topParent.parentMenu)
@@ -737,8 +750,10 @@ Menu.prototype =  extend(Controller,
             if (type == "checkbox")
             {
                 var checked = target.getAttribute("checked");
+                var value = target.getAttribute("value");
+                var wasChecked = hasClass(target, "fbMenuChecked");
                 
-                if (hasClass(target, "fbMenuChecked"))
+                if (wasChecked)
                 {
                     removeClass(target, "fbMenuChecked");
                     target.setAttribute("checked", "");
@@ -748,6 +763,9 @@ Menu.prototype =  extend(Controller,
                     setClass(target, "fbMenuChecked");
                     target.setAttribute("checked", "true");
                 }
+                
+                if (isFunction(this.onCheck))
+                    this.onCheck.call(this, target, value, !wasChecked)
             }            
             
             if (type == "radiobutton")
@@ -776,16 +794,16 @@ Menu.prototype =  extend(Controller,
             var closeMenu = true;
             
             if (handler)
-                closeMenu = handler.call(this, target);
+                closeMenu = handler.call(this, target) !== false;
             
             if (closeMenu)
                 topParent.hide();
         }
     },
     
-    onWindowClick: function(event)
+    handleWindowClick: function(event)
     {
-        //console.log("onWindowClick");
+        //console.log("handleWindowClick");
         
         var target = event.target || event.srcElement;
         
@@ -793,14 +811,14 @@ Menu.prototype =  extend(Controller,
         
         if (!target)
         {
-            removeEvent(Firebug.chrome.document, "mousedown", this.onWindowClick);
+            removeEvent(Firebug.chrome.document, "mousedown", this.handleWindowClick);
             this.hide();
         }
     },
 
-    onMouseMove: function(event)
+    handleMouseMove: function(event)
     {
-        //console.log("onMouseMove", this.element.id);
+        //console.log("handleMouseMove", this.element.id);
         
         this.clearHideTimeout();
         this.clearShowChildTimeout();
@@ -833,6 +851,34 @@ Menu.prototype =  extend(Controller,
     }
 });
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+Menu.register = function(object)
+{
+    menuMap[object.id] = object;
+};
+
+Menu.check = function(element)
+{
+    setClass(element, "fbMenuChecked");
+    element.setAttribute("checked", "true");
+};
+
+Menu.uncheck = function(element)
+{
+    removeClass(element, "fbMenuChecked");
+    element.setAttribute("checked", "");
+};
+
+Menu.disable = function(element)
+{
+    setClass(element, "fbMenuDisabled");
+};
+
+Menu.enable = function(element)
+{
+    removeClass(element, "fbMenuDisabled");
+};
 
 /*
 

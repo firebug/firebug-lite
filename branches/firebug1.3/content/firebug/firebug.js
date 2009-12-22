@@ -194,8 +194,133 @@ window.Firebug = FBL.Firebug =
             if (child.repObject == object)
                 return child;
         }
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Preferences
+    
+    getPref: function(name)
+    {
+        return Firebug[name];
+    },
+    
+    setPref: function(name, value)
+    {
+        updatePrefBuffer[name] = value;
+        
+        // Will update at once all preferences defined inside the main function 
+        // in which it was called
+        if (!updatePrefTimer)
+            updatePrefTimer = setTimeout(updatePrefHandler, 0);
+    },
+    
+    loadPrefs: function(prefs)
+    {
+        prefs = prefs || eval("(" + readCookie("FirebugLite") + ")");
+        
+        append(updatePrefBuffer, prefs);
+        
+        updatePrefSaveCookie = false;
+        
+        // Will update at once all preferences defined inside the main function 
+        // in which it was called
+        if (!updatePrefTimer)
+            updatePrefTimer = setTimeout(updatePrefHandler, 0);
+    },
+    
+    savePrefs: function()
+    {
+        savePreferences();
+    },
+    
+    restorePrefs: function()
+    {
+        for (var name in preferences)
+        {
+            Firebug[name] = preferences[name];
+        }
     }
 
+};
+
+var preferences =
+{
+    saveCookies: false,
+    startOpened: false,
+    startInNewWindow: false,
+    overrideConsole: true,
+    enableTrace: false,
+    enablePersistent: false
+};
+
+Firebug.restorePrefs();
+
+var updatePrefSaveCookie = true;
+var updatePrefTimer;
+var updatePrefBuffer = {};
+
+var updatePrefHandler = function()
+{
+    if (updatePrefTimer)
+    {
+        clearTimeout(updatePrefTimer);
+        updatePrefTimer = null;
+    }
+    
+    for (var name in updatePrefBuffer)
+    {
+        if (updatePrefBuffer.hasOwnProperty(name))
+        {
+            var value = updatePrefBuffer[name];
+            Firebug[name] = value;
+            
+            updatePrefBuffer[name] = null;
+            delete updatePrefBuffer[name];
+        }
+    }
+    
+    if (updatePrefSaveCookie)
+        savePreferences();
+    
+    updatePrefSaveCookie = true;
+};
+
+
+var savePreferences = function()
+{
+    var json = ['{'], jl = 0;
+    
+    for (var name in preferences)
+    {
+        if (preferences.hasOwnProperty(name))
+        {
+            var value = Firebug[name];
+            
+            json[++jl] = '"'; 
+            json[++jl] = name;
+            
+            var type = typeof value;
+            if (type == "boolean" || type == "number")
+            {
+                json[++jl] = '":';
+                json[++jl] = value 
+                json[++jl] = ',';
+            }
+            else
+            {
+                json[++jl] = '":"';
+                json[++jl] = value 
+                json[++jl] = '",';
+            }
+        }
+    }
+    
+    json.length = jl--;
+    json[++jl] = '}';
+    
+    createCookie("FirebugLite", json.join(""));
+    
+    updatePrefSaveCookie = true;
 };
 
 if (!Env.isPersistentMode || 

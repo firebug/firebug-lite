@@ -70,7 +70,10 @@ this.initialize = function()
     if (isChromeContext)
     {
         // TODO: xxxpedro persist - make a better synchronization
-        FBL.Env = window.Firebug.SharedEnv;
+        sharedEnv = window.Firebug.SharedEnv;
+        delete window.Firebug.SharedEnv;
+        
+        FBL.Env = sharedEnv;
         FBL.Env.isChromeContext = true;
         FBTrace.messageQueue = FBL.Env.traceMessageQueue;
     }
@@ -81,10 +84,21 @@ this.initialize = function()
         FBL.Env.browser = window;
         FBL.Env.destroy = destroyApplication;
 
+        if (document.documentElement.getAttribute("debug") == "true")
+            FBL.Env.startOpened = true;
+
         // find the URL location of the loaded application
         findLocation();
         
         // TODO: get preferences here...
+    }
+    
+    var prefs = eval("(" + FBL.readCookie("FirebugLite") + ")");
+    if (prefs)
+    {
+        FBL.Env.startOpened = prefs.startOpened;
+        FBL.Env.isTraceMode = prefs.enableTrace;
+        FBL.Env.isPersistentMode = prefs.enablePersistent;
     }
     
     // check browser compatibilities
@@ -119,6 +133,11 @@ this.initialize = function()
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // finish environment initialization
 
+    Firebug.startOpened = FBL.Env.startOpened;
+    Firebug.enableTrace = FBL.Env.isTraceMode;
+    Firebug.enablePersistent = FBL.Env.isPersistentMode;
+    Firebug.loadPrefs(prefs);
+    
     if (FBL.Env.isPersistentMode)
     {
         // TODO: xxxpedro persist - make a better synchronization
@@ -170,8 +189,8 @@ var onDocumentLoad = function onDocumentLoad()
         // used to synchronize the both persistent contexts
         if (!FBL.Env.isDevelopmentMode)
         {
-            window.Firebug.SharedEnv.destroy();
-            delete window.Firebug.SharedEnv;
+            sharedEnv.destroy();
+            sharedEnv = null;
         }
     }
     // non-persistent application
@@ -184,10 +203,12 @@ var onDocumentLoad = function onDocumentLoad()
 // ************************************************************************************************
 // Env
 
+var sharedEnv;
+
 this.Env = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Env preferences
-    openAtStartup: false,
+    startOpened: false,
     
     isBookmarletMode: false,
     isPersistentMode: false,
@@ -326,12 +347,11 @@ var findLocation =  function findLocation()
         if (fileOptions)
         {
             if (fileOptions.indexOf("open") != -1)
-                App.openAtStartup = true;
+                App.startOpened = true;
             
             if (fileOptions.indexOf("remote") != -1)
             {
                 App.isBookmarletMode = true;
-                App.openAtStartup = true;
             }
             
             if (fileOptions.indexOf("trace") != -1)
@@ -1136,6 +1156,20 @@ this.getAncestorByClass = function(node, className)
     return null;
 };
 
+
+this.getElementsByClass = function(node, className)
+{
+    var result = [];
+    
+    for (var child = node.firstChild; child; child = child.nextSibling)
+    {
+        if (this.hasClass(child, className))
+            result.push(child);
+    }
+
+    return result;
+};
+
 this.getElementByClass = function(node, className)  // className, className, ...
 {
     var args = cloneArray(arguments); args.splice(0, 1);
@@ -1402,7 +1436,12 @@ this.dispatch = function(listeners, name, args)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var disableTextSelectionHandler = function(){ return false };
+var disableTextSelectionHandler = function(event)
+{
+    FBL.cancelEvent(event, true);
+    
+    return false;
+};
 
 this.disableTextSelection = function(e)
 {
@@ -1410,7 +1449,14 @@ this.disableTextSelection = function(e)
         this.addEvent(e, "selectstart", disableTextSelectionHandler);
         
     else // others
-        this.addEvent(e, "mousedown", disableTextSelectionHandler);
+    {
+        e.style.cssText = "user-select: none; -khtml-user-select: none; -moz-user-select: none;"
+        
+        // canceling the event in FF will prevent the menu popups to close when clicking over 
+        // text-disabled elements
+        if (!this.isFirefox) 
+            this.addEvent(e, "mousedown", disableTextSelectionHandler);
+    }
     
     e.style.cursor = "default";
 };
@@ -1421,7 +1467,14 @@ this.restoreTextSelection = function(e)
         this.removeEvent(e, "selectstart", disableTextSelectionHandler);
         
     else // others
-        this.removeEvent(e, "mousedown", disableTextSelectionHandler);
+    {
+        e.style.cssText = "cursor: default;"
+            
+        // canceling the event in FF will prevent the menu popups to close when clicking over 
+        // text-disabled elements
+        if (!this.isFirefox)
+            this.removeEvent(e, "mousedown", disableTextSelectionHandler);
+    }
 };
 
 // ************************************************************************************************
@@ -2020,6 +2073,8 @@ this.isArray = function(object) {
 };
 
 this.isFunction = function(object) {
+    if (!object) return false;
+    
     return toString.call(object) === "[object Function]" || 
             this.isIE && typeof object != "string" && reFunction.test(""+object);
 };
@@ -4329,11 +4384,11 @@ FBL.documentCache = {};
 
 var modules = [];
 var panelTypes = [];
-
 var panelTypeMap = {};
+var reps = [];
+
 var parentPanelMap = {};
 
-var reps = [];
 
 // ************************************************************************************************
 // Firebug
@@ -4342,11 +4397,12 @@ window.Firebug = FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version: "Firebug Lite 1.3.0a3",
-    revision: "$Revision: 5272 $",
+    revision: "$Revision: 5414 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
+    panelTypeMap: panelTypeMap,
     reps: reps,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -4372,7 +4428,17 @@ window.Firebug = FBL.Firebug =
   
     shutdown: function()
     {
+        if (Firebug.Inspector)
+            Firebug.Inspector.destroy();
+        
         dispatch(modules, "shutdown", []);
+        
+        var chromeMap = FirebugChrome.chromeMap;
+        
+        if (chromeMap.popup)
+            chromeMap.popup.destroy();
+        
+        chromeMap.frame.destroy();
         
         for(var name in documentCache)
         {
@@ -4384,12 +4450,8 @@ window.Firebug = FBL.Firebug =
         documentCache = null;
         delete FBL.documentCache;
         
-        var chromeMap = FirebugChrome.chromeMap;
-        
-        if (chromeMap.popup)
-            chromeMap.popup.destroy();
-        
-        chromeMap.frame.destroy();
+        Firebug.browser = null;
+        Firebug.context = null;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -4504,8 +4566,133 @@ window.Firebug = FBL.Firebug =
             if (child.repObject == object)
                 return child;
         }
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Preferences
+    
+    getPref: function(name)
+    {
+        return Firebug[name];
+    },
+    
+    setPref: function(name, value)
+    {
+        updatePrefBuffer[name] = value;
+        
+        // Will update at once all preferences defined inside the main function 
+        // in which it was called
+        if (!updatePrefTimer)
+            updatePrefTimer = setTimeout(updatePrefHandler, 0);
+    },
+    
+    loadPrefs: function(prefs)
+    {
+        prefs = prefs || eval("(" + readCookie("FirebugLite") + ")");
+        
+        append(updatePrefBuffer, prefs);
+        
+        updatePrefSaveCookie = false;
+        
+        // Will update at once all preferences defined inside the main function 
+        // in which it was called
+        if (!updatePrefTimer)
+            updatePrefTimer = setTimeout(updatePrefHandler, 0);
+    },
+    
+    savePrefs: function()
+    {
+        savePreferences();
+    },
+    
+    restorePrefs: function()
+    {
+        for (var name in preferences)
+        {
+            Firebug[name] = preferences[name];
+        }
     }
 
+};
+
+var preferences =
+{
+    saveCookies: false,
+    startOpened: false,
+    startInNewWindow: false,
+    overrideConsole: true,
+    enableTrace: false,
+    enablePersistent: false
+};
+
+Firebug.restorePrefs();
+
+var updatePrefSaveCookie = true;
+var updatePrefTimer;
+var updatePrefBuffer = {};
+
+var updatePrefHandler = function()
+{
+    if (updatePrefTimer)
+    {
+        clearTimeout(updatePrefTimer);
+        updatePrefTimer = null;
+    }
+    
+    for (var name in updatePrefBuffer)
+    {
+        if (updatePrefBuffer.hasOwnProperty(name))
+        {
+            var value = updatePrefBuffer[name];
+            Firebug[name] = value;
+            
+            updatePrefBuffer[name] = null;
+            delete updatePrefBuffer[name];
+        }
+    }
+    
+    if (updatePrefSaveCookie)
+        savePreferences();
+    
+    updatePrefSaveCookie = true;
+};
+
+
+var savePreferences = function()
+{
+    var json = ['{'], jl = 0;
+    
+    for (var name in preferences)
+    {
+        if (preferences.hasOwnProperty(name))
+        {
+            var value = Firebug[name];
+            
+            json[++jl] = '"'; 
+            json[++jl] = name;
+            
+            var type = typeof value;
+            if (type == "boolean" || type == "number")
+            {
+                json[++jl] = '":';
+                json[++jl] = value 
+                json[++jl] = ',';
+            }
+            else
+            {
+                json[++jl] = '":"';
+                json[++jl] = value 
+                json[++jl] = '",';
+            }
+        }
+    }
+    
+    json.length = jl--;
+    json[++jl] = '}';
+    
+    createCookie("FirebugLite", json.join(""));
+    
+    updatePrefSaveCookie = true;
 };
 
 if (!Env.isPersistentMode || 
@@ -4517,7 +4704,7 @@ if (!Env.isPersistentMode ||
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Other methods
 
-var cacheDocument = function cacheDocument()
+FBL.cacheDocument = function cacheDocument()
 {
     var els = Firebug.browser.document.getElementsByTagName("*");
     for (var i=0, l=els.length, el; i<l; i++)
@@ -4527,70 +4714,6 @@ var cacheDocument = function cacheDocument()
         documentCache[i] = el;
     }
 };
-
-// ************************************************************************************************
-// Controller
-
-Firebug.Controller = {
-        
-    controllers: null,
-    controllerContext: null,
-    
-    initialize: function(context)
-    {
-        this.controllers = [];
-        this.controllerContext = context || Firebug.chrome;
-    },
-    
-    shutdown: function()
-    {
-        this.removeControllers();
-    },
-    
-    addController: function()
-    {
-        for (var i=0, arg; arg=arguments[i]; i++)
-        {
-            // If the first argument is a string, make a selector query 
-            // within the controller node context
-            if (typeof arg[0] == "string")
-            {
-                arg[0] = $$(arg[0], this.controllerContext);
-            }
-            
-            // bind the handler to the proper context
-            var handler = arg[2];
-            arg[2] = bind(handler, this);
-            // save the original handler as an extra-argument, so we can
-            // look for it later, when removing a particular controller            
-            arg[3] = handler;
-            
-            this.controllers.push(arg);
-            addEvent.apply(this, arg);
-        }
-    },
-    
-    removeController: function()
-    {
-        for (var i=0, arg; arg=arguments[i]; i++)
-        {
-            for (var j=0, c; c=this.controllers[j]; j++)
-            {
-                if (arg[0] == c[0] && arg[1] == c[1] && arg[2] == c[3])
-                    removeEvent.apply(this, c);
-            }
-        }
-    },
-    
-    removeControllers: function()
-    {
-        for (var i=0, c; c=this.controllers[i]; i++)
-        {
-            removeEvent.apply(this, c);
-        }
-    }
-};
-
 
 // ************************************************************************************************
 // Module
@@ -4730,7 +4853,7 @@ Firebug.Panel =
     {
         if (parentPanelMap.hasOwnProperty(this.name))
         {
-            this.sidePanelBar = extend({}, Firebug.PanelBar);
+            this.sidePanelBar = extend({}, PanelBar);
             this.sidePanelBar.create(true);
         }
         
@@ -4851,7 +4974,22 @@ Firebug.Panel =
     destroy: function(state) // Panel may store info on state
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.destroy", this.name);
-
+        
+        if (parentPanelMap.hasOwnProperty(this.name))
+        {
+            this.sidePanelBar.destroy();
+            this.sidePanelBar = null;
+        }
+        
+        this.options = null;
+        this.name = null;
+        this.parentPanel = null;
+        
+        this.tabNode = null;
+        this.panelNode = null;
+        this.contentNode = null;
+        this.containerNode = null;
+        
         //if (this.panelNode)
         //    delete this.panelNode.ownerPanel;
 
@@ -4905,6 +5043,10 @@ Firebug.Panel =
         
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
+        
+        this.toolButtonsNode = null;
+        this.statusBarBox = null;
+        this.statusBarNode = null;
     },
 
     detach: function(oldChrome, newChrome)
@@ -5085,316 +5227,9 @@ Firebug.Panel =
 
 };
 
-// ************************************************************************************************
-// PanelBar
-
-Firebug.PanelBar = 
-{
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    selectedPanel: null,
-    isSidePanelBar: null, // only SidePanelBar
-    
-    //panelBarNode: null,
-    //context: null,
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
-    create: function(isSidePanelBar)
-    {
-        this.panelMap = {};
-        this.isSidePanelBar = isSidePanelBar;
-        
-        var panels = Firebug.panelTypes;
-        for (var i=0, p; p=panels[i]; i++)
-        {
-            if (isSidePanelBar && p.prototype.parentPanel || 
-                !isSidePanelBar && !p.prototype.parentPanel)
-            {
-                this.addPanel(p.prototype.name);
-            }
-        }
-    },
-    
-    initialize: function()
-    {
-        for(var name in this.panelMap)
-        {
-            (function(self, name){
-                
-                // tab click handler
-                var onTabClick = function onTabClick()
-                { 
-                    self.selectPanel(name);
-                    return false;
-                };
-                
-                Firebug.chrome.addController([self.panelMap[name].tabNode, "mousedown", onTabClick]);
-                
-            })(this, name);
-        }
-    },
-    
-    shutdown: function()
-    {
-        var selectedPanel = this.selectedPanel;
-        
-        if (selectedPanel)
-        {
-            removeClass(selectedPanel.tabNode, "fbSelectedTab");
-            selectedPanel.hide();
-            selectedPanel.shutdown();
-        }
-        
-        this.selectedPanel = null;
-    },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    addPanel: function(panelName, parentPanel)
-    {
-        var PanelType = panelTypeMap[panelName];
-        var panel = this.panelMap[panelName] = new PanelType();
-        
-        panel.create();
-    },
-    
-    removePanel: function(panelName)
-    {
-        
-    },
-    
-    selectPanel: function(panelName)
-    {
-        var selectedPanel = this.selectedPanel;
-        var panel = this.panelMap[panelName];
-        
-        if (panel && selectedPanel != panel)
-        {
-            if (selectedPanel)
-            {
-                removeClass(selectedPanel.tabNode, "fbSelectedTab");
-                selectedPanel.hide();
-                selectedPanel.shutdown();
-            }
-            
-            if (!panel.parentPanel)
-                FirebugChrome.selectedPanelName = panelName;
-            
-            this.selectedPanel = panel;
-            
-            setClass(panel.tabNode, "fbSelectedTab");
-            panel.initialize();
-            panel.show();
-        }
-    },
-    
-    getPanel: function(panelName)
-    {
-        var panel = this.panelMap[panelName];
-        
-        return panel;
-    }
-   
-};
-
-//************************************************************************************************
-// Button
-
-Firebug.Button = function(options)
-{
-    options = options || {};
-    
-    this.state = "unpressed";
-    this.display = "unpressed";
-    
-    this.type = options.type || "normal";
-    
-    this.onClick = options.onClick;
-    this.onPress = options.onPress;
-    this.onUnpress = options.onUnpress;
-    
-    if (options.node)
-    {
-        this.node = options.node
-        this.owner = options.owner;
-        this.container = this.node.parentNode;
-    }
-    else
-    {
-        var caption = options.caption || "caption";
-        var title = options.title || "title";
-        
-        this.owner = this.module = options.module;
-        this.panel = options.panel || this.module.getPanel();
-        this.container = this.panel.toolButtonsNode;
-    
-        this.node = createElement("a", {
-            className: "fbHover",
-            title: title,
-            innerHTML: caption
-        });
-        
-        this.container.appendChild(this.node);
-    }
-};
-
-Firebug.Button.prototype = extend(Firebug.Controller,
-{
-    type: null,
-    
-    node: null,
-    owner: null,
-    
-    module: null,
-    
-    panel: null,
-    container: null,
-    
-    state: null,
-    display: null,
-    
-    destroy: function()
-    {
-        this.shutdown();
-        
-        this.container.removeChild(this.node);
-    },
-    
-    initialize: function()
-    {
-        Firebug.Controller.initialize.apply(this);
-        var node = this.node;
-        
-        this.addController([node, "mousedown", this.handlePress]);
-        
-        if (this.type == "normal")
-            this.addController(
-                [node, "mouseup", this.handleUnpress],
-                [node, "mouseout", this.handleUnpress],
-                [node, "click", this.handleClick]
-            );
-    },
-    
-    shutdown: function()
-    {
-        Firebug.Controller.shutdown.apply(this);
-    },
-    
-    restore: function()
-    {
-        this.changeState("unpressed");
-    },
-    
-    changeState: function(state)
-    {
-        this.state = state;
-        this.changeDisplay(state);
-    },
-    
-    changeDisplay: function(display)
-    {
-        if (display != this.display)
-        {
-            if (display == "pressed")
-            {
-                setClass(this.node, "fbBtnPressed");
-            }
-            else if (display == "unpressed")
-            {
-                removeClass(this.node, "fbBtnPressed");
-            }
-            this.display = display;
-        }
-    },
-    
-    handlePress: function(event)
-    {
-        cancelEvent(event, true);
-        
-        if (this.type == "normal")
-        {
-            this.changeDisplay("pressed");
-            this.beforeClick = true;
-        }
-        else if (this.type == "toggle")
-        {
-            if (this.state == "pressed")
-            {
-                this.changeState("unpressed");
-                
-                if (this.onUnpress)
-                    this.onUnpress.apply(this.owner);
-            }
-            else
-            {
-                this.changeState("pressed");
-                
-                if (this.onPress)
-                    this.onPress.apply(this.owner);
-                
-            }
-        }
-        
-        return false;
-    },
-    
-    handleUnpress: function(event)
-    {
-        cancelEvent(event, true);
-        
-        if (this.beforeClick)
-            this.changeDisplay("unpressed");
-        
-        return false;
-    },
-    
-    handleClick: function(event)
-    {
-        cancelEvent(event, true);
-        
-        if (this.type == "normal")
-        {
-            if (this.onClick)
-                this.onClick.apply(this.owner);
-            
-            this.changeState("unpressed");
-        }
-        
-        this.beforeClick = false;
-        
-        return false;
-    },
-    
-    // should be place inside module
-    addButton: function(caption, title, handler)
-    {
-    },
-    
-    removeAllButtons: function()
-    {
-        
-    }
-    
-});
-
-
-function StatusBar(){};
-
-StatusBar.prototype = extend(Firebug.Controller, {
-    
-});
-
-function PanelOptions(){};
-
-PanelOptions.prototype = extend(Firebug.Controller, {
-    
-});
-
 
 // ************************************************************************************************
-if (FBL.domplate)
-Firebug.Rep = domplate(
+if (FBL.domplate) Firebug.Rep = domplate(
 {
     className: "",
     inspectable: true,
@@ -5468,6 +5303,985 @@ Firebug.Rep = domplate(
     {
         return n == 1 ? "" : "s";
     }
+});
+
+// ************************************************************************************************
+
+
+// ************************************************************************************************
+}});
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+// ************************************************************************************************
+// Controller
+
+FBL.Controller = {
+        
+    controllers: null,
+    controllerContext: null,
+    
+    initialize: function(context)
+    {
+        this.controllers = [];
+        this.controllerContext = context || Firebug.chrome;
+    },
+    
+    shutdown: function()
+    {
+        this.removeControllers();
+        
+        //this.controllers = null;
+        //this.controllerContext = null;
+    },
+    
+    addController: function()
+    {
+        for (var i=0, arg; arg=arguments[i]; i++)
+        {
+            // If the first argument is a string, make a selector query 
+            // within the controller node context
+            if (typeof arg[0] == "string")
+            {
+                arg[0] = $$(arg[0], this.controllerContext);
+            }
+            
+            // bind the handler to the proper context
+            var handler = arg[2];
+            arg[2] = bind(handler, this);
+            // save the original handler as an extra-argument, so we can
+            // look for it later, when removing a particular controller            
+            arg[3] = handler;
+            
+            this.controllers.push(arg);
+            addEvent.apply(this, arg);
+        }
+    },
+    
+    removeController: function()
+    {
+        for (var i=0, arg; arg=arguments[i]; i++)
+        {
+            for (var j=0, c; c=this.controllers[j]; j++)
+            {
+                if (arg[0] == c[0] && arg[1] == c[1] && arg[2] == c[3])
+                    removeEvent.apply(this, c);
+            }
+        }
+    },
+    
+    removeControllers: function()
+    {
+        for (var i=0, c; c=this.controllers[i]; i++)
+        {
+            removeEvent.apply(this, c);
+        }
+    }
+};
+
+
+// ************************************************************************************************
+// PanelBar
+
+FBL.PanelBar = 
+{
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    selectedPanel: null,
+    isSidePanelBar: null,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    create: function(isSidePanelBar)
+    {
+        this.panelMap = {};
+        this.isSidePanelBar = isSidePanelBar;
+        
+        var panels = Firebug.panelTypes;
+        for (var i=0, p; p=panels[i]; i++)
+        {
+            if (isSidePanelBar && p.prototype.parentPanel || 
+                !isSidePanelBar && !p.prototype.parentPanel)
+            {
+                this.addPanel(p.prototype.name);
+            }
+        }
+    },
+    
+    destroy: function()
+    {
+        PanelBar.shutdown.call(this);
+        
+        for (var name in this.panelMap)
+        {
+            this.removePanel(name);
+            
+            var panel = this.panelMap[name];
+            panel.destroy();
+            
+            this.panelMap[name] = null;
+            delete this.panelMap[name];
+        }
+        
+        this.panelMap = null;
+    },
+    
+    initialize: function()
+    {
+        for(var name in this.panelMap)
+        {
+            (function(self, name){
+                
+                // tab click handler
+                var onTabClick = function onTabClick()
+                { 
+                    self.selectPanel(name);
+                    return false;
+                };
+                
+                Firebug.chrome.addController([self.panelMap[name].tabNode, "mousedown", onTabClick]);
+                
+            })(this, name);
+        }
+    },
+    
+    shutdown: function()
+    {
+        var selectedPanel = this.selectedPanel;
+        
+        if (selectedPanel)
+        {
+            removeClass(selectedPanel.tabNode, "fbSelectedTab");
+            selectedPanel.hide();
+            selectedPanel.shutdown();
+        }
+        
+        this.selectedPanel = null;
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    addPanel: function(panelName, parentPanel)
+    {
+        var PanelType = Firebug.panelTypeMap[panelName];
+        var panel = this.panelMap[panelName] = new PanelType();
+        
+        panel.create();
+    },
+    
+    removePanel: function(panelName)
+    {
+        var panel = this.panelMap[panelName];
+        if (panel.hasOwnProperty(panelName))
+            panel.destroy();
+    },
+    
+    selectPanel: function(panelName)
+    {
+        var selectedPanel = this.selectedPanel;
+        var panel = this.panelMap[panelName];
+        
+        if (panel && selectedPanel != panel)
+        {
+            if (selectedPanel)
+            {
+                removeClass(selectedPanel.tabNode, "fbSelectedTab");
+                selectedPanel.hide();
+                selectedPanel.shutdown();
+            }
+            
+            if (!panel.parentPanel)
+                FirebugChrome.selectedPanelName = panelName;
+            
+            this.selectedPanel = panel;
+            
+            setClass(panel.tabNode, "fbSelectedTab");
+            panel.initialize();
+            panel.show();
+        }
+    },
+    
+    getPanel: function(panelName)
+    {
+        var panel = this.panelMap[panelName];
+        
+        return panel;
+    }
+   
+};
+
+//************************************************************************************************
+// Button
+
+/**
+ *
+ * options.element
+ * options.caption
+ * options.title
+ * 
+ * options.owner
+ * options.className
+ * options.pressedClassName
+ * 
+ * options.onPress
+ * options.onUnpress
+ * options.onClick
+ * 
+ */
+
+FBL.Button = function(options)
+{
+    options = options || {};
+    
+    append(this, options);
+    
+    this.state = "unpressed";
+    this.display = "unpressed";
+    
+    if (this.element)
+    {
+        this.container = this.element.parentNode;
+    }
+    else
+    {
+        this.container = this.owner.getPanel().toolButtonsNode;
+        
+        this.element = createElement("a", {
+            className: this.baseClassName + " " + this.className + " fbHover",
+            title: this.title,
+            innerHTML: this.caption
+        });
+        
+        this.container.appendChild(this.element);
+    }
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+Button.prototype = extend(Controller,
+{
+    type: "normal",
+    caption: "caption",
+    title: "title",
+    
+    className: "", // custom class
+    baseClassName: "fbButton", // control class
+    pressedClassName: "fbBtnPressed", // control pressed class
+    
+    element: null,
+    container: null,
+    owner: null,
+    
+    state: null,
+    display: null,
+    
+    destroy: function()
+    {
+        this.shutdown();
+        
+        this.container.removeChild(this.element);
+        
+        this.element = null;
+        this.container = null;
+        this.owner = null;
+    },
+    
+    initialize: function()
+    {
+        Controller.initialize.apply(this);
+        
+        var element = this.element;
+        
+        this.addController([element, "mousedown", this.handlePress]);
+        
+        if (this.type == "normal")
+            this.addController(
+                [element, "mouseup", this.handleUnpress],
+                [element, "mouseout", this.handleUnpress],
+                [element, "click", this.handleClick]
+            );
+    },
+    
+    shutdown: function()
+    {
+        Controller.shutdown.apply(this);
+    },
+    
+    restore: function()
+    {
+        this.changeState("unpressed");
+    },
+    
+    changeState: function(state)
+    {
+        this.state = state;
+        this.changeDisplay(state);
+    },
+    
+    changeDisplay: function(display)
+    {
+        if (display != this.display)
+        {
+            if (display == "pressed")
+            {
+                setClass(this.element, this.pressedClassName);
+            }
+            else if (display == "unpressed")
+            {
+                removeClass(this.element, this.pressedClassName);
+            }
+            this.display = display;
+        }
+    },
+    
+    handlePress: function(event)
+    {
+        cancelEvent(event, true);
+        
+        if (this.type == "normal")
+        {
+            this.changeDisplay("pressed");
+            this.beforeClick = true;
+        }
+        else if (this.type == "toggle")
+        {
+            if (this.state == "pressed")
+            {
+                this.changeState("unpressed");
+                
+                if (this.onUnpress)
+                    this.onUnpress.apply(this.owner, arguments);
+            }
+            else
+            {
+                this.changeState("pressed");
+                
+                if (this.onPress)
+                    this.onPress.apply(this.owner, arguments);
+            }
+            
+            if (this.onClick)
+                this.onClick.apply(this.owner, arguments);
+        }
+        
+        return false;
+    },
+    
+    handleUnpress: function(event)
+    {
+        cancelEvent(event, true);
+        
+        if (this.beforeClick)
+            this.changeDisplay("unpressed");
+        
+        return false;
+    },
+    
+    handleClick: function(event)
+    {
+        cancelEvent(event, true);
+        
+        if (this.type == "normal")
+        {
+            if (this.onClick)
+                this.onClick.apply(this.owner);
+            
+            this.changeState("unpressed");
+        }
+        
+        this.beforeClick = false;
+        
+        return false;
+    }
+});
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+FBL.IconButton = function()
+{
+    Button.apply(this, arguments);
+};
+
+IconButton.prototype = extend(Button.prototype, 
+{
+    baseClassName: "fbIconButton",
+    pressedClassName: "fbIconPressed"
+});
+
+
+//************************************************************************************************
+// Menu
+
+var menuItemProps = {"class": "$item.className", type: "$item.type", value: "$item.value",
+        command: "$item.command"};
+    
+MenuPlate = domplate(Firebug.Rep,
+{
+    tag:
+        DIV({"class": "fbMenu fbShadow"},
+            DIV({"class": "fbMenuContent fbShadowContent"},
+                FOR("item", "$object.items|memberIterator",
+                    TAG("$item.tag", {item: "$item"})
+                )
+            )
+        ),
+        
+    itemTag:
+        A(menuItemProps,
+            "$item.label"
+        ),
+        
+    checkBoxTag:
+        A(extend(menuItemProps, {checked : "$item.checked"}),
+           
+            "$item.label"
+        ),
+        
+    radioButtonTag:
+        A(extend(menuItemProps, {selected : "$item.selected"}),
+           
+            "$item.label"
+        ),
+        
+    groupTag:
+        A(extend(menuItemProps, {child: "$item.child"}),
+            "$item.label"
+        ),
+        
+    shortcutTag:
+        A(menuItemProps,
+            "$item.label",
+            SPAN({"class": "fbMenuShortcutKey"},
+                "$item.key"
+            )
+        ),
+        
+    separatorTag:
+        SPAN({"class": "fbMenuSeparator"}),
+        
+    memberIterator: function(items)
+    {
+        var result = [];
+        
+        for (var i=0, length=items.length; i<length; i++)
+        {
+            var item = items[i];
+            
+            // separator representation
+            if (typeof item == "string" && item.indexOf("-") == 0)
+            {
+                result.push({tag: this.separatorTag});
+                continue;
+            }
+            
+            item = extend(item, {});
+            
+            item.type = item.type || "";
+            item.value = item.value || "";
+            
+            var type = item.type;
+            
+            // default item representation
+            item.tag = this.itemTag;
+            
+            var className = item.className || ""; 
+            
+            className += "fbMenuOption fbHover ";
+            
+            // specific representations
+            if (type == "checkbox")
+            {
+                className += "fbMenuCheckBox ";
+                item.tag = this.checkBoxTag;
+            }
+            else if (type == "radiobutton")
+            {
+                className += "fbMenuRadioButton ";
+                item.tag = this.radioButtonTag;
+            }
+            else if (type == "group")
+            {
+                className += "fbMenuGroup ";
+                item.tag = this.groupTag;
+            }
+            else if (type == "shortcut")
+            {
+                className += "fbMenuShortcut ";
+                item.tag = this.shortcutTag;
+            }
+            
+            if (item.checked)
+                className += "fbMenuChecked ";
+            else if (item.selected)
+                className += "fbMenuRadioSelected ";
+            
+            if (item.disabled)
+                className += "fbMenuDisabled ";
+            
+            item.className = className;
+            
+            result.push(item);
+        }
+        
+        return result;
+    }
+});
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+/**
+ * options
+ * options.element
+ * options.id
+ * options.items
+ * 
+ * item.label
+ * item.className
+ * item.type
+ * item.value
+ * item.disabled
+ * item.checked
+ * item.selected
+ * item.command
+ * item.child
+ */
+FBL.Menu = function(options)
+{
+    // if element is not pre-rendered, we must render it now
+    if (!options.element)
+    {
+        if (options.getItems)
+            options.items = options.getItems();
+        
+        options.element = MenuPlate.tag.append(
+                {object: options},
+                Firebug.chrome.document.body, 
+                MenuPlate
+            );
+    }
+    
+    // extend itself with the provided options
+    append(this, options);
+    
+    if (typeof this.element == "string")
+    {
+        this.id = this.element;
+        this.element = $(this.id);
+    }
+    else if (this.id)
+    {
+        this.element.id = this.id;
+    }
+    
+    this.elementStyle = this.element.style;
+    
+    this.isVisible = false;
+    
+    this.handleClick = bind(this.handleClick, this);
+    this.handleMouseMove = bind(this.handleMouseMove, this);
+    this.handleMouseOut = bind(this.handleMouseOut, this);
+    
+    this.handleWindowClick = bind(this.handleWindowClick, this);
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var menuMap = {};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+Menu.prototype =  extend(Controller,
+{
+    destroy: function()
+    {
+        //if (this.element) console.log("destroy", this.element.id);
+        
+        this.hide();
+        
+        this.element = null;
+        this.elementStyle = null;
+        this.parentMenu = null;
+        this.parentTarget = null;
+    },
+    
+    initialize: function()
+    {
+        Controller.initialize.call(this);
+        
+        this.addController(
+                [this.element, "click", this.handleClick],
+                [this.element, "mouseover", this.handleMouseMove]
+             );
+    },
+    
+    shutdown: function()
+    {
+        Controller.shutdown.call(this);
+    },
+    
+    show: function(x, y)
+    {
+        this.initialize();
+        
+        if (this.isVisible) return;
+        
+        //console.log("show", this.element.id);
+        
+        x = x || 0;
+        y = y || 0;
+        
+        if (this.parentMenu)
+        {
+            var oldChildMenu = this.parentMenu.childMenu;
+            if (oldChildMenu && oldChildMenu != this)
+            {
+                oldChildMenu.destroy();
+            }
+            
+            this.parentMenu.childMenu = this;
+        }
+        else
+            addEvent(Firebug.chrome.document, "mousedown", this.handleWindowClick);
+        
+        this.elementStyle.display = "block";
+        this.elementStyle.visibility = "hidden";
+        
+        var size = Firebug.chrome.getWindowSize();
+        
+        x = Math.min(x, size.width - this.element.clientWidth - 10);
+        x = Math.max(x, 0);
+        
+        y = Math.min(y, size.height - this.element.clientHeight - 10);
+        y = Math.max(y, 0);
+        
+        this.elementStyle.left = x + "px";
+        this.elementStyle.top = y + "px";
+        
+        this.elementStyle.visibility = "visible";
+        
+        this.isVisible = true;
+        
+        if (isFunction(this.onShow))
+            this.onShow.apply(this, arguments);
+    },
+    
+    hide: function()
+    {
+        this.clearHideTimeout();
+        this.clearShowChildTimeout();
+        
+        if (!this.isVisible) return;
+        
+        //console.log("hide", this.element.id);
+        
+        this.elementStyle.display = "none";
+        
+        if(this.childMenu)
+        {
+            this.childMenu.destroy();
+            this.childMenu = null;
+        }
+        
+        if(this.parentTarget)
+            removeClass(this.parentTarget, "fbMenuGroupSelected");
+        
+        this.isVisible = false;
+        
+        this.shutdown();
+        
+        if (isFunction(this.onHide))
+            this.onHide.apply(this, arguments);
+    },
+    
+    showChildMenu: function(target)
+    {
+        var id = target.getAttribute("child");
+        
+        var parent = this;
+        var target = target;
+        
+        this.showChildTimeout = Firebug.chrome.window.setTimeout(function(){
+            
+            //if (!parent.isVisible) return;
+            
+            var childMenuObject = menuMap.hasOwnProperty(id) ?
+                    menuMap[id] : {element: $(id)};
+            
+            var childMenu = new Menu(extend(childMenuObject, 
+                {
+                    parentMenu: parent,
+                    parentTarget: target
+                }));
+            
+            var box = Firebug.chrome.getElementBox(target);
+            
+            childMenu.show(box.left + box.width -6, box.top);
+            setClass(target, "fbMenuGroupSelected");
+            
+        },350);
+    },
+    
+    clearHideTimeout: function()
+    {
+        if (this.hideTimeout)
+        {
+            Firebug.chrome.window.clearTimeout(this.hideTimeout);
+            delete this.hideTimeout;
+        }
+    },
+    
+    clearShowChildTimeout: function()
+    {
+        if(this.showChildTimeout)
+        {
+            Firebug.chrome.window.clearTimeout(this.showChildTimeout);
+            this.showChildTimeout = null;
+        }
+    },
+    
+    handleClick: function(event)
+    {
+        var topParent = this;
+        while (topParent.parentMenu)
+            topParent = topParent.parentMenu;
+        
+        var target = event.target || event.srcElement;
+        
+        target = getAncestorByClass(target, "fbMenuOption");
+        
+        if(!target || hasClass(target, "fbMenuGroup"))
+        {
+            cancelEvent(event);
+            return false;
+        }
+        
+        if (target && !hasClass(target, "fbMenuDisabled"))
+        {
+            var type = target.getAttribute("type");
+            
+            if (type == "checkbox")
+            {
+                var checked = target.getAttribute("checked");
+                var value = target.getAttribute("value");
+                var wasChecked = hasClass(target, "fbMenuChecked");
+                
+                if (wasChecked)
+                {
+                    removeClass(target, "fbMenuChecked");
+                    target.setAttribute("checked", "");
+                }
+                else
+                {
+                    setClass(target, "fbMenuChecked");
+                    target.setAttribute("checked", "true");
+                }
+                
+                if (isFunction(this.onCheck))
+                    this.onCheck.call(this, target, value, !wasChecked)
+            }            
+            
+            if (type == "radiobutton")
+            {
+                var selectedRadios = getElementsByClass(target.parentNode, "fbMenuRadioSelected");
+                
+                var group = target.getAttribute("group");
+                
+                for (var i = 0, length = selectedRadios.length; i < length; i++)
+                {
+                    radio = selectedRadios[i];
+                    
+                    if (radio.getAttribute("group") == group)
+                    {
+                        removeClass(radio, "fbMenuRadioSelected");
+                        radio.setAttribute("selected", "");
+                    }
+                }
+                
+                setClass(target, "fbMenuRadioSelected");
+                target.setAttribute("selected", "true");
+            }            
+            
+            var cmd = target.getAttribute("command");
+            var handler = this[cmd];
+            var closeMenu = true;
+            
+            if (handler)
+                closeMenu = handler.call(this, target) !== false;
+            
+            if (closeMenu)
+                topParent.hide();
+        }
+    },
+    
+    handleWindowClick: function(event)
+    {
+        //console.log("handleWindowClick");
+        
+        var target = event.target || event.srcElement;
+        
+        target = getAncestorByClass(target, "fbMenu");
+        
+        if (!target)
+        {
+            removeEvent(Firebug.chrome.document, "mousedown", this.handleWindowClick);
+            this.hide();
+        }
+    },
+
+    handleMouseMove: function(event)
+    {
+        //console.log("handleMouseMove", this.element.id);
+        
+        this.clearHideTimeout();
+        this.clearShowChildTimeout();
+        
+        var target = event.target || event.srcElement;
+        
+        target = getAncestorByClass(target, "fbMenuOption");
+        
+        if(!target)
+            return;
+        
+        var childMenu = this.childMenu;
+        if(childMenu) 
+        {
+            removeClass(childMenu.parentTarget, "fbMenuGroupSelected");
+            
+            if (childMenu.parentTarget != target && childMenu.isVisible)
+            {
+                childMenu.clearHideTimeout(); 
+                childMenu.hideTimeout = Firebug.chrome.window.setTimeout(function(){
+                    childMenu.destroy();
+                },300);
+            }
+        }
+        
+        if(hasClass(target, "fbMenuGroup"))
+        {
+            this.showChildMenu(target);
+        }
+    }
+});
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+Menu.register = function(object)
+{
+    menuMap[object.id] = object;
+};
+
+Menu.check = function(element)
+{
+    setClass(element, "fbMenuChecked");
+    element.setAttribute("checked", "true");
+};
+
+Menu.uncheck = function(element)
+{
+    removeClass(element, "fbMenuChecked");
+    element.setAttribute("checked", "");
+};
+
+Menu.disable = function(element)
+{
+    setClass(element, "fbMenuDisabled");
+};
+
+Menu.enable = function(element)
+{
+    removeClass(element, "fbMenuDisabled");
+};
+
+/*
+
+SAMPLE
+
+    getContextMenuItems: function(fn, target)
+    {
+        if (getAncestorByClass(target, "sourceLine"))
+            return;
+
+        var sourceRow = getAncestorByClass(target, "sourceRow");
+        if (!sourceRow)
+            return;
+
+        var sourceLine = getChildByClass(sourceRow, "sourceLine");
+        var lineNo = parseInt(sourceLine.textContent);
+
+        var items = [];
+
+        var selection = this.document.defaultView.getSelection();
+        if (selection.toString())
+        {
+            items.push(
+                {label: "CopySourceCode", command: bind(this.copySource, this) },
+                "-",
+                {label: "AddWatch", command: bind(this.addSelectionWatch, this) }
+            );
+        }
+
+        var hasBreakpoint = sourceRow.getAttribute("breakpoint") == "true";
+
+        items.push(
+            "-",
+            {label: "SetBreakpoint", type: "checkbox", checked: hasBreakpoint,
+                command: bindFixed(this.toggleBreakpoint, this, lineNo) }
+        );
+        if (hasBreakpoint)
+        {
+            var isDisabled = fbs.isBreakpointDisabled(this.location.href, lineNo);
+            items.push(
+                {label: "DisableBreakpoint", type: "checkbox", checked: isDisabled,
+                    command: bindFixed(this.toggleDisableBreakpoint, this, lineNo) }
+            );
+        }
+        items.push(
+            {label: "EditBreakpointCondition",
+                command: bindFixed(this.editBreakpointCondition, this, lineNo) }
+        );
+
+        if (this.context.stopped)
+        {
+            var sourceRow = getAncestorByClass(target, "sourceRow");
+            if (sourceRow)
+            {
+                var sourceFile = getAncestorByClass(sourceRow, "sourceBox").repObject;
+                var lineNo = parseInt(sourceRow.firstChild.textContent);
+
+                var debuggr = Firebug.Debugger;
+                items.push(
+                    "-",
+                    {label: "Continue",
+                        command: bindFixed(debuggr.resume, debuggr, this.context) },
+                    {label: "StepOver",
+                        command: bindFixed(debuggr.stepOver, debuggr, this.context) },
+                    {label: "StepInto",
+                        command: bindFixed(debuggr.stepInto, debuggr, this.context) },
+                    {label: "StepOut",
+                        command: bindFixed(debuggr.stepOut, debuggr, this.context) },
+                    {label: "RunUntil",
+                        command: bindFixed(debuggr.runUntil, debuggr, this.context,
+                        sourceFile, lineNo) }
+                );
+            }
+        }
+
+        return items;
+    },
+
+
+
+ */
+
+
+//************************************************************************************************
+// Status Bar
+
+function StatusBar(){};
+
+StatusBar.prototype = extend(Controller, {
+    
 });
 
 // ************************************************************************************************
@@ -5979,9 +6793,6 @@ FBL.FirebugChrome =
         if (Env.chrome.type == "frame")
             ChromeMini.create(Env.chrome);
             
-        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
-            Env.openAtStartup = true;
-
         var chrome = Firebug.chrome = new Chrome(Env.chrome);
         FirebugChrome.chromeMap[chrome.type] = chrome;
         
@@ -5994,7 +6805,9 @@ FBL.FirebugChrome =
             if (frame)
                 frame.close();
             
-            chrome.reattach(frame, chrome);
+            //chrome.reattach(frame, chrome);
+            //TODO: xxxpedro persist synchronize?
+            chrome.initialize();
         }
     },
     
@@ -6003,7 +6816,7 @@ FBL.FirebugChrome =
         for (var name in FBChrome)
         {
             var prop = FBChrome[name];
-            if (FBChrome.hasOwnProperty(name) && typeof prop != "function")
+            if (FBChrome.hasOwnProperty(name) && !isFunction(prop))
             {
                 this[name] = prop;
             }
@@ -6034,7 +6847,7 @@ var createChromeWindow = function(options)
     
     var chrome = {};
     
-    chrome.type = options.type;
+    chrome.type = Env.isPersistentMode ? "popup" : options.type;
     
     var isChromeFrame = chrome.type == "frame";
     var isBookmarletMode = Env.isBookmarletMode;
@@ -6164,7 +6977,7 @@ var onChromeLoad = function onChromeLoad(chrome)
         {
             var doc = chrome.document;
             var script = doc.createElement("script");
-            script.src = Env.location.app;
+            script.src = Env.location.app + "#remote,persist";
             doc.getElementsByTagName("head")[0].appendChild(script);
         }
     }
@@ -6239,7 +7052,7 @@ var Chrome = function Chrome(chrome)
 // ************************************************************************************************
 // ChromeBase
 
-var ChromeBase = extend(Firebug.Controller, Firebug.PanelBar);
+var ChromeBase = extend(Controller, PanelBar);
 
 append(ChromeBase, Context.prototype);
 
@@ -6247,12 +7060,12 @@ append(ChromeBase,
 {
     create: function()
     {
-        Firebug.PanelBar.create.apply(this);
+        PanelBar.create.call(this);
         
         if (Firebug.Inspector)
-            this.inspectButton = new Firebug.Button({
+            this.inspectButton = new Button({
                 type: "toggle",
-                node: $("fbChrome_btInspect"),
+                element: $("fbChrome_btInspect"),
                 owner: Firebug.Inspector,
                 
                 onPress: Firebug.Inspector.startInspecting,
@@ -6262,7 +7075,246 @@ append(ChromeBase,
     
     destroy: function()
     {
+        this.inspectButton.destroy();
+        
+        PanelBar.destroy.call(this);
+        
         this.shutdown();
+    },
+    
+    testMenu: function()
+    {
+        var firebugMenu = new Menu(
+        {
+            id: "fbFirebugMenu2",
+            
+            items:
+            [
+                {
+                    label: "Open Firebug",
+                    type: "shortcut",
+                    key: isFirefox ? "Shift+F12" : "F12",
+                    checked: true,
+                    command: "toggleChrome"
+                },
+                {
+                    label: "Open Firebug in New Window", 
+                    type: "shortcut",
+                    key: isFirefox ? "Ctrl+Shift+F12" : "Ctrl+F12",
+                    command: "openPopup"
+                },
+                {
+                    label: "Inspect Element", 
+                    type: "shortcut",
+                    key: "Ctrl+Shift+C",
+                    command: "toggleInspect"
+                },
+                {
+                    label: "Command Line", 
+                    type: "shortcut",
+                    key: "Ctrl+Shift+L",
+                    command: "focusCommandLine"
+                },
+                "-",
+                {
+                    label: "Options", 
+                    type: "group", 
+                    child: "fbFirebugOptionsMenu"
+                },
+                "-",
+                {
+                    label: "Firebug Lite Homepage"
+                },
+                {
+                    label: "Discussion List"
+                },
+                {
+                    label: "Report Bug"
+                }
+            ],
+            
+            onHide: function()
+            {
+                iconButton.restore();
+            },            
+            
+            clickMe: function(target)
+            {
+                var val=target.getAttribute("value");
+                alert(val);
+            },
+            
+            focusCommandLine: function()
+            {
+                alert("fcml");
+            }        
+        });
+        
+        var firebugOptionsMenu =
+        {
+            id: "fbFirebugOptionsMenu",
+            
+            getItems: function()
+            {
+                var cookiesDisabled = !Firebug.saveCookies;
+                
+                return [
+                    {
+                        label: "Save Options in Cookies",
+                        type: "checkbox",
+                        value: "saveCookies",
+                        checked: Firebug.saveCookies,
+                        command: "saveOptions"
+                    },
+                    "-",
+                    {
+                        label: "Start Opened",
+                        type: "checkbox",
+                        value: "startOpened",
+                        checked: Firebug.startOpened,
+                        disabled: cookiesDisabled
+                    },
+                    {
+                        label: "Start in New Window",
+                        type: "checkbox",
+                        value: "startInNewWindow",
+                        checked: Firebug.startInNewWindow,
+                        disabled: cookiesDisabled
+                    },
+                    {
+                        label: "Override Console Object",
+                        type: "checkbox",
+                        value: "overrideConsole",
+                        checked: Firebug.overrideConsole,
+                        disabled: cookiesDisabled
+                    },
+                    "-",
+                    {
+                        label: "Enable Trace Mode",
+                        type: "checkbox",
+                        value: "enableTrace",
+                        checked: Firebug.enableTrace,
+                        disabled: cookiesDisabled
+                    },
+                    {
+                        label: "Enable Persistent Mode (experimental)",
+                        type: "checkbox",
+                        value: "enablePersistent",
+                        checked: Firebug.enablePersistent,
+                        disabled: cookiesDisabled
+                    },
+                    "-",
+                    {
+                        label: "Restore Preferences",
+                        command: "restorePrefs",
+                        disabled: cookiesDisabled
+                    }
+                ];
+            },
+            
+            onCheck: function(target, value, checked)
+            {
+                Firebug.setPref(value, checked);
+            },           
+            
+            saveOptions: function(target)
+            {
+                var saveEnabled = target.getAttribute("checked");
+                
+                if (!saveEnabled) this.restorePrefs();
+                
+                this.updateMenu(target);
+                
+                return false;
+            },
+            
+            restorePrefs: function(target)
+            {
+                Firebug.restorePrefs();
+                Firebug.savePrefs();
+                
+                if (target)
+                    this.updateMenu(target);
+                
+                return false;
+            },
+            
+            updateMenu: function(target)
+            {
+                var options = getElementsByClass(target.parentNode, "fbMenuOption");
+                
+                /*
+                var firstOption = options[0]; 
+                var state = !!firstOption.getAttribute("checked");
+                var enabled = Firebug.saveCookies;
+                
+                if (state != enabled)
+                    firstOption.setAttribute("checked", enabled ? "true" : "");
+                /**/
+                
+                var enabled = options[0].getAttribute("checked");
+                
+                for (var i = 1, length = options.length; i < length; i++)
+                {
+                    var option = options[i];
+                    
+                    var value = option.getAttribute("value");
+                    var pref = Firebug[value];
+                    
+                    if (pref)
+                        Menu.check(option);
+                    else
+                        Menu.uncheck(option);
+                    
+                    if (enabled)
+                        Menu.enable(option);
+                    else
+                        Menu.disable(option);
+                }
+            },
+            
+            clickMe: function(target)
+            {
+                var val=target.getAttribute("value");
+                alert(val);
+            }
+        };
+        
+        Menu.register(firebugOptionsMenu);
+        
+        
+        var menu = firebugMenu;
+        
+        var testMenuClick = function(event)
+        {
+            //console.log("testMenuClick");
+            cancelEvent(event, true);
+            
+            var target = event.target || event.srcElement;
+            
+            if (menu.isVisible)
+                menu.hide();
+            else
+            {
+                var box = Firebug.chrome.getElementBox(target);
+                menu.show(box.left -4, box.top + box.height -5);
+            }
+            
+            return false;
+        };
+        
+        var iconButton = new IconButton({
+            type: "toggle",
+            element: $("fbFirebugButton"),
+            
+            onClick: testMenuClick
+        });
+        
+        iconButton.initialize();
+        
+        
+        
+        //addEvent($("fbToolbarIcon"), "click", testMenuClick);
     },
     
     initialize: function()
@@ -6279,8 +7331,8 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
-        Firebug.Controller.initialize.apply(this);
-        Firebug.PanelBar.initialize.apply(this);
+        Controller.initialize.call(this);
+        PanelBar.initialize.call(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
@@ -6324,6 +7376,8 @@ append(ChromeBase,
         
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
+        disableTextSelection($("fbPanelBar1"));
+        disableTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create a new instance of the CommandLine class
@@ -6332,7 +7386,7 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
-        if (isIE && Firebug.Selector)
+        if (isIE6 && Firebug.Selector)
         {
             // TODO: xxxpedro change to getElementsByClass
             var as = $$(".fbHover");
@@ -6377,6 +7431,8 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //this.draw();
+        
+        this.testMenu();
     },
     
     shutdown: function()
@@ -6399,6 +7455,8 @@ append(ChromeBase,
         // remove disableTextSelection event handlers
         restoreTextSelection($("fbToolbar"));
         restoreTextSelection($("fbPanelBarBox"));
+        restoreTextSelection($("fbPanelBar1"));
+        restoreTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Remove the interface elements cache
@@ -6441,8 +7499,8 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
-        Firebug.Controller.shutdown.apply(this);
-        Firebug.PanelBar.shutdown.apply(this);
+        Controller.shutdown.call(this);
+        PanelBar.shutdown.call(this);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // destroy the instance of the CommandLine class
@@ -6626,7 +7684,7 @@ var ChromeFrameBase = extend(ChromeBase,
         if (isFirefox)
             this.node.style.display = "block";
         
-        if (Env.openAtStartup)
+        if (Env.startOpened)
             this.open();
         else
         {
@@ -6637,9 +7695,9 @@ var ChromeFrameBase = extend(ChromeBase,
     
     destroy: function()
     {
-        ChromeBase.destroy.call(this);
-        
         removeGlobalEvent("keydown", onPressF12);
+        
+        ChromeBase.destroy.call(this);
         
         this.document = null;
         delete this.document;
@@ -6659,11 +7717,12 @@ var ChromeFrameBase = extend(ChromeBase,
         
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
-            [Firebug.browser.window, "unload", Firebug.shutdown],
-            
             [$("fbChrome_btClose"), "click", this.close],
             [$("fbChrome_btDetach"), "click", this.detach]       
         );
+        
+        if (!Env.isPersistentMode)
+            this.addController([Firebug.browser.window, "unload", Firebug.shutdown]);
         
         if (noFixedPosition)
         {
@@ -6767,11 +7826,15 @@ var ChromeFrameBase = extend(ChromeBase,
         
         this.node.style.top = maxHeight - height + scroll.top + "px";
         
-        
         if (this.type == "frame" && (bodyStyle.marginLeft || bodyStyle.marginRight))
         {
             this.node.style.width = size.width + "px";
         }
+        
+        if (fbVSplitterStyle)
+            fbVSplitterStyle.right = FirebugChrome.sidePanelWidth + "px";
+        
+        this.draw();
     }
 
 });
@@ -6780,7 +7843,7 @@ var ChromeFrameBase = extend(ChromeBase,
 // ************************************************************************************************
 // ChromeMini
 
-var ChromeMini = extend(Firebug.Controller, 
+var ChromeMini = extend(Controller, 
 {
     create: function(chrome)
     {
@@ -6790,7 +7853,7 @@ var ChromeMini = extend(Firebug.Controller,
     
     initialize: function()
     {
-        Firebug.Controller.initialize.apply(this);
+        Controller.initialize.apply(this);
         
         var doc = FirebugChrome.chromeMap.frame.document;
         
@@ -6851,7 +7914,7 @@ var ChromeMini = extend(Firebug.Controller,
         var mini = $("fbMiniChrome", doc);
         mini.style.display = "none";
         
-        Firebug.Controller.shutdown.apply(this);
+        Controller.shutdown.apply(this);
         
         this.isInitialized = false;
     },
@@ -6879,9 +7942,18 @@ var ChromePopupBase = extend(ChromeBase, {
         
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
-            [Firebug.chrome.window, "unload", this.destroy],
-            [Firebug.browser.window, "unload", this.close]
+            [Firebug.chrome.window, "unload", this.destroy]
         );
+        
+        if (Env.isPersistentMode)
+        {
+            this.persist = bind(this.persist, this);
+            addEvent(Firebug.browser.window, "unload", this.persist);
+        }
+        else
+            this.addController(
+                [Firebug.browser.window, "unload", this.close]
+            );
         
         fbVSplitter.onmousedown = onVSplitterMouseDown;
     },
@@ -6891,15 +7963,87 @@ var ChromePopupBase = extend(ChromeBase, {
         // TODO: xxxpedro sync detach reattach attach
         var frame = FirebugChrome.chromeMap.frame;
         
-        dispatch(frame.panelMap, "detach", [this, frame]);
+        if(frame)
+        {
+            dispatch(frame.panelMap, "detach", [this, frame]);
+            
+            frame.reattach(this, frame);
+        }
         
-        frame.reattach(this, frame);
+        if (Env.isPersistentMode)
+        {
+            removeEvent(Firebug.browser.window, "unload", this.persist);
+        }
         
         ChromeBase.destroy.apply(this);
         
         FirebugChrome.chromeMap.popup = null;
         
         this.node.close();
+    },
+    
+    persist: function()
+    {
+        persistTimeStart = new Date().getTime();
+        
+        removeEvent(Firebug.browser.window, "unload", this.persist);
+        
+        Firebug.Inspector.destroy();
+        Firebug.browser.window.FirebugOldBrowser = true;
+        
+        var persistTimeStart = new Date().getTime();
+        
+        var waitMainWindow = function()
+        {
+            var doc, head;
+        
+            try
+            {
+                if (window.opener && !window.opener.FirebugOldBrowser && (doc = window.opener.document)/* && 
+                    doc.documentElement && (head = doc.documentElement.firstChild)*/)
+                {
+                    
+                    try
+                    {
+                        var persistDelay = new Date().getTime() - persistTimeStart;
+                
+                        window.Firebug = Firebug;
+                        window.opener.Firebug = Firebug;
+                
+                        Env.browser = window.opener;
+                        Firebug.browser = Firebug.context = new Context(Env.browser);
+                
+                        registerConsole();
+                
+                        var chrome = Firebug.chrome;
+                        addEvent(Firebug.browser.window, "unload", chrome.persist)
+                
+                        FBL.cacheDocument();
+                        Firebug.Inspector.create();
+                
+                        var htmlPanel = chrome.getPanel("HTML");
+                        htmlPanel.createUI();
+                        
+                        Firebug.Console.info("Firebug could not capture console calls during " + 
+                                persistDelay + "ms");
+                    }
+                    catch(pE)
+                    {
+                        alert("persist error: " + (pE.message || pE));
+                    }
+                    
+                }
+                else
+                {
+                    window.setTimeout(waitMainWindow, 0);
+                }
+            
+            } catch (E) {
+                window.close();
+            }
+        };
+        
+        waitMainWindow();    
     },
     
     close: function()
@@ -7199,8 +8343,8 @@ FBL.ns(function() { with (FBL) {
 //----------------------------------------------------------------------------
 FirebugChrome.injected = 
 {
-    CSS: '.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}.twisty{background-position:2px 0;}.panelNode-console{overflow-x:hidden;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{padding:0;border:none;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;outline:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#F8F8F8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectPropValue{font-weight:normal;font-style:italic;color:#555555;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.arrayLeftBracket{margin-right:4px;}.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0px 0 1px 0;}.logRow-spy,.logRow-spy .objectLink-sourceLink{padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;}.logRow-spy.loading .spyHead .spyRow .spyIcon{}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:11px;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;white-space:nowrap;background-color:#FFFFFF;}.memberRow.hasChildren > .memberLabelCell > .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbCSS{font:11px Monaco,monospace;padding:0 7px;}#fbCSSButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;}.Selector{margin-top:10px}.CSSText{padding-left:20px;}.CSSProperty{color:#005500; margin-top:10px;}.CSSValue{padding-left:5px; color:#000088;}.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 1px 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 5px;margin:0 0 0 1px;cursor:default;}.fbToolbarButtonsa:hover{color:#333;padding:3px 4px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:fixed;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{display:block;height:20px;width:20px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;text-decoration:none;cursor:default;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons a{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}#fbToolbarButtons a:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbChromeButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:50px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;position:relative;}#fbChromeButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#fbChrome_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#fbChrome_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#fbChrome_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#fbChrome_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;}div.lineNo{font:11px Monaco,monospace;position:absolute;top:0;left:0;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:11px Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbChromeButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
-    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbChromeButtons"><a id="fbChrome_btClose" class="fbHover" title="Minimize Firebug">&nbsp;</a><a id="fbChrome_btDetach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a title="Firebug Lite Homepage" href="http://getfirebug.com/lite.html" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Style</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Layout</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
+    CSS: '.hasChildren .memberLabelCell .memberLabel,.hasHeaders .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}.opened .memberLabelCell .memberLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}.twisty{background-position:2px 0;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{padding:0;border:none;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;outline:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#F8F8F8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectPropValue{font-weight:normal;font-style:italic;color:#555555;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.arrayLeftBracket{margin-right:4px;}.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0px 0 1px 0;}.logRow-spy,.logRow-spy .objectLink-sourceLink{padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;}.logRow-spy.loading .spyHead .spyRow .spyIcon{}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:11px;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;white-space:nowrap;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbCSS{font:11px Monaco,monospace;padding:0 7px;}#fbCSSButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;}.Selector{margin-top:10px}.CSSText{padding-left:20px;}.CSSProperty{color:#005500; margin-top:10px;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:fixed;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;z-index:999;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}html,body{margin:0;padding:0;overflow:hidden;}body{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{position:fixed;overflow:hidden;height:100%;width:100%;border-collapse:collapse;background:#fff;}#fbTop{height:49px;}#fbToolbar{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 8px 4px;cursor:default;}.fbButton:hover{color:#333;padding:3px 7px 3px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#ECEBE3;padding:3px 6px 2px 7px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbChromeButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:50px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:11px;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:7px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;}div.fbFitHeight{overflow:auto;position:relative;}#fbChromeButtons a{font-size:1px;width:16px;height:16px;display:block;float:right;margin-right:4px;text-decoration:none;cursor:default;}#fbChrome_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#fbChrome_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#fbChrome_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#fbChrome_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{display:block;float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:9;position:absolute;height:100%;top:27px;}div.lineNo{font:11px Monaco,monospace;position:absolute;top:0;left:0;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:11px Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:11px;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbChromeButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbChromeButtons"><a id="fbChrome_btClose" class="fbHover" title="Minimize Firebug">&nbsp;</a><a id="fbChrome_btDetach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Style</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Layout</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
 };
 
 // ************************************************************************************************
@@ -7874,8 +9018,8 @@ ConsolePanel.prototype = extend(Firebug.Panel,
     {
         Firebug.Panel.create.apply(this, arguments);
         
-        this.clearButton = new Firebug.Button({
-            node: $("fbConsole_btClear"),
+        this.clearButton = new Button({
+            element: $("fbConsole_btClear"),
             owner: Firebug.Console,
             onClick: Firebug.Console.clear
         });
@@ -7935,9 +9079,13 @@ FBL.onError = function(msg, href, lineNo)
 // ************************************************************************************************
 // Register console namespace
 
-if (!isFirefox)
-    Env.browser.window.console = ConsoleAPI;        
+FBL.registerConsole = function()
+{
+    if (!isFirefox)
+        Env.browser.window.console = ConsoleAPI;
+};
 
+registerConsole();
 
 // ************************************************************************************************
 }});
@@ -9390,7 +10538,13 @@ var OBJECTBOX = this.OBJECTBOX =
 var OBJECTBLOCK = this.OBJECTBLOCK =
     DIV({"class": "objectBox objectBox-$className"});
 
-var OBJECTLINK = this.OBJECTLINK =
+var OBJECTLINK = this.OBJECTLINK = isIE6 ? // IE6 object link representation
+    A({
+        "class": "objectLink objectLink-$className a11yFocus",
+        href: "javascript:void(0)",
+        _repObject: "$object"
+    })
+    : // Other browsers
     A({
         "class": "objectLink objectLink-$className a11yFocus",
         _repObject: "$object"
@@ -12830,8 +13984,19 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if(!this.sidePanelBar.selectedPanel)
         {
-            this.sidePanelBar.selectPanel("DOMSide");
+            this.sidePanelBar.selectPanel("DOMSidePanel");
         }            
+    },
+    
+    destroy: function()
+    {
+        selectedElement = null
+        fbPanel1 = null;
+        
+        selectedSidePanelTS = null;
+        selectedSidePanelTimer = null;
+        
+        Firebug.Panel.destroy.apply(this, arguments);
     },
     
     createUI: function()
@@ -12994,24 +14159,6 @@ Firebug.HTML.onTreeClick = function (e)
         input.focus(); 
         /**/
     }
-}
-
-var OLD_chromeLoad = function OLD_chromeLoad(doc)
-{
-    //Firebug.Inspector.onChromeReady();
-    
-    var rootNode = document.documentElement;
-    
-    /* Console event handlers */
-    addEvent(fbConsole, 'mousemove', onListMouseMove);
-    addEvent(fbConsole, 'mouseout', onListMouseOut);
-    
-    
-    // HTML event handlers
-    addEvent(fbHTML, 'click', Firebug.HTML.onTreeClick);
-    
-    addEvent(fbHTML, 'mousemove', onListMouseMove);
-    addEvent(fbHTML, 'mouseout', onListMouseOut);
 }
 
 function onListMouseOut(e)
@@ -13692,11 +14839,17 @@ var ignoreVars =
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+var memberPanelRep =
+    isIE6 ?
+    {"class": "memberLabel $member.type\\Label", href: "javacript:void(0)"}
+    :
+    {"class": "memberLabel $member.type\\Label"};
+
 var RowTag =
     TR({"class": "memberRow $member.open $member.type\\Row", $hasChildren: "$member.hasChildren", role : 'presentation',
         level: "$member.level"},
         TD({"class": "memberLabelCell", style: "padding-left: $member.indent\\px", role : 'presentation'},
-            DIV({"class": "memberLabel $member.type\\Label"},
+            A(memberPanelRep,
                 SPAN({}, "$member.name")
             )
         ),
@@ -13807,6 +14960,8 @@ var DirTablePlate = domplate(Firebug.Rep,
                 }
             }
         }
+        
+        return false;
     },
 
     toggleRow: function(row)
@@ -15178,7 +16333,7 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
-    name: "DOMSide",
+    name: "DOMSidePanel",
     parentPanel: "HTML",
     title: "DOM",
     
@@ -15211,7 +16366,7 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     reattach: function(oldChrome)
     {
         //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
-        this.toggles = oldChrome.getPanel("DOMSide").toggles;
+        this.toggles = oldChrome.getPanel("DOMSidePanel").toggles;
     }
     
 });
@@ -15443,10 +16598,10 @@ TracePanel.prototype = extend(Firebug.Panel,
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
         
-        this.clearButton = new Firebug.Button({
+        this.clearButton = new Button({
             caption: "Clear",
             title: "Clear FBTrace logs",            
-            module: Firebug.Trace,
+            owner: Firebug.Trace,
             onClick: Firebug.Trace.clear
         });
     },
