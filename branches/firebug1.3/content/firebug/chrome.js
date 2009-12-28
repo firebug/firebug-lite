@@ -33,7 +33,7 @@ FBL.FirebugChrome =
         var chrome = Firebug.chrome = new Chrome(Env.chrome);
         FirebugChrome.chromeMap[chrome.type] = chrome;
         
-        addGlobalEvent("keydown", onPressF12);
+        addGlobalEvent("keydown", onGlobalKeyDown);
         
         if (Env.isPersistentMode && chrome.type == "popup")
         {
@@ -360,7 +360,8 @@ append(ChromeBase,
                 },
                 "-",
                 {
-                    label: "Firebug Lite Homepage"
+                    label: "Firebug Lite Homepage",
+                    command: "visitHomepage"
                 },
                 {
                     label: "Discussion List"
@@ -373,18 +374,48 @@ append(ChromeBase,
             onHide: function()
             {
                 iconButton.restore();
-            },            
+            },
             
-            clickMe: function(target)
+            toggleChrome: function()
             {
-                var val=target.getAttribute("value");
-                alert(val);
+                Firebug.chrome.toggle();
+            },
+            
+            openPopup: function()
+            {
+                Firebug.chrome.toggle(true, true);
+            },
+            
+            toggleInspect: function()
+            {
+                Firebug.Inspector.toggleInspect();
             },
             
             focusCommandLine: function()
             {
-                alert("fcml");
-            }        
+                Firebug.chrome.focusCommandLine();
+            },
+            
+            visitHomepage: function()
+            {
+                this.visit("http://getfirebug.com/lite");
+            },
+            
+            visitDiscussionList: function()
+            {
+                this.visit("");
+            },
+            
+            visitIssueList: function()
+            {
+                this.visit("");
+            },
+            
+            visit: function(url)
+            {
+                window.open(url);
+            }
+            
         });
         
         var firebugOptionsMenu =
@@ -468,7 +499,11 @@ append(ChromeBase,
             restorePrefs: function(target)
             {
                 Firebug.restorePrefs();
-                Firebug.savePrefs();
+                
+                if(Firebug.saveCookies)
+                    Firebug.savePrefs()
+                else
+                    Firebug.removePrefs();
                 
                 if (target)
                     this.updateMenu(target);
@@ -487,6 +522,11 @@ append(ChromeBase,
                 else
                     Menu.uncheck(firstOption);
                 
+                if (enabled)
+                    Menu.check(options[0]);
+                else
+                    Menu.uncheck(options[0]);
+                
                 for (var i = 1, length = options.length; i < length; i++)
                 {
                     var option = options[i];
@@ -504,17 +544,10 @@ append(ChromeBase,
                     else
                         Menu.disable(option);
                 }
-            },
-            
-            clickMe: function(target)
-            {
-                var val=target.getAttribute("value");
-                alert(val);
             }
         };
         
         Menu.register(firebugOptionsMenu);
-        
         
         var menu = firebugMenu;
         
@@ -544,8 +577,6 @@ append(ChromeBase,
         });
         
         iconButton.initialize();
-        
-        
         
         //addEvent($("fbToolbarIcon"), "click", testMenuClick);
     },
@@ -660,6 +691,9 @@ append(ChromeBase,
         var self = this;
         setTimeout(function(){
             self.selectPanel(FirebugChrome.selectedPanelName);
+            
+            if (FirebugChrome.selectedPanelName == "Console")
+                Firebug.chrome.focusCommandLine();
         },0);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -900,6 +934,14 @@ append(ChromeBase,
         changeSidePanelVisibility(options.hasSidePanel);
         
         Firebug.chrome.draw();
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    focusCommandLine: function()
+    {
+        this.selectPanel("Console");
+        commandLine.element.focus();
     }
     
 });
@@ -928,7 +970,7 @@ var ChromeFrameBase = extend(ChromeBase,
     
     destroy: function()
     {
-        removeGlobalEvent("keydown", onPressF12);
+        removeGlobalEvent("keydown", onGlobalKeyDown);
         
         ChromeBase.destroy.call(this);
         
@@ -1006,6 +1048,8 @@ var ChromeFrameBase = extend(ChromeBase,
             
             var self = this;
             setTimeout(function(){
+                node.style.visibility = "visible";
+                
                 //dispatch(Firebug.modules, "initialize", []);
                 self.initialize();
                 
@@ -1014,7 +1058,6 @@ var ChromeFrameBase = extend(ChromeBase,
                 
                 self.draw();
         
-                node.style.visibility = "visible";
             }, 10);
         }
     },
@@ -1339,6 +1382,10 @@ var topPartialHeight = null;
 
 var chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75;
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var lastSelectedPanelName = null;
+
 
 //************************************************************************************************
 // UI helpers
@@ -1372,14 +1419,27 @@ var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 // ************************************************************************************************
 // F12 Handler
 
-var onPressF12 = function onPressF12(event)
+var onGlobalKeyDown = function onGlobalKeyDown(event)
 {
-    if (event.keyCode == 123 /* F12 */ && 
-        (!isFirefox && !event.shiftKey || event.shiftKey && isFirefox))
-        {
-            Firebug.chrome.toggle(false, event.ctrlKey);
-            cancelEvent(event, true);
-        }
+    var keyCode = event.keyCode;
+    var shiftKey = event.shiftKey;
+    var ctrlKey = event.ctrlKey;
+    
+    if (keyCode == 123 /* F12 */ && (!isFirefox && !shiftKey || shiftKey && isFirefox))
+    {
+        Firebug.chrome.toggle(false, ctrlKey);
+        cancelEvent(event, true);
+    }
+    else if (keyCode == 67 /* C */ && ctrlKey && shiftKey)
+    {
+        Firebug.Inspector.toggleInspect();
+        cancelEvent(event, true);
+    }
+    else if (keyCode == 76 /* L */ && ctrlKey && shiftKey)
+    {
+        Firebug.chrome.focusCommandLine();
+        cancelEvent(event, true);
+    }
 };
 
 var onMiniIconClick = function onMiniIconClick(event)
