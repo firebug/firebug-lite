@@ -4,7 +4,7 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Inspector Module
 
-var inspectorTS, inspectorTimer;
+var inspectorTS, inspectorTimer, isInspecting;
 
 Firebug.Inspector =
 {
@@ -27,8 +27,23 @@ Firebug.Inspector =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Inspect functions
     
+    toggleInspect: function()
+    {
+        if (isInspecting)
+        {
+            this.stopInspecting();
+        }
+        else
+        {
+            Firebug.chrome.inspectButton.changeState("pressed");
+            this.startInspecting();
+        }
+    },
+    
     startInspecting: function()
     {
+        isInspecting = true;
+        
         Firebug.chrome.selectPanel("HTML");
         
         createInspectorFrame();
@@ -46,6 +61,8 @@ Firebug.Inspector =
     
     stopInspecting: function()
     {
+        isInspecting = false;
+        
         destroyInspectorFrame();
         
         Firebug.chrome.inspectButton.restore();
@@ -57,7 +74,6 @@ Firebug.Inspector =
         if (Firebug.chrome.type == "popup")
             Firebug.chrome.node.focus();
     },
-    
     
     onInspectingClick: function(e)
     {
