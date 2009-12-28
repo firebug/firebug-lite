@@ -1026,6 +1026,9 @@ var Renderer =
         while (womb.firstChild)
             parent.appendChild(womb.firstChild);
 
+        // clearing element reference to avoid reference error in IE8 when switching contexts
+        womb = null;
+        
         var domArgs = [root, this.tag.context, 0];
         domArgs.push.apply(domArgs, this.tag.domArgs);
         domArgs.push.apply(domArgs, outputs);
