@@ -565,11 +565,11 @@ FBL.Menu = function(options)
     
     this.isVisible = false;
     
-    this.handleClick = bind(this.handleClick, this);
-    this.handleMouseMove = bind(this.handleMouseMove, this);
+    this.handleMouseDown = bind(this.handleMouseDown, this);
+    this.handleMouseOver = bind(this.handleMouseOver, this);
     this.handleMouseOut = bind(this.handleMouseOut, this);
     
-    this.handleWindowClick = bind(this.handleWindowClick, this);
+    this.handleWindowMouseDown = bind(this.handleWindowMouseDown, this);
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -597,8 +597,8 @@ Menu.prototype =  extend(Controller,
         Controller.initialize.call(this);
         
         this.addController(
-                [this.element, "click", this.handleClick],
-                [this.element, "mouseover", this.handleMouseMove]
+                [this.element, "mousedown", this.handleMouseDown],
+                [this.element, "mouseover", this.handleMouseOver]
              );
     },
     
@@ -629,7 +629,7 @@ Menu.prototype =  extend(Controller,
             this.parentMenu.childMenu = this;
         }
         else
-            addEvent(Firebug.chrome.document, "mousedown", this.handleWindowClick);
+            addEvent(Firebug.chrome.document, "mousedown", this.handleWindowMouseDown);
         
         this.elementStyle.display = "block";
         this.elementStyle.visibility = "hidden";
@@ -727,8 +727,10 @@ Menu.prototype =  extend(Controller,
         }
     },
     
-    handleClick: function(event)
+    handleMouseDown: function(event)
     {
+        cancelEvent(event, true);
+        
         var topParent = this;
         while (topParent.parentMenu)
             topParent = topParent.parentMenu;
@@ -738,10 +740,7 @@ Menu.prototype =  extend(Controller,
         target = getAncestorByClass(target, "fbMenuOption");
         
         if(!target || hasClass(target, "fbMenuGroup"))
-        {
-            cancelEvent(event);
             return false;
-        }
         
         if (target && !hasClass(target, "fbMenuDisabled"))
         {
@@ -799,11 +798,13 @@ Menu.prototype =  extend(Controller,
             if (closeMenu)
                 topParent.hide();
         }
+        
+        return false;
     },
     
-    handleWindowClick: function(event)
+    handleWindowMouseDown: function(event)
     {
-        //console.log("handleWindowClick");
+        //console.log("handleWindowMouseDown");
         
         var target = event.target || event.srcElement;
         
@@ -811,14 +812,14 @@ Menu.prototype =  extend(Controller,
         
         if (!target)
         {
-            removeEvent(Firebug.chrome.document, "mousedown", this.handleWindowClick);
+            removeEvent(Firebug.chrome.document, "mousedown", this.handleWindowMouseDown);
             this.hide();
         }
     },
 
-    handleMouseMove: function(event)
+    handleMouseOver: function(event)
     {
-        //console.log("handleMouseMove", this.element.id);
+        //console.log("handleMouseOver", this.element.id);
         
         this.clearHideTimeout();
         this.clearShowChildTimeout();
