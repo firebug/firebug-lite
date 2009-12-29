@@ -368,7 +368,7 @@ var inspectStyle = resetStyle + "z-index: 2147483500;";
 var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; background:url(" +
                         Env.location.skinDir + "pixel_transparent.gif);";
 
-//if (Env.isTraceMode) inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
+//if (Env.Options.enableTrace) inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
 
 var inspectModelOpacity = isIE ? "filter:alpha(opacity=80);" : "opacity:0.8;";
 var inspectModelStyle = inspectStyle + inspectModelOpacity;

@@ -479,8 +479,13 @@ FBL.onError = function(msg, href, lineNo)
 
 FBL.registerConsole = function()
 {
-    if (!isFirefox)
-        Env.browser.window.console = ConsoleAPI;
+    if (Env.Options.overrideConsole)
+    {
+        var win = Env.browser.window;
+        
+        if (!isFirefox || isFirefox && !("console" in win))
+            win.console = ConsoleAPI;
+    }
 };
 
 registerConsole();

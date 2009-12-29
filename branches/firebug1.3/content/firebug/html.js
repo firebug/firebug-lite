@@ -281,7 +281,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         this.panelNode.style.padding = "4px 3px 1px 15px";
         
-        if (Env.isPersistentMode || Firebug.chrome.type != "popup")
+        if (Env.Options.enablePersistent || Firebug.chrome.type != "popup")
             this.createUI();
         
         if(!this.sidePanelBar.selectedPanel)

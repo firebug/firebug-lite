@@ -35,7 +35,7 @@ FBL.FirebugChrome =
         
         addGlobalEvent("keydown", onGlobalKeyDown);
         
-        if (Env.isPersistentMode && chrome.type == "popup")
+        if (Env.Options.enablePersistent && chrome.type == "popup")
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
             var frame = FirebugChrome.chromeMap.frame;
@@ -84,11 +84,11 @@ var createChromeWindow = function(options)
     
     var chrome = {};
     
-    chrome.type = Env.isPersistentMode ? "popup" : options.type;
+    chrome.type = Env.Options.enablePersistent ? "popup" : options.type;
     
     var isChromeFrame = chrome.type == "frame";
-    var isBookmarletMode = Env.isBookmarletMode;
-    var url = isBookmarletMode ? "about:blank" : Env.location.skin;
+    var useLocalSkin = Env.useLocalSkin;
+    var url = useLocalSkin ? Env.location.skin : "about:blank";
     
     if (isChromeFrame)
     {
@@ -111,7 +111,7 @@ var createChromeWindow = function(options)
         if (isFirefox)
             node.style.display = "none";
         
-        if (!isBookmarletMode)
+        if (useLocalSkin)
             node.setAttribute("src", Env.location.skin);
         
         // document.body not available in XML+XSL documents in Firefox
@@ -156,7 +156,7 @@ var createChromeWindow = function(options)
         }
     }
     
-    if (isBookmarletMode)
+    if (!useLocalSkin)
     {
         var tpl = getChromeTemplate(!isChromeFrame);
         var doc = isChromeFrame ? node.contentWindow.document : node.document;
@@ -165,7 +165,7 @@ var createChromeWindow = function(options)
     }
     
     var win;
-    var waitDelay = !isBookmarletMode ? isChromeFrame ? 200 : 300 : 100;
+    var waitDelay = useLocalSkin ? isChromeFrame ? 200 : 300 : 100;
     var waitForChrome = function()
     {
         if ( // Frame loaded... OR
@@ -198,7 +198,7 @@ var onChromeLoad = function onChromeLoad(chrome)
     
     if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome window loaded");
     
-    if (Env.isPersistentMode)
+    if (Env.Options.enablePersistent)
     {
         // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
         Env.FirebugChrome = FirebugChrome;
@@ -360,14 +360,16 @@ append(ChromeBase,
                 },
                 "-",
                 {
-                    label: "Firebug Lite Homepage",
-                    command: "visitHomepage"
+                    label: "Firebug Lite Website...",
+                    command: "visitWebsite"
                 },
                 {
-                    label: "Discussion List"
+                    label: "Discussion Group...",
+                    command: "visitDiscussionGroup"
                 },
                 {
-                    label: "Report Bug"
+                    label: "Issue Tracker...",
+                    command: "visitIssueTracker"
                 }
             ],
             
@@ -396,19 +398,19 @@ append(ChromeBase,
                 Firebug.chrome.focusCommandLine();
             },
             
-            visitHomepage: function()
+            visitWebsite: function()
             {
-                this.visit("http://getfirebug.com/lite");
+                this.visit("http://getfirebug.com/lite.html");
             },
             
-            visitDiscussionList: function()
+            visitDiscussionGroup: function()
             {
-                this.visit("");
+                this.visit("http://groups.google.com/group/firebug");
             },
             
-            visitIssueList: function()
+            visitIssueTracker: function()
             {
-                this.visit("");
+                this.visit("http://code.google.com/p/fbug/issues/list");
             },
             
             visit: function(url)
@@ -503,7 +505,7 @@ append(ChromeBase,
                 if(Firebug.saveCookies)
                     Firebug.savePrefs()
                 else
-                    Firebug.removePrefs();
+                    Firebug.erasePrefs();
                 
                 if (target)
                     this.updateMenu(target);
@@ -562,8 +564,9 @@ append(ChromeBase,
                 menu.hide();
             else
             {
+                var offsetLeft = isIE6 ? 1 : -4;  // IE6 problem with fixed position
                 var box = Firebug.chrome.getElementBox(target);
-                menu.show(box.left -4, box.top + box.height -5);
+                menu.show(box.left + offsetLeft, box.top + box.height -5);
             }
             
             return false;
@@ -940,11 +943,33 @@ append(ChromeBase,
     
     focusCommandLine: function()
     {
-        this.selectPanel("Console");
-        commandLine.element.focus();
+        var selectedPanelName = this.selectedPanel.name, panelToSelect;
+        
+        if (focusCommandLineState == 0 || selectedPanelName != "Console")
+        {
+            focusCommandLineState = 0;
+            lastFocusedPanelName = selectedPanelName;
+            
+            panelToSelect = "Console";
+        }
+        if (focusCommandLineState == 1)
+        {
+            panelToSelect = lastFocusedPanelName;
+        }
+        
+        this.selectPanel(panelToSelect);
+        
+        if (panelToSelect == "Console")
+            commandLine.element.focus();
+        else
+            fbPanel1.focus();
+        
+        focusCommandLineState = ++focusCommandLineState % 2;
     }
     
 });
+
+var focusCommandLineState = 0, lastFocusedPanelName; 
 
 // ************************************************************************************************
 // ChromeFrameBase
@@ -959,13 +984,17 @@ var ChromeFrameBase = extend(ChromeBase,
         if (isFirefox)
             this.node.style.display = "block";
         
-        if (Env.startOpened)
+        if (Env.Options.startInNewWindow)
+        {
+            this.close();
+            this.toggle(true, true);
+            return;
+        }
+        
+        if (Env.Options.startOpened)
             this.open();
         else
-        {
-            FirebugChrome.isOpen = true;
             this.close();
-        }
     },
     
     destroy: function()
@@ -996,7 +1025,7 @@ var ChromeFrameBase = extend(ChromeBase,
             [$("fbChrome_btDetach"), "click", this.detach]       
         );
         
-        if (!Env.isPersistentMode)
+        if (!Env.Options.enablePersistent)
             this.addController([Firebug.browser.window, "unload", Firebug.shutdown]);
         
         if (noFixedPosition)
@@ -1064,7 +1093,7 @@ var ChromeFrameBase = extend(ChromeBase,
     
     close: function()
     {
-        if (FirebugChrome.isOpen)
+        if (FirebugChrome.isOpen || !this.isInitialized)
         {
             if (this.isInitialized)
             {
@@ -1221,7 +1250,7 @@ var ChromePopupBase = extend(ChromeBase, {
             [Firebug.chrome.window, "unload", this.destroy]
         );
         
-        if (Env.isPersistentMode)
+        if (Env.Options.enablePersistent)
         {
             this.persist = bind(this.persist, this);
             addEvent(Firebug.browser.window, "unload", this.persist);
@@ -1246,7 +1275,7 @@ var ChromePopupBase = extend(ChromeBase, {
             frame.reattach(this, frame);
         }
         
-        if (Env.isPersistentMode)
+        if (Env.Options.enablePersistent)
         {
             removeEvent(Firebug.browser.window, "unload", this.persist);
         }

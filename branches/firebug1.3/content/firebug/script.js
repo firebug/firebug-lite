@@ -256,14 +256,6 @@ var getScriptURL = function getScriptURL(script)
     if (path && m)
     {
         return path + fileName;
-        
-        var App = FBL.Env;
-        var loc = App.location; 
-        loc.sourceDir = path;
-        loc.baseDir = path.substr(0, path.length - m[1].length - 1);
-        loc.skinDir = loc.baseDir + "skin/" + App.skin + "/"; 
-        loc.skin = loc.skinDir + "firebug.html";
-        loc.app = path + fileName;
     }
 };
 

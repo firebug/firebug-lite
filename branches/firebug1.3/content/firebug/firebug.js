@@ -211,23 +211,37 @@ window.Firebug = FBL.Firebug =
         this.savePrefs();
     },
     
+    restorePrefs: function()
+    {
+        var Options = Env.Options;
+        
+        for (var name in Options)
+        {
+            Firebug[name] = Options[name];
+        }
+    },
+    
     loadPrefs: function(prefs)
     {
+        this.restorePrefs();
+        
         prefs = prefs || eval("(" + readCookie("FirebugLite") + ")");
         
         for (var name in prefs)
         {
-            Firebug[name] = prefs[name];
+            if (prefs.hasOwnProperty(name))
+                Firebug[name] = prefs[name];
         }
     },
     
     savePrefs: function()
     {
         var json = ['{'], jl = 0;
+        var Options = Env.Options;
         
-        for (var name in preferences)
+        for (var name in Options)
         {
-            if (preferences.hasOwnProperty(name))
+            if (Options.hasOwnProperty(name))
             {
                 var value = Firebug[name];
                 
@@ -256,34 +270,16 @@ window.Firebug = FBL.Firebug =
         createCookie("FirebugLite", json.join(""));
     },
     
-    restorePrefs: function()
-    {
-        for (var name in preferences)
-        {
-            Firebug[name] = preferences[name];
-        }
-    },
-    
-    removePrefs: function()
+    erasePrefs: function()
     {
         removeCookie("FirebugLite");
     }
 };
 
-var preferences =
-{
-    saveCookies: false,
-    startOpened: false,
-    startInNewWindow: false,
-    overrideConsole: true,
-    enableTrace: false,
-    enablePersistent: false
-};
-
 Firebug.restorePrefs();
 
-if (!Env.isPersistentMode || 
-     Env.isPersistentMode && Env.isChromeContext || 
+if (!Env.Options.enablePersistent || 
+     Env.Options.enablePersistent && Env.isChromeContext || 
      Env.isDevelopmentMode )
         Env.browser.window.Firebug = FBL.Firebug; 
 

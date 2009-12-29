@@ -83,20 +83,19 @@ this.initialize = function()
         FBL.Env.destroy = destroyApplication;
 
         if (document.documentElement.getAttribute("debug") == "true")
-            FBL.Env.startOpened = true;
+            FBL.Env.Options.startOpened = true;
 
         // find the URL location of the loaded application
         findLocation();
         
         // TODO: get preferences here...
-    }
-    
-    var prefs = eval("(" + FBL.readCookie("FirebugLite") + ")");
-    if (prefs)
-    {
-        FBL.Env.startOpened = prefs.startOpened;
-        FBL.Env.isTraceMode = prefs.enableTrace;
-        FBL.Env.isPersistentMode = prefs.enablePersistent;
+        var prefs = eval("(" + FBL.readCookie("FirebugLite") + ")");
+        if (prefs)
+        {
+            FBL.Env.Options.startOpened = prefs.startOpened;
+            FBL.Env.Options.enableTrace = prefs.enableTrace;
+            FBL.Env.Options.enablePersistent = prefs.enablePersistent;
+        }
     }
     
     // check browser compatibilities
@@ -107,7 +106,7 @@ this.initialize = function()
     this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
     
     // after creating/synchronizing the environment, initialize the FBTrace module
-    if (FBL.Env.isTraceMode) FBTrace.initialize();
+    if (FBL.Env.Options.enableTrace) FBTrace.initialize();
     
     if (FBTrace.DBG_INITIALIZE && isChromeContext) FBTrace.sysout("FBL.initialize - persistent application", "initialize chrome context");
         
@@ -131,12 +130,9 @@ this.initialize = function()
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // finish environment initialization
 
-    Firebug.startOpened = FBL.Env.startOpened;
-    Firebug.enableTrace = FBL.Env.isTraceMode;
-    Firebug.enablePersistent = FBL.Env.isPersistentMode;
     Firebug.loadPrefs(prefs);
     
-    if (FBL.Env.isPersistentMode)
+    if (FBL.Env.Options.enablePersistent)
     {
         // TODO: xxxpedro persist - make a better synchronization
         if (isChromeContext)
@@ -178,7 +174,7 @@ var onDocumentLoad = function onDocumentLoad()
         fixIE6BackgroundImageCache();
         
     // chrome context of the persistent application
-    if (FBL.Env.isPersistentMode && FBL.Env.isChromeContext)
+    if (FBL.Env.Options.enablePersistent && FBL.Env.isChromeContext)
     {
         // finally, start the application in the chrome context
         FBL.Firebug.initialize();
@@ -205,13 +201,19 @@ var sharedEnv;
 
 this.Env = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // Env preferences
-    startOpened: false,
+    // Env preferences (will override Firebug default preferences)
+    Options:
+    {
+        saveCookies: false,
+        startOpened: false,
+        startInNewWindow: false,
+        overrideConsole: true,
+        enableTrace: false,
+        enablePersistent: false
+    },
     
-    isBookmarletMode: false,
-    isPersistentMode: false,
-    isTraceMode: false,
     skin: "xp",
+    useLocalSkin: true,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Env states
@@ -250,7 +252,7 @@ this.Env.location =
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.jgz)?)(#.+)?$/;
+    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.jgz)?)(?:#(.+))?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
@@ -331,40 +333,44 @@ var findLocation =  function findLocation()
     
     if (path && m)
     {
-        var App = FBL.Env;
-        var loc = App.location; 
+        var Env = FBL.Env;
+        var loc = Env.location; 
         loc.sourceDir = path;
         loc.baseDir = path.substr(0, path.length - m[1].length - 1);
-        loc.skinDir = loc.baseDir + "skin/" + App.skin + "/"; 
+        loc.skinDir = loc.baseDir + "skin/" + Env.skin + "/"; 
         loc.skin = loc.skinDir + "firebug.html";
         loc.app = path + fileName;
         
         if (fileName == "firebug.dev.js")
-            App.isDevelopmentMode = true;
+        {
+            Env.isDevelopmentMode = true;
+            Env.useLocalSkin = true;
+        }
         
         if (fileOptions)
         {
-            if (fileOptions.indexOf("open") != -1)
-                App.startOpened = true;
+            var options = fileOptions.split(",");
             
-            if (fileOptions.indexOf("remote") != -1)
+            for (var i = 0, length = options.length; i < length; i++)
             {
-                App.isBookmarletMode = true;
+                var option = options[i];
+                
+                if (option in Env.Options)
+                    Env.Options[option] = true;
+                else
+                    Env[option] = true;
             }
-            
-            if (fileOptions.indexOf("trace") != -1)
-                App.isTraceMode = true;
-            
-            if (fileOptions.indexOf("persist") != -1)
-                App.isPersistentMode = true;
         }
+        
+        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
+            Env.Options.startOpened = true;
         
         var innerOptions = FBL.trim(script.innerHTML);
         
         if(innerOptions)
         {
-            var innerOptionsObject = eval(innerOptions);
-            // TODO:
+            var innerOptionsObject = eval("(" + innerOptions + ")");
+            FBL.append(Env.Options, innerOptionsObject);
         }
                 
     }

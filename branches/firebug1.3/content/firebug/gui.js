@@ -692,6 +692,8 @@ Menu.prototype =  extend(Controller,
             
             //if (!parent.isVisible) return;
             
+            var box = Firebug.chrome.getElementBox(target);
+            
             var childMenuObject = menuMap.hasOwnProperty(id) ?
                     menuMap[id] : {element: $(id)};
             
@@ -701,9 +703,8 @@ Menu.prototype =  extend(Controller,
                     parentTarget: target
                 }));
             
-            var box = Firebug.chrome.getElementBox(target);
-            
-            childMenu.show(box.left + box.width -6, box.top);
+            var offsetLeft = isIE6 ? -1 : -6; // IE6 problem with fixed position
+            childMenu.show(box.left + box.width + offsetLeft, box.top -6);
             setClass(target, "fbMenuGroupSelected");
             
         },350);
