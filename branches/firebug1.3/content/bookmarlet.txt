@@ -26,6 +26,9 @@ e.src=t+i;
 })(document,'createElement','build/firebug.min.js#remote','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/');
 //  F         B              L                             i                    t
 
+
+javascript:(function(F,B,L,i,t,e){e=F[B]('script');e.id='FirebugLite';e.src=t+L;F.getElementsByTagName('head')[0].appendChild(e);e=F[B]('img');e.src=t+i;})(document,'createElement','build/firebug.min.js#remote','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/');
+
 //---------------------------------------------------
 
 (function(F,i,r,e,b,u,g){

@@ -69,14 +69,112 @@ window.FBDev =
         });
     },
 
+    panelBuild: function() {
+        var panel = this.getPanel();
+        panel.updateOutput("Building Source...");
+        
+        setTimeout(function(){
+            FBDev.buildFullSource(function(source){
+                panel.updateOutput(source);
+            });
+        },0);
+    },
+    
+    panelBuildSkin: function()
+    {
+        var panel = this.getPanel();
+        panel.updateOutput("Building Source...");
+        
+        setTimeout(function(){
+            FBDev.buildSkin(function(source){
+                panel.updateOutput(source);
+            });
+        },0);
+    },
+    
     build: function() {
         var out = document.createElement("textarea");
         
-        FBDev.buildSource(function(source){
+        FBDev.buildFullSource(function(source){
             out.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%;";
             out.appendChild(document.createTextNode(source));
             document.body.appendChild(out);
         });
+    },
+    
+    buildFullSource: function(callback)
+    {
+        var useClosure = true;
+        var source = [];
+        var modules = FBDev.modules.slice(0,FBDev.modules.length-1);
+        var last = modules.length-1;
+        
+        if (useClosure)
+            source.push("(function(){\n\n");
+        
+        var htmlUrl = skinURL + "firebug.html",
+            cssUrl = skinURL + "firebug.css",
+            html,
+            css,
+            injected;
+        
+        FBL.Ajax.request({
+            url: htmlUrl, 
+            onComplete:function(r)
+            {
+                html = FBDev.compressHTML(r);
+            }
+        });
+
+        FBL.Ajax.request({
+            url: cssUrl, 
+            onComplete:function(r)
+            {
+                css = FBDev.compressCSS(r);
+                injected = 
+                    "\n\nFBL.ns(function() { with (FBL) {\n" +
+                    "// ************************************************************************************************\n\n" +
+                    "FirebugChrome.injected = \n" +
+                    "{\n" +
+                    "    HTML: '" + html + "',\n" +
+                    "    CSS: '" + css + "'\n" +
+                    "};\n\n" +
+                    "// ************************************************************************************************\n" +
+                    "}});\n\n" +
+                    "// ************************************************************************************************\n" +
+                    "FBL.initialize();\n" +
+                    "// ************************************************************************************************\n";
+            }
+        });
+        
+        for (var i=0, module; module=modules[i]; i++)
+        {
+            var moduleURL = sourceURL + module;
+            
+            if (module.indexOf("chrome.injected") != -1) continue;
+            
+            FBL.Ajax.request({
+                url: moduleURL, 
+                i: i, 
+                onComplete: function(r,o)
+                {
+                    source.push(r);
+                    
+                    if (o.i == last)
+                    {
+                        //alert("ok")
+                        source.push(injected);
+                        
+                        if (useClosure)
+                            source.push("\n})();");
+
+                        callback(source.join(""));
+                    }
+                    else
+                        source.push("\n\n");
+                }
+            });
+        }
     },
     
     buildSource: function(callback)
@@ -110,10 +208,41 @@ window.FBDev =
         }        
     },
     
-    compressInterace: function()
+    buildSkin: function(callback)
     {
-        var files = [
-            ];
+        var htmlUrl = skinURL + "firebug.html",
+            cssUrl = skinURL + "firebug.css",
+            html,
+            css,
+            injected;
+        
+        FBL.Ajax.request({
+            url: htmlUrl, 
+            onComplete:function(r)
+            {
+                html = FBDev.compressHTML(r);
+            }
+        });
+
+        FBL.Ajax.request({
+            url: cssUrl, 
+            onComplete:function(r)
+            {
+                css = FBDev.compressCSS(r);
+                injected = 
+                    "FBL.ns(function() { with (FBL) {\n" +
+                    "// ************************************************************************************************\n\n" +
+                    "FirebugChrome.injected = \n" +
+                    "{\n" +
+                    "    HTML: '" + html + "',\n" +
+                    "    CSS: '" + css + "'\n" +
+                    "};\n\n" +
+                    "// ************************************************************************************************\n" +
+                    "}});";
+                
+                callback(injected);
+            }
+        });
     },
     
     compressSkinHTML: function()
@@ -131,7 +260,6 @@ window.FBDev =
                 document.body.appendChild(out);
             }
         });
-        
     },
     
     compressSkinCSS: function()
@@ -182,8 +310,12 @@ window.FBDev =
             replace(/\s+\:/gm, ":").            
             replace(/\:\s+/gm, ":").            
             replace(/,\s+/gm, ",");            
+    },
+    
+    getPanel: function()
+    {
+        return Firebug.chrome.getPanel("Dev");
     }
-
 }
 
 function findLocation() 
@@ -307,7 +439,92 @@ function loadModules() {
     {
         document.write(scriptTags.join(""));
     }
+    
+    waitFirebugLoad();
 };
+
+var waitFirebugLoad = function()
+{
+    if (window && "Firebug" in window)
+    {
+        loadDevPanel();
+    }
+    else
+        setTimeout(waitFirebugLoad, 0);
+};
+
+var loadDevPanel = function() { with(FBL) { 
+
+    // ************************************************************************************************
+    // FBTrace Panel
+    
+    function DevPanel(){};
+    
+    DevPanel.prototype = extend(Firebug.Panel,
+    {
+        name: "Dev",
+        title: "Dev",
+        
+        options: {
+            hasToolButtons: true,
+            innerHTMLSync: true
+        },
+        
+        create: function(){
+            Firebug.Panel.create.apply(this, arguments);
+            
+            var doc = Firebug.chrome.document;
+            var out = doc.createElement("textarea");
+            out.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;";
+            
+            this.contentNode.appendChild(out);
+            this.outputNode = out;                
+            
+            this.buildSourceButton = new Button({
+                caption: "Build Source",
+                title: "Build full source code",            
+                owner: FBDev,
+                onClick: FBDev.panelBuild
+            });
+            
+            this.buildSkinButton = new Button({
+                caption: "Build Skin",
+                title: "Build skin source code",            
+                owner: FBDev,
+                onClick: FBDev.panelBuildSkin
+            });
+        },
+        
+        updateOutput: function(output)
+        {
+            var doc = Firebug.chrome.document;
+            
+            if (isIE)
+                this.outputNode.innerText = output;
+            else
+                this.outputNode.textContent = output;
+        },
+        
+        initialize: function(){
+            Firebug.Panel.initialize.apply(this, arguments);
+            
+            this.containerNode.style.overflow = "hidden";
+            
+            this.buildSourceButton.initialize();
+            this.buildSkinButton.initialize();
+        },
+        
+        shutdown: function()
+        {
+            this.containerNode.style.overflow = "";
+        }
+        
+    });
+    
+    // ************************************************************************************************
+    
+    Firebug.registerPanel(DevPanel);
+}};
 
 var publishedURL = "";
 var baseURL = "";
