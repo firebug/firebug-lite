@@ -26,6 +26,9 @@ var ignoreVars =
     "_FirebugCommandLine": 1
 };
 
+if (Firebug.ignoreFirebugElements)
+    ignoreVars[cacheID] = 1;
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var memberPanelRep =
@@ -947,7 +950,7 @@ var updateStatusBar = function(panel)
     
     for (var i=0, l=path.length; i<l; i++)
     {
-        r.push(i==index ? '<a class="fbHover fbBtnSelected" ' : '<a class="fbHover" ');
+        r.push(i==index ? '<a class="fbHover fbButton fbBtnSelected" ' : '<a class="fbHover fbButton" ');
         r.push('pathIndex=');
         r.push(i);
         

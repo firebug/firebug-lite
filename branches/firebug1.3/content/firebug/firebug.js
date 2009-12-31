@@ -4,7 +4,7 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Globals
 
-FBL.cacheID = "___FBL_";
+FBL.cacheID = "firebug" + new Date().getTime();
 FBL.documentCache = {};
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -52,6 +52,14 @@ window.Firebug = FBL.Firebug =
         FirebugChrome.initialize();
         
         dispatch(modules, "initialize", []);
+        
+        if (Env.onLoad)
+        {
+            var onLoad = Env.onLoad;
+            delete Env.onLoad;
+            
+            setTimeout(onLoad, 200);
+        }
     },
   
     shutdown: function()
@@ -207,6 +215,17 @@ window.Firebug = FBL.Firebug =
     setPref: function(name, value)
     {
         Firebug[name] = value;
+        
+        this.savePrefs();
+    },
+    
+    setPrefs: function(prefs)
+    {
+        for (var name in prefs)
+        {
+            if (prefs.hasOwnProperty(name))
+                Firebug[name] = prefs[name];
+        }
         
         this.savePrefs();
     },

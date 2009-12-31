@@ -402,8 +402,11 @@ IconButton.prototype = extend(Button.prototype,
 
 var menuItemProps = {"class": "$item.className", type: "$item.type", value: "$item.value",
         command: "$item.command"};
-    
-MenuPlate = domplate(Firebug.Rep,
+
+if (isIE6)
+    menuItemProps.href = "javascript:void(0)";
+
+var MenuPlate = domplate(Firebug.Rep,
 {
     tag:
         DIV({"class": "fbMenu fbShadow"},

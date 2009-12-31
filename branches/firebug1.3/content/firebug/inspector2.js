@@ -317,7 +317,7 @@ Firebug.Inspector = extend(Firebug.Module,
         this.onInspectingMouseDown = bind(this.onInspectingMouseDown, this);
         this.onInspectingClick = bind(this.onInspectingClick, this);
 
-        highlightCSS = Env.location.sourceDir + "firebug/highlighter.css"; 
+        highlightCSS = Env.Location.sourceDir + "firebug/highlighter.css"; 
         this.inspectingContext = Firebug.browser.window;
         //this.updateOption("shadeBoxModel", Firebug.shadeBoxModel);
     },

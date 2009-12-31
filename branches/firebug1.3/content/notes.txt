@@ -1,6 +1,8 @@
 ###################################################################################################
 
 ###################################################################################################
+Mutation Events
+http://tobiasz123.wordpress.com/2009/01/19/utilizing-mutation-events-for-automatic-and-persistent-event-attaching/#comments
 
 Revise FBLite issues
     http://code.google.com/p/fbug/issues/list?can=1&q=owner:pedrosimonetti&sort=-owner+-status&colspec=ID+Type+Status+Owner+Test+Summary&cells=tiles
@@ -58,12 +60,11 @@ Stack Trace improvements
         Compatibility (cross-browser, XHTML and XML+XSL, and cross-iframe in the future)
 
     User Interface
-        Responsive User Interface
-        Recreation of Firebug's Original UI with pixel precision
-        Recreation of the Firebug's Visual Object Representation (aka Reps)
+        Recreation of Firebug 1.3 User Interface with pixel precision
+        Recreation of Firebug's Visual Object Representation (aka Reps)
         Resizable sidePanel
-        Easy to customize
-        Skinnable
+        Skinnable Interface
+        Skin in separated file, making easier to tweak the Interface or add new elements.
 
     Inspector
         BoxModel highlight
@@ -76,12 +77,11 @@ Stack Trace improvements
         can capture console messages before DOM document creation (scripts attached to HTML header) 
 
     Core
-        Chrome
-        Synchronization across different windows (iframe, popup)
-        Lib
-        Domplate
+        Port most of the Firebug Library (aka Lib, FBL)
+        Port the Firebug DOM Templates Engine (aka Domplate), the magic behind Reps
         Plugin system like Firebug
         Context-independent (will allow cross-iframe debugging, and persistent popups)
+        Synchronization across different windows (iframe, popup)
 
 
 ###################################################################################################

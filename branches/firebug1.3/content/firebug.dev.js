@@ -136,8 +136,8 @@ window.FBDev =
                     "// ************************************************************************************************\n\n" +
                     "FirebugChrome.injected = \n" +
                     "{\n" +
-                    "    HTML: '" + html + "',\n" +
-                    "    CSS: '" + css + "'\n" +
+                    "    HTML: '" + html + "'\n" +
+                    //"    CSS: '" + css + "'\n" +
                     "};\n\n" +
                     "// ************************************************************************************************\n" +
                     "}});\n\n" +
@@ -475,21 +475,22 @@ var loadDevPanel = function() { with(FBL) {
             
             var doc = Firebug.chrome.document;
             var out = doc.createElement("textarea");
-            out.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;";
+            out.id = "fbDevOutput";
+            out.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; padding: 0;";
             
             this.contentNode.appendChild(out);
-            this.outputNode = out;                
+            this.outputNode = out;
             
             this.buildSourceButton = new Button({
                 caption: "Build Source",
-                title: "Build full source code",            
+                title: "Build full source code",
                 owner: FBDev,
                 onClick: FBDev.panelBuild
             });
             
             this.buildSkinButton = new Button({
                 caption: "Build Skin",
-                title: "Build skin source code",            
+                title: "Build skin source code",
                 owner: FBDev,
                 onClick: FBDev.panelBuildSkin
             });
@@ -509,6 +510,7 @@ var loadDevPanel = function() { with(FBL) {
             Firebug.Panel.initialize.apply(this, arguments);
             
             this.containerNode.style.overflow = "hidden";
+            this.outputNode = this.contentNode.firstChild;                
             
             this.buildSourceButton.initialize();
             this.buildSkinButton.initialize();

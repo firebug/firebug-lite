@@ -96,6 +96,10 @@ this.initialize = function()
             FBL.Env.Options.enableTrace = prefs.enableTrace;
             FBL.Env.Options.enablePersistent = prefs.enablePersistent;
         }
+        
+        if (FBL.isFirefox && typeof console == "object" && console.firebug &&
+            FBL.Env.Options.disableWhenFirebugActive)
+            return;
     }
     
     // check browser compatibilities
@@ -130,7 +134,7 @@ this.initialize = function()
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // finish environment initialization
 
-    Firebug.loadPrefs(prefs);
+    FBL.Firebug.loadPrefs(prefs);
     
     if (FBL.Env.Options.enablePersistent)
     {
@@ -201,19 +205,40 @@ var sharedEnv;
 
 this.Env = {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // Env preferences (will override Firebug default preferences)
+    // Env Options (will be transported to Firebug options)
     Options:
     {
         saveCookies: false,
+    
+        saveWindowPosition: false,
+        saveCommandLineHistory: false,
+        
         startOpened: false,
         startInNewWindow: false,
+        showIconWhenHidden: true,
+        
         overrideConsole: true,
+        ignoreFirebugElements: true,
+        disableWhenFirebugActive: true,
+        
         enableTrace: false,
         enablePersistent: false
+        
     },
     
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // Library location
+    Location:
+    {
+        sourceDir: null,
+        baseDir: null,
+        skinDir: null,
+        skin: null,
+        app: null
+    },
+
     skin: "xp",
-    useLocalSkin: true,
+    useLocalSkin: false,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Env states
@@ -238,17 +263,6 @@ var destroyApplication = function destroyApplication()
 
 // ************************************************************************************************
 // Library location
-
-this.Env.location =
-{
-    sourceDir: null,
-    baseDir: null,
-    skinDir: null,
-    skin: null,
-    app: null
-};
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var findLocation =  function findLocation() 
 {
@@ -334,17 +348,12 @@ var findLocation =  function findLocation()
     if (path && m)
     {
         var Env = FBL.Env;
-        var loc = Env.location; 
-        loc.sourceDir = path;
-        loc.baseDir = path.substr(0, path.length - m[1].length - 1);
-        loc.skinDir = loc.baseDir + "skin/" + Env.skin + "/"; 
-        loc.skin = loc.skinDir + "firebug.html";
-        loc.app = path + fileName;
         
         if (fileName == "firebug.dev.js")
         {
             Env.isDevelopmentMode = true;
             Env.useLocalSkin = true;
+            Env.Options.disableWhenFirebugActive = false;
         }
         
         if (fileOptions)
@@ -354,11 +363,24 @@ var findLocation =  function findLocation()
             for (var i = 0, length = options.length; i < length; i++)
             {
                 var option = options[i];
+                var name, value;
                 
-                if (option in Env.Options)
-                    Env.Options[option] = true;
+                if (option.indexOf("=") != -1)
+                {
+                    var parts = option.split("=");
+                    name = parts[0];
+                    value = eval(unescape(parts[1]));
+                }
                 else
-                    Env[option] = true;
+                {
+                    name = option;
+                    value = true;
+                }
+                
+                if (name in Env.Options)
+                    Env.Options[name] = value;
+                else
+                    Env[name] = value;
             }
         }
         
@@ -367,12 +389,27 @@ var findLocation =  function findLocation()
         
         var innerOptions = FBL.trim(script.innerHTML);
         
-        if(innerOptions)
+        if (innerOptions)
         {
             var innerOptionsObject = eval("(" + innerOptions + ")");
-            FBL.append(Env.Options, innerOptionsObject);
-        }
+            
+            for (var name in innerOptionsObject)
+            {
+                var value = innerOptionsObject[name];
                 
+                if (name in Env.Options)
+                    Env.Options[name] = value;
+                else
+                    Env[name] = value;
+            }
+        }
+        
+        var loc = Env.Location;
+        loc.sourceDir = path;
+        loc.baseDir = path.substr(0, path.length - m[1].length - 1);
+        loc.skinDir = loc.baseDir + "skin/" + Env.skin + "/"; 
+        loc.skin = loc.skinDir + "firebug.html";
+        loc.app = path + fileName;
     }
     else
     {
