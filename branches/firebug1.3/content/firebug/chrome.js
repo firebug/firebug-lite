@@ -255,15 +255,18 @@ var getChromeTemplate = function(isPopup)
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
     r[++i] = '<html><head><title>';
     r[++i] = Firebug.version;
+    
+    /*
     r[++i] = '</title><link href="';
     r[++i] = Env.Location.skinDir + 'firebug.css';
     r[++i] = '" rel="stylesheet" type="text/css" />';
-    /*
+    /**/
+    
     r[++i] = '</title><style>';
     r[++i] = tpl.CSS;
-    r[++i] = (isIE6 && tpl.IE6CSS) ? tpl.IE6CSS : '';
     r[++i] = '</style>';
     /**/
+    
     r[++i] = '</head><body class=' + (isPopup ? '"FirebugPopup"' : '') + '>';
     r[++i] = tpl.HTML;
     r[++i] = '</body></html>';
