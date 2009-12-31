@@ -11,5 +11,5 @@ AddEncoding gzip .jgz
     #RewriteCond %{HTTP_USER_AGENT} ".*Safari.*" [OR]
     RewriteCond %{HTTP_USER_AGENT} ".*MSIE 6.*" [OR]
     RewriteCond %{HTTP:Accept-Encoding} !gzip
-    RewriteRule (.*)\.jgz$ $1 [L]
+    RewriteRule (.*)\.jgz$ $1.js [L]
 </IfModule>
