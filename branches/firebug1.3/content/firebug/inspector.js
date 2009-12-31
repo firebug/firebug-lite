@@ -301,21 +301,27 @@ Firebug.Inspector =
         
         var margin = Firebug.browser.getMeasurementBox(el, "margin");
         var padding = Firebug.browser.getMeasurementBox(el, "padding");
-
+        var border = Firebug.browser.getMeasurementBox(el, "border");
+        
         boxModelStyle.top = top - margin.top + "px";
         boxModelStyle.left = left - margin.left + "px";
         boxModelStyle.height = height + margin.top + margin.bottom + "px";
         boxModelStyle.width = width + margin.left + margin.right + "px";
       
-        boxPaddingStyle.top = margin.top + "px";
-        boxPaddingStyle.left = margin.left + "px";
-        boxPaddingStyle.height = height + "px";
-        boxPaddingStyle.width = width + "px";
+        boxBorderStyle.top = margin.top + "px";
+        boxBorderStyle.left = margin.left + "px";
+        boxBorderStyle.height = height + "px";
+        boxBorderStyle.width = width + "px";
+        
+        boxPaddingStyle.top = margin.top + border.top + "px";
+        boxPaddingStyle.left = margin.left + border.left + "px";
+        boxPaddingStyle.height = height - border.top - border.bottom + "px";
+        boxPaddingStyle.width = width - border.left - border.right + "px";
       
-        boxContentStyle.top = margin.top + padding.top + "px";
-        boxContentStyle.left = margin.left + padding.left + "px";
-        boxContentStyle.height = height - padding.top - padding.bottom + "px";
-        boxContentStyle.width = width - padding.left - padding.right + "px";
+        boxContentStyle.top = margin.top + border.top + padding.top + "px";
+        boxContentStyle.left = margin.left + border.left + padding.left + "px";
+        boxContentStyle.height = height - border.top - padding.top - padding.bottom - border.bottom + "px";
+        boxContentStyle.width = width - border.left - padding.left - padding.right - border.right + "px";
         
         if (!boxModelVisible) this.showBoxModel();
     },
@@ -356,8 +362,11 @@ var offlineFragment = null;
 
 var boxModelVisible = false;
 
-var boxModel, boxModelStyle, boxMargin, boxMarginStyle, 
-boxPadding, boxPaddingStyle, boxContent, boxContentStyle;
+var boxModel, boxModelStyle, 
+    boxMargin, boxMarginStyle,
+    boxBorder, boxBorderStyle,
+    boxPadding, boxPaddingStyle, 
+    boxContent, boxContentStyle;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -366,13 +375,14 @@ var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 
 var inspectStyle = resetStyle + "z-index: 2147483500;";
 var inspectFrameStyle = resetStyle + "z-index: 2147483550; top:0; left:0; background:url(" +
-                        Env.location.skinDir + "pixel_transparent.gif);";
+                        Env.Location.skinDir + "pixel_transparent.gif);";
 
 //if (Env.Options.enableTrace) inspectFrameStyle = resetStyle + "z-index: 2147483550; top: 0; left: 0; background: #ff0; opacity: 0.05; _filter: alpha(opacity=5);";
 
 var inspectModelOpacity = isIE ? "filter:alpha(opacity=80);" : "opacity:0.8;";
 var inspectModelStyle = inspectStyle + inspectModelOpacity;
 var inspectMarginStyle = inspectStyle + "background: #EDFF64; height:100%; width:100%;";
+var inspectBorderStyle = inspectStyle + "background: #666;";
 var inspectPaddingStyle = inspectStyle + "background: SlateBlue;";
 var inspectContentStyle = inspectStyle + "background: SkyBlue;";
 
@@ -456,6 +466,12 @@ var createBoxModelInspector = function createBoxModelInspector()
     boxMarginStyle = boxMargin.style;
     boxMarginStyle.cssText = inspectMarginStyle;
     boxModel.appendChild(boxMargin);
+    
+    boxBorder = createGlobalElement("div");
+    boxBorder.id = "fbBoxBorder";
+    boxBorderStyle = boxBorder.style;
+    boxBorderStyle.cssText = inspectBorderStyle;
+    boxModel.appendChild(boxBorder);
     
     boxPadding = createGlobalElement("div");
     boxPadding.id = "fbBoxPadding";
