@@ -485,6 +485,8 @@ FBL.registerConsole = function()
         
         if (!isFirefox || isFirefox && !("console" in win))
             win.console = ConsoleAPI;
+        else
+            win.firebug = ConsoleAPI;
     }
 };
 

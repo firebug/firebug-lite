@@ -17,7 +17,7 @@ Firebug.HTML = extend(Firebug.Module,
         {
             if (node.nodeType == 1)
             {
-                if (node.firebugIgnore) continue;
+                if (Firebug.ignoreFirebugElements && node.firebugIgnore) continue;
                 
                 var uid = node[cacheID];
                 var child = node.childNodes;
@@ -223,6 +223,13 @@ Firebug.HTML = extend(Firebug.Module,
         return $(id);
     },
     
+    select: function(element)
+    {
+        var id = element[cacheID];
+        if (id)
+            this.selectTreeNode(id);
+    },
+    
     selectTreeNode: function(id)
     {
         id = ""+id;
@@ -383,6 +390,15 @@ var selectElement= function selectElement(e)
         
         var target = documentCache[e.id];
         var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
+        
+        var stack = FirebugChrome.htmlSelectionStack;
+        
+        stack.unshift(target);
+        Firebug.CommandLine.API.$0 = stack[0];
+        Firebug.CommandLine.API.$1 = stack[1];
+        
+        if (stack.length > 2)
+            stack.pop();
         
         var lazySelect = function()
         {

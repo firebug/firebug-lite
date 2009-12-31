@@ -21,8 +21,6 @@ Firebug.CommandLine = function(element)
     
     addEvent(Firebug.browser.window, "error", this.onError);
     addEvent(Firebug.chrome.window, "error", this.onError);
-    
-    initializeCommandLineAPI();
 };
 
 Firebug.CommandLine.prototype = 
@@ -353,6 +351,10 @@ var CommandLineAPI =
                 Firebug.Console.error("Firebug.Selector module not loaded.");
     },
     
+    $0: null,
+    
+    $1: null,
+    
     dir: Firebug.Console.dir,
 
     dirxml: Firebug.Console.dirxml
@@ -362,9 +364,10 @@ Firebug.CommandLine.API = {};
 var initializeCommandLineAPI = function initializeCommandLineAPI()
 {
     for (var m in CommandLineAPI)
-        if (!Firebug.browser.window[m])
+        if (!Env.browser.window[m])
             Firebug.CommandLine.API[m] = CommandLineAPI[m];
 };
+initializeCommandLineAPI();
 
 // ************************************************************************************************
 }});
