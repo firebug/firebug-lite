@@ -407,9 +407,11 @@ var findLocation =  function findLocation()
         }
         
         var loc = Env.Location;
+        var isProductionRelease = path.indexOf("http://getfirebug.com/releases/lite/") != -1;
+        
         loc.sourceDir = path;
         loc.baseDir = path.substr(0, path.length - m[1].length - 1);
-        loc.skinDir = loc.baseDir + "skin/" + Env.skin + "/"; 
+        loc.skinDir = (isProductionRelease ? path : loc.baseDir) + "skin/" + Env.skin + "/"; 
         loc.skin = loc.skinDir + "firebug.html";
         loc.app = path + fileName;
     }
@@ -4444,8 +4446,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.0a4",
-    revision: "$Revision: 5491 $",
+    version:  "Firebug Lite 1.3.0a4",
+    revision: "$Revision: 5493 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
