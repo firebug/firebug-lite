@@ -275,8 +275,10 @@ FBL.Context.prototype =
     
     getMeasurementBox: function(el, name)
     {
-        var sufixes = ["Top", "Left", "Bottom", "Right"];
         var result = [];
+        var sufixes = name == "border" ?
+                ["TopWidth", "LeftWidth", "BottomWidth", "RightWidth"] :
+                ["Top", "Left", "Bottom", "Right"];
         
         if (isIE)
         {
@@ -330,7 +332,7 @@ FBL.Context.prototype =
         
         var box = this.document.createElement("div");
         //box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
-        box.style.cssText = "margin:0; padding:1px; border: 0;";
+        box.style.cssText = "margin:0; padding:1px; border: 0; visibility: hidden;";
         
         var clone = el.cloneNode(false);
         var text = this.document.createTextNode("&nbsp;");
