@@ -1,3 +1,3 @@
-java -jar yuicompressor-2.4.2.jar -o firebug.min.js firebug.full.js
+java -jar yuicompressor-2.4.2.jar --line-break 0 -o firebug.js firebug.uncompressed.js
 
-gzip -c firebug.min.js > firebug.min.js.gz
+gzip -c firebug.js > firebug.js.jgz
