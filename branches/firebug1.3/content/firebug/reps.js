@@ -82,8 +82,8 @@ Firebug.Reps = {
     appendSelector: function(object, html)
     {
         var uid = object[cacheID];
-        var uidString = uid ? [cacheID, '="', uid, '" id="', uid, '"'].join("") : "";
-                        
+        var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";
+        
         html.push('<span class="objectBox-selector"', uidString, '>');
     
         html.push('<span class="selectorTag">', escapeHTML(object.nodeName.toLowerCase()), '</span>');
@@ -100,7 +100,7 @@ Firebug.Reps = {
         if (node.nodeType == 1)
         {
             var uid = node[cacheID];
-            var uidString = uid ? [cacheID, '="', uid, '" id="', uid, '"'].join("") : "";                
+            var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";                
             
             html.push(
                 '<div class="objectBox-element"', uidString, '">',

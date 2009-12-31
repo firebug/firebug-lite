@@ -223,9 +223,9 @@ Firebug.HTML = extend(Firebug.Module,
         return $(id);
     },
     
-    select: function(element)
+    select: function(el)
     {
-        var id = element[cacheID];
+        var id = el && el[cacheID];
         if (id)
             this.selectTreeNode(id);
     },

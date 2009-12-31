@@ -79,7 +79,7 @@ this.Env={Options:{saveCookies:false,saveWindowPosition:false,saveCommandLineHis
 var destroyApplication=function destroyApplication(){setTimeout(function(){FBL=null
 },100)
 };
-var findLocation=function findLocation(){var reFirebugFile=/(firebug(?:\.\w+)?\.js(?:\.jgz)?)(?:#(.+))?$/;
+var findLocation=function findLocation(){var reFirebugFile=/(firebug(?:\.\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
 var rePath=/^(.*\/)/;
 var reProtocol=/^\w+:\/\//;
 var path=null;
@@ -938,7 +938,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0a4",revision:"$Revision: 5493 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0a4",revision:"$Revision: 5494 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -2128,14 +2128,14 @@ var reObject=/\[object (.*?)\]/;
 var m=reObject.exec(text);
 html.push('<span class="objectBox-object">',m?m[1]:text,"</span>")
 },appendSelector:function(object,html){var uid=object[cacheID];
-var uidString=uid?[cacheID,'="',uid,'" id="',uid,'"'].join(""):"";
+var uidString=uid?[cacheID,'="',uid,'"'].join(""):"";
 html.push('<span class="objectBox-selector"',uidString,">");
 html.push('<span class="selectorTag">',escapeHTML(object.nodeName.toLowerCase()),"</span>");
 if(object.id){html.push('<span class="selectorId">#',escapeHTML(object.id),"</span>")
 }if(object.className){html.push('<span class="selectorClass">.',escapeHTML(object.className),"</span>")
 }html.push("</span>")
 },appendNode:function(node,html){if(node.nodeType==1){var uid=node[cacheID];
-var uidString=uid?[cacheID,'="',uid,'" id="',uid,'"'].join(""):"";
+var uidString=uid?[cacheID,'="',uid,'"'].join(""):"";
 html.push('<div class="objectBox-element"',uidString,'">',"<span ",cacheID,'="',uid,'" class="nodeBox">','&lt;<span class="nodeTag">',node.nodeName.toLowerCase(),"</span>");
 for(var i=0;
 i<node.attributes.length;
@@ -3899,7 +3899,7 @@ control.className="nodeControl";
 children.parentNode.removeChild(children);
 closeTag.parentNode.removeChild(closeTag)
 },isTreeNodeVisible:function(id){return $(id)
-},select:function(element){var id=element[cacheID];
+},select:function(el){var id=el&&el[cacheID];
 if(id){this.selectTreeNode(id)
 }},selectTreeNode:function(id){id=""+id;
 var node,stack=[];

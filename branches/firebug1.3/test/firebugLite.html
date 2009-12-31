@@ -3,7 +3,51 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>FirebugLite 1.3 Testing</title>
-<script type="text/javascript" src="../content/firebug.dev.js"></script>
+<script type="text/javascript" src="../build/firebug.jgz#disableWhenFirebugActive=false">
+    {
+        startOpened: true,
+        skin: (window.firebugSkin = ["xp","classic","light"][Math.floor(Math.random()*3)]),
+        
+        onLoad: function()
+        {
+            var console = Firebug.Console;
+            
+            console.info("Hello World, I'm " + Firebug.version + "!");
+            console.warn('This is the "' + firebugSkin + '" skin');
+            
+            //console.log("move your mouse over here: ", document.getElementsByTagName("div"));
+        
+            var random = function(i){return Math.floor(Math.random()*i)};
+            var randomPanel = ["Console", "HTML", "CSS", "Script", "DOM"][random(5)];
+            
+            randomPanel = "HTML"
+            Firebug.chrome.selectPanel(randomPanel);
+            if (randomPanel == "HTML")
+            {
+                var randomElement = ["h1", "h3", "p"][random(3)];
+                randomElement = "h1";
+                var element = document.getElementsByTagName(randomElement)[0];
+                
+                //setTimeout(function(){
+                    Firebug.HTML.select(element);
+                    Firebug.Inspector.drawBoxModel(element);
+                //},0);
+                
+                setTimeout(Firebug.Inspector.hideBoxModel, 2500);
+                
+            }
+            else if (randomPanel == "DOM")
+            {
+                var randomElement = [null, "Firebug", "console", "document"][random(4)];
+                var element = Firebug.browser.window[randomElement];
+                
+                setTimeout(function(){
+                    Firebug.chrome.getPanel("DOM").select(element);
+                },0);
+            }
+        }
+    }
+</script>
 <script type="text/javascript">
 (function(){
 var console = Firebug.Console;

@@ -268,7 +268,7 @@ var destroyApplication = function destroyApplication()
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?\.js(?:\.jgz)?)(?:#(.+))?$/;
+    var reFirebugFile = /(firebug(?:\.\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
@@ -4446,8 +4446,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.3.0a4",
-    revision: "$Revision: 5493 $",
+    version: "Firebug Lite 1.3.0a4",
+    revision: "$Revision: 5494 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -8578,8 +8578,8 @@ Firebug.Reps = {
     appendSelector: function(object, html)
     {
         var uid = object[cacheID];
-        var uidString = uid ? [cacheID, '="', uid, '" id="', uid, '"'].join("") : "";
-                        
+        var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";
+        
         html.push('<span class="objectBox-selector"', uidString, '>');
     
         html.push('<span class="selectorTag">', escapeHTML(object.nodeName.toLowerCase()), '</span>');
@@ -8596,7 +8596,7 @@ Firebug.Reps = {
         if (node.nodeType == 1)
         {
             var uid = node[cacheID];
-            var uidString = uid ? [cacheID, '="', uid, '" id="', uid, '"'].join("") : "";                
+            var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";                
             
             html.push(
                 '<div class="objectBox-element"', uidString, '">',
@@ -14109,9 +14109,9 @@ Firebug.HTML = extend(Firebug.Module,
         return $(id);
     },
     
-    select: function(element)
+    select: function(el)
     {
-        var id = element[cacheID];
+        var id = el && el[cacheID];
         if (id)
             this.selectTreeNode(id);
     },
