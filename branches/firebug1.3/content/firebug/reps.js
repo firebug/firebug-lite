@@ -39,6 +39,16 @@ Firebug.Reps = {
     
     appendObject: function(object, html)
     {
+        /*
+        var rep = Firebug.getRep(object);
+        var outputs = [];
+        
+        rep.tag.tag.compile();
+        
+        var str = rep.tag.renderHTML({object: object}, outputs);
+        html.push(str);
+        /**/
+        
         try
         {
             if (object == undefined)
@@ -68,6 +78,7 @@ Firebug.Reps = {
         catch (exc)
         {
         }
+        /**/
     },
         
     appendObjectFormatted: function(object, html)
