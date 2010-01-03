@@ -574,6 +574,21 @@ this.addStyleSheet = function(doc, style)
 };
 
 // ************************************************************************************************
+
+this.getCSS = this.isIE ? 
+    function(el, name)
+    {
+        return el.currentStyle[name] || el.style[name] || undefined;
+    }
+    :
+    function(el, name)
+    {
+        return this.document.defaultView.getComputedStyle(el,null)[name] 
+            || el.style[name] || undefined;
+    };
+
+
+// ************************************************************************************************
 // String Util
 
 var reTrim = /^\s+|\s+$/g;
@@ -710,9 +725,12 @@ this.isVisible = function(elt)
         return (!elt.hidden && !elt.collapsed);
     }
     /**/
-    return elt.offsetWidth > 0 || elt.offsetHeight > 0 || elt.tagName in invisibleTags
+    
+    return this.getCSS(elt, "visibility") != "hidden" &&
+        ( elt.offsetWidth > 0 || elt.offsetHeight > 0 
+        || elt.tagName in invisibleTags
         || elt.namespaceURI == "http://www.w3.org/2000/svg"
-        || elt.namespaceURI == "http://www.w3.org/1998/Math/MathML";
+        || elt.namespaceURI == "http://www.w3.org/1998/Math/MathML" );
 };
 
 this.collapse = function(elt, collapsed)
