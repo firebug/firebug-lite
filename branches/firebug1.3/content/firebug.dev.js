@@ -1,8 +1,10 @@
 (function(){
 
-var bookmarletMode = true;
+var bookmarletMode = false;
 var bookmarletURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/";
-var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
+
+//var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
+var bookmarletSkinURL = "http://getfirebug.com/releases/lite/alpha/skin/xp/";
 
 window.FBL = {}; // force exposure in IE global namespace
 window.FBDev =
@@ -136,7 +138,7 @@ window.FBDev =
                     "// ************************************************************************************************\n\n" +
                     "FirebugChrome.injected = \n" +
                     "{\n" +
-                    "    CSS: '" + css + "'\n," +
+                    "    CSS: '" + css + "',\n" +
                     "    HTML: '" + html + "'\n" +
                     "};\n\n" +
                     "// ************************************************************************************************\n" +

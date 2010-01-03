@@ -4,11 +4,9 @@
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>Firebug Lite</title>
 <link href="firebug.css" rel="stylesheet" type="text/css" />
-<!--[if lte IE 6]>
-<link rel="stylesheet" href="firebug.IE6.css" type="text/css" />
-<![endif]-->
 </head>
-<body>
+<style>html,body{margin:0;padding:0;overflow:hidden;}</style>
+<body class="fbBody">
 <table id="fbChrome" cellpadding="0" cellspacing="0" border="0">
   <tbody>
     <tr>
@@ -22,10 +20,10 @@
         </div>
         -->
               
-        <!-- Main Buttons -->
-        <div id="fbChromeButtons">
-          <a id="fbChrome_btClose" class="fbHover" title="Minimize Firebug">&nbsp;</a>
-          <a id="fbChrome_btDetach" class="fbHover" title="Open Firebug in popup window">&nbsp;</a>
+        <!-- Window Buttons -->
+        <div id="fbWindowButtons">
+          <a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a>
+          <a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a>
         </div>
         
         <!-- Toolbar buttons and Status Bar -->
@@ -108,72 +106,6 @@
             </a>
           </div>
 
-          <!-- 
-          <div id="fbFirebugMenu" class="fbMenu fbShadow">
-              <div class="fbMenuContent fbShadowContent">
-              
-                  <a class="fbMenuOption fbMenuShortcut fbHover">Open Firebug <span class="fbMenuShortcutKey">F12</span></a>
-                  <a class="fbMenuOption fbMenuShortcut fbHover">Open Firebug in New Window <span class="fbMenuShortcutKey">Ctrl+F12</span></a>
-                  <a class="fbMenuOption fbMenuShortcut fbHover">Inspect Element <span class="fbMenuShortcutKey">Ctrl+Shift+C</span></a>
-                  <a class="fbMenuOption fbMenuShortcut fbHover">Command Line <span class="fbMenuShortcutKey">Ctrl+Shift+L</span></a>
-                  
-                  <span class="fbMenuSeparator"></span>
-                  
-                  <a class="fbMenuOption fbMenuGroup fbHover" child="fbFirebugSettingsMenu">Settings</a>
-                  
-                  <span class="fbMenuSeparator"></span>
-                  
-                  <a class="fbMenuOption fbMenuGroup fbHover" child="fbConsoleMenu">Settings2</a>
-                  
-                  <span class="fbMenuSeparator"></span>
-                  
-                  <a class="fbMenuOption fbHover">Firebug Lite Homepage</a>
-                  <a class="fbMenuOption fbHover">Discussion List</a>
-                  <a class="fbMenuOption fbHover">Report Bug</a>
-                  
-              </div>
-          </div>
-          
-          <div id="fbFirebugSettingsMenu" class="fbMenu fbShadow">
-              <div class="fbMenuContent fbShadowContent">
-              
-                  <a type="checkbox" class="fbMenuOption fbHover">Save Settings in Cookies</a>
-                  
-                  <span class="fbMenuSeparator"></span>
-                  
-                  <a class="fbMenuOption fbMenuGroup fbHover" child="fbSubMenu">Settings2</a>
-                  
-                  <span class="fbMenuSeparator"></span>
-                  
-                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbMenuDisabled fbHover">Start Visible</a>
-                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbMenuDisabled fbHover">Start in Popup</a>
-                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbMenuDisabled fbMenuChecked fbHover">Override Console Object</a>
-                  
-                  <span class="fbMenuSeparator"></span>
-                  
-                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Enable Trace Mode</a>
-                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Enable Persistent Mode</a>
-                  
-              </div>
-          </div>
-                   
-          <div id="fbConsoleMenu" class="fbMenu fbShadow">
-              <div class="fbMenuContent fbShadowContent">
-                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Test Option</a>
-                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Another Test Option</a>
-                  <a type="checkbox" class="fbMenuOption fbMenuCheckBox fbHover">Just nothing</a>
-              </div>
-          </div>
-          
-          <div id="fbSubMenu" class="fbMenu fbShadow">
-              <div class="fbMenuContent fbShadowContent">
-                  <a type="radiobutton" class="fbMenuOption fbMenuRadioButton fbMenuRadioSelected fbHover">Sub</a>
-                  <a type="radiobutton" class="fbMenuOption fbMenuRadioButton fbHover">Option</a>
-                  <a type="radiobutton" class="fbMenuOption fbMenuRadioButton fbHover">Hello</a>
-              </div>
-          </div>
-          -->
-          
           <!-- Side PanelBars -->
           <div id="fbPanelBar2Box" class="hide">
             <div id="fbPanelBar2" class="fbPanelBar">
@@ -231,6 +163,18 @@
           <div id="fbHTML_DOM" class="fbPanel"></div>
           
         </div>
+        
+        <!-- Large Command Line -->
+        <textarea id="fbLargeCommandLine" class="fbFitHeight">Hello</textarea>
+        
+        <!-- Large Command Line Buttons -->
+        <div id="fbLargeCommandButtons">
+            <a id="" class="fbButton fbHover">Run</a>
+            <a id="" class="fbButton fbHover">Clear</a>
+            
+            <a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a>
+        </div>
+        
       </td>
       
     </tr>
@@ -243,13 +187,14 @@
         <div id="fbCommandBox">
           <div id="fbCommandIcon">&gt;&gt;&gt;</div>
           <input id="fbCommandLine" name="fbCommandLine" type="text" />
+          <a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a>
         </div>
       </td>
       
     </tr>
     
   </tbody>
-</table>
+</table> 
 <span id="fbMiniChrome">
   <span id="fbMiniContent">
     <span id="fbMiniIcon" title="Open Firebug Lite"></span>

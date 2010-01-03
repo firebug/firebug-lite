@@ -701,7 +701,7 @@
     /*position: absolute;*/
     padding-left: 18px;
     /*max-width: 30%;*/
-    white-space: nowrap;
+    /*white-space: nowrap;*/
     background-color: #FFFFFF;
     text-decoration: none;
 }
@@ -868,7 +868,7 @@
 
 #fbToolbarContent {
     display: block;
-    position: fixed;
+    position: absolute;
     _position: absolute;
     top: 0;
     padding-top: 4px;
@@ -909,7 +909,8 @@
 .fbMenu {
     display: none;
     position: absolute;
-    z-index: 999;
+    font-size: 11px;
+    z-index: 2147483647;
 }
 
 .fbMenuContent {
@@ -1094,13 +1095,11 @@
 /************************************************************************************************
  General
 *************************************************************************************************/
-html, body {
+.fbBody {
     margin: 0;
     padding: 0;
     overflow: hidden;
-}
-
-body {
+    
     font-family: Lucida Grande, Tahoma, sans-serif;
     font-size: 11px;
     background: #fff;
@@ -1184,12 +1183,16 @@ body {
  Master Layout
 *************************************************************************************************/
 #fbChrome {
-    position: fixed;
-    overflow: hidden;
+    font-family: Lucida Grande, Tahoma, sans-serif;
+    font-size: 11px;
+    position: absolute;
+    top: 0;
+    left: 0;
     height: 100%;
     width: 100%;
     border-collapse: collapse;
     background: #fff;
+    overflow: hidden;
 }
 
 #fbTop {
@@ -1270,6 +1273,7 @@ body {
 
 .fbButton:hover {
     color: #333;
+    background: #f5f5ef url(buttonBg.png);
     padding: 3px 5px 3px 6px;
     border: 1px solid #fff;
     border-bottom: 1px solid #bbb;
@@ -1277,7 +1281,7 @@ body {
 }
 
 .fbBtnPressed {
-    background: #ECEBE3;
+    background: #e3e3db url(buttonBgHover.png) !important;
     padding: 3px 4px 2px 6px !important;
     margin: 1px 0 0 1px !important;
     border: 1px solid #ACA899 !important;
@@ -1318,7 +1322,7 @@ body {
 }
 
 
-#fbChromeButtons {
+#fbWindowButtons {
     position: absolute;
     white-space: nowrap;
     right: 0;
@@ -1385,6 +1389,53 @@ body {
     background: #fff;
 }
 
+#fbLargeCommandLine {
+    display: none;
+    position: absolute;
+    z-index: 9;
+    top: 27px;
+    right: 0;
+    width: 294px;
+    height: 201px;
+    border-width: 0;
+    margin: 0;
+    padding: 0;
+    resize: none;
+    outline: none;
+    _right: -1px;
+    _border-left: 1px solid #fff;
+}
+
+#fbLargeCommandButtons {
+    display: none;
+    background: #ECE9D8;
+    bottom: 0;
+    right: 0;
+    width: 294px;
+    height: 21px;
+    padding-top: 1px;
+    position: absolute;
+    border-top: 1px solid #ACA899;
+    z-index: 9;
+}
+
+#fbLargeCommandButtons .fbButton {
+    margin-left: 2px;
+}
+
+#fbSmallCommandLineIcon {
+    background: url(down.png) no-repeat;
+    position: absolute;
+    right: 2px;
+    bottom: 3px;
+    
+    z-index: 99;
+}
+
+#fbSmallCommandLineIcon:hover {
+    background: url(downHover.png) no-repeat;
+}
+
 .hide {
     overflow: hidden !important;
     position: fixed !important;
@@ -1432,6 +1483,19 @@ body {
     padding: 2px 0 2px 32px;
     font: 11px Monaco, monospace;
     z-index: 9;
+    outline: none;
+}
+
+#fbLargeCommandLineIcon {
+    background: url(up.png) no-repeat;
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    z-index: 10;
+}
+
+#fbLargeCommandLineIcon:hover {
+    background: url(upHover.png) no-repeat;
 }
 
 div.fbFitHeight {
@@ -1446,30 +1510,33 @@ div.fbFitHeight {
 
 /* fbToolbar buttons 
 *************************************************************************************************/
-#fbChromeButtons a {
-    font-size: 1px;
+.fbSmallButton {
+    overflow: hidden;
     width: 16px;
     height: 16px;
     display: block;
-    float: right;
-    margin-right: 4px;
     text-decoration: none;
     cursor: default;
 }
 
-#fbChrome_btClose {
+#fbWindowButtons .fbSmallButton {
+    float: right;
+    margin-right: 4px;
+}
+
+#fbWindow_btClose {
     background: url(sprite.png) 0 -119px;
 }
 
-#fbChrome_btClose:hover {
+#fbWindow_btClose:hover {
     background: url(sprite.png) -16px -119px;
 }
 
-#fbChrome_btDetach {
+#fbWindow_btDetach {
     background: url(sprite.png) -32px -119px;
 }
 
-#fbChrome_btDetach:hover {
+#fbWindow_btDetach:hover {
     background: url(sprite.png) -48px -119px;
 }
 
@@ -1490,7 +1557,7 @@ div.fbFitHeight {
 }
 
 .fbPanelBar span {
-    display: block;
+    /*display: block; TODO: safe to remove this? */
     float: left;
 }
 
@@ -1559,7 +1626,7 @@ a.fbTab:hover .fbTabR {
     overflow: hidden;
     right: 294px;
     text-decoration: none;
-    z-index: 9;
+    z-index: 10;
     position: absolute;
     height: 100%;
     top: 27px;
@@ -1872,7 +1939,7 @@ div.objectBox-element {
     height: 100% !important;
 }
 
-.FirebugPopup #fbChromeButtons {
+.FirebugPopup #fbWindowButtons {
     display: none !important;
 }
 

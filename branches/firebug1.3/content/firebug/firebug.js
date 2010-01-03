@@ -71,10 +71,13 @@ window.Firebug = FBL.Firebug =
         
         var chromeMap = FirebugChrome.chromeMap;
         
-        if (chromeMap.popup)
-            chromeMap.popup.destroy();
-        
-        chromeMap.frame.destroy();
+        for (var name in chromeMap)
+        {
+            if (chromeMap.hasOwnProperty(name))
+            {
+                chromeMap[name].destroy();
+            }
+        }
         
         for(var name in documentCache)
         {
@@ -643,6 +646,9 @@ Firebug.Panel =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
         
+        if (Firebug.chrome.largeCommandLineVisible)
+            Firebug.chrome.hideLargeCommandLine();
+            
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
         

@@ -30,7 +30,7 @@ FBL.FirebugChrome =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.initialize", "initializing chrome window");
         
-        if (Env.chrome.type == "frame")
+        if (Env.chrome.type == "frame" || Env.chrome.type == "div")
             ChromeMini.create(Env.chrome);
             
         var chrome = Firebug.chrome = new Chrome(Env.chrome);
@@ -80,118 +80,216 @@ var ChromeDefaultOptions =
 
 var createChromeWindow = function(options)
 {
-    options = options || {};
-    options = extend(ChromeDefaultOptions, options);
+    options = extend(ChromeDefaultOptions, options || {});
     
-    var context = options.context || Env.browser;
+    var chrome = {},
+        context = options.context || Env.browser;
     
-    var chrome = {};
-    
-    chrome.type = Env.Options.enablePersistent ? "popup" : options.type;
-    
-    var isChromeFrame = chrome.type == "frame";
-    var useLocalSkin = Env.useLocalSkin;
-    var url = useLocalSkin ? Env.Location.skin : "about:blank";
-    
-    if (isChromeFrame)
-    {
-        // Create the Chrome Frame
-        var node = chrome.node = createGlobalElement("iframe");
+    var type = chrome.type = Env.Options.enablePersistent ? "popup" : options.type,
         
-        node.setAttribute("id", options.id);
-        node.setAttribute("frameBorder", "0");
-        node.firebugIgnore = true;
-        node.style.border = "0";
-        node.style.visibility = "hidden";
-        node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
-        node.style.position = noFixedPosition ? "absolute" : "fixed";
-        node.style.width = "100%"; // "102%"; IE auto margin bug
-        node.style.left = "0";
-        node.style.bottom = noFixedPosition ? "-1px" : "0";
-        node.style.height = options.height + "px";
+        isChromeFrame = type == "frame",
         
-        // avoid flickering during chrome rendering
-        if (isFirefox)
-            node.style.display = "none";
+        useLocalSkin = Env.useLocalSkin,
         
-        if (useLocalSkin)
-            node.setAttribute("src", Env.Location.skin);
+        url = useLocalSkin ? Env.Location.skin : "about:blank",
         
         // document.body not available in XML+XSL documents in Firefox
-        context.document.getElementsByTagName("body")[0].appendChild(node);
-    }
-    else
-    {
-        // Create the Chrome Popup
-        var height = FirebugChrome.height || options.height;
-        var options = [
-                "true,top=",
-                Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
-                ",left=0,height=",
-                height,
-                ",width=",
-                screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
-                ",resizable"          
-            ].join("");
-        
-        var node = chrome.node = context.window.open(
-            url, 
-            "popup", 
-            options
-          );
-        
-        if (node)
+        body = context.document.getElementsByTagName("body")[0],
+                
+        formatNode = function(node)
         {
-            try
+            node.firebugIgnore = true;
+            node.style.border = "0";
+            node.style.visibility = "hidden";
+            node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
+            node.style.position = noFixedPosition ? "absolute" : "fixed";
+            node.style.width = "100%"; // "102%"; IE auto margin bug
+            node.style.left = "0";
+            node.style.bottom = noFixedPosition ? "-1px" : "0";
+            node.style.height = options.height + "px";
+            
+            // avoid flickering during chrome rendering
+            if (isFirefox)
+                node.style.display = "none";
+        },
+        
+        createChromeDiv = function()
+        {
+            Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
+        
+            var node = chrome.node = createGlobalElement("div"),
+                style = createGlobalElement("style"),
+                
+                css = FirebugChrome.injected.CSS
+                        /*
+                        .replace(/;/g, " !important;")
+                        .replace(/!important\s!important/g, "!important")
+                        .replace(/display\s*:\s*(\w+)\s*!important;/g, "display:$1;")*/,
+                
+                        // reset some styles to minimize interference from the main page's style
+                rules = ".fbBody *{margin:0;padding:0;font-size:11px;line-height:13px;color:inherit;}" +
+                        // load the chrome styles
+                        css +
+                        // adjust some remaining styles
+                        ".fbBody #fbHSplitter{position:absolute !important;},.fbBody #fbHTML span{line-height:14px;}";
+            
+            if (isIE)
             {
-                node.focus();
+                // IE7 CSS bug (FbChrome table bigger than its parent div) 
+                rules += ".fbBody table.fbChrome{height:1px !important;}";
             }
-            catch(E)
+            
+            style.type = "text/css";
+            
+            if (style.styleSheet)
+                style.styleSheet.cssText = rules;
+            else
+                style.appendChild(context.document.createTextNode(rules));
+            
+            document.getElementsByTagName("head")[0].appendChild(style);
+            
+            node.className = "fbBody";
+            node.style.overflow = "hidden";
+            node.innerHTML = getChromeDivTemplate();
+            
+            if (isIE)
+            {
+                // IE7 CSS bug (FbChrome table bigger than its parent div)
+                node.firstChild.style.height = "1px";
+            }
+            
+            formatNode(node);
+            
+            body.appendChild(node);
+            
+            chrome.window = window;
+            chrome.document = document;
+            onChromeLoad(chrome);            
+        };
+    
+    // Uncomment the following line to enable the "windowless mode" (for test purposes)
+    //type = chrome.type = "div";
+    
+    try
+    {
+        if (type == "div")
+        {
+            createChromeDiv();
+            return;
+        }
+        else if (isChromeFrame)
+        {
+            // Create the Chrome Frame
+            var node = chrome.node = createGlobalElement("iframe");
+            node.setAttribute("src", url);
+            node.setAttribute("frameBorder", "0");
+            
+            formatNode(node);
+            
+            body.appendChild(node);
+            
+            // must set the id after appending to the document, otherwise will cause an
+            // strange error in IE, making the iframe load the page in which the bookmarlet
+            // was created (like getfirebug.com), before loading the injected UI HTML,
+            // generating an "Access Denied" error.
+            node.id = options.id;
+        }
+        else
+        {
+            // Create the Chrome Popup
+            var height = FirebugChrome.height || options.height;
+            var options = [
+                    "true,top=",
+                    Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
+                    ",left=0,height=",
+                    height,
+                    ",width=",
+                    screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
+                    ",resizable"          
+                ].join("");
+            
+            var node = chrome.node = context.window.open(
+                url, 
+                "popup", 
+                options
+              );
+            
+            if (node)
+            {
+                try
+                {
+                    node.focus();
+                }
+                catch(E)
+                {
+                    alert("Firebug Error: Firebug popup was blocked.");
+                    return;
+                }
+            }
+            else
             {
                 alert("Firebug Error: Firebug popup was blocked.");
                 return;
             }
         }
-        else
+        
+        if (!useLocalSkin)
         {
-            alert("Firebug Error: Firebug popup was blocked.");
-            return;
+            var tpl = getChromeTemplate(!isChromeFrame);
+            var doc = isChromeFrame ? node.contentWindow.document : node.document;
+            doc.write(tpl);
+            doc.close();
         }
-    }
-    
-    if (!useLocalSkin)
-    {
-        var tpl = getChromeTemplate(!isChromeFrame);
-        var doc = isChromeFrame ? node.contentWindow.document : node.document;
-        doc.write(tpl);
-        doc.close();
-    }
-    
-    var win;
-    var waitDelay = useLocalSkin ? isChromeFrame ? 200 : 300 : 100;
-    var waitForChrome = function()
-    {
-        if ( // Frame loaded... OR
-             isChromeFrame && (win=node.contentWindow) &&
-             node.contentWindow.document.getElementById("fbCommandLine") ||
-             
-             // Popup loaded
-             !isChromeFrame && (win=node.window) && node.document &&
-             node.document.getElementById("fbCommandLine") )
+        
+        var win;
+        var waitDelay = useLocalSkin ? isChromeFrame ? 200 : 300 : 100;
+        var waitForChrome = function()
         {
-            chrome.window = win.window;
-            chrome.document = win.document;
+            if ( // Frame loaded... OR
+                 isChromeFrame && (win=node.contentWindow) &&
+                 node.contentWindow.document.getElementById("fbCommandLine") ||
+                 
+                 // Popup loaded
+                 !isChromeFrame && (win=node.window) && node.document &&
+                 node.document.getElementById("fbCommandLine") )
+            {
+                chrome.window = win.window;
+                chrome.document = win.document;
+                
+                // Prevent getting the wrong chrome height in FF when opening a popup 
+                setTimeout(function(){
+                    onChromeLoad(chrome);
+                },0);
+            }
+            else
+                setTimeout(waitForChrome, waitDelay);
+        }
+        
+        waitForChrome();
+    }
+    catch(e)
+    {
+        var msg = e.message || e;
+        
+        if (/access/i.test(msg))
+        {
+            // Firebug Lite could not create a window for its Graphical User Interface due to
+            // a access restriction. This happens in some pages, when loading via bookmarlet.
+            // In such cases, the only way is to load the GUI in a "windowless mode".
             
-            // Prevent getting the wrong chrome height in FF when opening a popup 
-            setTimeout(function(){
-                onChromeLoad(chrome);
-            },0);
+            if (isChromeFrame)
+                body.removeChild(node);
+            else if(type == "popup")
+                node.close();
+            
+            // Load the GUI in a "windowless mode"
+            createChromeDiv();
         }
         else
-            setTimeout(waitForChrome, waitDelay);
+        {
+            alert("Firebug Error: Firebug GUI could not be created.");
+        }
     }
-    
-    waitForChrome();
 };
 
 
@@ -223,7 +321,7 @@ var onChromeLoad = function onChromeLoad(chrome)
     }
     else
     {
-        if (chrome.type == "frame")
+        if (chrome.type == "frame" || chrome.type == "div")
         {
             // initialize the chrome application
             setTimeout(function(){
@@ -247,6 +345,11 @@ var onChromeLoad = function onChromeLoad(chrome)
     }
 };
 
+var getChromeDivTemplate = function()
+{
+    return FirebugChrome.injected.HTML;
+};
+
 var getChromeTemplate = function(isPopup)
 {
     var tpl = FirebugChrome.injected; 
@@ -262,12 +365,12 @@ var getChromeTemplate = function(isPopup)
     r[++i] = '" rel="stylesheet" type="text/css" />';
     /**/
     
-    r[++i] = '</title><style>';
+    r[++i] = '</title><style>html,body{margin:0;padding:0;overflow:hidden;}';
     r[++i] = tpl.CSS;
     r[++i] = '</style>';
     /**/
     
-    r[++i] = '</head><body class=' + (isPopup ? '"FirebugPopup"' : '') + '>';
+    r[++i] = '</head><body class="fbBody' + (isPopup ? ' FirebugPopup' : '') + '">';
     r[++i] = tpl.HTML;
     r[++i] = '</body></html>';
     
@@ -280,7 +383,7 @@ var getChromeTemplate = function(isPopup)
 var Chrome = function Chrome(chrome)
 {
     var type = chrome.type;
-    var Base = type == "frame" ? ChromeFrameBase : ChromePopupBase; 
+    var Base = type == "frame" || type == "div" ? ChromeFrameBase : ChromePopupBase; 
     
     append(this, chrome); // inherit chrome window properties
     append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
@@ -334,7 +437,7 @@ append(ChromeBase,
     {
         var firebugMenu = new Menu(
         {
-            id: "fbFirebugMenu2",
+            id: "fbFirebugMenu",
             
             items:
             [
@@ -597,9 +700,20 @@ append(ChromeBase,
                 menu.hide();
             else
             {
-                var offsetLeft = isIE6 ? 1 : -4;  // IE6 problem with fixed position
-                var box = Firebug.chrome.getElementBox(target);
-                menu.show(box.left + offsetLeft, box.top + box.height -5);
+                var offsetLeft = isIE6 ? 1 : -4,  // IE6 problem with fixed position
+                    
+                    chrome = Firebug.chrome,
+                    
+                    box = chrome.getElementBox(target),
+                    
+                    offset = chrome.node.nodeName.toLowerCase() == "div" ?
+                            chrome.getElementPosition(chrome.node) :
+                            {top: 0, left: 0};
+                
+                menu.show(
+                            box.left + offsetLeft - offset.left, 
+                            box.top + box.height -5 - offset.top
+                        );
             }
             
             return false;
@@ -666,6 +780,8 @@ append(ChromeBase,
         fbHTML = $("fbHTML");
       
         fbCommandLine = $("fbCommandLine");
+        fbLargeCommandLine = $("fbLargeCommandLine");
+        fbLargeCommandButtons = $("fbLargeCommandButtons");
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
@@ -792,6 +908,8 @@ append(ChromeBase,
         fbHTML = null;
   
         fbCommandLine = null;
+        fbLargeCommandLine = null;
+        fbLargeCommandButtons = null;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
@@ -897,7 +1015,7 @@ append(ChromeBase,
 
     draw: function()
     {
-        var size = Firebug.chrome.getWindowSize();
+        var size = this.getSize();
         
         // Height related values
         var commandLineHeight = Firebug.chrome.commandLineVisible ? fbCommandLine.offsetHeight : 0,
@@ -944,21 +1062,49 @@ append(ChromeBase,
             
             fbPanelBox2Style.width = sideWidth;
             fbPanelBar2BoxStyle.width = sideWidth;
+            
             fbVSplitterStyle.right = sideWidth;
+            
+            if (Firebug.chrome.largeCommandLineVisible)
+            {
+                fbLargeCommandLine = $("fbLargeCommandLine");
+                
+                fbLargeCommandLine.style.height = height;
+                fbLargeCommandLine.style.width = sideWidth;
+                
+                fbLargeCommandButtons = $("fbLargeCommandButtons");
+                fbLargeCommandButtons.style.width = sideWidth;
+            }
         }
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    getSize: function()
+    {
+        return this.node.nodeName.toLowerCase() == "div" ?
+            {
+                height: this.node.offsetHeight,
+                width: this.node.offsetWidth
+            }
+            :
+            this.getWindowSize();
     },
     
     resize: function()
     {
         var self = this;
+        
         // avoid partial resize when maximizing window
         setTimeout(function(){
             self.draw();
             
-            if (noFixedPosition && self.type == "frame")
+            if (noFixedPosition && (self.type == "frame" || self.type == "div"))
                 self.fixIEPosition();
         }, 0);
     },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     layout: function(panel)
     {
@@ -971,6 +1117,51 @@ append(ChromeBase,
         
         Firebug.chrome.draw();
     },
+    
+    showLargeCommandLine: function(hideToggleIcon)
+    {
+        var chrome = Firebug.chrome;
+        
+        if (!chrome.largeCommandLineVisible)
+        {
+            chrome.largeCommandLineVisible = true;
+            
+            if (chrome.selectedPanel.options.hasCommandLine)
+            {
+                commandLine.element.blur();
+                changeCommandLineVisibility(false);
+            }
+            
+            changeSidePanelVisibility(true);
+            
+            fbLargeCommandLine.style.display = "block";
+            fbLargeCommandButtons.style.display = "block";
+            
+            chrome.draw();
+            
+            fbLargeCommandLine.focus();
+        }
+    },
+    
+    hideLargeCommandLine: function()
+    {
+        if (Firebug.chrome.largeCommandLineVisible)
+        {
+            Firebug.chrome.largeCommandLineVisible = false;
+            
+            fbLargeCommandLine.blur();
+            
+            fbLargeCommandLine.style.display = "none";
+            fbLargeCommandButtons.style.display = "none";
+            
+            changeSidePanelVisibility(false);
+            
+            if (Firebug.chrome.selectedPanel.options.hasCommandLine)
+                changeCommandLineVisibility(true);
+            
+            Firebug.chrome.draw();
+        }
+    },    
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
@@ -992,10 +1183,17 @@ append(ChromeBase,
         
         this.selectPanel(panelToSelect);
         
-        if (panelToSelect == "Console")
-            commandLine.element.focus();
-        else
-            fbPanel1.focus();
+        try
+        {
+            if (panelToSelect == "Console")
+                commandLine.element.focus();
+            else
+                commandLine.element.blur();
+        }
+        catch(e)
+        {
+            //TODO: xxxpedro trace error
+        }
         
         focusCommandLineState = ++focusCommandLineState % 2;
     }
@@ -1054,8 +1252,8 @@ var ChromeFrameBase = extend(ChromeBase,
         
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
-            [$("fbChrome_btClose"), "click", this.close],
-            [$("fbChrome_btDetach"), "click", this.detach]       
+            [$("fbWindow_btClose"), "click", this.close],
+            [$("fbWindow_btDetach"), "click", this.detach]       
         );
         
         if (!Env.Options.enablePersistent)
@@ -1177,7 +1375,8 @@ var ChromeFrameBase = extend(ChromeBase,
         
         this.node.style.top = maxHeight - height + scroll.top + "px";
         
-        if (this.type == "frame" && (bodyStyle.marginLeft || bodyStyle.marginRight))
+        if ((this.type == "frame" || this.type == "div") && 
+            (bodyStyle.marginLeft || bodyStyle.marginRight))
         {
             this.node.style.width = size.width + "px";
         }
@@ -1224,13 +1423,17 @@ var ChromeMini = extend(Controller,
         node.style.width = width + "px";
         node.style.left = "";
         node.style.right = 0;
-        node.setAttribute("allowTransparency", "true");
+        
+        if (this.node.nodeName.toLowerCase() == "iframe")
+        {
+            node.setAttribute("allowTransparency", "true");
+            this.document.body.style.backgroundColor = "transparent";
+        }
+        else
+            node.style.background = "transparent";
 
         if (noFixedPosition)
             this.fixIEPosition();
-        
-        this.document.body.style.backgroundColor = "transparent";
-        
         
         this.addController(
             [$("fbMiniIcon", doc), "click", onMiniIconClick]       
@@ -1253,12 +1456,17 @@ var ChromeMini = extend(Controller,
         node.style.width = "100%";
         node.style.left = 0;
         node.style.right = "";
-        node.setAttribute("allowTransparency", "false");
+        
+        if (this.node.nodeName.toLowerCase() == "iframe")
+        {
+            node.setAttribute("allowTransparency", "false");
+            this.document.body.style.backgroundColor = "#fff";
+        }
+        else
+            node.style.background = "#fff";
         
         if (noFixedPosition)
             this.fixIEPosition();
-        
-        this.document.body.style.backgroundColor = "#fff";
         
         var doc = FirebugChrome.chromeMap.frame.document;
         
@@ -1412,54 +1620,57 @@ var ChromePopupBase = extend(ChromeBase, {
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 //
-var commandLine = null;
 
+var commandLine,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Interface Elements Cache
 
-var fbTop = null;
-var fbContent = null;
-var fbContentStyle = null;
-var fbBottom = null;
-var fbBtnInspect = null;
+    fbTop,
+    fbContent,
+    fbContentStyle,
+    fbBottom,
+    fbBtnInspect,
 
-var fbToolbar = null;
+    fbToolbar,
 
-var fbPanelBox1 = null;
-var fbPanelBox1Style = null;
-var fbPanelBox2 = null;
-var fbPanelBox2Style = null;
-var fbPanelBar2Box = null;
-var fbPanelBar2BoxStyle = null;
+    fbPanelBox1,
+    fbPanelBox1Style,
+    fbPanelBox2,
+    fbPanelBox2Style,
+    fbPanelBar2Box,
+    fbPanelBar2BoxStyle,
 
-var fbHSplitter = null;
-var fbVSplitter = null;
-var fbVSplitterStyle = null;
+    fbHSplitter,
+    fbVSplitter,
+    fbVSplitterStyle,
 
-var fbPanel1 = null;
-var fbPanel1Style = null;
-var fbPanel2 = null;
-var fbPanel2Style = null;
+    fbPanel1,
+    fbPanel1Style,
+    fbPanel2,
+    fbPanel2Style,
 
-var fbConsole = null;
-var fbConsoleStyle = null;
-var fbHTML = null;
+    fbConsole,
+    fbConsoleStyle,
+    fbHTML,
 
-var fbCommandLine = null;
+    fbCommandLine,
+    fbLargeCommandLine, 
+    fbLargeCommandButtons,
+
 
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var topHeight = null;
-var topPartialHeight = null;
+    topHeight,
+    topPartialHeight,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75;
+    chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var lastSelectedPanelName = null;
+    lastSelectedPanelName;
 
 
 //************************************************************************************************
@@ -1677,7 +1888,7 @@ var onVSplitterMouseMove = function onVSplitterMouseMove(event)
             if (win != win.parent)
                 clientX += win.frameElement ? win.frameElement.offsetLeft : 0;
             
-            var size = Firebug.chrome.getWindowSize();
+            var size = Firebug.chrome.getSize();
             var x = Math.max(size.width - clientX + 3, 6);
             
             FirebugChrome.sidePanelWidth = x;

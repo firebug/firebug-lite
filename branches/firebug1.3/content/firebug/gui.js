@@ -236,9 +236,11 @@ FBL.Button = function(options)
         
         this.element = createElement("a", {
             className: this.baseClassName + " " + this.className + " fbHover",
-            title: this.title,
             innerHTML: this.caption
         });
+        
+        if (this.title)
+            this.element.title = this.title;
         
         this.container.appendChild(this.element);
     }
@@ -250,7 +252,7 @@ Button.prototype = extend(Controller,
 {
     type: "normal",
     caption: "caption",
-    title: "title",
+    title: null,
     
     className: "", // custom class
     baseClassName: "fbButton", // control class
@@ -546,7 +548,7 @@ FBL.Menu = function(options)
         
         options.element = MenuPlate.tag.append(
                 {object: options},
-                Firebug.chrome.document.body, 
+                getElementByClass(Firebug.chrome.document, "fbBody"),
                 MenuPlate
             );
     }
@@ -564,6 +566,7 @@ FBL.Menu = function(options)
         this.element.id = this.id;
     }
     
+    this.element.firebugIgnore = true;
     this.elementStyle = this.element.style;
     
     this.isVisible = false;
@@ -589,6 +592,14 @@ Menu.prototype =  extend(Controller,
         
         this.hide();
         
+        // if it is a childMenu, remove its reference from the parentMenu
+        if (this.parentMenu)
+            this.parentMenu.childMenu = null;
+        
+        // remove the element from the document
+        this.element.parentNode.removeChild(this.element);
+        
+        // clear references
         this.element = null;
         this.elementStyle = null;
         this.parentMenu = null;
@@ -637,7 +648,7 @@ Menu.prototype =  extend(Controller,
         this.elementStyle.display = "block";
         this.elementStyle.visibility = "hidden";
         
-        var size = Firebug.chrome.getWindowSize();
+        var size = Firebug.chrome.getSize();
         
         x = Math.min(x, size.width - this.element.clientWidth - 10);
         x = Math.max(x, 0);
@@ -884,87 +895,6 @@ Menu.enable = function(element)
 {
     removeClass(element, "fbMenuDisabled");
 };
-
-/*
-
-SAMPLE
-
-    getContextMenuItems: function(fn, target)
-    {
-        if (getAncestorByClass(target, "sourceLine"))
-            return;
-
-        var sourceRow = getAncestorByClass(target, "sourceRow");
-        if (!sourceRow)
-            return;
-
-        var sourceLine = getChildByClass(sourceRow, "sourceLine");
-        var lineNo = parseInt(sourceLine.textContent);
-
-        var items = [];
-
-        var selection = this.document.defaultView.getSelection();
-        if (selection.toString())
-        {
-            items.push(
-                {label: "CopySourceCode", command: bind(this.copySource, this) },
-                "-",
-                {label: "AddWatch", command: bind(this.addSelectionWatch, this) }
-            );
-        }
-
-        var hasBreakpoint = sourceRow.getAttribute("breakpoint") == "true";
-
-        items.push(
-            "-",
-            {label: "SetBreakpoint", type: "checkbox", checked: hasBreakpoint,
-                command: bindFixed(this.toggleBreakpoint, this, lineNo) }
-        );
-        if (hasBreakpoint)
-        {
-            var isDisabled = fbs.isBreakpointDisabled(this.location.href, lineNo);
-            items.push(
-                {label: "DisableBreakpoint", type: "checkbox", checked: isDisabled,
-                    command: bindFixed(this.toggleDisableBreakpoint, this, lineNo) }
-            );
-        }
-        items.push(
-            {label: "EditBreakpointCondition",
-                command: bindFixed(this.editBreakpointCondition, this, lineNo) }
-        );
-
-        if (this.context.stopped)
-        {
-            var sourceRow = getAncestorByClass(target, "sourceRow");
-            if (sourceRow)
-            {
-                var sourceFile = getAncestorByClass(sourceRow, "sourceBox").repObject;
-                var lineNo = parseInt(sourceRow.firstChild.textContent);
-
-                var debuggr = Firebug.Debugger;
-                items.push(
-                    "-",
-                    {label: "Continue",
-                        command: bindFixed(debuggr.resume, debuggr, this.context) },
-                    {label: "StepOver",
-                        command: bindFixed(debuggr.stepOver, debuggr, this.context) },
-                    {label: "StepInto",
-                        command: bindFixed(debuggr.stepInto, debuggr, this.context) },
-                    {label: "StepOut",
-                        command: bindFixed(debuggr.stepOut, debuggr, this.context) },
-                    {label: "RunUntil",
-                        command: bindFixed(debuggr.runUntil, debuggr, this.context,
-                        sourceFile, lineNo) }
-                );
-            }
-        }
-
-        return items;
-    },
-
-
-
- */
 
 
 //************************************************************************************************
