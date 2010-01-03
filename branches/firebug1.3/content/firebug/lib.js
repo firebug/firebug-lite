@@ -583,7 +583,7 @@ this.getCSS = this.isIE ?
     :
     function(el, name)
     {
-        return this.document.defaultView.getComputedStyle(el,null)[name] 
+        return el.ownerDocument.defaultView.getComputedStyle(el,null)[name] 
             || el.style[name] || undefined;
     };
 
