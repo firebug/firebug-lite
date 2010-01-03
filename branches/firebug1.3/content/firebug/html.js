@@ -65,7 +65,7 @@ Firebug.HTML = extend(Firebug.Module,
                         continue;
                     
                     var name = attr.nodeName.toLowerCase();
-                    var value = name == "style" ? node.style.cssText : attr.nodeValue;
+                    var value = name == "style" ? formatStyles(node.style.cssText) : attr.nodeValue;
                     
                     html.push('&nbsp;<span class="nodeName">', name,
                         '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
@@ -139,7 +139,7 @@ Firebug.HTML = extend(Firebug.Module,
                 {
                     var value = node.nodeValue.replace(reTrim, '');
                     
-                    if(document.all){
+                    if(isIE){
                         var src = value+'\n';
                        
                     }else {
@@ -360,6 +360,17 @@ HTMLPanel.prototype = extend(Firebug.Panel,
 });
 
 Firebug.registerPanel(HTMLPanel);
+
+// ************************************************************************************************
+
+var formatStyles = function(styles)
+{
+    return isIE ?
+        // IE return CSS property names in upper case, so we need to convert them
+        styles.replace(/([^\s]+)\s*:/g, function(m,g){return g.toLowerCase()+":"}) :
+        // other browsers are just fine
+        styles;
+};
 
 // ************************************************************************************************
 
