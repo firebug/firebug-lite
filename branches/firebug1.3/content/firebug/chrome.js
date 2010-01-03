@@ -1,23 +1,111 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+// ************************************************************************************************
+// Globals
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Window Options
+
+var WindowDefaultOptions = 
+    {
+        type: "frame",
+        id: "FirebugUI",
+        height: 250
+    },
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Instantiated objects
+
+    commandLine,
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Interface Elements Cache
+
+    fbTop,
+    fbContent,
+    fbContentStyle,
+    fbBottom,
+    fbBtnInspect,
+
+    fbToolbar,
+
+    fbPanelBox1,
+    fbPanelBox1Style,
+    fbPanelBox2,
+    fbPanelBox2Style,
+    fbPanelBar2Box,
+    fbPanelBar2BoxStyle,
+
+    fbHSplitter,
+    fbVSplitter,
+    fbVSplitterStyle,
+
+    fbPanel1,
+    fbPanel1Style,
+    fbPanel2,
+    fbPanel2Style,
+
+    fbConsole,
+    fbConsoleStyle,
+    fbHTML,
+
+    fbCommandLine,
+    fbLargeCommandLine, 
+    fbLargeCommandButtons,
+
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// Cached size values
+
+    topHeight,
+    topPartialHeight,
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75,
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    lastSelectedPanelName,
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    focusCommandLineState = 0, 
+    lastFocusedPanelName, 
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    lastHSplitterMouseMove = 0,
+    onHSplitterMouseMoveBuffer = null,
+    onHSplitterMouseMoveTimer = null,
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    lastVSplitterMouseMove = 0;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+// ************************************************************************************************
+// FirebugChrome
+
 FBL.FirebugChrome = 
 {
-    chromeMap: {},
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
+    isOpen: false,
+    height: 250,
     sidePanelWidth: 300,
     
     selectedPanelName: "Console",
-    
     selectedHTMLElementId: null,
     
-    htmlSelectionStack: [],
+    chromeMap: {},
     
+    htmlSelectionStack: [],
     consoleMessageQueue: [],
     
-    height: 250,
-    
-    isOpen: false,
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     create: function()
     {
@@ -65,33 +153,32 @@ FBL.FirebugChrome =
 };
 
 
-// ************************************************************************************************
-// Chrome Window Options
-
-var ChromeDefaultOptions = 
-{
-    type: "frame",
-    id: "FirebugUI",
-    height: 250
-};
 
 // ************************************************************************************************
 // Chrome Window Creation
 
 var createChromeWindow = function(options)
 {
-    options = extend(ChromeDefaultOptions, options || {});
+    options = extend(WindowDefaultOptions, options || {});
+    
+    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Locals
     
     var chrome = {},
+        
         context = options.context || Env.browser;
     
-    var type = chrome.type = Env.Options.enablePersistent ? "popup" : options.type,
+        type = chrome.type = Env.Options.enablePersistent ? 
+                "popup" : 
+                options.type,
         
         isChromeFrame = type == "frame",
         
         useLocalSkin = Env.useLocalSkin,
         
-        url = useLocalSkin ? Env.Location.skin : "about:blank",
+        url = useLocalSkin ? 
+                Env.Location.skin : 
+                "about:blank",
         
         // document.body not available in XML+XSL documents in Firefox
         body = context.document.getElementsByTagName("body")[0],
@@ -167,16 +254,23 @@ var createChromeWindow = function(options)
             onChromeLoad(chrome);            
         };
     
+    //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
     // Uncomment the following line to enable the "windowless mode" (for test purposes)
     //type = chrome.type = "div";
     
     try
     {
+        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create the Chrome as a "div" (windowless mode)
         if (type == "div")
         {
             createChromeDiv();
             return;
         }
+        
+        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // cretate the Chrome as an "iframe"
         else if (isChromeFrame)
         {
             // Create the Chrome Frame
@@ -194,11 +288,14 @@ var createChromeWindow = function(options)
             // generating an "Access Denied" error.
             node.id = options.id;
         }
+        
+        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create the Chrome as a "popup"
         else
         {
-            // Create the Chrome Popup
-            var height = FirebugChrome.height || options.height;
-            var options = [
+            var height = FirebugChrome.height || options.height,
+            
+                options = [
                     "true,top=",
                     Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
                     ",left=0,height=",
@@ -206,13 +303,13 @@ var createChromeWindow = function(options)
                     ",width=",
                     screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
                     ",resizable"          
-                ].join("");
+                ].join(""),
             
-            var node = chrome.node = context.window.open(
-                url, 
-                "popup", 
-                options
-              );
+                node = chrome.node = context.window.open(
+                    url, 
+                    "popup", 
+                    options
+                );
             
             if (node)
             {
@@ -233,39 +330,48 @@ var createChromeWindow = function(options)
             }
         }
         
+        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Inject the interface HTML if it is not using the local skin
+        
         if (!useLocalSkin)
         {
-            var tpl = getChromeTemplate(!isChromeFrame);
-            var doc = isChromeFrame ? node.contentWindow.document : node.document;
+            var tpl = getChromeTemplate(!isChromeFrame),
+                doc = isChromeFrame ? node.contentWindow.document : node.document;
+            
             doc.write(tpl);
             doc.close();
         }
         
-        var win;
-        var waitDelay = useLocalSkin ? isChromeFrame ? 200 : 300 : 100;
-        var waitForChrome = function()
-        {
-            if ( // Frame loaded... OR
-                 isChromeFrame && (win=node.contentWindow) &&
-                 node.contentWindow.document.getElementById("fbCommandLine") ||
-                 
-                 // Popup loaded
-                 !isChromeFrame && (win=node.window) && node.document &&
-                 node.document.getElementById("fbCommandLine") )
-            {
-                chrome.window = win.window;
-                chrome.document = win.document;
-                
-                // Prevent getting the wrong chrome height in FF when opening a popup 
-                setTimeout(function(){
-                    onChromeLoad(chrome);
-                },0);
-            }
-            else
-                setTimeout(waitForChrome, waitDelay);
-        }
+        //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Wait the Window to be loaded
         
-        waitForChrome();
+        var win,
+        
+            waitDelay = useLocalSkin ? isChromeFrame ? 200 : 300 : 100,
+            
+            waitForWindow = function()
+            {
+                if ( // Frame loaded... OR
+                     isChromeFrame && (win=node.contentWindow) &&
+                     node.contentWindow.document.getElementById("fbCommandLine") ||
+                     
+                     // Popup loaded
+                     !isChromeFrame && (win=node.window) && node.document &&
+                     node.document.getElementById("fbCommandLine") )
+                {
+                    chrome.window = win.window;
+                    chrome.document = win.document;
+                    
+                    // Prevent getting the wrong chrome height in FF when opening a popup 
+                    setTimeout(function(){
+                        onChromeLoad(chrome);
+                    },0);
+                }
+                else
+                    setTimeout(waitForWindow, waitDelay);
+            };
+        
+        waitForWindow();
     }
     catch(e)
     {
@@ -292,6 +398,7 @@ var createChromeWindow = function(options)
     }
 };
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var onChromeLoad = function onChromeLoad(chrome)
 {
@@ -345,6 +452,8 @@ var onChromeLoad = function onChromeLoad(chrome)
     }
 };
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
 var getChromeDivTemplate = function()
 {
     return FirebugChrome.injected.HTML;
@@ -377,6 +486,7 @@ var getChromeTemplate = function(isPopup)
     return r.join("");
 };
 
+
 // ************************************************************************************************
 // Chrome Class
     
@@ -385,8 +495,8 @@ var Chrome = function Chrome(chrome)
     var type = chrome.type;
     var Base = type == "frame" || type == "div" ? ChromeFrameBase : ChromePopupBase; 
     
-    append(this, chrome); // inherit chrome window properties
     append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
+    append(this, chrome); // inherit chrome window properties
     
     FirebugChrome.chromeMap[type] = this;
     Firebug.chrome = this;
@@ -403,12 +513,41 @@ var Chrome = function Chrome(chrome)
 // ************************************************************************************************
 // ChromeBase
 
-var ChromeBase = extend(Controller, PanelBar);
-
+var ChromeBase = {};
+append(ChromeBase, Controller); 
+append(ChromeBase, PanelBar);
 append(ChromeBase, Context.prototype);
-
 append(ChromeBase,
 {
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // inherited properties
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // inherited from createChrome function
+    
+    node: null,
+    type: null,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // inherited from Context.prototype
+    
+    document: null,
+    window: null,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // value properties
+    
+    sidePanelVisible: false,
+    commandLineVisible: false,
+    largeCommandLineVisible: false,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // object properties
+    
+    inspectButton: null,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
     create: function()
     {
         PanelBar.create.call(this);
@@ -1211,8 +1350,6 @@ append(ChromeBase,
     
 });
 
-var focusCommandLineState = 0, lastFocusedPanelName; 
-
 // ************************************************************************************************
 // ChromeFrameBase
 
@@ -1624,66 +1761,6 @@ var ChromePopupBase = extend(ChromeBase, {
 });
 
 
-
-// ************************************************************************************************
-// Internals
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-//
-
-var commandLine,
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// Interface Elements Cache
-
-    fbTop,
-    fbContent,
-    fbContentStyle,
-    fbBottom,
-    fbBtnInspect,
-
-    fbToolbar,
-
-    fbPanelBox1,
-    fbPanelBox1Style,
-    fbPanelBox2,
-    fbPanelBox2Style,
-    fbPanelBar2Box,
-    fbPanelBar2BoxStyle,
-
-    fbHSplitter,
-    fbVSplitter,
-    fbVSplitterStyle,
-
-    fbPanel1,
-    fbPanel1Style,
-    fbPanel2,
-    fbPanel2Style,
-
-    fbConsole,
-    fbConsoleStyle,
-    fbHTML,
-
-    fbCommandLine,
-    fbLargeCommandLine, 
-    fbLargeCommandButtons,
-
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    topHeight,
-    topPartialHeight,
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    chromeRedrawSkipRate = isIE ? 75 : isOpera ? 80 : 75,
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    lastSelectedPanelName;
-
-
 //************************************************************************************************
 // UI helpers
 
@@ -1761,10 +1838,6 @@ var onHSplitterMouseDown = function onHSplitterMouseDown(event)
     
     return false;
 };
-
-var lastHSplitterMouseMove = 0;
-var onHSplitterMouseMoveBuffer = null;
-var onHSplitterMouseMoveTimer = null;
 
 var onHSplitterMouseMove = function onHSplitterMouseMove(event)
 {
@@ -1881,8 +1954,6 @@ var onVSplitterMouseDown = function onVSplitterMouseDown(event)
     
     return false;
 };
-
-var lastVSplitterMouseMove = 0;
 
 var onVSplitterMouseMove = function onVSplitterMouseMove(event)
 {
