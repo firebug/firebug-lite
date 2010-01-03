@@ -1322,17 +1322,17 @@ this.createGlobalElement = function(tagName, properties)
 
 this.isLeftClick = function(event)
 {
-    return event.button == 0 && this.noKeyModifiers(event);
+    return (this.isIE ? event.button == 1 : event.button == 0) && this.noKeyModifiers(event);
 };
 
 this.isMiddleClick = function(event)
 {
-    return event.button == 1 && this.noKeyModifiers(event);
+    return (this.isIE ? event.button == 4 : event.button == 1) && this.noKeyModifiers(event);
 };
 
 this.isRightClick = function(event)
 {
-    return event.button == 2 && this.noKeyModifiers(event);
+    return (this.isIE ? event.button == 2 : event.button == 2) && this.noKeyModifiers(event);
 };
 
 this.noKeyModifiers = function(event)
@@ -1342,12 +1342,12 @@ this.noKeyModifiers = function(event)
 
 this.isControlClick = function(event)
 {
-    return event.button == 0 && this.isControl(event);
+    return (this.isIE ? event.button == 1 : event.button == 0) && this.isControl(event);
 };
 
 this.isShiftClick = function(event)
 {
-    return event.button == 0 && this.isShift(event);
+    return (this.isIE ? event.button == 1 : event.button == 0) && this.isShift(event);
 };
 
 this.isControl = function(event)
