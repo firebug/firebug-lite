@@ -70,10 +70,13 @@ FBL.Context.prototype =
             r = this.eval(cmd);
             if (r && r[evalError])
             {
+                var msg = r.name ? (r.name + ": ") : "";
+                msg += r.message || r;
+                
                 if (errorHandler)
-                    r = errorHandler(r.message || r)
+                    r = errorHandler(msg)
                 else
-                    r = r.message || r;
+                    r = msg;
             }
         }
         
