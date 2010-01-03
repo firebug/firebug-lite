@@ -1019,15 +1019,17 @@ append(ChromeBase,
         
         // Height related values
         var commandLineHeight = Firebug.chrome.commandLineVisible ? fbCommandLine.offsetHeight : 0,
+            
             y = Math.max(size.height /* chrome height */, topHeight),
             
-            height = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0)+ "px",
+            heightValue = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0), 
             
+            height = heightValue + "px",
             
             // Width related values
-            sideWidth = Firebug.chrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0,
+            sideWidthValue = Firebug.chrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0,
             
-            width = Math.max(size.width /* chrome width */ - sideWidth, 0) + "px";
+            width = Math.max(size.width /* chrome width */ - sideWidthValue, 0) + "px";
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Height related rendering
@@ -1055,13 +1057,14 @@ append(ChromeBase,
         // SidePanel rendering
         if (Firebug.chrome.sidePanelVisible)
         {
-            sideWidth = Math.max(sideWidth - 6, 0) + "px";
+            sideWidthValue = Math.max(sideWidthValue - 6, 0);
+            
+            var sideWidth = sideWidthValue + "px"
             
             fbPanel2Style.height = height;
             fbPanel2Style.width = sideWidth;
             
             fbPanelBox2Style.width = sideWidth;
-            fbPanelBar2BoxStyle.width = sideWidth;
             
             fbVSplitterStyle.right = sideWidth;
             
@@ -1069,11 +1072,15 @@ append(ChromeBase,
             {
                 fbLargeCommandLine = $("fbLargeCommandLine");
                 
-                fbLargeCommandLine.style.height = height;
-                fbLargeCommandLine.style.width = sideWidth;
+                fbLargeCommandLine.style.height = heightValue - 4 + "px";
+                fbLargeCommandLine.style.width = sideWidthValue - 2 + "px";
                 
                 fbLargeCommandButtons = $("fbLargeCommandButtons");
                 fbLargeCommandButtons.style.width = sideWidth;
+            }
+            else
+            {
+                fbPanelBar2BoxStyle.width = sideWidth;
             }
         }
     },
@@ -1137,6 +1144,8 @@ append(ChromeBase,
             fbLargeCommandLine.style.display = "block";
             fbLargeCommandButtons.style.display = "block";
             
+            fbPanelBar2BoxStyle.display = "none";
+            
             chrome.draw();
             
             fbLargeCommandLine.focus();
@@ -1151,8 +1160,10 @@ append(ChromeBase,
             
             fbLargeCommandLine.blur();
             
+            fbPanelBar2BoxStyle.display = "block";
+            
             fbLargeCommandLine.style.display = "none";
-            fbLargeCommandButtons.style.display = "none";
+            fbLargeCommandButtons.style.display = "none";            
             
             changeSidePanelVisibility(false);
             

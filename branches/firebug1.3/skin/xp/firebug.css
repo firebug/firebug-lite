@@ -1393,15 +1393,16 @@
     display: none;
     position: absolute;
     z-index: 9;
-    top: 27px;
+    top: 28px;
     right: 0;
     width: 294px;
     height: 201px;
     border-width: 0;
     margin: 0;
-    padding: 0;
+    padding: 2px 0 0 2px;
     resize: none;
     outline: none;
+    font-size: 11px;
     _right: -1px;
     _border-left: 1px solid #fff;
 }
