@@ -232,6 +232,8 @@ FBL.Button = function(options)
     }
     else
     {
+        this.shouldDestroy = true;
+        
         this.container = this.owner.getPanel().toolButtonsNode;
         
         this.element = createElement("a", {
@@ -269,7 +271,9 @@ Button.prototype = extend(Controller,
     {
         this.shutdown();
         
-        this.container.removeChild(this.element);
+        // only remove if it is a dynamically generated button (not pre-rendered)
+        if (this.shouldDestroy)
+            this.container.removeChild(this.element);
         
         this.element = null;
         this.container = null;
