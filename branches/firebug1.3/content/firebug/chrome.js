@@ -983,7 +983,7 @@ append(ChromeBase,
         setTimeout(function(){
             self.selectPanel(FirebugChrome.selectedPanelName);
             
-            if (FirebugChrome.selectedPanelName == "Console")
+            if (FirebugChrome.selectedPanelName == "Console" && Firebug.CommandLine)
                 Firebug.chrome.focusCommandLine();
         },0);
         

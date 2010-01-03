@@ -1,7 +1,51 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+// ************************************************************************************************
+// Globals
+
 var Console = Firebug.Console;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var commandHistory = [];
+var commandPointer = -1;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var reOpenBracket = /[\[\(\{]/;
+var reCloseBracket = /[\]\)\}]/;
+
+var commandHistory = [];
+var commandPointer = -1;
+
+var isAutoCompleting = null;
+var autoCompletePrefix = null;
+var autoCompleteExpr = null;
+var autoCompleteBuffer = null;
+var autoCompletePosition = null;
+
+var _completion =
+{
+    window:
+    [
+        "console"
+    ],
+    
+    document:
+    [
+        "getElementById", 
+        "getElementsByTagName"
+    ]
+};
+
+var _stack = function(command)
+{
+    commandHistory.push(command);
+    commandPointer = commandHistory.length;
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 // ************************************************************************************************
 // CommandLine
@@ -27,35 +71,6 @@ Firebug.CommandLine.prototype =
 {
     element: null,
   
-    _buffer: [],
-    _bi: -1,
-    
-    _completing: null,
-    _completePrefix: null,
-    _completeExpr: null,
-    _completeBuffer: null,
-    _ci: null,
-    
-    _completion:
-    {
-        window:
-        [
-            "console"
-        ],
-        
-        document:
-        [
-            "getElementById", 
-            "getElementsByTagName"
-        ]
-    },
-  
-    _stack: function(command)
-    {
-        this._buffer.push(command);
-        this._bi = this._buffer.length;
-    },
-    
     initialize: function(doc)
     {
     },
@@ -76,7 +91,7 @@ Firebug.CommandLine.prototype =
         var cmd = this.element;
         var command = cmd.value;
         
-        this._stack(command);
+        _stack(command);
         Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
         
         try
@@ -117,36 +132,32 @@ Firebug.CommandLine.prototype =
     
     prevCommand: function()
     {
-        var cmd = this.element;
-        var buffer = this._buffer;
-        
-        if (this._bi > 0 && buffer.length > 0)
-            cmd.value = buffer[--this._bi];
+        if (commandPointer > 0 && commandHistory.length > 0)
+            this.element.value = commandHistory[--commandPointer];
     },
   
     nextCommand: function()
     {
-        var cmd = this.element;
+        var element = this.element;
         
-        var buffer = this._buffer;
-        var limit = buffer.length -1;
-        var i = this._bi;
+        var limit = commandHistory.length -1;
+        var i = commandPointer;
         
         if (i < limit)
-          cmd.value = buffer[++this._bi];
+          element.value = commandHistory[++commandPointer];
           
         else if (i == limit)
         {
-            ++this._bi;
-            cmd.value = "";
+            ++commandPointer;
+            element.value = "";
         }
     },
   
     autocomplete: function(reverse)
     {
-        var cmd = this.element;
+        var element = this.element;
         
-        var command = cmd.value;
+        var command = element.value;
         var offset = getExpressionOffset(command);
 
         var valBegin = offset ? command.substr(0, offset) : "";
@@ -155,7 +166,7 @@ Firebug.CommandLine.prototype =
         var buffer, obj, objName, commandBegin, result, prefix;
         
         // if it is the beginning of the completion
-        if(!this._completing)
+        if(!isAutoCompleting)
         {
             
             // group1 - command begin
@@ -177,7 +188,7 @@ Firebug.CommandLine.prototype =
             } else
                 return;
             
-            this._completing = true;
+            isAutoCompleting = true;
       
             // find base object
             if(objName == "")
@@ -207,12 +218,12 @@ Firebug.CommandLine.prototype =
             // map base object
             if(obj)
             {
-                this._completePrefix = prefix;
-                this._completeExpr = valBegin + commandBegin + (objName ? objName + "." : "");
-                this._ci = -1;
+                autoCompletePrefix = prefix;
+                autoCompleteExpr = valBegin + commandBegin + (objName ? objName + "." : "");
+                autoCompletePosition = -1;
                 
-                buffer = this._completeBuffer = isIE ?
-                    this._completion[objName || "window"] || [] : [];
+                buffer = autoCompleteBuffer = isIE ?
+                    _completion[objName || "window"] || [] : [];
                 
                 for(var p in obj)
                     buffer.push(p);
@@ -220,21 +231,21 @@ Firebug.CommandLine.prototype =
     
         // if it is the continuation of the last completion
         } else
-          buffer = this._completeBuffer;
+          buffer = autoCompleteBuffer;
         
         if (buffer)
         {
-            prefix = this._completePrefix;
+            prefix = autoCompletePrefix;
             
             var diff = reverse ? -1 : 1;
             
-            for(var i=this._ci+diff, l=buffer.length, bi; i>=0 && i<l; i+=diff)
+            for(var i=autoCompletePosition+diff, l=buffer.length, bi; i>=0 && i<l; i+=diff)
             {
                 bi = buffer[i];
                 
                 if (bi.indexOf(prefix) == 0)
                 {
-                    this._ci = i;
+                    autoCompletePosition = i;
                     result = bi;
                     break;
                 }
@@ -242,7 +253,7 @@ Firebug.CommandLine.prototype =
         }
         
         if (result)
-            cmd.value = this._completeExpr + result;
+            element.value = autoCompleteExpr + result;
     },
     
     onError: function(msg, href, lineNo)
@@ -273,7 +284,7 @@ Firebug.CommandLine.prototype =
         
         /*tab, shift, control, alt*/
         if (code != 9 && code != 16 && code != 17 && code != 18)
-            this._completing = false;
+            isAutoCompleting = false;
     
         if (code == 13 /* enter */)
             this.execute();
@@ -301,9 +312,6 @@ Firebug.CommandLine.prototype =
 
 // ************************************************************************************************
 // 
-
-var reOpenBracket = /[\[\(\{]/;
-var reCloseBracket = /[\]\)\}]/;
 
 function getExpressionOffset(command)
 {
@@ -367,6 +375,7 @@ var initializeCommandLineAPI = function initializeCommandLineAPI()
         if (!Env.browser.window[m])
             Firebug.CommandLine.API[m] = CommandLineAPI[m];
 };
+
 initializeCommandLineAPI();
 
 // ************************************************************************************************
