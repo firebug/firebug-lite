@@ -1022,7 +1022,8 @@ var Renderer =
             womb = parent.ownerDocument.createElement("div");
         womb.innerHTML = html;
 
-        root = womb.firstChild;
+        // TODO: xxxpedro domplate port to Firebug
+        var root = womb.firstChild;
         while (womb.firstChild)
             parent.appendChild(womb.firstChild);
 
