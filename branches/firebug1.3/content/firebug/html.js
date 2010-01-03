@@ -25,8 +25,7 @@ Firebug.HTML = extend(Firebug.Module,
                 
                 var nodeName = node.nodeName.toLowerCase();
                 
-                var nodeVisible = node.style.visibility != "hidden" &&
-                        node.style.display != "none";
+                var nodeVisible = isVisible(node);
                 
                 var hasSingleTextChild = childLength == 1 && node.firstChild.nodeType == 3 &&
                         nodeName != "script" && nodeName != "style";
@@ -54,7 +53,9 @@ Firebug.HTML = extend(Firebug.Module,
                     );
                 else
                     html.push(
-                        '<div class="objectBox-element"><span class="nodeBox">&lt;<span class="nodeTag">', 
+                        '<div class="objectBox-element"><span class="nodeBox',
+                        nodeVisible ? "" : " nodeHidden",
+                        '">&lt;<span class="nodeTag">', 
                         nodeName, '</span>'
                     );
                 
