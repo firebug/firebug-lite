@@ -15,7 +15,8 @@
 /*.twisty,
 .logRow-errorMessage > .hasTwisty > .errorTitle,
 .logRow-spy .spyHead .spyTitle,
-.logGroup > .logRow, /* avoid rule not being parsed IE6 */
+ /* avoid rule not being parsed IE6 */
+.logGroup .logGroupLabel,
 .hasChildren .memberLabelCell .memberLabel,
 .hasHeaders .netHrefLabel {
     background-image: url(tree_open.gif);
@@ -25,7 +26,8 @@
 /*
 .logRow-errorMessage > .hasTwisty.opened > .errorTitle,
 .logRow-spy.opened .spyHead .spyTitle,
-.logGroup.opened > .logRow, /* avoid rule not being parsed IE6 */
+/* avoid rule not being parsed IE6 */
+.opened .logGroupLabel, 
 .opened .memberLabelCell .memberLabel/*,
 .nodeBox.highlightOpen > .nodeLabel > .twisty,
 .nodeBox.open > .nodeLabel > .twisty,
@@ -98,7 +100,7 @@
 }
 
 .logGroup {
-    /*background: url(chrome://firebug/skin/group.gif) repeat-x #FFFFFF;*/
+    background: url(group.gif) repeat-x #FFFFFF;
     padding: 0;
     border: none;
 }
@@ -1403,6 +1405,7 @@
     resize: none;
     outline: none;
     font-size: 11px;
+    overflow: auto;
     _right: -1px;
     _border-left: 1px solid #fff;
 }
@@ -1418,10 +1421,6 @@
     position: absolute;
     border-top: 1px solid #ACA899;
     z-index: 9;
-}
-
-#fbLargeCommandButtons .fbButton {
-    margin-left: 2px;
 }
 
 #fbSmallCommandLineIcon {
@@ -1711,14 +1710,15 @@ div.objectBox-element {
 .logRow * {
     font-size: 1em;
 }
-
+/*
+//TODO: remove this
 .logRow {
     position: relative;
     border-bottom: 1px solid #D7D7D7;
     padding: 2px 4px 1px 6px;
     background-color: #FFFFFF;
 }
-
+/**/
 .logRow-command {
     font-family: Monaco, monospace;
     color: blue;
@@ -1809,6 +1809,9 @@ div.objectBox-element {
 }
 
 /************************************************************************************************/
+/*
+//TODO: remove this
+
 .logRow-group {
     background: #EEEEEE;
     border-bottom: none;
@@ -1822,7 +1825,7 @@ div.objectBox-element {
     margin-left: 24px;
     border-top: 1px solid #D7D7D7;
     border-left: 1px solid #D7D7D7;
-}
+}/**/
 
 /************************************************************************************************/
 .selectorTag,.selectorId,.selectorClass {
