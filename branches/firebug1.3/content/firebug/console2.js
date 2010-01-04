@@ -1,5 +1,6 @@
 /* See license.txt for terms of usage */
 
+// next-generation Console Panel (will override consoje.js)
 FBL.ns(function() { with (FBL) {
 
 // ************************************************************************************************
@@ -50,6 +51,9 @@ Firebug.ConsoleBase =
 
     logRow: function(appender, objects, context, className, rep, sourceLink, noThrottle, noRow)
     {
+        // TODO: xxxpedro console console2
+        noThrottle = true; // xxxpedro forced because there is no TabContext yet
+        
         if (!context)
             context = FirebugContext;
 
@@ -66,6 +70,9 @@ Firebug.ConsoleBase =
             {
                 var row = panel.append(appender, objects, className, rep, sourceLink, noRow);
                 var container = panel.panelNode;
+
+                // TODO: xxxpedro what is this? console console2
+                /*
                 var template = Firebug.NetMonitor.NetLimit;
 
                 while (container.childNodes.length > maxQueueRequests + 1)
@@ -76,6 +83,7 @@ Firebug.ConsoleBase =
                     template.updateCounter(panel.limit);
                 }
                 dispatch([Firebug.A11yModel], "onLogRowCreated", [panel , row]);
+                /**/
                 return row;
             }
         }
@@ -83,7 +91,7 @@ Firebug.ConsoleBase =
         {
             if (!context.throttle)
             {
-                FBTrace.sysout("console.logRow has not context.throttle! ");
+                //FBTrace.sysout("console.logRow has not context.throttle! ");
                 return;
             }
             var args = [appender, objects, context, className, rep, sourceLink, true, noRow];
@@ -116,7 +124,9 @@ Firebug.ConsoleBase =
     // Override to direct output to your panel
     getPanel: function(context, noCreate)
     {
-        return context.getPanel("console", noCreate);
+        //return context.getPanel("console", noCreate);
+        // TODO: xxxpedro console console2
+        return Firebug.chrome.getPanel("console2");
     }
 
 };
@@ -562,23 +572,30 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         groupBody.setAttribute('role', 'group');
         this.groups.push(groupBody);
 
-        innerRow.addEventListener("mousedown", function(event)
+        addEvent(innerRow, "mousedown", function(event)
         {
             if (isLeftClick(event))
             {
-                var groupRow = event.currentTarget.parentNode;
+                //console.log(event.currentTarget == event.target);
+                
+                var target = event.target || event.srcElement;
+                
+                target = getAncestorByClass(target, "logGroupLabel");
+                
+                var groupRow = target.parentNode;
+                
                 if (hasClass(groupRow, "opened"))
                 {
                     removeClass(groupRow, "opened");
-                    event.target.setAttribute('aria-expanded', 'false');
+                    target.setAttribute('aria-expanded', 'false');
                 }
                 else
                 {
                     setClass(groupRow, "opened");
-                    event.target.setAttribute('aria-expanded', 'true');
+                    target.setAttribute('aria-expanded', 'true');
                 }
             }
-        }, false);
+        });
     },
 
     appendCloseGroup: function(object, row, rep)
@@ -615,6 +632,14 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
                 this.insertReloadWarning();
         }
 
+        //TODO: xxxpedro remove this 
+        /*
+        Firebug.Console2.openGroup(["asd"], null, "group", null, false);
+        Firebug.Console2.log("asd");
+        Firebug.Console2.log("asd");
+        Firebug.Console2.log("asd");
+        /**/
+        
         //TODO: xxxpedro preferences prefs
         //prefs.addObserver(Firebug.prefDomain, this, false);
     },
@@ -625,25 +650,28 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         if (FBTrace.DBG_CONSOLE)
         {
             this.onScroller = bind(this.onScroll, this);
-            this.panelNode.addEventListener("scroll", this.onScroller, true);
+            addEvent(this.panelNode, "scroll", this.onScroller);
         }
 
         this.onResizer = bind(this.onResize, this);
         this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
-        this.resizeEventTarget.addEventListener("resize", this.onResizer, true);
+        addEvent(this.resizeEventTarget, "resize", this.onResizer);
     },
 
     destroyNode : function()
     {
         dispatch([Firebug.A11yModel], 'onDestroyNode', [this]);
         if (this.onScroller)
-            this.panelNode.removeEventListener("scroll", this.onScroller, true);
+            removeEvent(this.panelNode, "scroll", this.onScroller);
 
-        this.resizeEventTarget.removeEventListener("resize", this.onResizer, true);
+        removeEvent(this.resizeEventTarget, "resize", this.onResizer);
     },
 
     shutdown: function()
     {
+        //TODO: xxxpedro console console2
+        Firebug.Panel.shutdown.apply(this, arguments);
+
         //TODO: xxxpedro preferences prefs
         //prefs.removeObserver(Firebug.prefDomain, this, false);
     },
@@ -681,7 +709,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         }
     },
 
-    hide: function(state)
+    ihide: function(state)
     {
         if (FBTrace.DBG_CONSOLE)
             FBTrace.sysout("Console.panel hide; " + this.context.getName(), state);
