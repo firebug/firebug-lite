@@ -1015,7 +1015,10 @@ this.SourceLink = domplate(Firebug.Rep,
             if (FBTrace.DBG_ERRORS)
                 FBTrace.sysout("reps.getSourceLinkTitle decodeURIComponent fails for \'"+fileName+"\': "+exc, exc);
         }
-        return $STRF("Line", [fileName, sourceLink.line]);
+        
+        return fileName + " (line " + sourceLink.line + ")";
+        // TODO: xxxpedro
+        //return $STRF("Line", [fileName, sourceLink.line]);
     },
 
     copyLink: function(sourceLink)

@@ -34,7 +34,7 @@ window.FBDev =
         // Experimental
         "firebug/domplate.js", // not used yet
         "firebug/reps2.js",  // experimental
-        //"firebug/console2.js",
+        "firebug/console2.js",
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Application Classes

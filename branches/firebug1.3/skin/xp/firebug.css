@@ -14,8 +14,8 @@
 /* IE6 has problems with > operator, and multiple classes */
 /*.twisty,
 .logRow-errorMessage > .hasTwisty > .errorTitle,
-.logRow-spy .spyHead .spyTitle,
  /* avoid rule not being parsed IE6 */
+.logRow-spy .spyHead .spyTitle,
 .logGroup .logGroupLabel,
 .hasChildren .memberLabelCell .memberLabel,
 .hasHeaders .netHrefLabel {
@@ -543,7 +543,7 @@
 
 .logRow-spy,
 .logRow-spy .objectLink-sourceLink {
-    /*background: url(chrome://firebug/skin/group.gif) repeat-x #FFFFFF;*/
+    background: url(group.gif) repeat-x #FFFFFF;
     padding-right: 4px;
     right: 0;
 }
@@ -605,8 +605,8 @@
     background: transparent no-repeat 0 0;
 }
 
-.logRow-spy.loading .spyHead .spyRow .spyIcon {
-    /*background-image: url(chrome://firebug/skin/loading_16.gif);*/
+.loading .spyHead .spyRow .spyIcon {
+    background-image: url(loading_16.gif);
 }
 
 .logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon {

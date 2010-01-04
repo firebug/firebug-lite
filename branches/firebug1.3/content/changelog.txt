@@ -1,4 +1,39 @@
 ###################################################################################################
+ 1.3.0a5
+###################################################################################################
+    - Large Command Line
+    
+    - Windowless mode
+    
+    - Fix problem in iframe creation
+    
+    - ported the console.js file from Firebug codebase (not enabled yet). This will replace 
+      the current implementation of the Console panel in the 1.3 final version.
+    
+    - refactoring Chrome module for better readability
+    
+    - refactoring CommandLine module for better readability and encapsulation (commandHistory
+        is now a private variable in CommandLine module)
+        
+    - Added the "category" of error in the error messages (like "Type Error", "Syntax Error", etc).
+    
+    - fixed visibility detection and visibility representation of elements
+    
+    - properly format inline style of elements in IE to lower-case in HTML panel
+    
+    - Fixed problems in IE with some event functions like isLeftClick(), isRightClick(), 
+      and others. IE has a different pattern for identifying mouse buttons.
+    
+    - fixed variable "root" leaking to global namespace (domplate.js) 
+    
+    - refined the layout of log groups
+    
+    - refined the layout of buttons (added an image background)
+    
+    - improved development build functions
+
+
+###################################################################################################
  1.3.0a4
 ###################################################################################################
 

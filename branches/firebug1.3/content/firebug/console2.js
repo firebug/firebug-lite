@@ -3,6 +3,184 @@
 // next-generation Console Panel (will override consoje.js)
 FBL.ns(function() { with (FBL) {
 
+Firebug.Spy = Firebug.Spy || {};
+Firebug.Spy.log = function()
+{
+    var panel = Firebug.chrome.getPanel("console2");
+    var container = panel.containerNode;
+    
+    var spy = {
+            method: "get", 
+            href: "h",
+            sourceLink: {href:"file.html", line: 22}
+        };
+    
+    spy.getURL = function(){return "http://www.dummy.com";};
+    
+    var div = Firebug.chrome.document.createElement("div");
+    div.className = "logRow logRow-spy loading";
+    Firebug.Spy.XHR.tag.append({object: spy}, div);
+    container.appendChild(div);
+    //Firebug.Console2.log({}, window, "spy", Firebug.Spy.XHR); 
+};
+
+/**
+ * @domplate Represents a template for XHRs logged in the Console panel. The body of the
+ * log (displayed when expanded) is rendered using {@link Firebug.NetMonitor.NetInfoBody}.
+ */
+Firebug.Spy.XHR = domplate(Firebug.Rep,
+/** @lends Firebug.Spy.XHR */
+{
+    tag:
+        DIV({"class": "spyHead", _repObject: "$object"},
+            TABLE({"class": "spyHeadTable focusRow outerFocusRow", cellpadding: 0, cellspacing: 0,
+                "role": "listitem", "aria-expanded": "false"},
+                TBODY({"role": "presentation"},
+                    TR({"class": "spyRow"},
+                        TD({"class": "spyTitleCol spyCol", onclick: "$onToggleBody"},
+                            DIV({"class": "spyTitle"},
+                                "$object|getCaption"
+                            ),
+                            DIV({"class": "spyFullTitle spyTitle"},
+                                "$object|getFullUri"
+                            )
+                        ),
+                        TD({"class": "spyCol"},
+                            DIV({"class": "spyStatus"}, "$object|getStatus")
+                        ),
+                        TD({"class": "spyCol"},
+                            IMG({"class": "spyIcon", src: "pixel_transparent.gif"})
+                        ),
+                        TD({"class": "spyCol"},
+                            SPAN({"class": "spyTime"})
+                        ),
+                        TD({"class": "spyCol"},
+                            TAG(FirebugReps.SourceLink.tag, {object: "$object.sourceLink"})
+                        )
+                    )
+                )
+            )
+        ),
+
+    getCaption: function(spy)
+    {
+        return spy.method.toUpperCase() + " " + cropString(spy.getURL(), 100);
+    },
+
+    getFullUri: function(spy)
+    {
+        return spy.method.toUpperCase() + " " + spy.getURL();
+    },
+
+    getStatus: function(spy)
+    {
+        var text = "";
+        if (spy.statusCode)
+            text += spy.statusCode + " ";
+
+        if (spy.statusText)
+            return text += spy.statusText;
+
+        return text;
+    },
+
+    onToggleBody: function(event)
+    {
+        var target = event.currentTarget;
+        var logRow = getAncestorByClass(target, "logRow-spy");
+
+        if (isLeftClick(event))
+        {
+            toggleClass(logRow, "opened");
+
+            var spy = getChildByClass(logRow, "spyHead").repObject;
+            var spyHeadTable = getAncestorByClass(target, "spyHeadTable");
+
+            if (hasClass(logRow, "opened"))
+            {
+                updateHttpSpyInfo(spy);
+                if (spyHeadTable)
+                    spyHeadTable.setAttribute('aria-expanded', 'true');
+            }
+            else
+            {
+                var netInfoBox = getChildByClass(spy.logRow, "spyHead", "netInfoBody");
+                dispatch(Firebug.NetMonitor.NetInfoBody.fbListeners, "destroyTabBody", [netInfoBox, spy]);
+                if (spyHeadTable)
+                    spyHeadTable.setAttribute('aria-expanded', 'false');
+            }
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    copyURL: function(spy)
+    {
+        copyToClipboard(spy.getURL());
+    },
+
+    copyParams: function(spy)
+    {
+        var text = spy.postText;
+        if (!text)
+            return;
+
+        var url = reEncodeURL(spy, text, true);
+        copyToClipboard(url);
+    },
+
+    copyResponse: function(spy)
+    {
+        copyToClipboard(spy.responseText);
+    },
+
+    openInTab: function(spy)
+    {
+        openNewTab(spy.getURL(), spy.postText);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    supportsObject: function(object)
+    {
+        return object instanceof Firebug.Spy.XMLHttpRequestSpy;
+    },
+
+    browseObject: function(spy, context)
+    {
+        var url = spy.getURL();
+        openNewTab(url);
+        return true;
+    },
+
+    getRealObject: function(spy, context)
+    {
+        return spy.xhrRequest;
+    },
+
+    getContextMenuItems: function(spy)
+    {
+        var items = [
+            {label: "CopyLocation", command: bindFixed(this.copyURL, this, spy) }
+        ];
+
+        if (spy.postText)
+        {
+            items.push(
+                {label: "CopyLocationParameters", command: bindFixed(this.copyParams, this, spy) }
+            );
+        }
+
+        items.push(
+            {label: "CopyResponse", command: bindFixed(this.copyResponse, this, spy) },
+            "-",
+            {label: "OpenInTab", command: bindFixed(this.openInTab, this, spy) }
+        );
+
+        return items;
+    }
+});
+
 // ************************************************************************************************
 // Constants
 
