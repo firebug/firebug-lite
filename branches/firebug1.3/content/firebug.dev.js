@@ -1,3 +1,5 @@
+/* See license.txt for terms of usage */
+
 (function(){
 
 var bookmarletMode = false;
@@ -25,6 +27,7 @@ window.FBDev =
         // Console core
         "firebug/reps.js",
         "firebug/console.js",
+        //"firebug/console2.js",
         "firebug/commandLine.js",
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -55,6 +58,7 @@ window.FBDev =
         // Trace Module and Panel
         "firebug/trace.js",
         "firebug/tracePanel.js",
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Bootstrap
         "firebug/boot.js"
@@ -108,6 +112,9 @@ window.FBDev =
     {
         var useClosure = true;
         var source = [];
+        
+        // remove the boot.js from the list of modules to be included
+        // because it will be generated bellow
         var modules = FBDev.modules.slice(0,FBDev.modules.length-1);
         var last = modules.length-1;
         
@@ -232,6 +239,7 @@ window.FBDev =
             {
                 css = FBDev.compressCSS(r);
                 injected = 
+                    "/* See license.txt for terms of usage */\n\n" +
                     "FBL.ns(function() { with (FBL) {\n" +
                     "// ************************************************************************************************\n\n" +
                     "FirebugChrome.injected = \n" +
@@ -543,5 +551,68 @@ var isOpera = navigator.userAgent.indexOf("Opera") != -1;
 var isSafari = navigator.userAgent.indexOf("AppleWebKit") != -1;
 
 loadModules();
+
+
+// experimental xhr watcher
+
+/*
+var _ActiveXObject = ActiveXObject;
+
+aActiveXObject = function()
+{
+};/**/
+
+/*
+var _XMLHttpRequest = XMLHttpRequest;
+XMLHttpRequest = function()
+{
+    var self = this;
+    var xhr = new _XMLHttpRequest();
+    
+    // can cause problems
+    //for (var name in xhr)
+    //    if (name != "channel")
+    //        this[name] = xhr[name];
+    
+    var handleStateChange = function()
+    {
+        Firebug.Console.log("onreadystatechange");
+        //self.onreadystatechange.apply(self, arguments);
+    };
+    
+    this.onreadystatechange = function(){};
+    
+    this.open = function(type, url, async)
+    {
+        Firebug.Console.log("open");
+        
+        self.msg = type.toUpperCase() + " " +  url;
+        
+        if (async)
+            xhr.onreadystatechange = handleStateChange;
+        
+        xhr.open(type, url, async);
+        
+        if (!async)
+            Firebug.Console.log("handle sync");
+    };
+    
+    this.send = function(a)
+    {
+        Firebug.Console.log(self.msg);
+        
+        xhr.send(a);
+    };
+    
+    this.setRequestHeader = function(header, value)
+    {
+        Firebug.Console.log("setRequestHeader", header, ", ", value);
+        xhr.setRequestHeader(header, value);
+    };
+    
+    return this;
+};
+/**/
+
 
 })();

@@ -1,7 +1,20 @@
+/*!*************************************************************
+ *
+ *    Firebug Lite 1.3a5
+ * 
+ *      Copyright (c) 2007, Parakey Inc.
+ *      Released under BSD license.
+ *      More information: http://getfirebug.com/lite.html
+ *  
+ **************************************************************/
+
 /*!
- *  Copyright 2009, Firebug Working Group
- *  Released under BSD license.
- *  More information: http://getfirebug.com/lite.html
+ * CSS selectors powered by:
+ * 
+ * Sizzle CSS Selector Engine - v1.0
+ *  Copyright 2009, The Dojo Foundation
+ *  Released under the MIT, BSD, and GPL Licenses.
+ *  More information: http://sizzlejs.com/
  */
 
 var FBL = {};

@@ -258,9 +258,6 @@ var createChromeWindow = function(options)
     
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    // Uncomment the following line to enable the "windowless mode" (for test purposes)
-    //type = chrome.type = "div";
-    
     try
     {
         //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

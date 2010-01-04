@@ -1,7 +1,9 @@
+/* See license.txt for terms of usage */
+
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-/*!
+/*
  * Sizzle CSS Selector Engine - v1.0
  *  Copyright 2009, The Dojo Foundation
  *  Released under the MIT, BSD, and GPL Licenses.
