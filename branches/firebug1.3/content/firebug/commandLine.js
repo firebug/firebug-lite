@@ -1,5 +1,8 @@
+/* See license.txt for terms of usage */
+
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
+
 
 // ************************************************************************************************
 // Globals
@@ -16,14 +19,26 @@ var commandPointer = -1;
 var reOpenBracket = /[\[\(\{]/;
 var reCloseBracket = /[\]\)\}]/;
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
 var commandHistory = [];
 var commandPointer = -1;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var isAutoCompleting = null;
 var autoCompletePrefix = null;
 var autoCompleteExpr = null;
 var autoCompleteBuffer = null;
 var autoCompletePosition = null;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var fbCommandLine = null;
+var fbLargeCommandLine = null;
+var fbLargeCommandButtons = null;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var _completion =
 {
@@ -39,6 +54,8 @@ var _completion =
     ]
 };
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
 var _stack = function(command)
 {
     commandHistory.push(command);
@@ -49,7 +66,7 @@ var _stack = function(command)
 
 // ************************************************************************************************
 // CommandLine
-
+/*
 Firebug.CommandLine = function(element)
 {
     this.element = element;
@@ -66,37 +83,181 @@ Firebug.CommandLine = function(element)
     addEvent(Firebug.browser.window, "error", this.onError);
     addEvent(Firebug.chrome.window, "error", this.onError);
 };
-
-Firebug.CommandLine.prototype = 
+/**/
+Firebug.CommandLine = extend(Firebug.Module,
 {
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
     element: null,
+    isMultiLine: false,
+    isActive: false,
   
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
     initialize: function(doc)
     {
+        this.clear = bind(this.clear, this);
+        this.enter = bind(this.enter, this);
+        
+        this.onError = bind(this.onError, this);
+        this.onKeyDown = bind(this.onKeyDown, this);
+        this.onMultiLineKeyDown = bind(this.onMultiLineKeyDown, this);
+        
+        addEvent(Firebug.browser.window, "error", this.onError);
+        addEvent(Firebug.chrome.window, "error", this.onError);
+    
     },
     
-    destroy: function()
+    shutdown: function(doc)
     {
+        this.deactivate();
+        
         removeEvent(Firebug.browser.window, "error", this.onError);
         removeEvent(Firebug.chrome.window, "error", this.onError);
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    activate: function(multiLine, hideToggleIcon, onRun)
+    {
+        if (this.isActive)
+        {
+            if (this.isMultiLine == multiLine) return;
+            
+            this.deactivate();
+        }
         
-        removeEvent(this.element, "keydown", this.onKeyDown);
+        fbCommandLine = $("fbCommandLine");
+        fbLargeCommandLine = $("fbLargeCommandLine");
+        fbLargeCommandButtons = $("fbLargeCommandButtons");
+        
+        if (multiLine)
+        {
+            onRun = onRun || this.enter;
+            
+            this.isMultiLine = true;
+            
+            this.element = fbLargeCommandLine;
+            
+            addEvent(this.element, "keydown", this.onMultiLineKeyDown);
+            
+            addEvent($("fbSmallCommandLineIcon"), "click", Firebug.chrome.hideLargeCommandLine);
+            
+            this.runButton = new Button({
+                element: $("fbCommand_btRun"),
+                owner: Firebug.CommandLine,
+                onClick: onRun
+            });
+            
+            this.runButton.initialize();
+            
+            this.clearButton = new Button({
+                element: $("fbCommand_btClear"),
+                owner: Firebug.CommandLine,
+                onClick: this.clear
+            });
+            
+            this.clearButton.initialize();
+        }
+        else
+        {
+            this.isMultiLine = false;
+            this.element = fbCommandLine;
+            
+            if (!fbCommandLine)
+                return;
+            
+            addEvent(this.element, "keydown", this.onKeyDown);
+        }
+        
+        //Firebug.Console.log("activate", this.element);
+        
+        if (isOpera)
+          fixOperaTabKey(this.element);
+        
+        if(this.lastValue)
+            this.element.value = this.lastValue;
+        
+        this.isActive = true;
+    },
+    
+    deactivate: function()
+    {
+        if (!this.isActive) return;
+        
+        //Firebug.Console.log("deactivate", this.element);
+        
+        this.isActive = false;
+        
+        this.lastValue = this.element.value;
+        
+        if (this.isMultiLine)
+        {
+            removeEvent(this.element, "keydown", this.onMultiLineKeyDown);
+            
+            removeEvent($("fbSmallCommandLineIcon"), "click", Firebug.chrome.hideLargeCommandLine);
+            
+            this.runButton.destroy();
+            this.clearButton.destroy();
+        }
+        else
+        {
+            removeEvent(this.element, "keydown", this.onKeyDown);
+        }
         
         this.element = null
         delete this.element;
+        
+        fbCommandLine = null;
+        fbLargeCommandLine = null;
+        fbLargeCommandButtons = null;
     },
-
-    execute: function()
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    focus: function()
     {
-        var cmd = this.element;
-        var command = cmd.value;
+        this.element.focus();
+    },
+    
+    blur: function()
+    {
+        this.element.blur();
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    clear: function()
+    {
+        this.element.value = "";
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    evaluate: function(expr)
+    {
+        // TODO: need to register the API in console.firebug.commandLineAPI
+        var api = "Firebug.CommandLine.API"
+            
+        //Firebug.context = Firebug.chrome;
+        //api = null;
+
+        return Firebug.context.evaluate(expr, "window", api, Console.error);
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    enter: function()
+    {
+        var command = this.element.value;
+        
+        if (!command) return;
         
         _stack(command);
         Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
         
         try
         {
-            
             var result = this.evaluate(command);
             
             // avoid logging the console command twice, in case it is a console function
@@ -113,22 +274,9 @@ Firebug.CommandLine.prototype =
         {
             Firebug.Console.writeMessage([e.message || e], "error");
         }
-        
-        cmd.value = "";
     },
     
-    evaluate: function(expr)
-    {
-        // TODO: need to register the API in console.firebug.commandLineAPI
-        var api = "Firebug.CommandLine.API"
-            
-        //Firebug.context = Firebug.chrome;
-        //api = null;
-
-        return Firebug.context.evaluate(expr, "window", api, Console.error);
-    },
-    
-    //eval: new Function("return window.eval.apply(window, arguments)"),
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     prevCommand: function()
     {
@@ -153,6 +301,8 @@ Firebug.CommandLine.prototype =
         }
     },
   
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
     autocomplete: function(reverse)
     {
         var element = this.element;
@@ -256,6 +406,17 @@ Firebug.CommandLine.prototype =
             element.value = autoCompleteExpr + result;
     },
     
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    setMultiLine: function(multiLine)
+    {
+        if (multiLine == this.isMultiLine) return;
+        
+        this.activate(multiLine);
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
     onError: function(msg, href, lineNo)
     {
         var html = [];
@@ -271,11 +432,6 @@ Firebug.CommandLine.prototype =
         Firebug.Console.writeRow(html, "error");
     },
     
-    clear: function()
-    {
-        this.element.value = "";
-    },
-    
     onKeyDown: function(e)
     {
         e = e || event;
@@ -284,30 +440,52 @@ Firebug.CommandLine.prototype =
         
         /*tab, shift, control, alt*/
         if (code != 9 && code != 16 && code != 17 && code != 18)
+        {
             isAutoCompleting = false;
+        }
     
         if (code == 13 /* enter */)
-            this.execute();
-
+        {
+            this.enter();
+            this.clear();
+        }
         else if (code == 27 /* ESC */)
+        {
             setTimeout(this.clear, 0);
-          
+        } 
         else if (code == 38 /* up */)
+        {
             this.prevCommand();
-          
+        }
         else if (code == 40 /* down */)
+        {
             this.nextCommand();
-          
+        }
         else if (code == 9 /* tab */)
+        {
             this.autocomplete(e.shiftKey);
-          
+        }
         else
             return;
         
         cancelEvent(e, true);
         return false;
+    },
+    
+    onMultiLineKeyDown: function(e)
+    {
+        e = e || event;
+        
+        var code = e.keyCode;
+        
+        if (code == 13 /* enter */ && e.ctrlKey)
+        {
+            this.enter();
+        }
     }
-};
+});
+
+Firebug.registerModule(Firebug.CommandLine);
 
 
 // ************************************************************************************************
@@ -367,6 +545,8 @@ var CommandLineAPI =
 
     dirxml: Firebug.Console.dirxml
 };
+
+// ************************************************************************************************
 
 Firebug.CommandLine.API = {};
 var initializeCommandLineAPI = function initializeCommandLineAPI()

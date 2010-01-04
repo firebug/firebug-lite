@@ -1,3 +1,5 @@
+/* See license.txt for terms of usage */
+
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
@@ -845,7 +847,7 @@ append(ChromeBase,
                     
                     box = chrome.getElementBox(target),
                     
-                    offset = chrome.node.nodeName.toLowerCase() == "div" ?
+                    offset = chrome.type == "div" ?
                             chrome.getElementPosition(chrome.node) :
                             {top: 0, left: 0};
                 
@@ -935,11 +937,6 @@ append(ChromeBase,
         disableTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // create a new instance of the CommandLine class
-        if (Firebug.CommandLine)
-            commandLine = new Firebug.CommandLine(fbCommandLine);
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
         if (isIE6 && Firebug.Selector)
         {
@@ -975,6 +972,12 @@ append(ChromeBase,
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
+        // ************************************************************************************************
+        
+        this.addController(
+            [$("fbLargeCommandLineIcon"), "click", this.showLargeCommandLine]       
+        );
+        
         // ************************************************************************************************
         
         // Select the first registered panel
@@ -1061,11 +1064,6 @@ append(ChromeBase,
         // shutdown inherited classes
         Controller.shutdown.call(this);
         PanelBar.shutdown.call(this);
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // destroy the instance of the CommandLine class
-        if (Firebug.CommandLine)
-            commandLine.destroy();
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1228,7 +1226,7 @@ append(ChromeBase,
     
     getSize: function()
     {
-        return this.node.nodeName.toLowerCase() == "div" ?
+        return this.type == "div" ?
             {
                 height: this.node.offsetHeight,
                 width: this.node.offsetWidth
@@ -1274,7 +1272,7 @@ append(ChromeBase,
             
             if (chrome.selectedPanel.options.hasCommandLine)
             {
-                commandLine.element.blur();
+                Firebug.CommandLine.blur();
                 changeCommandLineVisibility(false);
             }
             
@@ -1288,6 +1286,8 @@ append(ChromeBase,
             chrome.draw();
             
             fbLargeCommandLine.focus();
+            
+            Firebug.CommandLine.setMultiLine(true);
         }
     },
     
@@ -1296,6 +1296,8 @@ append(ChromeBase,
         if (Firebug.chrome.largeCommandLineVisible)
         {
             Firebug.chrome.largeCommandLineVisible = false;
+            
+            Firebug.CommandLine.setMultiLine(false);
             
             fbLargeCommandLine.blur();
             
@@ -1310,6 +1312,7 @@ append(ChromeBase,
                 changeCommandLineVisibility(true);
             
             Firebug.chrome.draw();
+            
         }
     },    
     
@@ -1336,9 +1339,9 @@ append(ChromeBase,
         try
         {
             if (panelToSelect == "Console")
-                commandLine.element.focus();
+                Firebug.CommandLine.focus();
             else
-                commandLine.element.blur();
+                Firebug.CommandLine.blur();
         }
         catch(e)
         {
@@ -1643,7 +1646,7 @@ var ChromePopupBase = extend(ChromeBase, {
     
     initialize: function()
     {
-        this.document.body.className = "FirebugPopup";
+        setClass(this.document.body, "FirebugPopup");
         
         ChromeBase.initialize.call(this)
         
@@ -1767,12 +1770,21 @@ var ChromePopupBase = extend(ChromeBase, {
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
     var last = Firebug.chrome.commandLineVisible;
-    Firebug.chrome.commandLineVisible =  
+    var visible = Firebug.chrome.commandLineVisible =  
         typeof visibility == "boolean" ? visibility : !Firebug.chrome.commandLineVisible;
     
-    if (Firebug.chrome.commandLineVisible != last)
+    if (visible != last)
     {
-        fbBottom.className = Firebug.chrome.commandLineVisible ? "" : "hide";
+        if (visible)
+        {
+            fbBottom.className = "";
+            Firebug.CommandLine.activate();
+        }
+        else
+        {
+            Firebug.CommandLine.deactivate();
+            fbBottom.className = "hide";
+        }
     }
 };
 

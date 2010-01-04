@@ -75,6 +75,10 @@ FBL.PanelBar =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
+    panelMap: null,
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
     selectedPanel: null,
     isSidePanelBar: null,
     
