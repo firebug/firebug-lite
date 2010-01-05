@@ -418,6 +418,8 @@ var menuItemProps = {"class": "$item.className", type: "$item.type", value: "$it
 if (isIE6)
     menuItemProps.href = "javascript:void(0)";
 
+// Allow GUI to be loaded even when Domplate module is not installed.
+if (FBL.domplate)
 var MenuPlate = domplate(Firebug.Rep,
 {
     tag:
