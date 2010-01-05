@@ -1057,7 +1057,7 @@ function defineTags()
 }
 
 defineTags(
-    "a", "button", "br", "canvas", "col", "colgroup", "div", "fieldset", "form", "h1", "h2", "h3", "hr",
+    "a", "button", "br", "canvas", "code" /*?!*/, "col", "colgroup", "div", "fieldset", "form", "h1", "h2", "h3", "hr",
      "img", "input", "label", "legend", "li", "ol", "optgroup", "option", "p", "pre", "select",
     "span", "strong", "table", "tbody", "td", "textarea", "tfoot", "th", "thead", "tr", "tt", "ul", "iframe"
 );
