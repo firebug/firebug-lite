@@ -56,33 +56,84 @@ FBL.Context.prototype =
      */
     evaluate: function(expr, context, api, errorHandler)
     {
-        context = context || "window";
-
-        var cmd = api ?
-            "(function(arguments){ with("+api+"){ return "+expr+" } }).call("+context+",undefined)" :
-            "(function(arguments){ return "+expr+" }).call("+context+",undefined)" ;
+        // Need to remove line breaks otherwise only the first line will be executed
+        expr = stripNewLines(expr);
         
-        var r = this.eval(cmd);
-        if (r && r[evalError])
+        // the default context is the "window" object. It can be any string that represents
+        // a global accessible element as: "my.namespaced.object"
+        context = context || "window";
+        
+        var cmd,
+            result;
+        
+        // if the context is the "window" object, we don't need a closure
+        if (context == "window")
         {
+            // try first the expression wrapped in parenthesis (so we can capture 
+            // object literal expressions like "{}" and "{some:1,props:2}")
             cmd = api ?
-                "(function(arguments){ with("+api+"){ "+expr+" } }).call("+context+",undefined)" :
-                "(function(arguments){ "+expr+" }).call("+context+",undefined)" ;
-                
-            r = this.eval(cmd);
-            if (r && r[evalError])
+                "with("+api+"){ ("+expr+") }" :
+                "(" + expr + ")";
+            
+            result = this.eval(cmd);
+            
+            // if it results in error, then try it without parenthesis 
+            if (result && result[evalError])
             {
-                var msg = r.name ? (r.name + ": ") : "";
-                msg += r.message || r;
+                cmd = api ?
+                    "with("+api+"){ "+expr+" }" :
+                    expr;
                 
-                if (errorHandler)
-                    r = errorHandler(msg)
-                else
-                    r = msg;
+                result = this.eval(cmd);
+
+            }
+        }
+        else
+        {
+            // try to execute the command using a "return" statement in the evaluation closure.
+            cmd = api ?
+                // with API and context, trying to get the return value
+                "(function(arguments){ with(" + api + "){ return (" + 
+                    expr + 
+                ") } }).call(" + context + ",undefined)"
+                :
+                // with context only, trying to get the return value
+                "(function(arguments){ return (" +
+                    expr +
+                ") }).call(" +context + ",undefined)";
+            
+            result = this.eval(cmd);
+            
+            // if it results in error, then try it without the "return" statement 
+            if (result && result[evalError])
+            {
+                cmd = api ?
+                    // with API and context, no return value
+                    "(function(arguments){ with(" + api + "){ " +
+                        expr + 
+                    " } }).call(" + context + ",undefined)"
+                    :
+                    // with context only, no return value
+                    "(function(arguments){ " + 
+                        expr + 
+                    " }).call(" + context + ",undefined)";
+                    
+                result = this.eval(cmd);
             }
         }
         
-        return r;
+        if (result && result[evalError])
+        {
+            var msg = result.name ? (result.name + ": ") : "";
+            msg += result.message || result;
+            
+            if (errorHandler)
+                result = errorHandler(msg)
+            else
+                result = msg;
+        }
+        
+        return result;
     },
     
 
