@@ -233,9 +233,7 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         var result = Firebug.context.evaluate(expr, "window", api, Firebug.Console.error);
         
-        return this.isMultiLine ?
-                Firebug.Console.LOG_COMMAND :
-                result;
+        return result;
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
