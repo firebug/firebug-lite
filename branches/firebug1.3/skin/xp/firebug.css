@@ -2,6 +2,783 @@
 /*************************************************************************************************/
 /*************************************************************************************************/
 /*************************************************************************************************/
+/* Loose */
+/*************************************************************************************************/
+/*************************************************************************************************/
+/*************************************************************************************************/
+/*
+.netInfoResponseHeadersTitle, netInfoResponseHeadersBody {
+    display: none;
+}
+/**/
+
+/* IE6 need a separated rule, otherwise it will not recognize it */
+.collapsed {
+    display: none;
+}
+
+[collapsed="true"] {
+    display: none;
+}
+
+
+/*************************************************************************************************/
+/*************************************************************************************************/
+/*************************************************************************************************/
+/*************************************************************************************************/
+/* Net */
+/*************************************************************************************************/
+/*************************************************************************************************/
+/*************************************************************************************************/
+
+/* See license.txt for terms of usage */
+
+.panelNode-net {
+    overflow-x: hidden;
+}
+
+.netTable {
+    width: 100%;
+}
+
+/************************************************************************************************/
+
+.hideCategory-undefined .category-undefined,
+.hideCategory-html .category-html,
+.hideCategory-css .category-css,
+.hideCategory-js .category-js,
+.hideCategory-image .category-image,
+.hideCategory-xhr .category-xhr,
+.hideCategory-flash .category-flash,
+.hideCategory-txt .category-txt,
+.hideCategory-bin .category-bin {
+    display: none;
+}
+
+/************************************************************************************************/
+
+.netHeadRow {
+    background: url(chrome://firebug/skin/group.gif) repeat-x #FFFFFF;
+}
+
+.netHeadCol {
+    border-bottom: 1px solid #CCCCCC;
+    padding: 2px 4px 2px 18px;
+    font-weight: bold;
+}
+
+.netHeadLabel {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/************************************************************************************************/
+/* Header for Net panel table */
+
+.netHeaderRow {
+    height: 16px;
+}
+
+.netHeaderCell {
+    cursor: pointer;
+    -moz-user-select: none;
+    border-bottom: 1px solid #9C9C9C;
+    padding: 0 !important;
+    font-weight: bold;
+    background: #BBBBBB url(chrome://firebug/skin/tableHeader.gif) repeat-x;
+    white-space: nowrap;
+}
+
+.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox {
+    padding: 2px 14px 2px 18px;
+}
+
+.netHeaderCellBox {
+    padding: 2px 14px 2px 10px;
+    border-left: 1px solid #D9D9D9;
+    border-right: 1px solid #9C9C9C;
+}
+
+.netHeaderCell:hover:active {
+    background: #959595 url(chrome://firebug/skin/tableHeaderActive.gif) repeat-x;
+}
+
+.netHeaderSorted {
+    background: #7D93B2 url(chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;
+}
+
+.netHeaderSorted > .netHeaderCellBox {
+    border-right-color: #6B7C93;
+    background: url(chrome://firebug/skin/arrowDown.png) no-repeat right;
+}
+
+.netHeaderSorted.sortedAscending > .netHeaderCellBox {
+    background-image: url(chrome://firebug/skin/arrowUp.png);
+}
+
+.netHeaderSorted:hover:active {
+    background: #536B90 url(chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;
+}
+
+/************************************************************************************************/
+/* Breakpoints */
+
+.panelNode-net .netRowHeader {
+    display: block;
+}
+
+.netRowHeader {
+    cursor: pointer;
+    display: none;
+    height: 15px;
+    margin-right: 0 !important;
+}
+
+/* Display brekpoint disc */
+.netRow .netRowHeader {
+    background-position: 5px 1px;
+}
+
+.netRow[breakpoint="true"] .netRowHeader {
+    background-image: url(chrome://firebug/skin/breakpoint.png);
+}
+
+.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader {
+    background-image: url(chrome://firebug/skin/breakpointDisabled.png);
+}
+
+.netRow.category-xhr:hover .netRowHeader {
+    background-color: #F6F6F6;
+}
+
+#netBreakpointBar {
+    max-width: 38px;
+}
+
+#netHrefCol > .netHeaderCellBox {
+    border-left: 0px;
+}
+
+.netRow .netRowHeader {
+    width: 3px;
+}
+
+.netInfoRow .netRowHeader {
+    display: table-cell;
+}
+
+/************************************************************************************************/
+/* Column visibility */
+
+.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],
+.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,
+.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],
+.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,
+.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],
+.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,
+.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],
+.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,
+.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],
+.netTable[hiddenCols~=netTimeCol] TD.netTimeCol {
+    display: none;
+}
+
+/************************************************************************************************/
+
+.netRow {
+    background: LightYellow;
+}
+
+.netRow.loaded {
+    background: #FFFFFF;
+}
+
+.netRow.loaded:hover {
+    background: #EFEFEF;
+}
+
+.netCol {
+    padding: 0;
+    vertical-align: top;
+    border-bottom: 1px solid #EFEFEF;
+    white-space: nowrap;
+    height: 17px;
+}
+
+.netLabel {
+    width: 100%;
+}
+
+.netStatusCol {
+    padding-left: 10px;
+    color: rgb(128, 128, 128);
+}
+
+.responseError > .netStatusCol {
+    color: red;
+}
+
+.netDomainCol {
+    padding-left: 5px;
+}
+
+.netSizeCol {
+    text-align: right;
+    padding-right: 10px;
+}
+
+.netHrefLabel {
+    -moz-box-sizing: padding-box;
+    overflow: hidden;
+    z-index: 10;
+    position: absolute;
+    padding-left: 18px;
+    padding-top: 1px;
+    max-width: 15%;
+    font-weight: bold;
+}
+
+.netFullHrefLabel {
+    display: none;
+    -moz-user-select: none;
+    padding-right: 10px;
+    padding-bottom: 3px;
+    max-width: 100%;
+    background: #FFFFFF;
+    z-index: 200;
+}
+
+.netHrefCol:hover > .netFullHrefLabel {
+    display: block;
+}
+
+.netRow.loaded:hover .netCol > .netFullHrefLabel {
+    background-color: #EFEFEF;
+}
+
+.useA11y .a11yShowFullLabel {
+    display: block;
+    background-image: none !important;
+    border: 1px solid #CBE087;
+    background-color: LightYellow;
+    font-family: Monaco, monospace;
+    color: #000000;
+    font-size: 10px;
+    z-index: 2147483647;
+}
+
+.netSizeLabel {
+    padding-left: 6px;
+}
+
+.netStatusLabel,
+.netDomainLabel,
+.netSizeLabel,
+.netBar {
+    padding: 1px 0 2px 0 !important;
+}
+
+.responseError {
+    color: red;
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+.hasHeaders .netHrefLabel:hover {
+    cursor: pointer;
+    color: blue;
+    text-decoration: underline;
+}
+
+/************************************************************************************************/
+
+.netLoadingIcon {
+    position: absolute;
+    border: 0;
+    margin-left: 14px;
+    width: 16px;
+    height: 16px;
+    background: transparent no-repeat 0 0;
+    background-image: url(chrome://firebug/skin/loading_16.gif);
+    display:inline-block;
+}
+
+.loaded .netLoadingIcon {
+    display: none;
+}
+
+/************************************************************************************************/
+
+.netBar, .netSummaryBar {
+    position: relative;
+    border-right: 50px solid transparent;
+}
+
+.netResolvingBar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: #FFFFFF url(chrome://firebug/skin/netBarResolving.gif) repeat-x;
+    z-index:60;
+}
+
+.netConnectingBar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: #FFFFFF url(chrome://firebug/skin/netBarConnecting.gif) repeat-x;
+    z-index:50;
+}
+
+.netBlockingBar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: #FFFFFF url(chrome://firebug/skin/netBarWaiting.gif) repeat-x;
+    z-index:40;
+}
+
+.netSendingBar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: #FFFFFF url(chrome://firebug/skin/netBarSending.gif) repeat-x;
+    z-index:30;
+}
+
+.netWaitingBar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: #FFFFFF url(chrome://firebug/skin/netBarResponded.gif) repeat-x;
+    z-index:20;
+    min-width: 1px;
+}
+
+.netReceivingBar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: #38D63B url(chrome://firebug/skin/netBarLoading.gif) repeat-x;
+    z-index:10;
+}
+
+.netWindowLoadBar,
+.netContentLoadBar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: red;
+    z-index: 70;
+    opacity: 0.5;
+    display: none;
+    margin-bottom:-1px;
+}
+
+.netContentLoadBar {
+    background-color: Blue;
+}
+
+.netTimeLabel {
+    -moz-box-sizing: padding-box;
+    position: absolute;
+    top: 1px;
+    left: 100%;
+    padding-left: 6px;
+    color: #444444;
+    min-width: 16px;
+}
+
+/*
+ * Timing info tip is reusing net timeline styles to display the same
+ * colors for individual request phases. Notice that the info tip must
+ * respect also loaded and fromCache styles that also modify the
+ * actual color. These are used both on the same element in case
+ * of the tooltip.
+ */
+.loaded .netReceivingBar,
+.loaded.netReceivingBar {
+    background: #B6B6B6 url(chrome://firebug/skin/netBarLoaded.gif) repeat-x;
+    border-color: #B6B6B6;
+}
+
+.fromCache .netReceivingBar,
+.fromCache.netReceivingBar {
+    background: #D6D6D6 url(chrome://firebug/skin/netBarCached.gif) repeat-x;
+    border-color: #D6D6D6;
+}
+
+.netSummaryRow .netTimeLabel,
+.loaded .netTimeLabel {
+    background: transparent;
+}
+
+/************************************************************************************************/
+/* Time Info tip */
+
+.timeInfoTip {
+    width: 150px; 
+    height: 40px
+}
+
+.timeInfoTipBar,
+.timeInfoTipEventBar {
+    position: relative;
+    display: block;
+    margin: 0;
+    opacity: 1;
+    height: 15px;
+    width: 4px;
+}
+
+.timeInfoTipEventBar {
+    width: 1px !important;
+}
+
+.timeInfoTipCell.startTime {
+    padding-right: 8px;
+}
+
+.timeInfoTipCell.elapsedTime {
+    text-align: right;
+    padding-right: 8px;
+}
+
+/************************************************************************************************/
+/* Size Info tip */
+
+.sizeInfoLabelCol {
+    font-weight: bold;
+    padding-right: 10px;
+    font-family: Lucida Grande, Tahoma, sans-serif;
+    font-size: 11px;
+}
+
+.sizeInfoSizeCol {
+    font-weight: bold;
+}
+
+.sizeInfoDetailCol {
+    color: gray;
+    text-align: right;
+}
+
+.sizeInfoDescCol {
+    font-style: italic;
+}
+
+/************************************************************************************************/
+/* Summary */
+
+.netSummaryRow .netReceivingBar {
+    background: #BBBBBB;
+    border: none;
+}
+
+.netSummaryLabel {
+    color: #222222;
+}
+
+.netSummaryRow {
+    background: #BBBBBB !important;
+    font-weight: bold;
+}
+
+.netSummaryRow .netBar {
+    border-right-color: #BBBBBB;
+}
+
+.netSummaryRow > .netCol {
+    border-top: 1px solid #999999;
+    border-bottom: 2px solid;
+    -moz-border-bottom-colors: #EFEFEF #999999;
+    padding-top: 1px;
+    padding-bottom: 2px;
+}
+
+.netSummaryRow > .netHrefCol:hover {
+    background: transparent !important;
+}
+
+.netCountLabel {
+    padding-left: 18px;
+}
+
+.netTotalSizeCol {
+    text-align: right;
+    padding-right: 10px;
+}
+
+.netTotalTimeCol {
+    text-align: right;
+}
+
+.netCacheSizeLabel {
+    position: absolute;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+}
+
+/************************************************************************************************/
+
+.netLimitRow {
+    background: rgb(255, 255, 225) !important;
+    font-weight:normal;
+    color: black;
+    font-weight:normal;
+}
+
+.netLimitLabel {
+    padding-left: 18px;
+}
+
+.netLimitRow > .netCol {
+    border-bottom: 2px solid;
+    -moz-border-bottom-colors: #EFEFEF #999999;
+    vertical-align: middle !important;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.netLimitButton {
+    font-size: 11px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+}
+
+/************************************************************************************************/
+
+.netInfoCol {
+    border-top: 1px solid #EEEEEE;
+    background: url(chrome://firebug/skin/group.gif) repeat-x #FFFFFF;
+}
+
+.netInfoBody {
+    margin: 10px 0 4px 10px;
+}
+
+.netInfoTabs {
+    position: relative;
+    padding-left: 17px;
+}
+
+.netInfoTab {
+    position: relative;
+    top: -3px;
+    margin-top: 10px;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    _border: none;
+    font-weight: bold;
+    color: #565656;
+    cursor: pointer;
+}
+
+/*.netInfoTab:hover {
+    cursor: pointer;
+}*/
+
+/* replaced by .netInfoTabSelected for IE6 support
+.netInfoTab[selected="true"] {
+    cursor: default !important;
+    border: 1px solid #D7D7D7 !important;
+    border-bottom: none !important;
+    -moz-border-radius: 4px 4px 0 0;
+    background-color: #FFFFFF;
+}
+/**/
+.netInfoTabSelected {
+    cursor: default !important;
+    border: 1px solid #D7D7D7 !important;
+    border-bottom: none !important;
+    -moz-border-radius: 4px 4px 0 0;
+    background-color: #FFFFFF;
+}
+
+.logRow-netInfo.error .netInfoTitle {
+    color: red;
+}
+
+.logRow-netInfo.loading .netInfoResponseText {
+    font-style: italic;
+    color: #888888;
+}
+
+.loading .netInfoResponseHeadersTitle {
+    display: none;
+}
+
+.netInfoResponseSizeLimit {
+    font-family: Lucida Grande, Tahoma, sans-serif;
+    padding-top: 10px;
+    font-size: 11px;
+}
+
+.netInfoText {
+    display: none;
+    margin: 0;
+    border: 1px solid #D7D7D7;
+    border-right: none;
+    padding: 8px;
+    background-color: #FFFFFF;
+    font-family: Monaco, monospace;
+    /* white-space: pre; */
+    /*overflow-x: auto; HTML is damaged in case of big (2-3MB) responses */
+}
+
+/* replaced by .netInfoTextSelected for IE6 support 
+.netInfoText[selected="true"] {
+    display: block;
+}
+/**/
+.netInfoTextSelected {
+    display: block;
+}
+
+.netInfoParamName {
+    padding: 0 10px 0 0;
+    font-family: Lucida Grande, Tahoma, sans-serif;
+    font-weight: bold;
+    vertical-align: top;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.netInfoParamValue {
+    width: 100%;
+}
+
+.netInfoHeadersText,
+.netInfoPostText,
+.netInfoPutText {
+    padding-top: 0;
+}
+
+.netInfoHeadersGroup,
+.netInfoPostParams,
+.netInfoPostSource {
+    margin-bottom: 4px;
+    border-bottom: 1px solid #D7D7D7;
+    padding-top: 8px;
+    padding-bottom: 2px;
+    font-family: Lucida Grande, Tahoma, sans-serif;
+    font-weight: bold;
+    color: #565656;
+}
+
+.netInfoPostParamsTable,
+.netInfoPostPartsTable,
+.netInfoPostJSONTable,
+.netInfoPostXMLTable,
+.netInfoPostSourceTable {
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.netInfoPostContentType {
+    color: #bdbdbd;
+    padding-left: 50px;
+    font-weight: normal;
+}
+
+.netInfoHtmlPreview {
+    border: 0;
+    width: 100%;
+    height:100%;
+}
+
+/************************************************************************************************/
+/* Request & Response Headers */
+
+.netHeadersViewSource {
+    color: #bdbdbd;
+    margin-left: 200px;
+    font-weight: normal;
+}
+
+.netHeadersViewSource:hover {
+    color: blue;
+    cursor: pointer;
+}
+
+/************************************************************************************************/
+
+.netActivationRow,
+.netPageSeparatorRow {
+    background: rgb(229, 229, 229) !important;
+    font-weight: normal;
+    color: black;
+}
+
+.netActivationLabel {
+    background: url(chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;
+    padding-left: 22px;
+}
+
+/************************************************************************************************/
+
+.netPageSeparatorRow {
+    height: 5px !important;
+}
+
+.netPageSeparatorLabel {
+    padding-left: 22px;
+    height: 5px !important;
+}
+
+.netPageRow {
+    background-color: rgb(255, 255, 255);
+}
+
+.netPageRow:hover {
+    background: #EFEFEF;
+}
+
+.netPageLabel {
+    padding: 1px 0 2px 18px !important;
+    font-weight: bold;
+}
+
+/************************************************************************************************/
+
+.netActivationRow > .netCol {
+    border-bottom: 2px solid;
+    -moz-border-bottom-colors: #EFEFEF #999999;
+    padding-top: 2px;
+    padding-bottom: 3px;
+}
+
+.useA11y .panelNode-net .a11yFocus:focus,
+.useA11y .panelNode-net .focusRow:focus {
+    outline-offset: -2px;
+    background-color: #FFFFD6 !important;
+}
+
+.useA11y .panelNode-net .netHeaderCell:focus,
+.useA11y .panelNode-net :focus .netHeaderCell,
+.useA11y .panelNode-net :focus .netReceivingBar,
+.useA11y .netSummaryRow :focus .netBar,
+.useA11y .netSummaryRow:focus .netBar {
+    background-color: #FFFFD6;
+    background-image: none;
+    border-color: #FFFFD6;
+}
+
+
+/*************************************************************************************************/
+/*************************************************************************************************/
+/*************************************************************************************************/
+/*************************************************************************************************/
 /* Windows */
 /*************************************************************************************************/
 /*************************************************************************************************/
@@ -25,8 +802,8 @@
 }
 /*
 .logRow-errorMessage > .hasTwisty.opened > .errorTitle,
-.logRow-spy.opened .spyHead .spyTitle,
 /* avoid rule not being parsed IE6 */
+.opened .spyHead .spyTitle,
 .opened .logGroupLabel, 
 .opened .memberLabelCell .memberLabel/*,
 .nodeBox.highlightOpen > .nodeLabel > .twisty,
@@ -232,7 +1009,7 @@
 .objectBox-null,
 .objectBox-undefined {
     padding: 0 2px;
-    outline: 1px solid #666666;
+    border: 1px solid #666666;
     background-color: #888888;
     color: #FFFFFF;
 }
@@ -516,9 +1293,14 @@
 
 /************************************************************************************************/
 
+/*
 .logRow-errorMessage > .hasTwisty > .errorTitle,
 .logRow-spy .spyHead .spyTitle,
-.logGroup > .logRow {
+.logGroup > .logRow 
+*/
+.logRow-errorMessage .hasTwisty .errorTitle,
+.logRow-spy .spyHead .spyTitle,
+.logGroup .logRow {
     cursor: pointer;
     padding-left: 18px;
     background-repeat: no-repeat;
@@ -565,6 +1347,7 @@
 .spyCol {
     padding: 0;
     white-space: nowrap;
+    height: 16px;
 }
 
 .spyTitleCol:hover > .objectLink-sourceLink,
@@ -603,10 +1386,12 @@
     height: 16px;
     vertical-align: middle;
     background: transparent no-repeat 0 0;
+    display: none;
 }
 
 .loading .spyHead .spyRow .spyIcon {
     background-image: url(loading_16.gif);
+    display: block;
 }
 
 .logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon {
@@ -615,7 +1400,8 @@
 }
 
 .logRow-spy.error .spyHead .spyRow .spyIcon {
-    /*background-image: url(chrome://firebug/skin/errorIcon-sm.png);*/
+    background-image: url(errorIcon-sm.png);
+    display: block;
     background-position: 2px 2px;
 }
 
@@ -825,6 +1611,9 @@
 /************************************************************************************************
  CSS Not organized
 *************************************************************************************************/
+#fbConsole {
+    overflow-x: hidden !important;
+}
 
 #fbCSS {
     font: 1em Monaco, monospace;
@@ -1395,7 +2184,7 @@
     display: none;
     position: absolute;
     z-index: 9;
-    top: 28px;
+    top: 27px;
     right: 0;
     width: 294px;
     height: 201px;
@@ -1406,6 +2195,7 @@
     outline: none;
     font-size: 11px;
     overflow: auto;
+    border-top: 1px solid #B9B7AF;
     _right: -1px;
     _border-left: 1px solid #fff;
 }
@@ -1467,7 +2257,7 @@
     position: absolute;
     color: #00f;
     top: 2px;
-    left: 7px;
+    left: 6px;
     display: inline;
     font: 11px Monaco, monospace;
     z-index: 10;
@@ -1710,15 +2500,18 @@ div.objectBox-element {
 .logRow * {
     font-size: 1em;
 }
-/*
-//TODO: remove this
+
+/* TODO: remove this? */
+/* TODO: xxxpedro - IE need this in windowless mode (cnn.com) check if the issue is related to 
+position. if so, override it at chrome.js initialization when creating the div */
 .logRow {
     position: relative;
     border-bottom: 1px solid #D7D7D7;
     padding: 2px 4px 1px 6px;
-    background-color: #FFFFFF;
+    zbackground-color: #FFFFFF;
 }
 /**/
+
 .logRow-command {
     font-family: Monaco, monospace;
     color: blue;
