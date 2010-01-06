@@ -168,7 +168,7 @@ var createChromeWindow = function(options)
     
     var chrome = {},
         
-        context = options.context || Env.browser;
+        context = options.context || Env.browser,
     
         type = chrome.type = Env.Options.enablePersistent ? 
                 "popup" : 
@@ -564,7 +564,8 @@ append(ChromeBase,
     
     destroy: function()
     {
-        this.inspectButton.destroy();
+        if(Firebug.Inspector)
+            this.inspectButton.destroy();
         
         PanelBar.destroy.call(this);
         
@@ -872,8 +873,8 @@ append(ChromeBase,
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (Firebug.Console)
-            Firebug.Console.flush();
+        //if (Firebug.Console)
+        //    Firebug.Console.flush();
         
         if (Firebug.Trace)
             FBTrace.flush(Firebug.Trace);
@@ -990,7 +991,19 @@ append(ChromeBase,
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //this.draw();
         
-        this.testMenu();
+        // menus can be used without domplate
+        if (FBL.domplate)
+            this.testMenu();
+        /**/
+        
+        //test XHR
+        setTimeout(function(){
+        
+        FBL.Ajax.request({url: "../content/firebug/boot.js"});
+        FBL.Ajax.request({url: "../content/firebug/boot.js.invalid"});
+        
+        },1000);
+        /**/
     },
     
     shutdown: function()
@@ -1195,9 +1208,6 @@ append(ChromeBase,
             
             var sideWidth = sideWidthValue + "px"
             
-            fbPanel2Style.height = height;
-            fbPanel2Style.width = sideWidth;
-            
             fbPanelBox2Style.width = sideWidth;
             
             fbVSplitterStyle.right = sideWidth;
@@ -1214,6 +1224,9 @@ append(ChromeBase,
             }
             else
             {
+                fbPanel2Style.height = height;
+                fbPanel2Style.width = sideWidth;
+                
                 fbPanelBar2BoxStyle.width = sideWidth;
             }
         }
@@ -1269,7 +1282,9 @@ append(ChromeBase,
             
             if (chrome.selectedPanel.options.hasCommandLine)
             {
-                Firebug.CommandLine.blur();
+                if (Firebug.CommandLine)
+                    Firebug.CommandLine.blur();
+                
                 changeCommandLineVisibility(false);
             }
             
@@ -1278,13 +1293,15 @@ append(ChromeBase,
             fbLargeCommandLine.style.display = "block";
             fbLargeCommandButtons.style.display = "block";
             
+            fbPanel2Style.display = "none";
             fbPanelBar2BoxStyle.display = "none";
             
             chrome.draw();
             
             fbLargeCommandLine.focus();
             
-            Firebug.CommandLine.setMultiLine(true);
+            if (Firebug.CommandLine)
+                Firebug.CommandLine.setMultiLine(true);
         }
     },
     
@@ -1294,10 +1311,12 @@ append(ChromeBase,
         {
             Firebug.chrome.largeCommandLineVisible = false;
             
-            Firebug.CommandLine.setMultiLine(false);
+            if (Firebug.CommandLine)
+                Firebug.CommandLine.setMultiLine(false);
             
             fbLargeCommandLine.blur();
             
+            fbPanel2Style.display = "block";
             fbPanelBar2BoxStyle.display = "block";
             
             fbLargeCommandLine.style.display = "none";
@@ -1335,10 +1354,13 @@ append(ChromeBase,
         
         try
         {
-            if (panelToSelect == "Console")
-                Firebug.CommandLine.focus();
-            else
-                Firebug.CommandLine.blur();
+            if (Firebug.CommandLine)
+            {
+                if (panelToSelect == "Console")
+                    Firebug.CommandLine.focus();
+                else
+                    Firebug.CommandLine.blur();
+            }
         }
         catch(e)
         {
@@ -1775,11 +1797,15 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
         if (visible)
         {
             fbBottom.className = "";
-            Firebug.CommandLine.activate();
+            
+            if (Firebug.CommandLine)
+                Firebug.CommandLine.activate();
         }
         else
         {
-            Firebug.CommandLine.deactivate();
+            if (Firebug.CommandLine)
+                Firebug.CommandLine.deactivate();
+            
             fbBottom.className = "hide";
         }
     }
