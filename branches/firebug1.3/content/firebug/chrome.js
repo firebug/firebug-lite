@@ -204,7 +204,7 @@ var createChromeWindow = function(options)
         
         createChromeDiv = function()
         {
-            Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
+            //Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
         
             var node = chrome.node = createGlobalElement("div"),
                 style = createGlobalElement("style"),
@@ -220,7 +220,7 @@ var createChromeWindow = function(options)
                         // load the chrome styles
                         css +
                         // adjust some remaining styles
-                        ".fbBody #fbHSplitter{position:absolute !important;},.fbBody #fbHTML span{line-height:14px;}";
+                        ".fbBody #fbHSplitter{position:absolute !important;} .fbBody #fbHTML span{line-height:14px;} .fbBody .lineNo div{line-height:inherit !important;}";
             
             if (isIE)
             {
@@ -997,6 +997,7 @@ append(ChromeBase,
         /**/
         
         //test XHR
+        /*
         setTimeout(function(){
         
         FBL.Ajax.request({url: "../content/firebug/boot.js"});

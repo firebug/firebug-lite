@@ -7,7 +7,8 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Context
   
-FBL.Context = function(win){
+FBL.Context = function(win)
+{
     this.window = win.window;
     this.document = win.document;
     

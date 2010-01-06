@@ -1070,6 +1070,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         
         //this.select(Firebug.browser.window);
         
+        // TODO: xxxpedro dom leaking to global namespace (need to create a proper context object)
         this.context.loaded = true;
         this.ishow();
         
