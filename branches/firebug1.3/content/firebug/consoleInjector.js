@@ -1,16 +1,65 @@
 /* See license.txt for terms of usage */
 
-//
 FBL.ns(function() { with (FBL) {
 
 // ************************************************************************************************
 // Constants
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
+//const Cc = Components.classes;
+//const Ci = Components.interfaces;
 
-top.Firebug.Console.injector =
+Firebug.Console2.injector =
 {
+    install: function(context)
+    {
+        var win = context.window;
+        
+        var consoleHandler = new FirebugConsoleHandler(context, win);
+        
+        var properties = 
+        [
+            "log",
+            "debug",
+            "info",
+            "warn",
+            "error",
+            "assert",
+            "dir",
+            "dirxml",
+            "group",
+            "groupEnd",
+            "time",
+            "timeEnd",
+            "count",
+            "trace",
+            "profile",
+            "profileEnd",
+            "clear",
+            "open",
+            "close"
+        ];
+        
+        var Handler = function(name)
+        {
+            var c = consoleHandler;
+            var f = consoleHandler[name];
+            return function(){return f.apply(c,arguments)};
+        };
+        
+        var installer = function(c)
+        {
+            for (var i=0, l=properties.length; i<l; i++)
+            {
+                var name = properties[i];
+                c[name] = new Handler(name);
+            }
+        };
+        
+        var sandbox = new win.Function("arguments.callee.install(window.consolex={})");
+        sandbox.install = installer;
+        sandbox();
+    },
+    
     isAttached: function(context, win)
     {
         if (win.wrappedJSObject)
@@ -43,11 +92,11 @@ top.Firebug.Console.injector =
         this.attachConsoleInjector(context, win);
         this.addConsoleListener(context, win);
 
-        Firebug.Console.clearReloadWarning(context);
+        Firebug.Console2.clearReloadWarning(context);
 
         var attached =  this.isAttached(context, win);
         if (attached)
-            dispatch(Firebug.Console.fbListeners, "onConsoleInjected", [context, win]);
+            dispatch(Firebug.Console2.fbListeners, "onConsoleInjected", [context, win]);
 
         return attached;
     },
@@ -101,7 +150,7 @@ top.Firebug.Console.injector =
         var consoleForcer = "window.loadFirebugConsole();";
 
         if (context.stopped)
-            Firebug.Console.injector.evaluateConsoleScript(context);  // todo evaluate consoleForcer on stack
+            Firebug.Console2.injector.evaluateConsoleScript(context);  // todo evaluate consoleForcer on stack
         else
             Firebug.CommandLine.evaluateInWebPage(consoleForcer, context, win);
 
@@ -134,7 +183,7 @@ top.Firebug.Console.injector =
         }
 
         // We need the element to attach our event listener.
-        var element = Firebug.Console.getFirebugConsoleElement(context, win);
+        var element = Firebug.Console2.getFirebugConsoleElement(context, win);
         if (element)
             element.setAttribute("FirebugVersion", Firebug.version); // Initialize Firebug version.
         else
@@ -158,11 +207,11 @@ top.Firebug.Console.injector =
             if (element)
                 element.parentNode.removeChild(element);
         }
-    },
+    }
 }
 
 var total_handlers = 0;
-function FirebugConsoleHandler(context, win)
+var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 {
     this.window = win;
 
@@ -190,7 +239,7 @@ function FirebugConsoleHandler(context, win)
                 FBTrace.sysout("FirebugConsoleHandler", this);
 
             var methodName = event.target.getAttribute("methodName");
-            Firebug.Console.log($STRF("console.MethodNotSupported", [methodName]));
+            Firebug.Console2.log($STRF("console.MethodNotSupported", [methodName]));
         }
     };
 
@@ -253,7 +302,7 @@ function FirebugConsoleHandler(context, win)
 
     this.dir = function(o)
     {
-        Firebug.Console.log(o, context, "dir", Firebug.DOMPanel.DirTable);
+        Firebug.Console2.log(o, context, "dir", Firebug.DOMPanel.DirTable);
     };
 
     this.dirxml = function(o)
@@ -263,25 +312,27 @@ function FirebugConsoleHandler(context, win)
         else if (o instanceof Document)
             o = o.documentElement;
 
-        Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        Firebug.Console2.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
     };
 
     this.group = function()
     {
-        var sourceLink = getStackLink();
-        Firebug.Console.openGroup(arguments, null, "group", null, false, sourceLink);
+        //TODO: xxxpedro;
+        //var sourceLink = getStackLink();
+        var sourceLink = null;
+        Firebug.Console2.openGroup(arguments, null, "group", null, false, sourceLink);
     };
 
     this.groupEnd = function()
     {
-        Firebug.Console.closeGroup(context);
+        Firebug.Console2.closeGroup(context);
     };
 
     this.groupCollapsed = function()
     {
         var sourceLink = getStackLink();
         // noThrottle true is probably ok, openGroups will likely be short strings.
-        var row = Firebug.Console.openGroup(arguments, null, "group", null, true, sourceLink);
+        var row = Firebug.Console2.openGroup(arguments, null, "group", null, true, sourceLink);
         removeClass(row, "opened");
     };
 
@@ -325,9 +376,64 @@ function FirebugConsoleHandler(context, win)
         }
     };
 
+    this.trace = function()
+    {
+        var getFuncName = function getFuncName (f)
+        {
+            if (f.getName instanceof Function)
+                return f.getName();
+            if (f.name) // in FireFox, Function objects have a name property...
+                return f.name;
+            
+            var name = f.toString().match(/function\s*(\w*)/)[1];
+            return name || "anonymous";
+        };
+        
+        var wasVisited = function(fn)
+        {
+            for (var i=0, l=stack.length; i<l; i++)
+            {
+                if (stack[i] == fn)
+                    return true;
+            }
+            
+            return false;
+        };
+    
+        var stack = [];
+        
+        var traceLabel = "Stack Trace";
+        
+        Firebug.Console.group(traceLabel);
+        
+        for (var fn = arguments.callee.caller; fn; fn = fn.caller)
+        {
+            if (wasVisited(fn)) break;
+            
+            stack.push(fn);
+            
+            var html = [ getFuncName(fn), "(" ];
+
+            for (var i = 0, l = fn.arguments.length; i < l; ++i)
+            {
+                if (i)
+                    html.push(", ");
+                
+                Firebug.Reps.appendObject(fn.arguments[i], html);
+            }
+
+            html.push(")");
+            Firebug.Console.logRow(html, "stackTrace");
+        }
+        
+        Firebug.Console.groupEnd(traceLabel);
+        
+        return Firebug.Console.LOG_COMMAND; 
+    };
+    
     this.clear = function()
     {
-        Firebug.Console.clear(context);
+        Firebug.Console2.clear(context);
     };
 
     this.time = function(name, reset)
@@ -376,11 +482,11 @@ function FirebugConsoleHandler(context, win)
         if (FBTrace.DBG_CONSOLE)
             FBTrace.sysout("consoleInjector.FirebugConsoleHandler evalutated default called", result);
 
-        Firebug.Console.log(result, context);
+        Firebug.Console2.log(result, context);
     };
     this.evaluateError = function(result, context)
     {
-        Firebug.Console.log(result, context, "errorMessage");
+        Firebug.Console2.log(result, context, "errorMessage");
     };
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -388,7 +494,7 @@ function FirebugConsoleHandler(context, win)
     function logFormatted(args, className, linkToSource, noThrottle)
     {
         var sourceLink = linkToSource ? getStackLink() : null;
-        return Firebug.Console.logFormatted(args, context, className, noThrottle, sourceLink);
+        return Firebug.Console2.logFormatted(args, context, className, noThrottle, sourceLink);
     }
 
     function logAssert(category, args)
@@ -436,7 +542,7 @@ function FirebugConsoleHandler(context, win)
                 objects.push(args[i]);
         }
 
-        var row = Firebug.Console.log(objects, context, "errorMessage", null, true); // noThrottle
+        var row = Firebug.Console2.log(objects, context, "errorMessage", null, true); // noThrottle
         row.scrollIntoView();
     }
 
