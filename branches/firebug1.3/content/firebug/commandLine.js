@@ -7,15 +7,7 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Globals
 
-var Console = Firebug.Console;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var commandHistory = [];
-var commandPointer = -1;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
+var commandPrefix = ">>>";
 var reOpenBracket = /[\[\(\{]/;
 var reCloseBracket = /[\]\)\}]/;
 
@@ -238,11 +230,12 @@ Firebug.CommandLine = extend(Firebug.Module,
     {
         // TODO: need to register the API in console.firebug.commandLineAPI
         var api = "Firebug.CommandLine.API"
-            
-        //Firebug.context = Firebug.chrome;
-        //api = null;
-
-        return Firebug.context.evaluate(expr, "window", api, Console.error);
+        
+        var result = Firebug.context.evaluate(expr, "window", api, Firebug.Console.error);
+        
+        return this.isMultiLine ?
+                Firebug.Console.LOG_COMMAND :
+                result;
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -254,25 +247,20 @@ Firebug.CommandLine = extend(Firebug.Module,
         if (!command) return;
         
         _stack(command);
-        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
         
-        try
+        //Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
+        Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
+        
+        var result = this.evaluate(command);
+        
+        // avoid logging the console command twice, in case it is a console function
+        // that is being executed in the command line
+        if (result != Firebug.Console.LOG_COMMAND)
         {
-            var result = this.evaluate(command);
-            
-            // avoid logging the console command twice, in case it is a console function
-            // that is being executed in the command line
-            if (result != Console.LOG_COMMAND)
-            {
-                var html = [];
-                Firebug.Reps.appendObject(result, html)
-                Firebug.Console.writeMessage(html, "command");
-            }
-                
-        }
-        catch (e)
-        {
-            Firebug.Console.writeMessage([e.message || e], "error");
+            Firebug.Console.log(result);
+            //var html = [];
+            //Firebug.Reps.appendObject(result, html)
+            //Firebug.Console.writeMessage(html, "command");
         }
     },
     
