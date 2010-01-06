@@ -104,27 +104,16 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             var renderProcess = function renderProcess(src)
             {
                 var html = [],
-                    hl = 0,
-                    s = [],
-                    sl = 0;
+                    hl = 0;
                 
                 src = isIE && !isExternal ? 
                         src+'\n' :  // IE put an extra line when reading source of local resources
                         '\n'+src;
                 
                 // find the number of lines of code
-                var match = src.match(/\n/g);
+                src = src.replace(/\n\r|\r\n/g, "\n");
+                var match = src.match(/[\n]/g);
                 var lines=match ? match.length : 0;
-                
-                // render the line number divs
-                for(var c=1, lines; c<=lines; c++)
-                {
-                    s[sl++] = '<div line="';
-                    s[sl++] = c;
-                    s[sl++] = '">';
-                    s[sl++] = c;
-                    s[sl++] = '</div>';
-                }
                 
                 // render the full source code + line numbers html
                 html[hl++] = '<div><div class="sourceBox" style="left:'; 
@@ -132,10 +121,18 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                 html[hl++] = 'px;"><pre class="sourceCode">';
                 html[hl++] = escapeHTML(src);
                 html[hl++] = '</pre></div><div class="lineNo">';
-                html = html.concat(s); // uses concat instead of string.join() to boost performance 
-                hl = html.length; // adjust the size index
+                
+                // render the line number divs
+                for(var l=1, lines; l<=lines; l++)
+                {
+                    html[hl++] = '<div line="';
+                    html[hl++] = l;
+                    html[hl++] = '">';
+                    html[hl++] = l;
+                    html[hl++] = '</div>';
+                }
+                
                 html[hl++] = '</div></div>';
-                /**/
                 
                 updatePanel(html);
             };
