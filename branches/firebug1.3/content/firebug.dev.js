@@ -1,49 +1,60 @@
 /* See license.txt for terms of usage */
 
 (function(){
+// ************************************************************************************************
 
+// ************************************************************************************************
+    
 var bookmarletMode = false;
 var bookmarletURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/";
 
 //var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
 var bookmarletSkinURL = "http://getfirebug.com/releases/lite/alpha/skin/xp/";
 
+// ************************************************************************************************
+
 window.FBL = {}; // force exposure in IE global namespace
 window.FBDev =
 {
+    // ********************************************************************************************
     modules:
     [ 
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // ****************************************************************************************
         // Application Core
         "firebug/lib.js",
-        "firebug/firebug.js",
-        "firebug/gui.js",
         
+        "firebug/firebug.js",
+        
+        "firebug/gui.js",        
         "firebug/context.js",
         "firebug/chrome.js",
         "firebug/chrome.injected2.js",
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Console core
-        "firebug/reps.js",
-        "firebug/console.js",
-        //"firebug/console2.js",
-        "firebug/commandLine.js",
+        // ****************************************************************************************
+        // Application Classes
+        "firebug/selector.js",
+        "firebug/inspector.js",
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // ****************************************************************************************
         // Experimental
         "firebug/domplate.js", // not used yet
         "firebug/reps2.js",  // experimental
+        
+        // ****************************************************************************************
+        // Console / CommandLine core
+        "firebug/reps.js",
+        //"firebug/console.js",
         "firebug/console2.js",
+        "firebug/consoleInjector.js",
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Application Classes
-        "firebug/selector.js",
+        "firebug/commandLine.js",
         
-        "firebug/inspector.js",
-        //"firebug/inspectorX.js",
+        // ****************************************************************************************
+        "firebug/xhr.js",
+        "firebug/net.js",
+        "firebug/spy.js",
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // ****************************************************************************************
         // Application Panels
         "firebug/html.js",
         
@@ -54,17 +65,17 @@ window.FBDev =
         "firebug/script.js",
         "firebug/dom.js", // experimental
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // ****************************************************************************************
         // Trace Module and Panel
         "firebug/trace.js",
         "firebug/tracePanel.js",
         
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // ****************************************************************************************
         // Bootstrap
         "firebug/boot.js"
-        /**/
     ],
-    
+    // ********************************************************************************************
+
     loadChromeApplication: function(chrome)
     {
         FBDev.buildSource(function(source){
@@ -103,7 +114,9 @@ window.FBDev =
         
         FBDev.buildFullSource(function(source){
             out.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%;";
-            out.appendChild(document.createTextNode(source));
+            //out.appendChild(document.createTextNode(source));
+            
+            out.value = source;
             document.body.appendChild(out);
         });
     },
@@ -328,6 +341,8 @@ window.FBDev =
     }
 }
 
+// ************************************************************************************************
+
 function findLocation() 
 {
     var reFirebugFile = /(firebug(?:\.\w+)?\.js)(#.+)?$/;
@@ -413,6 +428,8 @@ function findLocation()
     }
 };
 
+// ************************************************************************************************
+
 function loadModules() {
     
     findLocation();
@@ -463,9 +480,11 @@ var waitFirebugLoad = function()
         setTimeout(waitFirebugLoad, 0);
 };
 
+// ************************************************************************************************
+
 var loadDevPanel = function() { with(FBL) { 
 
-    // ************************************************************************************************
+    // ********************************************************************************************
     // FBTrace Panel
     
     function DevPanel(){};
@@ -533,11 +552,12 @@ var loadDevPanel = function() { with(FBL) {
         
     });
     
-    // ************************************************************************************************
+    // ********************************************************************************************
     
     Firebug.registerPanel(DevPanel);
 }};
 
+// ************************************************************************************************
 var publishedURL = "";
 var baseURL = "";
 var sourceURL = "";
@@ -551,68 +571,134 @@ var isOpera = navigator.userAgent.indexOf("Opera") != -1;
 var isSafari = navigator.userAgent.indexOf("AppleWebKit") != -1;
 
 loadModules();
+// ************************************************************************************************
 
 
-// experimental xhr watcher
-
-/*
-var _ActiveXObject = ActiveXObject;
-
-aActiveXObject = function()
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
+window.FTrace = function()
 {
-};/**/
-
-/*
-var _XMLHttpRequest = XMLHttpRequest;
-XMLHttpRequest = function()
-{
-    var self = this;
-    var xhr = new _XMLHttpRequest();
-    
-    // can cause problems
-    //for (var name in xhr)
-    //    if (name != "channel")
-    //        this[name] = xhr[name];
-    
-    var handleStateChange = function()
+    try
     {
-        Firebug.Console.log("onreadystatechange");
-        //self.onreadystatechange.apply(self, arguments);
-    };
-    
-    this.onreadystatechange = function(){};
-    
-    this.open = function(type, url, async)
+        (0)();
+    }
+    catch(e)
     {
-        Firebug.Console.log("open");
+        var result = e;
         
-        self.msg = type.toUpperCase() + " " +  url;
+        //Firebug.Console.dir(result);
+        //Firebug.Console.log(result.type);
         
-        if (async)
-            xhr.onreadystatechange = handleStateChange;
+        var stack = 
+            result.stack || // Firefox / Google Chrome 
+            result.stacktrace || // Opera
+            "";
         
-        xhr.open(type, url, async);
+        //stack = stack.replace(/[\n]/g, "\n--------------------\n");
+        stack = stack.replace(/\n\r|\r\n/g, "\n"); // normalize line breaks
+        var items = stack.split(/[\n\r]/);
         
-        if (!async)
-            Firebug.Console.log("handle sync");
-    };
-    
-    this.send = function(a)
-    {
-        Firebug.Console.log(self.msg);
+        // props are:
+        // ---------------
+        // function name
+        // function parameters (Firefox)
+        // function location? (Google Chrome, when file is unknown)
+        // file URL
+        // line number
+        // column number (Google Chrome)
         
-        xhr.send(a);
-    };
-    
-    this.setRequestHeader = function(header, value)
-    {
-        Firebug.Console.log("setRequestHeader", header, ", ", value);
-        xhr.setRequestHeader(header, value);
-    };
-    
-    return this;
+        /*
+        // Google Chrome
+        var reChromeStackItem = /^\s+at\s+([^\(]+)\s\((.*)\)$/;
+        var reChromeStackItemValue = /^(.+)\:(\d+\:\d+)$/;
+        
+        for (var i=0, length=items.length; i<length; i++)
+        {
+            var item = items[i];
+            var match = item.match(reChromeStackItem);
+            
+            if (match)
+            {
+                Firebug.Console.log(match[1]);
+                
+                var value = match[2].match(reChromeStackItemValue);
+                
+                if (value)
+                {
+                    Firebug.Console.log(value[1]);
+                    Firebug.Console.log(value[2]);
+                }
+                else
+                    Firebug.Console.log(match[2]);
+                
+                Firebug.Console.log("--------------------------");
+            }                
+        }
+        /**/
+        
+        
+        // Firefox
+        var reFirefoxStackItem = /^(.*)@(.*)$/;
+        var reFirefoxStackItemValue = /^(.+)\:(\d+)$/;
+        
+        for (var i=0, length=items.length; i<length; i++)
+        {
+            var item = items[i];
+            var match = item.match(reFirefoxStackItem);
+            
+            if (match)
+            {
+                Firebug.Console.logFormatted([match[1]]);
+                
+                var value = match[2].match(reFirefoxStackItemValue);
+                
+                if (value)
+                {
+                    Firebug.Console.logFormatted([value[1]]);
+                    Firebug.Console.logFormatted([value[2]]);
+                }
+                else
+                    Firebug.Console.logFormatted([match[2]]);
+                
+                Firebug.Console.logFormatted(["--------------------------"]);
+            }                
+        }
+        /**/
+        
+        // Opera
+        /*
+        var reOperaStackItem = /^\s\s(?:\.\.\.\s\s)?Line\s(\d+)\sof\s(.+)$/;
+        var reOperaStackItemValue = /^linked\sscript\s(.+)$/;
+        
+        for (var i=0, length=items.length; i<length; i+=2)
+        {
+            var item = items[i];
+            
+            var match = item.match(reOperaStackItem);
+            
+            if (match)
+            {
+                Firebug.Console.log(match[1]);
+                
+                var value = match[2].match(reOperaStackItemValue);
+                
+                if (value)
+                {
+                    Firebug.Console.log(value[1]);
+                }
+                else
+                    Firebug.Console.log(match[2]);
+                
+                Firebug.Console.log("--------------------------");
+            }                
+        }
+        /**/
+    }
 };
-/**/
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
 
-
+// ************************************************************************************************
 })();
