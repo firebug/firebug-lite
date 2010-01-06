@@ -74,6 +74,8 @@ this.initialize = function()
     else
         FBTrace = FBL.FBTrace = {};
     
+    FBL.Ajax.initialize();
+    
     // check if the actual window is a persisted chrome context
     var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
     
@@ -766,7 +768,14 @@ this.hide = function(elt, hidden)
 
 this.clearNode = function(node)
 {
-    node.innerHTML = "";
+    var nodeName = " " + node.nodeName.toLowerCase() + " ";
+    var ignoreTags = " table tbody thead tfoot th tr td ";
+    
+    // IE can't use innerHTML of table elements
+    if (this.isIE && ignoreTags.indexOf(nodeName) != -1)
+        this.eraseNode(node);
+    else
+        node.innerHTML = "";
 };
 
 this.eraseNode = function(node)
@@ -1335,17 +1344,17 @@ this.createGlobalElement = function(tagName, properties)
 
 this.isLeftClick = function(event)
 {
-    return (this.isIE ? event.button == 1 : event.button == 0) && this.noKeyModifiers(event);
+    return event.button == 0 && this.noKeyModifiers(event);
 };
 
 this.isMiddleClick = function(event)
 {
-    return (this.isIE ? event.button == 4 : event.button == 1) && this.noKeyModifiers(event);
+    return event.button == 1 && this.noKeyModifiers(event);
 };
 
 this.isRightClick = function(event)
 {
-    return (this.isIE ? event.button == 2 : event.button == 2) && this.noKeyModifiers(event);
+    return event.button == 2 && this.noKeyModifiers(event);
 };
 
 this.noKeyModifiers = function(event)
@@ -1355,12 +1364,12 @@ this.noKeyModifiers = function(event)
 
 this.isControlClick = function(event)
 {
-    return (this.isIE ? event.button == 1 : event.button == 0) && this.isControl(event);
+    return event.button == 0 && this.isControl(event);
 };
 
 this.isShiftClick = function(event)
 {
-    return (this.isIE ? event.button == 1 : event.button == 0) && this.isShift(event);
+    return event.button == 0 && this.isShift(event);
 };
 
 this.isControl = function(event)
@@ -4328,8 +4337,6 @@ this.Ajax =
     }
   
 };
-
-this.Ajax.initialize();
 
 
 // ************************************************************************************************
