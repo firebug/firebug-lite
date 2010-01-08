@@ -239,7 +239,12 @@ var XMLHttpRequestWrapper = function(activeXObject)
     this.getAllResponseHeaders = function()
     {
         return xhrRequest.getAllResponseHeaders();
-    };    
+    };
+    
+    this.abort = function()
+    {
+        return xhrRequest.abort();
+    };
     
     return this;
 };
