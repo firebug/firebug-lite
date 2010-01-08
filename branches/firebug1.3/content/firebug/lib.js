@@ -1344,17 +1344,17 @@ this.createGlobalElement = function(tagName, properties)
 
 this.isLeftClick = function(event)
 {
-    return event.button == 0 && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.noKeyModifiers(event);
 };
 
 this.isMiddleClick = function(event)
 {
-    return event.button == 1 && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" ? event.button == 4 : event.button == 1) && this.noKeyModifiers(event);
 };
 
 this.isRightClick = function(event)
 {
-    return event.button == 2 && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" ? event.button == 2 : event.button == 2) && this.noKeyModifiers(event);
 };
 
 this.noKeyModifiers = function(event)
@@ -1364,12 +1364,12 @@ this.noKeyModifiers = function(event)
 
 this.isControlClick = function(event)
 {
-    return event.button == 0 && this.isControl(event);
+    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.isControl(event);
 };
 
 this.isShiftClick = function(event)
 {
-    return event.button == 0 && this.isShift(event);
+    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.isShift(event);
 };
 
 this.isControl = function(event)
@@ -1510,7 +1510,7 @@ this.dispatch = function(listeners, name, args)
     {
         if (FBTrace.DBG_ERRORS)
         {
-            FBTrace.dumpProperties(" Exception in lib.dispatch "+ name, exc);
+            FBTrace.sysout(" Exception in lib.dispatch "+ name, exc);
             //FBTrace.dumpProperties(" Exception in lib.dispatch listener", listener);
         }
         /**/
