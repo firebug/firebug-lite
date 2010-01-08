@@ -221,12 +221,12 @@ var createChromeWindow = function(options)
                         css +
                         // adjust some remaining styles
                         ".fbBody #fbHSplitter{position:absolute !important;} .fbBody #fbHTML span{line-height:14px;} .fbBody .lineNo div{line-height:inherit !important;}";
-            
+            /*
             if (isIE)
             {
                 // IE7 CSS bug (FbChrome table bigger than its parent div) 
-                rules += ".fbBody table.fbChrome{height:1px !important;}";
-            }
+                rules += ".fbBody table.fbChrome{position: static !important;}";
+            }/**/
             
             style.type = "text/css";
             
@@ -244,7 +244,11 @@ var createChromeWindow = function(options)
             if (isIE)
             {
                 // IE7 CSS bug (FbChrome table bigger than its parent div)
+                setTimeout(function(){
                 node.firstChild.style.height = "1px";
+                node.firstChild.style.position = "static";
+                },0);
+                /**/
             }
             
             formatNode(node);
@@ -1268,7 +1272,7 @@ append(ChromeBase,
         var options = panel.options;
         
         changeCommandLineVisibility(options.hasCommandLine);
-        changeSidePanelVisibility(options.hasSidePanel);
+        changeSidePanelVisibility(panel.hasSidePanel);
         
         Firebug.chrome.draw();
     },
@@ -1923,6 +1927,10 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
         if (!onHSplitterMouseMoveTimer)
             onHSplitterMouseMoveTimer = setTimeout(handleHSplitterMouseMove, chromeRedrawSkipRate);
     
+    // improving the resizing performance by canceling the mouse event.
+    // canceling events will prevent the page to receive such events, which would imply
+    // in more processing being expended.
+    cancelEvent(event, true);
     return false;
 };
 

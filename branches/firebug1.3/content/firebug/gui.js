@@ -82,20 +82,30 @@ FBL.PanelBar =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     selectedPanel: null,
-    isSidePanelBar: null,
+    parentPanelName: null,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    create: function(isSidePanelBar)
+    create: function(ownerPanel)
     {
         this.panelMap = {};
-        this.isSidePanelBar = isSidePanelBar;
+        this.ownerPanel = ownerPanel;
+        
+        if (ownerPanel)
+        {
+            ownerPanel.sidePanelBarNode = createElement("span");
+            ownerPanel.sidePanelBarNode.style.display = "none";
+            ownerPanel.sidePanelBarBoxNode.appendChild(ownerPanel.sidePanelBarNode);
+        }
         
         var panels = Firebug.panelTypes;
         for (var i=0, p; p=panels[i]; i++)
         {
-            if (isSidePanelBar && p.prototype.parentPanel || 
-                !isSidePanelBar && !p.prototype.parentPanel)
+            if ( // normal Panel  of the Chrome's PanelBar
+                !ownerPanel && !p.prototype.parentPanel ||
+                // Child Panel of the current Panel's SidePanelBar
+                ownerPanel && p.prototype.parentPanel && 
+                ownerPanel.name == p.prototype.parentPanel)
             {
                 this.addPanel(p.prototype.name);
             }
@@ -118,10 +128,14 @@ FBL.PanelBar =
         }
         
         this.panelMap = null;
+        this.ownerPanel = null;
     },
     
     initialize: function()
     {
+        if (this.ownerPanel)
+            this.ownerPanel.sidePanelBarNode.style.display = "inline";
+        
         for(var name in this.panelMap)
         {
             (function(self, name){
@@ -149,6 +163,9 @@ FBL.PanelBar =
             selectedPanel.hide();
             selectedPanel.shutdown();
         }
+        
+        if (this.ownerPanel)
+            this.ownerPanel.sidePanelBarNode.style.display = "none";        
         
         this.selectedPanel = null;
     },

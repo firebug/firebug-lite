@@ -412,7 +412,6 @@ Firebug.Panel =
     
     options: {
         hasCommandLine: false,
-        hasSidePanel: false,
         hasStatusBar: false,
         hasToolButtons: false,
         
@@ -440,15 +439,13 @@ Firebug.Panel =
 
     panelBarNode: null,
     
+    sidePanelBarBoxNode: null,
+    sidePanelBarNode: null,            
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    panelBar: null,
+    sidePanelBar: null,
     
-    commandLine: null,
-    
-    toolButtons: null,
-    statusBar: null,
-
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     searchable: false,
@@ -458,10 +455,15 @@ Firebug.Panel =
     
     create: function(context, doc)
     {
-        if (parentPanelMap.hasOwnProperty(this.name))
+        this.hasSidePanel = parentPanelMap.hasOwnProperty(this.name); 
+        
+        this.panelBarNode = $("fbPanelBar1");
+        this.sidePanelBarBoxNode = $("fbPanelBar2");
+        
+        if (this.hasSidePanel)
         {
             this.sidePanelBar = extend({}, PanelBar);
-            this.sidePanelBar.create(true);
+            this.sidePanelBar.create(this);
         }
         
         var options = this.options = extend(Firebug.Panel.options, this.options);
@@ -484,11 +486,6 @@ Firebug.Panel =
                 this.statusBarBox = $("fbStatusBarBox");
                 this.statusBarNode = $(panelId + "StatusBar");
             }
-            
-            if (options.hasSidePanel)
-            {
-                //this.sidePanelNode = $(panelId + "StatusBar");
-            }        
         }
         else
         {
@@ -519,7 +516,11 @@ Firebug.Panel =
                 tabNode.href = "javascript:void(0)";
             }
             
-            $("fbPanelBar" + containerSufix).appendChild(tabNode);
+            var panelBarNode = this.parentPanel ? 
+                    Firebug.chrome.getPanel(this.parentPanel).sidePanelBarNode :
+                    this.panelBarNode;
+            
+            panelBarNode.appendChild(tabNode);
             tabNode.style.display = "block";
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -533,8 +534,6 @@ Firebug.Panel =
                 
                 $("fbToolbarButtons").appendChild(this.toolButtonsNode);
             }
-            
-            /**/
             
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create StatusBar
@@ -582,7 +581,7 @@ Firebug.Panel =
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.destroy", this.name);
         
-        if (parentPanelMap.hasOwnProperty(this.name))
+        if (this.hasSidePanel)
         {
             this.sidePanelBar.destroy();
             this.sidePanelBar = null;
@@ -608,7 +607,7 @@ Firebug.Panel =
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.initialize", this.name);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (parentPanelMap.hasOwnProperty(this.name))
+        if (this.hasSidePanel)
         {
             this.sidePanelBar.initialize();
         }
@@ -620,11 +619,6 @@ Firebug.Panel =
         
         this.tabNode = $(panelId + "Tab");
         this.tabNode.style.display = "block";
-        
-        if (options.hasSidePanel)
-        {
-            //this.sidePanelNode = $(panelId + "StatusBar");
-        }
         
         if (options.hasStatusBar)
         {
@@ -651,6 +645,16 @@ Firebug.Panel =
         if (Firebug.chrome.largeCommandLineVisible)
             Firebug.chrome.hideLargeCommandLine();
             
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        if (this.hasSidePanel)
+        {
+            // TODO: xxxpedro firebug1.3a6 
+            // new PanelBar mechanism will need to call shutdown to hide the panels (so it 
+            // doesn't appears in other panel's sidePanelBar. Therefore, we need to implement 
+            // a "remember selected panel" feature in the sidePanelBar
+            //this.sidePanelBar.shutdown();
+        }
+        
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
         
@@ -680,11 +684,6 @@ Firebug.Panel =
     {
         var options = this.options;
         
-        if (options.hasSidePanel)
-        {
-            //this.sidePanelNode = $(panelId + "StatusBar");
-        }
-        
         if (options.hasStatusBar)
         {
             this.statusBarBox.style.display = "inline";
@@ -705,11 +704,6 @@ Firebug.Panel =
     hide: function(state)
     {
         var options = this.options;
-        
-        if (options.hasSidePanel)
-        {
-            //this.sidePanelNode = $(panelId + "StatusBar");
-        }
         
         if (options.hasStatusBar)
         {
