@@ -216,7 +216,7 @@ this.Func = domplate(Firebug.Rep,
 });
 
 // ************************************************************************************************
-
+/*
 this.jsdScript = domplate(Firebug.Rep,
 {
     copySource: function(script)
@@ -282,7 +282,7 @@ this.jsdScript = domplate(Firebug.Rep,
         ];
     }
 });
-
+/**/
 //************************************************************************************************
 
 this.Obj = domplate(Firebug.Rep,
