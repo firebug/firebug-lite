@@ -600,6 +600,9 @@ Firebug.Spy.XHR = domplate(Firebug.Rep,
 
     supportsObject: function(object)
     {
+        // TODO: xxxpedro spy xhr
+        return false;
+        
         return object instanceof Firebug.Spy.XMLHttpRequestSpy;
     },
 
@@ -751,7 +754,7 @@ function getResponseHeaders(spy)
 // Registration
 
 Firebug.registerModule(Firebug.Spy);
-Firebug.registerRep(Firebug.Spy.XHR);
+//Firebug.registerRep(Firebug.Spy.XHR);
 
 // ************************************************************************************************
 }});
