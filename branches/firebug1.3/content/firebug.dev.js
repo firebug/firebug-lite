@@ -38,14 +38,15 @@ window.FBDev =
         // ****************************************************************************************
         // Experimental
         "firebug/domplate.js", // not used yet
+        //"firebug/domplate.optmized.loops.js", // not used yet
         "firebug/reps2.js",  // experimental
         
         // ****************************************************************************************
         // Console / CommandLine core
         "firebug/reps.js",
-        //"firebug/console.js",
-        "firebug/console2.js",
-        "firebug/consoleInjector.js",
+        "firebug/console.js",
+        //"firebug/console2.js",
+        //"firebug/consoleInjector.js",
         
         "firebug/commandLine.js",
         
@@ -608,92 +609,108 @@ window.FTrace = function()
         // line number
         // column number (Google Chrome)
         
-        /*
+        
         // Google Chrome
-        var reChromeStackItem = /^\s+at\s+([^\(]+)\s\((.*)\)$/;
-        var reChromeStackItemValue = /^(.+)\:(\d+\:\d+)$/;
-        
-        for (var i=0, length=items.length; i<length; i++)
+        if (FBL.isSafari)
         {
-            var item = items[i];
-            var match = item.match(reChromeStackItem);
+            //var reChromeStackItem = /^\s+at\s+([^\(]+)\s\((.*)\)$/;
+            var reChromeStackItem = /^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
             
-            if (match)
+            var reChromeStackItemName = /\s*\($/;
+            var reChromeStackItemValue = /^(.+)\:(\d+\:\d+)\)?$/;
+            
+            for (var i=0, length=items.length; i<length; i++)
             {
-                Firebug.Console.log(match[1]);
+                var item = items[i];
+                var match = item.match(reChromeStackItem);
                 
-                var value = match[2].match(reChromeStackItemValue);
-                
-                if (value)
+                if (match)
                 {
-                    Firebug.Console.log(value[1]);
-                    Firebug.Console.log(value[2]);
-                }
-                else
-                    Firebug.Console.log(match[2]);
-                
-                Firebug.Console.log("--------------------------");
-            }                
+                    var name = match[1];
+                    if (name)
+                        name = name.replace(reChromeStackItemName, "");
+                    
+                    Firebug.Console.log(name);
+                    
+                    var value = match[2].match(reChromeStackItemValue);
+                    
+                    if (value)
+                    {
+                        Firebug.Console.log(value[1]);
+                        Firebug.Console.log(value[2]);
+                    }
+                    else
+                        Firebug.Console.log(match[2]);
+                    
+                    Firebug.Console.log("--------------------------");
+                }                
+            }
         }
         /**/
         
-        
-        // Firefox
-        var reFirefoxStackItem = /^(.*)@(.*)$/;
-        var reFirefoxStackItemValue = /^(.+)\:(\d+)$/;
-        
-        for (var i=0, length=items.length; i<length; i++)
+        else if (FBL.isFirefox)
         {
-            var item = items[i];
-            var match = item.match(reFirefoxStackItem);
+            // Firefox
+            var reFirefoxStackItem = /^(.*)@(.*)$/;
+            var reFirefoxStackItemValue = /^(.+)\:(\d+)$/;
             
-            if (match)
+            for (var i=0, length=items.length; i<length; i++)
             {
-                Firebug.Console.logFormatted([match[1]]);
+                var item = items[i];
+                var match = item.match(reFirefoxStackItem);
                 
-                var value = match[2].match(reFirefoxStackItemValue);
-                
-                if (value)
+                if (match)
                 {
-                    Firebug.Console.logFormatted([value[1]]);
-                    Firebug.Console.logFormatted([value[2]]);
-                }
-                else
-                    Firebug.Console.logFormatted([match[2]]);
-                
-                Firebug.Console.logFormatted(["--------------------------"]);
-            }                
+                    Firebug.Console.logFormatted([match[1]]);
+                    
+                    var value = match[2].match(reFirefoxStackItemValue);
+                    
+                    if (value)
+                    {
+                        Firebug.Console.logFormatted([value[1]]);
+                        Firebug.Console.logFormatted([value[2]]);
+                    }
+                    else
+                        Firebug.Console.logFormatted([match[2]]);
+                    
+                    Firebug.Console.logFormatted(["--------------------------"]);
+                }                
+            }
         }
         /**/
         
-        // Opera
-        /*
-        var reOperaStackItem = /^\s\s(?:\.\.\.\s\s)?Line\s(\d+)\sof\s(.+)$/;
-        var reOperaStackItemValue = /^linked\sscript\s(.+)$/;
-        
-        for (var i=0, length=items.length; i<length; i+=2)
+        else if (FBL.isOpera)
         {
-            var item = items[i];
+            // Opera
+            var reOperaStackItem = /^\s\s(?:\.\.\.\s\s)?Line\s(\d+)\sof\s(.+)$/;
+            var reOperaStackItemValue = /^linked\sscript\s(.+)$/;
             
-            var match = item.match(reOperaStackItem);
-            
-            if (match)
+            for (var i=0, length=items.length; i<length; i+=2)
             {
-                Firebug.Console.log(match[1]);
+                var item = items[i];
                 
-                var value = match[2].match(reOperaStackItemValue);
+                var match = item.match(reOperaStackItem);
                 
-                if (value)
+                if (match)
                 {
-                    Firebug.Console.log(value[1]);
-                }
-                else
-                    Firebug.Console.log(match[2]);
-                
-                Firebug.Console.log("--------------------------");
-            }                
+                    Firebug.Console.log(match[1]);
+                    
+                    var value = match[2].match(reOperaStackItemValue);
+                    
+                    if (value)
+                    {
+                        Firebug.Console.log(value[1]);
+                    }
+                    else
+                        Firebug.Console.log(match[2]);
+                    
+                    Firebug.Console.log("--------------------------");
+                }                
+            }
         }
         /**/
+        
+        Firebug.Console.log(result.stack);
     }
 };
 // ************************************************************************************************

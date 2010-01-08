@@ -1,39 +1,68 @@
 ###################################################################################################
  1.3.0a5
 ###################################################################################################
+
+-------------------------------------------------------------------------------
+CommandLine
+-------------------------------------------------------------------------------
     - Large Command Line
-    
-    - Windowless mode
-    
-    - Fix problem in iframe creation
-    
-    - Better context evaluation (commands with multiple lines are now properly evaluated)
-    
-    - Fixed mouse button detection in IE
-    
-    - ported the console.js file from Firebug codebase (not enabled yet). This will replace 
-      the current implementation of the Console panel in the 1.3 final version.
-    
-    - refactoring Chrome module for better readability
-    
     - refactoring CommandLine module for better readability and encapsulation (commandHistory
         is now a private variable in CommandLine module)
-        
-    - Added the "category" of error in the error messages (like "Type Error", "Syntax Error", etc).
-    
-    - fixed visibility detection and visibility representation of elements
-    
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - Fix problem in iframe creation that was blocking the UI creation via
+      bookmarlet in IE, for some pages.
+      
+    - Allow Firebug Lite UI to load in "windowless mode", without creating an
+      iframe. This is necessary to make the bookmarlet run in cases where it
+      is not possible to create an iframe.
+      
+    - refactoring Chrome module for better readability
+
+-------------------------------------------------------------------------------
+User Interface
+-------------------------------------------------------------------------------
+    - refined the layout of buttons (added an image background)
+    - refined the layout of log groups
+
+-------------------------------------------------------------------------------
+Context
+-------------------------------------------------------------------------------
+    - Better context evaluation (commands with multiple lines are now properly evaluated)
+    - context.evaluate() properly executes and returns the value of expressions with 
+      multiple commands (be it multilined or not).
+
+-------------------------------------------------------------------------------
+Style
+-------------------------------------------------------------------------------
+    - Editing feature of inline styles (Style panel)
+
+-------------------------------------------------------------------------------
+HTML
+-------------------------------------------------------------------------------
     - properly format inline style of elements in IE to lower-case in HTML panel
-    
+
+-------------------------------------------------------------------------------
+Lib
+-------------------------------------------------------------------------------
+    - fixed visibility detection and visibility representation of elements
     - Fixed problems in IE with some event functions like isLeftClick(), isRightClick(), 
       and others. IE has a different pattern for identifying mouse buttons.
-    
+
+-------------------------------------------------------------------------------
+Console
+-------------------------------------------------------------------------------
+    - Added the "category" of error in the error messages (like "Type Error", "Syntax Error", etc).
+    - ported the consoleInjetor.js file that will be used with the new console (console2.js)
+    - ported the console.js file from Firebug codebase (not enabled yet). This will replace 
+      the current implementation of the Console panel in the 1.3 final version.
+
+-------------------------------------------------------------------------------
+Core
+-------------------------------------------------------------------------------
     - fixed variable "root" leaking to global namespace (domplate.js) 
-    
-    - refined the layout of log groups
-    
-    - refined the layout of buttons (added an image background)
-    
     - improved development build functions
 
 
@@ -47,6 +76,7 @@ Core
     - Improved the performance of the application initial loading time
     - Improved the performance of the popup loading time
     - Refactored the chrome synchronization mechanism
+    - Implemented synchronization of the persistent popup
     - Fixed isFunction() problem with IE when dealing with external objects
     
     - Improved the memory consumption. Now each panel only uses resources (listen
@@ -55,6 +85,14 @@ Core
     - Implemented the "Duck Type Detection" system, to make possible identify
       native classes (Document, Element, etc) in IE, and therefore, generate
       the appropriate visual representation.
+
+-------------------------------------------------------------------------------
+User Interface
+-------------------------------------------------------------------------------
+    - Moved all UI components to a separated gui.js file.
+    - Implemented the Menu class (with normal, checkbox, radiobutton, group
+      and separator items), that will be used in options menus at 1.3 verson
+      and in contexts menus at 1.4 version.
 
 -------------------------------------------------------------------------------
 Chrome
@@ -72,10 +110,19 @@ Chrome
 Console
 -------------------------------------------------------------------------------
     - Fixed problem in console.time() and console.timeEnd().
+    - Implemented the console.trace (thanks dongryphon for the contribution!)
 
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+    - Implemented the border in the BoxModel Highlight
+    
 -------------------------------------------------------------------------------
 HTML
 -------------------------------------------------------------------------------
+    - Internet Explorer and inline styles representation (thanks christophe.blin 
+      for the contribution!)
+
     - Implemented a basic sidePanel synchronization to test the overall 
       performance of the rendering when inspecting elements
 
