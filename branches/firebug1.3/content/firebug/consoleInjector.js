@@ -385,7 +385,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             if (f.name) // in FireFox, Function objects have a name property...
                 return f.name;
             
-            var name = f.toString().match(/function\s*(\w*)/)[1];
+            var name = f.toString().match(/function\s*([_$\w\d]*)/)[1];
             return name || "anonymous";
         };
         
@@ -404,7 +404,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         
         var traceLabel = "Stack Trace";
         
-        Firebug.Console.group(traceLabel);
+        this.group(traceLabel);
         
         for (var fn = arguments.callee.caller; fn; fn = fn.caller)
         {
@@ -423,10 +423,11 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             }
 
             html.push(")");
-            Firebug.Console.logRow(html, "stackTrace");
+            //Firebug.Console.logRow(html, "stackTrace");
+            Firebug.Console.log(html, Firebug.browser, "stackTrace");
         }
         
-        Firebug.Console.groupEnd(traceLabel);
+        this.groupEnd(traceLabel);
         
         return Firebug.Console.LOG_COMMAND; 
     };
