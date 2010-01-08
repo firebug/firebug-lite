@@ -75,14 +75,15 @@ if (isIE6)
 
 var XMLHttpRequestWrapper = function(activeXObject)
 {
-    var self = this,
-        xhrRequest = typeof activeXObject != "undefined" ?
+    var xhrRequest = typeof activeXObject != "undefined" ?
                 activeXObject :
                 new _XMLHttpRequest(),
         
         spy = new XHRSpy(),
         
-        reqType, 
+        self = this,
+        
+        reqType,
         reqUrl,
         reqStartTS;
     
@@ -149,10 +150,10 @@ var XMLHttpRequestWrapper = function(activeXObject)
                 },200);
             }
             
+            self.status = xhrRequest.status;
             self.statusText = xhrRequest.statusText;
             self.responseText = xhrRequest.responseText;
             self.responseXML = xhrRequest.responseXML;
-            self.status = xhrRequest.status;
             
             xhrRequest.onreadystatechange = function(){};
         }
@@ -229,6 +230,16 @@ var XMLHttpRequestWrapper = function(activeXObject)
         spy.requestHeaders.push({name: [header], value: [value]});
         xhrRequest.setRequestHeader(header, value);
     };
+    
+    this.getResponseHeader = function(header)
+    {
+        return xhrRequest.getResponseHeader(header);
+    };
+    
+    this.getAllResponseHeaders = function()
+    {
+        return xhrRequest.getAllResponseHeaders();
+    };    
     
     return this;
 };
