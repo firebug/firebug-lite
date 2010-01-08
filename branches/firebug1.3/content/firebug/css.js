@@ -341,6 +341,102 @@ Firebug.registerPanel(CSSEditPanel);
 
 // ************************************************************************************************
 
+// ************************************************************************************************
+// CSS Panel
+
+function CSSRulesEditPanel(){};
+
+CSSRulesEditPanel.prototype = extend(Firebug.Panel,
+{
+    name: "CSSRulesEditPanel",
+    parentPanel: "CSS",
+    title: "Add",
+    
+    options: {
+        hasToolButtons: true
+    },
+
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        return;
+        
+        this.onKeyUp = bind(this.onKeyUp, this);
+        this.onKeyDown = bind(this.onKeyDown, this);
+        
+        addEvent(this.editNode, "keydown", this.onKeyDown);
+        addEvent(this.editNode, "keyup", this.onKeyUp);
+        
+    },
+    
+    initialize: function()
+    {
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        return;
+        
+        var target = documentCache[FirebugChrome.selectedHTMLElementId];
+        if (!target) return;
+        
+        var str = renderStyles2(target);
+        this.editNode.value = str;
+        
+        var str2 = renderStyles(target);
+        this.computedStylesNode.innerHTML = str2.join("");
+        
+        this.adjustEditSize();
+    }/*,
+    
+    select: function(node)
+    {
+        var str = renderStyles2(node);
+        this.editNode.value = str;
+        this.adjustEditSize();
+    },
+    
+    adjustEditSize: function(add)
+    {
+        add = add || 0;
+        var nodeValue = this.editNode.value + " ";
+        nodeValue = nodeValue.replace(/\n\r|\r\n/g, "\n");
+        var lines = nodeValue.split(/\n/)
+        var num = lines.length + add
+        this.editNode.rows = num;
+    },
+    
+    onKeyDown: function(event)
+    {
+        if (event.keyCode == 13) // enter
+        {
+            this.adjustEditSize(1);
+        }
+        
+    },
+    
+    onKeyUp: function()
+    {
+        var nodeValue = this.editNode.value;
+        
+        var selectedElement = documentCache[FirebugChrome.selectedHTMLElementId];
+        
+        try
+        {
+            selectedElement.style.cssText = nodeValue;
+        }
+        catch(e)
+        {
+        }
+        
+        this.adjustEditSize();
+    }/**/
+});
+
+//Firebug.registerPanel(CSSRulesEditPanel);
+
+
+// ************************************************************************************************
+
 var renderStyleSheet = function renderStyleSheet(index)
 {
     var styleSheet = Firebug.browser.document.styleSheets[index],
