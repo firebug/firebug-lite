@@ -322,6 +322,9 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         var timeouts = [];
         
         var delay = 0;
+        
+        // enable to measure rendering performance
+        var renderStart = new Date().getTime();
         while (members.length)
         {
             with({slice: members.splice(0, insertSliceSize), isLast: !members.length})
@@ -334,11 +337,18 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                     if (!tbody.lastChild) return;
                     
                     result = rowTag.insertRows({members: slice}, tbody.lastChild);
+                    
                     //rowCount += insertSliceSize;
                     //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
     
                     if ((panelNode.scrollHeight+panelNode.offsetHeight) >= priorScrollTop)
                         panelNode.scrollTop = priorScrollTop;
+                    
+                    
+                    // enable to measure rendering performance
+                    if (isLast) alert(new Date().getTime() - renderStart + "ms");
+                    
+                    
                 }, delay));
     
                 delay += insertInterval;
@@ -368,6 +378,115 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         this.timeouts = timeouts;
     },
 
+    // new
+    showMembers: function(members, update, scrollTop)
+    {
+        // If we are still in the midst of inserting rows, cancel all pending
+        // insertions here - this is a big speedup when stepping in the debugger
+        if (this.timeouts)
+        {
+            for (var i = 0; i < this.timeouts.length; ++i)
+                this.context.clearTimeout(this.timeouts[i]);
+            delete this.timeouts;
+        }
+
+        if (!members.length)
+            return this.showEmptyMembers();
+
+        var panelNode = this.panelNode;
+        var priorScrollTop = scrollTop == undefined ? panelNode.scrollTop : scrollTop;
+
+        // If we are asked to "update" the current view, then build the new table
+        // offscreen and swap it in when it's done
+        var offscreen = update && panelNode.firstChild;
+        var dest = offscreen ? panelNode.ownerDocument : panelNode;
+
+        var table = this.tag.replace({domPanel: this, toggles: this.toggles}, dest);
+        var tbody = table.lastChild;
+        var rowTag = DirTablePlate.rowTag;
+
+        // Insert the first slice immediately
+        //var slice = members.splice(0, insertSliceSize);
+        //var result = rowTag.insertRows({members: slice}, tbody.lastChild);
+        
+        //var setSize = members.length;
+        //var rowCount = 1;
+        
+        var panel = this;
+        var result;
+        
+        //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
+        var timeouts = [];
+        
+        var delay = 0;
+        var _insertSliceSize = insertSliceSize;
+        var _insertInterval = insertInterval;
+        var _setTimeout = this.context.setTimeout;
+
+        // enable to measure rendering performance
+        var renderStart = new Date().getTime();
+        var lastSkip = renderStart, now;
+        
+        while (members.length)
+        {
+            with({slice: members.splice(0, _insertSliceSize), isLast: !members.length})
+            {
+                var _tbody = tbody;
+                var _rowTag = rowTag;
+                var _panelNode = panelNode;
+                var _priorScrollTop = priorScrollTop;
+                
+                timeouts.push(_setTimeout(function()
+                {
+                    // TODO: xxxpedro can this be a timing error related to the
+                    // "iteration number" approach insted of "duration time"?
+                    // avoid error in IE8
+                    if (!_tbody.lastChild) return;
+                    
+                    result = _rowTag.insertRows({members: slice}, _tbody.lastChild);
+                    
+                    //rowCount += _insertSliceSize;
+                    //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
+    
+                    if ((_panelNode.scrollHeight + _panelNode.offsetHeight) >= _priorScrollTop)
+                        _panelNode.scrollTop = _priorScrollTop;
+                    
+                    
+                    // enable to measure rendering performance
+                    //alert("gap: " + (new Date().getTime() - lastSkip)); 
+                    //lastSkip = new Date().getTime();
+                    
+                    //if (isLast) alert("new: " + (new Date().getTime() - renderStart) + "ms");
+                    
+                }, delay));
+    
+                delay += _insertInterval;
+            }
+        }
+
+        if (offscreen)
+        {
+            timeouts.push(this.context.setTimeout(function()
+            {
+                if (panelNode.firstChild)
+                    panelNode.replaceChild(table, panelNode.firstChild);
+                else
+                    panelNode.appendChild(table);
+
+                // Scroll back to where we were before
+                panelNode.scrollTop = priorScrollTop;
+            }, delay));
+        }
+        else
+        {
+            timeouts.push(this.context.setTimeout(function()
+            {
+                panelNode.scrollTop = scrollTop == undefined ? 0 : scrollTop;
+            }, delay));
+        }
+        this.timeouts = timeouts;
+    },
+    
     showEmptyMembers: function()
     {
         FirebugReps.Warning.tag.replace({object: "NoMembersWarning"}, this.panelNode);
