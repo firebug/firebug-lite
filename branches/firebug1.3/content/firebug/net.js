@@ -1,6 +1,23 @@
 /* See license.txt for terms of usage */
 
 FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
+var oSTR =
+{
+    NoMembersWarning: "There are no properties to show for this object."    
+}
+
+FBL.$STR = function(name)
+{
+    return oSTR.hasOwnProperty(name) ? oSTR[name] : name;
+};
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -377,6 +394,7 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
         
         //var context = Firebug.getElementPanel(netInfoBox).context;
         var context = Firebug.chrome;
+        
         this.updateInfo(netInfoBox, file, context);
     },
 
@@ -489,6 +507,11 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
         //**********************************************
         //**********************************************
         netInfoBox.responsePresented = true;
+        
+        // line breaks somehow are different in IE
+        // make this only once in the initialization? we don't have net panels and modules yet.
+        if (isIE)
+            responseTextBox.style.whiteSpace = "nowrap";
         
         responseTextBox[
                 typeof responseTextBox.textContent != "undefined" ? 
@@ -1012,7 +1035,7 @@ var Utils = Firebug.NetMonitor.Utils;
 //Firebug.registerPanel(NetPanel);
 
 Firebug.registerModule(Firebug.NetMonitor);
-Firebug.registerRep(Firebug.NetMonitor.BreakpointRep);
+//Firebug.registerRep(Firebug.NetMonitor.BreakpointRep);
 
 // ************************************************************************************************
 }});

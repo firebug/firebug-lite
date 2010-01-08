@@ -2,23 +2,7 @@
 
 // next-generation Console Panel (will override consoje.js)
 FBL.ns(function() { with (FBL) {
-
 // ************************************************************************************************
-// ************************************************************************************************
-// ************************************************************************************************
-var oSTR =
-{
-    NoMembersWarning: "There are no properties to show for this object."    
-}
-
-FBL.$STR = function(name)
-{
-    return oSTR.hasOwnProperty(name) ? oSTR[name] : name;
-};
-// ************************************************************************************************
-// ************************************************************************************************
-// ************************************************************************************************
-
 
 // ************************************************************************************************
 // Constants
@@ -588,7 +572,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         else
             this.appendFormatted(objects, innerRow, rep);
         row.appendChild(innerRow);
-        dispatch([Firebug.A11yModel], 'onLogRowCreated', [this, innerRow]);
+        //dispatch([Firebug.A11yModel], 'onLogRowCreated', [this, innerRow]);
         var groupBody = this.createRow("logGroupBody");
         row.appendChild(groupBody);
         groupBody.setAttribute('role', 'group');
@@ -660,6 +644,9 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
                 this.insertReloadWarning();
         }
 
+        Firebug.Console.injector.install(Firebug.browser.window);
+        consolex.trace();
+        FTrace();
         //TODO: xxxpedro remove this 
         /*
         Firebug.Console2.openGroup(["asd"], null, "group", null, false);
