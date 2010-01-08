@@ -163,17 +163,38 @@ var ConsoleAPI =
             if (f.name) // in FireFox, Function objects have a name property...
                 return f.name;
             
-            var name = f.toString().match(/function\s*(\w*)/)[1];
+            var name = f.toString().match(/function\s*([_$\w\d]*)/)[1];
             return name || "anonymous";
         };
+        
+        var wasVisited = function(fn)
+        {
+            for (var i=0, l=stack.length; i<l; i++)
+            {
+                if (stack[i] == fn)
+                    return true;
+            }
+            
+            return false;
+        };
     
+        var stack = [];
+        
         var traceLabel = "Stack Trace";
         
-        Firebug.Console.group(traceLabel);
+        this.group(traceLabel);
         
         for (var fn = arguments.callee.caller; fn; fn = fn.caller)
         {
-            var html = [ getFuncName(fn), "(" ];
+            if (wasVisited(fn)) break;
+            
+            stack.push(fn);
+            
+            var html = [ 
+                "<div class='objectBox-function'>",
+                getFuncName(fn), 
+                "(" 
+            ];
 
             for (var i = 0, l = fn.arguments.length; i < l; ++i)
             {
@@ -183,11 +204,12 @@ var ConsoleAPI =
                 Firebug.Reps.appendObject(fn.arguments[i], html);
             }
 
-            html.push(")");
+            html.push(")</div>");
             Firebug.Console.logRow(html, "stackTrace");
+            //Firebug.Console.log(html);
         }
         
-        Firebug.Console.groupEnd(traceLabel);
+        this.groupEnd(traceLabel);
         
         return Firebug.Console.LOG_COMMAND; 
     },
