@@ -58,24 +58,7 @@ var _stack = function(command)
 
 // ************************************************************************************************
 // CommandLine
-/*
-Firebug.CommandLine = function(element)
-{
-    this.element = element;
-    
-    if (isOpera)
-      fixOperaTabKey(this.element);
-    
-    this.clear = bind(this.clear, this);
-    this.onKeyDown = bind(this.onKeyDown, this);
-    this.onError = bind(this.onError, this);
-    
-    addEvent(this.element, "keydown", this.onKeyDown);
-    
-    addEvent(Firebug.browser.window, "error", this.onError);
-    addEvent(Firebug.chrome.window, "error", this.onError);
-};
-/**/
+
 Firebug.CommandLine = extend(Firebug.Module,
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -246,8 +229,9 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         _stack(command);
         
-        //Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
-        Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
+        // TODO: remove this when console2 is finished
+        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
+        //Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
         
         var result = this.evaluate(command);
         

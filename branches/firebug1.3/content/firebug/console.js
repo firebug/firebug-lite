@@ -19,7 +19,7 @@ var ConsoleAPI =
         var panel = Firebug.DOM.getPanel();
         var toggles = {};
         
-        var row = Firebug.Console.getPanel().contentNode.ownerDocument.createElement("div");
+        var row = Firebug.Console.getPanel().panelNode.ownerDocument.createElement("div");
         var target = row;
         var object = o;
         
@@ -204,7 +204,7 @@ var ConsoleAPI =
     
     clear: function()
     {
-        Firebug.Console.getPanel().contentNode.innerHTML = "";
+        Firebug.Console.getPanel().panelNode.innerHTML = "";
         
         return Firebug.Console.LOG_COMMAND;
     },
@@ -330,7 +330,7 @@ Firebug.Console = extend(ConsoleModule,
     {
         var panel = this.getPanel();
         
-        if (panel && panel.contentNode)
+        if (panel && panel.panelNode)
             this.writeMessage(message, className, handler);
         else
         {
@@ -360,14 +360,14 @@ Firebug.Console = extend(ConsoleModule,
         if (this.groupStack.length > 0)
             var container = this.groupStack[this.groupStack.length-1];
         else
-            var container = this.getPanel().contentNode;
+            var container = this.getPanel().panelNode;
         
         container.appendChild(row);
     },
     
     writeRow: function(message, className)
     {
-        var row = this.getPanel().contentNode.ownerDocument.createElement("div");
+        var row = this.getPanel().panelNode.ownerDocument.createElement("div");
         row.className = "logRow" + (className ? " logRow-"+className : "");
         row.innerHTML = message.join("");
         this.appendRow(row);
@@ -377,9 +377,9 @@ Firebug.Console = extend(ConsoleModule,
     {
         this.logFormatted(message, className);
     
-        var groupRow = this.getPanel().contentNode.ownerDocument.createElement("div");
+        var groupRow = this.getPanel().panelNode.ownerDocument.createElement("div");
         groupRow.className = "logGroup";
-        var groupRowBox = this.getPanel().contentNode.ownerDocument.createElement("div");
+        var groupRowBox = this.getPanel().panelNode.ownerDocument.createElement("div");
         groupRowBox.className = "logGroupBox";
         groupRow.appendChild(groupRowBox);
         this.appendRow(groupRowBox);
