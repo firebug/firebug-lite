@@ -234,6 +234,7 @@ CSSEditPanel.prototype = extend(Firebug.Panel,
         el.style.padding = "2px 5px";
         el.style.border = "1px solid #ccc";
         el.style.borderWidth = "1px 0";
+        el.style.fontFamily = "Lucida Grande,Tahoma,sans-serif";
         this.contentNode.appendChild(el);
         
         var el = doc.createElement("div");
@@ -472,7 +473,7 @@ var renderRule = function renderRule(selector, styles)
     for(var i=0, len=styles.length; i<len; i++)
     {
         var rule = styles[i];
-        str += rule.replace(/(.+)\:(.+)/, renderRuleReplacer);
+        str += rule.replace(/([^\:]+)\:(.+)/, renderRuleReplacer);
     }
     
     str += "<div class='SelectorEnd'>}</div>";
