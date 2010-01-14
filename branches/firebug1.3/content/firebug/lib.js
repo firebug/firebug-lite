@@ -308,6 +308,8 @@ var findLocation =  function findLocation()
 
     if (file)
     {
+        script.firebugIgnore = true;
+        
         var fileName = file[1];
         var fileOptions = file[2];
         
