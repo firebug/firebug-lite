@@ -1,0 +1,762 @@
+---------------------------------------------------------------------------------------------------
+Development brainstorming and notes
+---------------------------------------------------------------------------------------------------
+    - bookmarlet problem with XML+XSL documents!
+
+---------------------------------------------------------------------------------------------------
+Memory leaks
+---------------------------------------------------------------------------------------------------
+    - Menu
+    
+    - XHRSpy
+
+---------------------------------------------------------------------------------------------------
+CSS Cascading and Inheritance
+---------------------------------------------------------------------------------------------------
+
+    Cascading Order and Inheritance in CSS
+    http://monc.se/kitchen/38/cascading-order-and-inheritance-in-css
+    
+    Cascading Order Specification
+    http://www.w3.org/TR/REC-CSS1/#cascading-order
+    
+    Assigning property values, Cascading, and Inheritance
+    http://www.w3.org/TR/CSS21/cascade.html
+    
+    Table of CSS properties with initial values - Appendix F. Full property table
+    http://www.w3.org/TR/CSS21/propidx.html
+
+
+CSS imported styles
+
+      @import-rule as first rule in the first stylesheet:
+      
+      document.styleSheets[0].cssRules[0].styleSheet.cssRules;
+      
+      IE:
+            
+      document.styleSheets[0].imports[0].rules;
+
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+
+    Java Applet Vulnerability
+    http://www.cert.org/blogs/vuls/2008/06/signed_java_security_worse_tha.html
+    
+    Mutation Events
+    http://tobiasz123.wordpress.com/2009/01/19/utilizing-mutation-events-for-automatic-and-persistent-event-attaching/#comments
+    
+    Revise FBLite issues
+        http://code.google.com/p/fbug/issues/list?can=1&q=owner:pedrosimonetti&sort=-owner+-status&colspec=ID+Type+Status+Owner+Test+Summary&cells=tiles
+    
+    Reopen issues
+        Console Trace: http://code.google.com/p/fbug/issues/detail?id=394
+        appendNode IE: http://code.google.com/p/fbug/issues/detail?id=225
+    
+    Stack Trace improvements
+        http://github.com/lsmith/javascript-stack-trace/blob/master/getStackTrace.js
+        http://eriwen.com/javascript/js-stack-trace/
+    
+
+---------------------------------------------------------------------------------------------------
+ 1.3.0a4 IMPORTANT TODOs
+---------------------------------------------------------------------------------------------------
+
+  - Panel Interfaces 
+          - initialize / initializeNode / show / hide
+
+  - Contexts
+          - TabWatcher and TabContext - what exactly are they?
+
+  - Data Sharing / Cache
+
+  - Chrome Synchronization
+        ~~  - divide sync proccess into separated functions
+        ok  - move FirebugApplication to Firebug namespace
+
+  - Panel as Controller?
+
+  - SidePanelBar
+        sidePanel group? to show/hide multiple tabs
+            OK - NO. PANEL inherits SIDEPANELBAR
+
+  - OK - domplate uses 2 global namespaces: domplate, DomplateTag
+
+  - Computed Styles
+
+  - Console "multiline" sidePanel????
+
+  - CSS "Run CSS" sidePanel????
+
+  - Use "offline" mode when switching panels (to avoid loose any message)?    
+
+
+---------------------------------------------------------------------------------------------------
+ 1.4?
+---------------------------------------------------------------------------------------------------
+    cross-iframe
+    persistent popups
+    inherited styles
+    live edit
+    live highlight dom changes?
+    unit tests
+    Panel options menu
+    Context menu
+    tooltips (CSS color, images)
+    Layout Ruler
+
+---------------------------------------------------------------------------------------------------
+ Firebug Lite Future
+---------------------------------------------------------------------------------------------------
+
+High level of portability
+    - Lib
+    - Domplate
+    - Reps
+    - InsideOutBox
+    - Inspector
+    - Infotip?
+
+Mid level of portability
+    - Console
+    - HTML
+    - DOM
+    - CSS?
+    - tabContext?
+    - tabWatcher?
+
+Low level of portability
+    - Script
+    
+    - Chrome
+    - Selector
+    - Trace
+
+
+---------------------------------------------------------------------------------------------------
+ Major changes between Firebug and Firebug Lite codebase
+---------------------------------------------------------------------------------------------------
+    addEvent/removeEvent
+    instanceof
+    scope problem (local named functions)
+    "top" scope
+    panel activation
+    
+    same application instance running across all tabs?
+
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+
+    IE 6: gzip + ETag != If-None-Match
+    http://abstractfinal.blogspot.com/2007/05/ie-6-gzip-etag-if-none-match.html
+    
+    JavaScript + Frames + IE 6 + gzip + “no-cache” Header = Trouble
+    http://www.akmattie.net/blog/2007/11/10/javascript-frames-ie-6-gzip-no-cache-header-trouble/
+    
+    IE problems
+    http://www.julienlecomte.net/blog/2007/08/13/#comment-258
+    
+    
+    http://support.microsoft.com/kb/321722/EN-US/
+    http://support.microsoft.com/default.aspx?scid=kb;LN;Q312496
+    http://support.microsoft.com/default.aspx?scid=kb;en-us;823386&Product=ie600
+    
+
+---------------------------------------------------------------------------------------------------
+Firebug Lite 1.3a3
+---------------------------------------------------------------------------------------------------
+    - settings
+        - url settings "remote"/"local" should be replace
+            remote - should be the default
+            local - should be replace by "dev"
+
+    - getfirebug release instructions page
+        - what to test?
+            - bookmarlet
+            - UI
+                - positioning
+                - display
+                - resizing
+                - popup loading
+                - popup/frame synchronization
+                
+            - different scenarios (XHTML, XSL+XML)
+
+
+---------------------------------------------------------------------------------------------------
+Firebug Lite 1.3a4
+---------------------------------------------------------------------------------------------------
+    - DOM Panel
+    - basic doc? 
+    - settings
+    - getLocation - split('/') method
+
+
+---------------------------------------------------------------------------------------------------
+Firebug Lite 1.3a5
+---------------------------------------------------------------------------------------------------
+    - Computed Style Panel
+    - CSS Panel
+
+---------------------------------------------------------------------------------------------------
+Firebug Lite 1.3a6
+---------------------------------------------------------------------------------------------------
+    - Script Panel
+
+
+
+---------------------------------------------------------------------------------------------------
+Versions
+---------------------------------------------------------------------------------------------------
+    Firebug 1.3a3 - Revision: 4882
+    Firebug 1.3a2 - Revision: 3847
+
+    
+---------------------------------------------------------------------------------------------------
+BUGS
+---------------------------------------------------------------------------------------------------
+    - context.evaluate
+    
+    - define FBL.console to point to the global console
+    
+    - console should be installed in each Chrome window
+    
+    - commandLine API should be place in console.firebuglite.commandLineAPI
+    
+    - commandLine API not well defined, when in persistent mode
+
+    - When loading the bookmarlet in IE it shows a security warning
+        https://www.google.com/accounts/ServiceLogin?service=adwords&cd=null&hl=en-US&ltmpl=adwords&passive=true&ifr=false&alwf=true&continue=https%3A%2F%2Fadwords.google.com%2Fselect%2Fgaiaauth%3Fapt%3DNone%26ugl%3Dtrue&sourceid=awo&subid=ww-en-et-ads-0-adsC-all
+
+    - problem with IE and and frame.close() function that uses $(). picking wrong window in persistent mode.
+    
+    - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
+      the "open tag" node (<div>).
+    
+    - remove events added in disableTextSelection
+
+    - rename the id "FirebugChrome" to "FirebugFrame" or "FirebugChromeFrame" or "FirebugWindow"
+    
+    - window.onerror is being turned off when UI is minimized (and should not)
+    
+    - put IE6CSS in injected chrome
+    
+OK  - context is not being properly handled in persistent mode, when using
+      the autocomplete function in commandLine. It is using the wrong "window".
+      
+OK  - tabLStyle reference in Chrome
+
+OK  - commandLine API. Firebug.browser isn't avaiable when the library is initialized
+    
+OK  - Chrome options inheritance (extend) is not working as expected
+
+OK  - Popup in IE, problem in the draw method
+
+OK  - when NOT in injected mode, the new application load system doesn't work.
+
+OK  - when in injected DEVELOPMENT mode, in XHTML documents, Google Chrome
+      is having problems with the loading order of the multiple scripts.
+
+OK  - IE6 and problem with CSS. Selected element in HTML Tree.
+    
+OK  - bookmarlet fail in getfirebug.com/lite.html
+    
+OK  - reference to wrong URL in var inspectFrameStyle in Inspector module.
+     
+OK  - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
+    
+1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
+      and is getting hidden 
+
+
+---------------------------------------------------------------------------------------------------
+Domplate/Reps
+---------------------------------------------------------------------------------------------------
+    IE6:
+        - create special rules to IE6 in a separated file
+
+    Opera:
+        - native function: "prototype" in fn == true && listed in for..in
+        - user function: "prototype" in fn == true && not listed in for..in
+
+
+    
+---------------------------------------------------------------------------------------------------
+Statistics
+---------------------------------------------------------------------------------------------------
+    Use Google Analytics to track Firebug Lite statistics.
+    It could run inside the Chrome iframe (no global pollution).
+    Not called when used locally, included when in development mode.
+
+
+
+---------------------------------------------------------------------------------------------------
+XML + XSL
+---------------------------------------------------------------------------------------------------
+Opera doesn't have document.elementFromPoint in XML documents
+
+revise the use of createElement and createGlobalElement
+    createElement --> createChromeElement
+    createGlobalElement --> createElement
+
+
+---------------------------------------------------------------------------------------------------
+Missing
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+ Popup
+---------------------------------------------------------------------------------------------------
+    - Frame/Popup settings
+
+---------------------------------------------------------------------------------------------------
+ Loading
+---------------------------------------------------------------------------------------------------
+    - Firebug.initialize should
+        - create console namespace
+    
+    - window onerror - wrong time 
+    
+    - Check the initializing order. 
+    
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+    - Panel event delegation?
+
+---------------------------------------------------------------------------------------------------
+Tool Buttons
+---------------------------------------------------------------------------------------------------
+    - button location: Fixed buttons (inspect) and Panel buttons 
+
+ 
+ 
+---------------------------------------------------------------------------------------------------
+User Interface
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+General
+---------------------------------------------------------------------------------------------------
+    - Where exactly the errors indicator should be placed in the UI?
+
+---------------------------------------------------------------------------------------------------
+Skins
+---------------------------------------------------------------------------------------------------
+     OK - port changes in XP skin to the "classic" and "light" ones
+     
+    1.4 - divide .css files? so new skins can be easier to write, and changes in UI can be easily 
+          ported across skins 
+        
+    1.4 - each skin has in his own folder a file called "firebug.json" (or similar)
+    1.4 - improve the build skin methods in FBDev
+    1.4 - loadJSON method
+    1.4 - loadSkin method
+
+
+---------------------------------------------------------------------------------------------------
+TODO's
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+ScrollArea Class
+---------------------------------------------------------------------------------------------------
+    - isScrolled
+    - isVerticalScrolled
+    - isHorizontalScrolled
+    - isScrolledToBottom
+    - scrollToElement(el)
+    - isElementVisible(el)
+    - interceptMouseWheel
+
+
+---------------------------------------------------------------------------------------------------
+User Interface
+---------------------------------------------------------------------------------------------------
+    - Highlighted nodes in HTML tree with round corners (with OS color)
+        - current implementation isn't good (it uses both CSS hack and JS)
+        - Opera round corner SVG trick
+        - best way to go is dynamically create a CSS rule according each browser 
+    
+    - UI styling
+        - (?) detect Windows theme (XP or classic?)
+        - (?) detect OS (windows or mac?)
+    
+    - error UI indications (like FB in status bar)
+
+---------------------------------------------------------------------------------------------------
+Chrome
+---------------------------------------------------------------------------------------------------
+    - Opera problem with onunload and popups (context is not being destroyed)
+ 
+    
+---------------------------------------------------------------------------------------------------
+Controllers
+---------------------------------------------------------------------------------------------------
+    - (?) add option to skip frames
+
+---------------------------------------------------------------------------------------------------
+Core
+---------------------------------------------------------------------------------------------------
+    - (?) How to proceed when the console global variable is already defined?
+    - (?) how to auto-load FirebugLite + Extension in a single bookmarlet?
+    - custom Errors = throw new FirebugError("message")
+ ~~ - persitent popups
+ 
+---------------------------------------------------------------------------------------------------
+Core
+---------------------------------------------------------------------------------------------------
+    - Problem with id conflits. The same attribute is being used in the document
+      elements and in the HTML Tree, in the user interface.
+    - Check if there's a problem using the Sizzle selector engine in the code
+
+---------------------------------------------------------------------------------------------------
+Events
+---------------------------------------------------------------------------------------------------
+    - handle disble mouse wheel in Chrome, when in frame mode?
+
+
+
+---------------------------------------------------------------------------------------------------
+FBL 1.4
+---------------------------------------------------------------------------------------------------
+    - Tests
+        - Unit Tests
+        - Manual Tests
+        - Test generation?
+
+
+---------------------------------------------------------------------------------------------------
+Firebug
+---------------------------------------------------------------------------------------------------
+Domplate (crossport to FB) Fixed accidental global variable declaration in the compiled string.
+
+
+---------------------------------------------------------------------------------------------------
+Firebug bugs
+---------------------------------------------------------------------------------------------------
+
+Reps - r1088 - Array
+http://code.google.com/p/fbug/source/browse/branches/firebug1.3/content/firebug/reps.js?spec=svn1222&r=1088
+
+Global:
+http://code.google.com/p/fbug/issues/detail?id=1017&q=DOM&colspec=ID%20Type%20Status%20Owner%20Test%20Summary
+
+Gmail:
+http://code.google.com/p/fbug/issues/detail?id=1977&q=DOM&colspec=ID%20Type%20Status%20Owner%20Test%20Summary
+
+Form freak:
+http://code.google.com/p/fbug/issues/detail?id=534&q=array&colspec=ID%20Type%20Status%20Owner%20Test%20Summary
+
+
+
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+BRAINSTORMING SECTION
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+getPixelValue
+---------------------------------------------------------------------------------------------------
+Dean Edwards:
+http://erik.eae.net/archives/2007/07/27/18.54.15/#comment-102291
+
+var PIXEL = /^\d+(px)?$/i;
+function getPixelValue(element, value) {
+if (PIXEL.test(value)) return parseInt(value);
+var style = element.style.left;
+var runtimeStyle = element.runtimeStyle.left;
+element.runtimeStyle.left = element.currentStyle.left;
+element.style.left = value || 0;
+value = element.style.pixelLeft;
+element.style.left = style;
+element.runtimeStyle.left = runtimeStyle;
+return value;
+};
+
+
+window.PIXEL=/^\d+(px)?$/i, window.getPixelValue=function (element, value) {if (PIXEL.test(value)) return parseInt(value);var style = element.style.left;var runtimeStyle = element.runtimeStyle.left;element.runtimeStyle.left = element.currentStyle.left;element.style.left = value || 0;value = element.style.pixelLeft;element.style.left = style;element.runtimeStyle.left = runtimeStyle;return value;};
+
+---------------------------------------------------------------------------------------------------
+Library Expose
+---------------------------------------------------------------------------------------------------
+    - if a FBLite extension can be dynamically loaded, the FBL namespace should be exposed 
+    - if the FBL is exposed inside the iframe, it is less visible, and less conflictable 
+
+
+---------------------------------------------------------------------------------------------------
+FB vs FBLite
+---------------------------------------------------------------------------------------------------
+
+FB
+    - Each Panel has its own window
+    - A single Firebug application run across all browser tabs
+    - The Firebug application is persistent, that is, it can live after page change, or reload 
+
+FBLite
+    - All Chrome Panels runs in the same window, the chrome window
+    - The FirebugLite application run in a single browser tab
+    - The Firebug application isn't persistent 
+
+
+---------------------------------------------------------------------------------------------------
+Persistent Mode
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+Loading Process
+---------------------------------------------------------------------------------------------------
+
+1st Stage - Load the application in "offscreen mode", with only the console 
+            functions available.
+
+2nd Stage - Wait the page load, and then create the chrome window
+            (frame or popup, based on preferences).
+
+3rd Stage - Wait the chrome page load, and the install the application
+            in the chrome window context.
+
+4th Stage - Load the full application in chrome window, synchronizes it with
+            the first application loaded, and transfer the console
+            functions to the new "screen mode" application.
+
+----------------------------------
+Pros
+---------------------------------------------------------------------------------------------------
+    More safe
+        - no global namespace pollution, except for the "console" variable
+        - no internal code exposure
+    
+    Allows persistent popups
+
+---------------------------------------------------------------------------------------------------
+Cons
+---------------------------------------------------------------------------------------------------
+    More complex
+    More difficult to debug low level functions
+    less stable?
+
+
+---------------------------------------------------------------------------------------------------
+ Inherited Styles
+---------------------------------------------------------------------------------------------------
+
+    Some of that functionality is built into DOM Inspector, but you can look at 
+    the parts that Firebug does itself.
+
+    In lib.js there is a list of properties ("inheritedStyleNames") that can 
+    be automatically inherited, so for a given element it looks for such 
+    properties in the rules being applied to each ancestor. 
+    (That list doesn't include the special print or aural properties.)
+
+    The table here (http://www.w3.org/TR/CSS21/propidx.html) shows 
+    which properties are inherited by default.
+
+    "updateCascadeView" in css.js will also be of interest.
+
+    Via http://code.google.com/p/fbug/source/browse/ you can look at the files:
+
+    branches/firebug1.2/content/firebug/css.js
+    branches/firebug1.2/content/firebug/lib.js
+    
+    ----------------------------------------------------------------------------
+
+    Full CSS property table
+    http://www.w3.org/TR/CSS21/propidx.html
+
+
+
+
+---------------------------------------------------------------------------------------------------
+To organize
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+DOMPLATE
+---------------------------------------------------------------------------------------------------
+IE problems with templates
+
+1 - class name attributes of objects
+
+2 - colon after the last property of a object
+
+3 - event handlers  
+
+
+
+---------------------------------------------------------------------------------------------------
+Disable Text Selection
+---------------------------------------------------------------------------------------------------
+
+<script language="JavaScript1.2">
+
+function disabletext(e){
+return false
+}
+
+function reEnable(){
+return true
+}
+
+//if the browser is IE4+
+document.onselectstart=new Function ("return false")
+
+//if the browser is NS6
+if (window.sidebar){
+document.onmousedown=disabletext
+document.onclick=reEnable
+}
+</script>
+
+
+
+---------------------------------------------------------------------------------------------------
+XPATH
+---------------------------------------------------------------------------------------------------
+
+function getXPath(node, path) {
+  path = path || [];
+  if(node.parentNode) {
+    path = getXPath(node.parentNode, path);
+  }
+
+  if(node.previousSibling) {
+    var count = 1;
+    var sibling = node.previousSibling
+    do {
+      if(sibling.nodeType == 1 && sibling.nodeName == node.nodeName) {count++;}
+      sibling = sibling.previousSibling;
+    } while(sibling);
+    if(count == 1) {count = null;}
+  } else if(node.nextSibling) {
+    var sibling = node.nextSibling;
+    do {
+      if(sibling.nodeType == 1 && sibling.nodeName == node.nodeName) {
+        var count = 1;
+        sibling = null;
+      } else {
+        var count = null;
+        sibling = sibling.previousSibling;
+      }
+    } while(sibling);
+  }
+
+  if(node.nodeType == 1) {
+    path.push(node.nodeName.toLowerCase() + (node.id ? "[@id='"+node.id+"']" : count > 0 ? "["+count+"]" : ''));
+  }
+  return path;
+};
+
+
+// Getting result
+document.evaluate("/html/body/div/ul/li[2]", document, null, XPathResult.ANY_TYPE, null ).iterateNext()
+
+
+---------------------------------------------------------------------------------------------------
+Advanced CSS Features brainstorm
+---------------------------------------------------------------------------------------------------
+
+
+styleCache = {};
+
+// First style to add to cache is the inline styles
+for(cid in documentCache)
+{
+    styleCache[cid] = [];
+    styleCache[cid].push();
+}
+
+// for each stylesheet 
+for(stylesheet in stylesheets)
+{
+    // look at each rule
+    for(rule in stylesheet)
+    {
+        // get the rule's selector, and find all elements in document
+        var els = Firebug.Selector(rule.selector);
+        
+        // for each element found
+        for(var i=0, el; el=els[i]; i++)
+        {
+            var cid = el[cacheID];
+            
+            // Add style info in the cache stack of styles of the element 
+            styleCache[cid].push({
+                stylesheet: stylesheet,
+                lineNumber: getLineNumber(rule, stylesheet),
+                fileName: getFileName(rule, stylesheet),
+                selector: rule.selector,
+                styles: rule.styles
+            });
+        }
+    }
+
+}
+
+
+---------------------------------------------------------------------------------------------------
+Advanced CSS Features Implementation
+---------------------------------------------------------------------------------------------------
+
+function getInlineStyles(el)
+{
+    var style = el.style;
+    var r = {}, l, prop;
+    
+    // Good browsers first
+    if (l = style.length)
+    {
+        for(var i=0; i<l; i++)
+        {
+            prop = style[i];
+            r[toCamelCase(prop)] = style.getPropertyValue(prop);
+        }
+    }
+    // Sad browsers last
+    else
+    {
+      for(var prop in style)
+        if (ignoreIEStyleProperties.indexOf(prop) == -1 && 
+            isIEInlineStyleProperty(el, prop))
+                r[prop] = style[prop];
+    }
+    
+    return r;
+}
+
+var ignoreIEStyleProperties = " cssText accelerator ";
+function isIEInlineStyleProperty(el, prop)
+{
+    var r = false;
+    
+    if (typeof el.style[prop] == "string")
+    {
+        r = !!el.style[prop];
+    }
+    
+    return r;
+}
+
+
+function toCamelCase(s)
+{
+    return s.replace(_selectorCaseMatch, _toCamelCaseReplaceFn);
+}
+
+function toSelectorCase(s)
+{
+  return s.replace(_camelCaseMatch, "-$1").toLowerCase();
+  
+}
+
+var _camelCaseMatch = /([A-Z])/g;
+var _selectorCaseMatch = /\-(.)/g; 
+function _toCamelCaseReplaceFn(m,g)
+{
+    return g.toUpperCase();
+}

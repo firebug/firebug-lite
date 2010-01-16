@@ -1,0 +1,380 @@
+###################################################################################################
+ 1.3.0a5
+###################################################################################################
+
+-------------------------------------------------------------------------------
+CommandLine
+-------------------------------------------------------------------------------
+    - Large Command Line
+    - refactoring CommandLine module for better readability and encapsulation (commandHistory
+        is now a private variable in CommandLine module)
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - Fix problem in iframe creation that was blocking the UI creation via
+      bookmarlet in IE, for some pages.
+      
+    - Allow Firebug Lite UI to load in "windowless mode", without creating an
+      iframe. This is necessary to make the bookmarlet run in cases where it
+      is not possible to create an iframe.
+      
+    - refactoring Chrome module for better readability
+
+-------------------------------------------------------------------------------
+User Interface
+-------------------------------------------------------------------------------
+    - refined the layout of buttons (added an image background)
+    - refined the layout of log groups
+
+-------------------------------------------------------------------------------
+Context
+-------------------------------------------------------------------------------
+    - Better context evaluation (commands with multiple lines are now properly evaluated)
+    - context.evaluate() properly executes and returns the value of expressions with 
+      multiple commands (be it multilined or not).
+
+-------------------------------------------------------------------------------
+Style
+-------------------------------------------------------------------------------
+    - Editing feature of inline styles (Style panel)
+
+-------------------------------------------------------------------------------
+HTML
+-------------------------------------------------------------------------------
+    - properly format inline style of elements in IE to lower-case in HTML panel
+
+-------------------------------------------------------------------------------
+Lib
+-------------------------------------------------------------------------------
+    - fixed visibility detection and visibility representation of elements
+    - Fixed problems in IE with some event functions like isLeftClick(), isRightClick(), 
+      and others. IE has a different pattern for identifying mouse buttons.
+
+-------------------------------------------------------------------------------
+Console
+-------------------------------------------------------------------------------
+    - Added the "category" of error in the error messages (like "Type Error", "Syntax Error", etc).
+    - ported the consoleInjetor.js file that will be used with the new console (console2.js)
+    - ported the console.js file from Firebug codebase (not enabled yet). This will replace 
+      the current implementation of the Console panel in the 1.3 final version.
+
+-------------------------------------------------------------------------------
+Core
+-------------------------------------------------------------------------------
+    - fixed variable "root" leaking to global namespace (domplate.js) 
+    - improved development build functions
+
+
+###################################################################################################
+ 1.3.0a4
+###################################################################################################
+
+-------------------------------------------------------------------------------
+Core
+-------------------------------------------------------------------------------
+    - Improved the performance of the application initial loading time
+    - Improved the performance of the popup loading time
+    - Refactored the chrome synchronization mechanism
+    - Implemented synchronization of the persistent popup
+    - Fixed isFunction() problem with IE when dealing with external objects
+    
+    - Improved the memory consumption. Now each panel only uses resources (listen
+      for events, etc) when is currently selected.
+    
+    - Implemented the "Duck Type Detection" system, to make possible identify
+      native classes (Document, Element, etc) in IE, and therefore, generate
+      the appropriate visual representation.
+
+-------------------------------------------------------------------------------
+User Interface
+-------------------------------------------------------------------------------
+    - Moved all UI components to a separated gui.js file.
+    - Implemented the Menu class (with normal, checkbox, radiobutton, group
+      and separator items), that will be used in options menus at 1.3 verson
+      and in contexts menus at 1.4 version.
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - StatusBar
+    - SidePanel size and positioning
+    
+    - Long sequence of elements (like toolbar/statusbar buttons) don't "bleed" 
+      anymore (appears outside its container) when the chrome has small dimensions
+       
+    - Large panels now triggers automatically the appropriate scrollbars
+      (some huge scripts with long lines wans't triggering the horizontal scrollbar) 
+
+-------------------------------------------------------------------------------
+Console
+-------------------------------------------------------------------------------
+    - Fixed problem in console.time() and console.timeEnd().
+    - Implemented the console.trace (thanks dongryphon for the contribution!)
+
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+    - Implemented the border in the BoxModel Highlight
+    
+-------------------------------------------------------------------------------
+HTML
+-------------------------------------------------------------------------------
+    - Internet Explorer and inline styles representation (thanks christophe.blin 
+      for the contribution!)
+
+    - Implemented a basic sidePanel synchronization to test the overall 
+      performance of the rendering when inspecting elements
+
+-------------------------------------------------------------------------------
+DOM
+-------------------------------------------------------------------------------
+    - Ported the main part of the original DOM Panel in Firebug
+    - Ported the DOM "views path" mechanism (click and "go into" DOM objects)
+    - Improved the performance of the initial rendering 
+    - Implemented a basic DOM Panel subclass used in as HTML side panel
+
+-------------------------------------------------------------------------------
+Script
+-------------------------------------------------------------------------------
+    - Implemented the basics of the Script panel, with some code ported from
+      the Firebug Lite 1.2 version.
+      
+    - Better number of lines detection
+
+-------------------------------------------------------------------------------
+CSS
+-------------------------------------------------------------------------------
+    - Implemented the basics of the CSS panel, with some code ported from
+      the Firebug Lite 1.2 version.
+      
+    - Adjusted the rules and property names styles to lowercase
+
+-------------------------------------------------------------------------------
+Domplate
+-------------------------------------------------------------------------------
+    - Removed the dependency on global variables (domplate, DomplateTag)
+    - Adjusted the code so it can run in external contexts (persistent mode)
+
+
+
+###################################################################################################
+ 1.3.0a3
+###################################################################################################
+
+-------------------------------------------------------------------------------
+Core
+-------------------------------------------------------------------------------
+    - Better implementation of the chrome synchronization (detach and reattach methods)
+    - Improvements the location detection
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - XML+XSL and XHTML support
+    - Synchronization messages ("detach" and "reattach") are now dispatched to all panels 
+    - Fixed problem with Chrome synchronization in Opera
+    - Fixed weird bug in layout in IE (horizontal splitter was disappearing sometimes)
+
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+    - Reimplemented the IE auto margin size calculator
+    - Reimplemented the pointsToPixels function
+    - Reimplemented the pixelsPerInch calculator
+    - Outline Inspector is now "cropped" to avoid triggering the scrollbars
+
+-------------------------------------------------------------------------------
+Bookmarlet
+-------------------------------------------------------------------------------
+    - More robust and maintainable bookmarlet
+
+-------------------------------------------------------------------------------
+Domplate
+-------------------------------------------------------------------------------
+    - Ported the Domplate rendering engine
+
+-------------------------------------------------------------------------------
+Reps
+-------------------------------------------------------------------------------
+    - Ported the visual representation rules of objects (Reps module) 
+
+-------------------------------------------------------------------------------
+Persist
+-------------------------------------------------------------------------------
+    - Reimplemented the application core to support in the future persisted
+      Chromes, that is, UI windows that stays alive when the user reloads or
+      changes the page (considering that the following page is in the same domain).
+
+
+
+###################################################################################################
+ 1.3.0a2
+###################################################################################################
+
+-------------------------------------------------------------------------------
+Core Changes
+-------------------------------------------------------------------------------
+    - Context Class implemented to allow inspect different windows (contexts)
+    
+    - better settings handling: 
+        - modes: BookmarletMode, PersistentMode, TraceMode, DevelopmentMode
+        - skin: xp, classic, light
+
+    - all components were revised to better handling memory consumption. 
+      create()/destroy() methods (called when something is created) and 
+      initialize()/shutdown() when something is activated, or made visible.
+
+    - console.log calls are now captured even when the UI is not loaded
+    - better location detection
+    - library initialization reimplemented to support future persistent applications
+    
+-------------------------------------------------------------------------------
+User Interface Changes
+-------------------------------------------------------------------------------
+    - Created "xp" and "classic" skins. The old skin was based in a Firefox 
+      non-default theme.     
+    
+    - HTML and CSS revised to render properly in different browsers, running
+      on different compatibility modes (quirks mode, standards mode).
+    
+-------------------------------------------------------------------------------
+Chrome Changes
+-------------------------------------------------------------------------------
+    - better positioning calculation, when running on different compatibility 
+      modes (quirks mode, standards mode).
+    
+    - better window size, scrollSize and scollPosition calculations, when 
+      running on different compatibility modes (quirks mode, standards mode).
+    
+    - element:hover now works also in IE7 & IE8 when in quirks mode.
+    
+    - resize chrome performance (buffered frame-skip technique) 
+    
+    - mini-chrome implemented
+
+-------------------------------------------------------------------------------
+Core Additions
+-------------------------------------------------------------------------------
+    - FBTrace - internal logging system
+    
+    - DOM methods:
+        - createElement()
+        - createGlobalElement()
+        
+    - Event methods:
+        - bind()
+        - cancelEvent()
+        - addGlobalEvent()
+        - removeGlobalEvent()
+        - dispatch()
+        - disableTextSelection()
+    
+    - className methods:
+        - addClass()
+        - removeClass()
+        - hasClass()
+        - toggleClass()
+
+-------------------------------------------------------------------------------
+Chrome Additions
+-------------------------------------------------------------------------------
+    - Controller Class
+    - Module Class
+    - Panel Class
+    - PanelBar Class
+    - Button Class (normal and toggle buttons)
+    
+    - FBTrace Panel
+
+
+
+
+###################################################################################################
+ 1.3.0a1
+###################################################################################################
+
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+    - Inspect function implemented.
+
+    - onInspecting highlight element in HTML Tree behaviour implemented.
+      When inspecting, the elements are being highlighted, and the scroll
+      is being changed to make the element visible in the tree.
+
+-------------------------------------------------------------------------------
+Core
+-------------------------------------------------------------------------------
+    - Problem with scope in event handlers. All functions that need to access
+      the "shared scope" must be assigned to a local variable.
+        
+        var onClick = function onClick(e)
+        {
+        ...
+
+    - Revised "extend" and "append" functions
+
+    - problem with the new Firebug for FF3, it seems that it doesn't allow 
+      extending the console namespace anymore.
+            
+    - CommandLineAPI --> $, $$, dir, dirxml...
+
+    - Fixed bug in getLocation function, the relative path calculation wasn't 
+      working in all cases. 
+
+    - Fixed bug in commandLine. Commands that doesn't return a value (if, for,
+      while) wasn't being properly executed.
+
+-------------------------------------------------------------------------------
+Events
+-------------------------------------------------------------------------------
+    - Opera problem with the TAB key in commandLine
+
+    - Better handling of the F12 key press, which wasn't being properly
+      attached to the Chrome Frame window.
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - Problem with multiple iframes and the resizing of the Chrome, that
+      tries to add events on them.
+
+    - Fixed problem in IE when resizing the Chrome, when the relative position
+      of the mouse wasnt being computed in all frames of the document, 
+      resulting in strange flickerings when resizing it.
+
+    - Fixed problem in Opera when resizing the Chrome.
+
+    - Problem when resizing with the fbVSplitter, when it reaches the side of
+       the screen. Problem with negative pixel numbers.
+
+    - fbVSplitter is bigger than the frame in firefox. Problem with mouse scroll.
+
+    - isScrolledToBottom is not working in Firefox, it seems that this is 
+      happening because the scrollable panel is some pixels higher than
+      it should be.
+
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+    - Selected element in HTML tree isn't being highlighted (boxmodel)
+
+    - BoxModel functions entirely revised. Now the position, size, padding
+       and margin are being computed correctly, in all units: pt, px, em, ex
+       and % (need to test more deeply the percentage values).
+
+-------------------------------------------------------------------------------
+commandLine
+-------------------------------------------------------------------------------
+    - better handling of scope of commandLine.eval(), if you type "this" it will
+      refer to the CommandLine module, and it should refer to "window" instead
+
+
+
+
+###################################################################################################
+ 1.3.0a0
+###################################################################################################
+
+1.3.0 prototype
