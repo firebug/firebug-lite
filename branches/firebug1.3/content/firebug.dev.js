@@ -5,7 +5,7 @@
 
 // ************************************************************************************************
     
-var bookmarletMode = false;
+var bookmarletMode = true;
 var bookmarletURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/";
 
 //var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
