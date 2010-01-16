@@ -1,30 +1,67 @@
-###################################################################################################
+---------------------------------------------------------------------------------------------------
+Development brainstorming and notes
+---------------------------------------------------------------------------------------------------
+    - bookmarlet problem with XML+XSL documents!
+
+---------------------------------------------------------------------------------------------------
 Memory leaks
-###################################################################################################
-Menu
-XHRSpy
+---------------------------------------------------------------------------------------------------
+    - Menu
+    
+    - XHRSpy
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
+CSS Cascading and Inheritance
+---------------------------------------------------------------------------------------------------
 
-###################################################################################################
-Mutation Events
-http://tobiasz123.wordpress.com/2009/01/19/utilizing-mutation-events-for-automatic-and-persistent-event-attaching/#comments
-
-Revise FBLite issues
-    http://code.google.com/p/fbug/issues/list?can=1&q=owner:pedrosimonetti&sort=-owner+-status&colspec=ID+Type+Status+Owner+Test+Summary&cells=tiles
-
-Reopen issues
-    Console Trace: http://code.google.com/p/fbug/issues/detail?id=394
-    appendNode IE: http://code.google.com/p/fbug/issues/detail?id=225
-
-Stack Trace improvements
-    http://github.com/lsmith/javascript-stack-trace/blob/master/getStackTrace.js
-    http://eriwen.com/javascript/js-stack-trace/
+    Cascading Order and Inheritance in CSS
+    http://monc.se/kitchen/38/cascading-order-and-inheritance-in-css
+    
+    Cascading Order Specification
+    http://www.w3.org/TR/REC-CSS1/#cascading-order
+    
+    Assigning property values, Cascading, and Inheritance
+    http://www.w3.org/TR/CSS21/cascade.html
+    
+    Table of CSS properties with initial values - Appendix F. Full property table
+    http://www.w3.org/TR/CSS21/propidx.html
 
 
-###################################################################################################
+CSS imported styles
+
+      @import-rule as first rule in the first stylesheet:
+      
+      document.styleSheets[0].cssRules[0].styleSheet.cssRules;
+      
+      IE:
+            
+      document.styleSheets[0].imports[0].rules;
+
+---------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------
+
+    Java Applet Vulnerability
+    http://www.cert.org/blogs/vuls/2008/06/signed_java_security_worse_tha.html
+    
+    Mutation Events
+    http://tobiasz123.wordpress.com/2009/01/19/utilizing-mutation-events-for-automatic-and-persistent-event-attaching/#comments
+    
+    Revise FBLite issues
+        http://code.google.com/p/fbug/issues/list?can=1&q=owner:pedrosimonetti&sort=-owner+-status&colspec=ID+Type+Status+Owner+Test+Summary&cells=tiles
+    
+    Reopen issues
+        Console Trace: http://code.google.com/p/fbug/issues/detail?id=394
+        appendNode IE: http://code.google.com/p/fbug/issues/detail?id=225
+    
+    Stack Trace improvements
+        http://github.com/lsmith/javascript-stack-trace/blob/master/getStackTrace.js
+        http://eriwen.com/javascript/js-stack-trace/
+    
+
+---------------------------------------------------------------------------------------------------
  1.3.0a4 IMPORTANT TODOs
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
   - Panel Interfaces 
           - initialize / initializeNode / show / hide
@@ -55,44 +92,9 @@ Stack Trace improvements
   - Use "offline" mode when switching panels (to avoid loose any message)?    
 
 
-###################################################################################################
- 1.2 / 1.3 diff
-###################################################################################################
-
-    General
-        Performance
-        Modularity
-        Accuracy
-        Compatibility (cross-browser, XHTML and XML+XSL, and cross-iframe in the future)
-
-    User Interface
-        Recreation of Firebug 1.3 User Interface with pixel precision
-        Recreation of Firebug's Visual Object Representation (aka Reps)
-        Resizable sidePanel
-        Skinnable Interface
-        Skin in separated file, making easier to tweak the Interface or add new elements.
-
-    Inspector
-        BoxModel highlight
-
-    Console
-        console.group() and console.groupEnd()
-        console.trace()
-        console command line API functions $(), $$(), and dir()
-        autocomplete (tab, shift+tab)
-        can capture console messages before DOM document creation (scripts attached to HTML header) 
-
-    Core
-        Port most of the Firebug Library (aka Lib, FBL)
-        Port the Firebug DOM Templates Engine (aka Domplate), the magic behind Reps
-        Plugin system like Firebug
-        Context-independent (will allow cross-iframe debugging, and persistent popups)
-        Synchronization across different windows (iframe, popup)
-
-
-###################################################################################################
+---------------------------------------------------------------------------------------------------
  1.4?
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     cross-iframe
     persistent popups
     inherited styles
@@ -104,9 +106,9 @@ Stack Trace improvements
     tooltips (CSS color, images)
     Layout Ruler
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
  Firebug Lite Future
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 High level of portability
     - Lib
@@ -132,9 +134,9 @@ Low level of portability
     - Trace
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
  Major changes between Firebug and Firebug Lite codebase
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     addEvent/removeEvent
     instanceof
     scope problem (local named functions)
@@ -143,172 +145,28 @@ Low level of portability
     
     same application instance running across all tabs?
 
+---------------------------------------------------------------------------------------------------
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
-Application --> Env
-
-- Firebug
-    - Env
-        - browser
-        - chrome
-        
-        - create()
-        - destroy()
-        - initialize()
+    IE 6: gzip + ETag != If-None-Match
+    http://abstractfinal.blogspot.com/2007/05/ie-6-gzip-etag-if-none-match.html
     
-        - Settings
-            - openAtStartup
-            
-            - isPersistent
-            - isLocal
-            - isTrace
-            - isDevelopment
-        
-        - Location
-            - app
-            - baseDir
-            - skin
-            - skinDir
-            - source
-        
-        - Cache
-            - synchronize()
-            
-            - Chrome (ex-FirebugChrome)
-                - selectedPanel
-                - ...
-                
-            - HTML
-                - element
-                
-            - CSS
-                - source
-                
-            - Script
-                - source
-        
-
-FirebugChrome (called only once!)
-    create --> App.create
-    initialize --> App.create
-    clone --> Cache.synchronize()
-
-FirebugChrome --> Data/Cache
-
-Firebug.SharedData
-Firebug.GlobalCache
-
-
-SharedData
-    - setting1
-    - setting2
-    - setting3
+    JavaScript + Frames + IE 6 + gzip + “no-cache” Header = Trouble
+    http://www.akmattie.net/blog/2007/11/10/javascript-frames-ie-6-gzip-no-cache-header-trouble/
     
-    - Cache
-        - HTML
-            - element
-            
-        - CSS
-            - source
-            
-        - Script
-            - source
-            
-
-
-
-###################################################################################################
- 1.3.0a4
-###################################################################################################
-
-Lib
-    general source name and path functions
-    general cache
+    IE problems
+    http://www.julienlecomte.net/blog/2007/08/13/#comment-258
     
-    "FirebugChrome" shared memory name
-    "Application" name
-
-
-Console
-    Issue 394: implemented console.trace() provided by a contributor's patch (dongryphon).
-
-
-Script
-    Cache source code
-
-Reps
-    Issue 225: appendNode in Internet explorer should ony serialize 'real' attributes, fixed by contributor's patch (christophe.blin).
     
-CSS
-    Add AJAX request
-    Cache source code
-
-
-Chrome
-    Panel remember scroll position
-    Better detach and reattach methods
-    change chrome sync - 
-        only use innerHTML for logging panels (console/trace), rebuild the whole panel runs faster.
+    http://support.microsoft.com/kb/321722/EN-US/
+    http://support.microsoft.com/default.aspx?scid=kb;LN;Q312496
+    http://support.microsoft.com/default.aspx?scid=kb;en-us;823386&Product=ie600
     
 
-DOM
-    change DOM time skip frame technique
-        treshold should be duration time, not number of operations (freezes on slow computers/browsers)
-
-
-
-###################################################################################################
- 1.3.0a5
-###################################################################################################
-DOM improve
-
-HTML SidePanel Controller
-
-
-
-###################################################################################################
- 1.3.0a6
-###################################################################################################
-DOM improve
-
-HTML Style SidePanel
-HTML DOM SidePanel
-
-
-###################################################################################################
- 1.3.0a7
-###################################################################################################
-DOM improve
-
-DOM select Element
-
-Console
-  DOM view inside Console
-  click on DOM element --> goto DOM
-  click on HTML element --> goto HTML
-
-###################################################################################################
-###################################################################################################
-
-IE 6: gzip + ETag != If-None-Match
-http://abstractfinal.blogspot.com/2007/05/ie-6-gzip-etag-if-none-match.html
-
-JavaScript + Frames + IE 6 + gzip + “no-cache” Header = Trouble
-http://www.akmattie.net/blog/2007/11/10/javascript-frames-ie-6-gzip-no-cache-header-trouble/
-
-IE problems
-http://www.julienlecomte.net/blog/2007/08/13/#comment-258
-
-
-http://support.microsoft.com/kb/321722/EN-US/
-http://support.microsoft.com/default.aspx?scid=kb;LN;Q312496
-http://support.microsoft.com/default.aspx?scid=kb;en-us;823386&Product=ie600
-
-
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Firebug Lite 1.3a3
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     - settings
         - url settings "remote"/"local" should be replace
             remote - should be the default
@@ -327,38 +185,38 @@ Firebug Lite 1.3a3
             - different scenarios (XHTML, XSL+XML)
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Firebug Lite 1.3a4
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     - DOM Panel
     - basic doc? 
     - settings
     - getLocation - split('/') method
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Firebug Lite 1.3a5
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     - Computed Style Panel
     - CSS Panel
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Firebug Lite 1.3a6
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     - Script Panel
 
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Versions
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     Firebug 1.3a3 - Revision: 4882
     Firebug 1.3a2 - Revision: 3847
 
     
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 BUGS
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     - context.evaluate
     
     - define FBL.console to point to the global console
@@ -413,10 +271,9 @@ OK  - nodeControl in HTMLTree should not fire the node highlight (include rule i
       and is getting hidden 
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Domplate/Reps
-###################################################################################################
-
+---------------------------------------------------------------------------------------------------
     IE6:
         - create special rules to IE6 in a separated file
 
@@ -424,138 +281,20 @@ Domplate/Reps
         - native function: "prototype" in fn == true && listed in for..in
         - user function: "prototype" in fn == true && not listed in for..in
 
-      
 
-###################################################################################################
-Preferences Brainstorm
-###################################################################################################
-
+    
 ---------------------------------------------------------------------------------------------------
-User Preferences
----------------------------------------------------------------------------------------------------
-<script>
-Firebug.loadPrefs({
-    Chrome: {
-        skin: "xp",
-        height: 400
-    }
-});
-</script>
-
-    - Console
-        - override (for non-FF browsers)
-
-    - HTML
-        - ?
-        - ignoreFirebugElements
-    
-    - DOM
-        - show DOM members
-        - ...
-
-    - Chrome
-        - open
-        - type
-        - skin
-        
-        - Frame
-            - height
-    
-        - Popup
-            - top
-            - left
-            - width
-            - height
-
-    - Application
-        - publish
-        - remote
-        - persist
-        - trace: "all"
-
-
-
----------------------------------------------------------------------------------------------------
-Application Preferences
----------------------------------------------------------------------------------------------------
-
-    ------------------
-    chrome
-    ------------------
-    - trace
-    - popup
-    
-    - frame
-        - height
-        
-    - popup
-        - height
-        - width (popup only)
-        - top (popup only)
-        - left (popup only)
-
-    - skin
-    
-    - override
-
-    ------------------
-    modes
-    ------------------
-    - trace
-    - persist
-
-
-========================================================================
-===== Chrome States ====================================================
-========================================================================
-
-===== Window ===========================================================
-    - type (frame, popup)
-    - height
-    - width (popup)
-    - position (popup)
-
-===== Console ==========================================================
-    - console commandLine history
-
-===== Tab ==============================================================
-  - active Panel
-
-
-
-========================================================================
-===== Panel States =====================================================
-========================================================================
-    - offset (scroll position)
-    - toolbarButtons
-    - statusBar
-    
-    - isSearchable
-    - busca
-    
-    - consoleVisible
-    - sidePanelVisible
-
-===== SidePanel =======================================================
-    - offset (scroll position)
-    - sidePanelWidth
-    - activeSidePanel
-
-
-
-    
-###################################################################################################
 Statistics
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     Use Google Analytics to track Firebug Lite statistics.
     It could run inside the Chrome iframe (no global pollution).
     Not called when used locally, included when in development mode.
 
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 XML + XSL
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Opera doesn't have document.elementFromPoint in XML documents
 
 revise the use of createElement and createGlobalElement
@@ -563,49 +302,14 @@ revise the use of createElement and createGlobalElement
     createGlobalElement --> createElement
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Missing
-###################################################################################################
-
 ---------------------------------------------------------------------------------------------------
- Chrome context synchronize
----------------------------------------------------------------------------------------------------
-OK  - frame.isVisible --> isOpen?
-OK  - Firebug.chromeMap.frame & Firebug.chromeMap.popup
 
 ---------------------------------------------------------------------------------------------------
  Popup
 ---------------------------------------------------------------------------------------------------
-OK  - problem with global events when in popup window
-      add/removeGlobalEvent looks for iframes only, excluding popup windows.
-      
     - Frame/Popup settings
-    
-OK  - Synchronize chromes
-        
-    OK  - detach and reattach methods
-    
-    OK  - dispatch detach and reattach methods to panels  
-    
-    OK  - Chrome Frame should have different states and handlers when in minichrome mode
-        
-    OK  - mini-chrome should be "spans" and not "divs"
-        
-    OK  - onPressF12 should not be disabled when chrome frame closes
-        
-    OK  - refactor panel. each panel should have a single panelContentNode that will be shared
-          across Chrome windows.
-          
-    OK  - divide Chrome.initialize and Chrome.create. addPanel() should be added only in create()
-        
-    OK  - margin in HTML tree isn't being synchronized
-        
-    OK  - selected element in HTML tree isn't being synchronized
-    
-Seems to be fixed - popup chrome in Opera isn't being initialized when NOT in bookmarlet mode. 
-      Maybe the best way to detect when the chrome is loaded is the Joe Hewitt old way putting 
-      JS in the end of HTML body. This is not a major issue since bookmarlet mode will be
-      allways active when in production.
 
 ---------------------------------------------------------------------------------------------------
  Loading
@@ -617,75 +321,26 @@ Seems to be fixed - popup chrome in Opera isn't being initialized when NOT in bo
     
     - Check the initializing order. 
     
-OK  - Console.create() is being called in the wrong time
-    
-OK  - Check create() and initialize() methods of Modules and Panels.
-    OK  - HTML panel create() will be called twice (1 for frame and 1 for popup)
-    
-    
 ---------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------
     - Panel event delegation?
 
-
----------------------------------------------------------------------------------------------------
- Preferences?
----------------------------------------------------------------------------------------------------
-    - FBL.application
-    - FBL.preferences
-    
-
-    
 ---------------------------------------------------------------------------------------------------
 Tool Buttons
 ---------------------------------------------------------------------------------------------------
-OK  - toolButtons
-    OK  - default button
-    OK  - toggle button (inspect, edit html)
-    
-OK  - inherits from Controller
-OK  - it has one of 2 types (normal and toggle buttons)
-OK  - it has, on a giving time, one of 2 states (pressed, and unpressed)
-    
     - button location: Fixed buttons (inspect) and Panel buttons 
- 
----------------------------------------------------------------------------------------------------
- UI
----------------------------------------------------------------------------------------------------
- OK - IE problem with Console and Trace panels. Scroll isnt working!!
-      maybe a dummy div solves the problem? because the HTML has one, and scrolls fine
-    
- OK - IE problem with tree node control positioning [+]
-     OK - fix is to use absolute position in the control and the left and right panels
-          need to check the z-indexes of the overall interface.
 
  
  
 ---------------------------------------------------------------------------------------------------
- DOM
----------------------------------------------------------------------------------------------------
- 
-Sorting Order:
-    First letter uppercase
-    underscore followed by uppercase letter
-    underscore followed by lowercase letter
-    First letter lowercase
-
-
-###################################################################################################
 User Interface
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------
 General
 ---------------------------------------------------------------------------------------------------
     - Where exactly the errors indicator should be placed in the UI?
-
----------------------------------------------------------------------------------------------------
-MiniChrome
----------------------------------------------------------------------------------------------------
-    - 
 
 ---------------------------------------------------------------------------------------------------
 Skins
@@ -701,9 +356,9 @@ Skins
     1.4 - loadSkin method
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 TODO's
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------
 ScrollArea Class
@@ -730,32 +385,24 @@ User Interface
         - (?) detect OS (windows or mac?)
     
     - error UI indications (like FB in status bar)
-OK  - UI indication when chrome is hidden
 
 ---------------------------------------------------------------------------------------------------
 Chrome
 ---------------------------------------------------------------------------------------------------
     - Opera problem with onunload and popups (context is not being destroyed)
- OK - frame, frameStyle, consoleFrame, consoleBody
  
     
 ---------------------------------------------------------------------------------------------------
 Controllers
 ---------------------------------------------------------------------------------------------------
     - (?) add option to skip frames
- OK - add controllers Class
 
 ---------------------------------------------------------------------------------------------------
 Core
 ---------------------------------------------------------------------------------------------------
     - (?) How to proceed when the console global variable is already defined?
     - (?) how to auto-load FirebugLite + Extension in a single bookmarlet?
-    
     - custom Errors = throw new FirebugError("message")
-    - better location detection to allow advanced settings via URL 
- OK - create/destroy, initialize/shutdown. rename functions to this pattern.
- OK - context
- OK - library loading in different windows
  ~~ - persitent popups
  
 ---------------------------------------------------------------------------------------------------
@@ -763,55 +410,33 @@ Core
 ---------------------------------------------------------------------------------------------------
     - Problem with id conflits. The same attribute is being used in the document
       elements and in the HTML Tree, in the user interface.
-
- OK - Better handling of switching tab contexts (selectedTab, rightPanelVisible)
     - Check if there's a problem using the Sizzle selector engine in the code
-
----------------------------------------------------------------------------------------------------
-Lib
----------------------------------------------------------------------------------------------------
-OK FBL.$
-OK FBL.$$
-
----------------------------------------------------------------------------------------------------
-Console
----------------------------------------------------------------------------------------------------
-  $0
-  $1
 
 ---------------------------------------------------------------------------------------------------
 Events
 ---------------------------------------------------------------------------------------------------
- OK - use of dispatch
- OK - handle disble text selection on Vertical Scrolling
     - handle disble mouse wheel in Chrome, when in frame mode?
 
 
+
 ---------------------------------------------------------------------------------------------------
-CommandLine
----------------------------------------------------------------------------------------------------
-    - refactor commandLine to hide internal methods and properties.
-
-
-
-###################################################################################################
 FBL 1.4
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     - Tests
         - Unit Tests
         - Manual Tests
         - Test generation?
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Firebug
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Domplate (crossport to FB) Fixed accidental global variable declaration in the compiled string.
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Firebug bugs
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 Reps - r1088 - Array
 http://code.google.com/p/fbug/source/browse/branches/firebug1.3/content/firebug/reps.js?spec=svn1222&r=1088
@@ -827,17 +452,17 @@ http://code.google.com/p/fbug/issues/detail?id=534&q=array&colspec=ID%20Type%20S
 
 
 
-###################################################################################################
-###################################################################################################
-###################################################################################################
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 BRAINSTORMING SECTION
-###################################################################################################
-###################################################################################################
-###################################################################################################
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 getPixelValue
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Dean Edwards:
 http://erik.eae.net/archives/2007/07/27/18.54.15/#comment-102291
 
@@ -857,17 +482,16 @@ return value;
 
 window.PIXEL=/^\d+(px)?$/i, window.getPixelValue=function (element, value) {if (PIXEL.test(value)) return parseInt(value);var style = element.style.left;var runtimeStyle = element.runtimeStyle.left;element.runtimeStyle.left = element.currentStyle.left;element.style.left = value || 0;value = element.style.pixelLeft;element.style.left = style;element.runtimeStyle.left = runtimeStyle;return value;};
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Library Expose
-###################################################################################################
+---------------------------------------------------------------------------------------------------
     - if a FBLite extension can be dynamically loaded, the FBL namespace should be exposed 
     - if the FBL is exposed inside the iframe, it is less visible, and less conflictable 
 
 
-
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 FB vs FBLite
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 FB
     - Each Panel has its own window
@@ -880,56 +504,9 @@ FBLite
     - The Firebug application isn't persistent 
 
 
-###################################################################################################
-Chrome Design
-###################################################################################################
-
 ---------------------------------------------------------------------------------------------------
-Chrome
----------------------------------------------------------------------------------------------------
-    - {?) panelControl
-    - panelBar
-    - panel // active panel
-    
-    - sidePanel // active side panel
-    - commandLine
-
-
-    - selectPanel()
-    - selectSidePanel()
-
-
----------------------------------------------------------------------------------------------------
-Panel
----------------------------------------------------------------------------------------------------
-    - {?) panelControl
-    - panelBar
-    
-    - sidePanel // active side panel
-    - commandLine
-    
-    
-    - isVisible // may be offline, in a documentFragment
-    - show
-    - hide
-
----------------------------------------------------------------------------------------------------
-PanelControl
----------------------------------------------------------------------------------------------------
-    - registerPanel
-    - removePanel
-    - removePanels
-    - selectPanel
-
----------------------------------------------------------------------------------------------------
-PanelBar
----------------------------------------------------------------------------------------------------
-    - selectPanel()
-    
-
-###################################################################################################
 Persistent Mode
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------
 Loading Process
@@ -965,16 +542,9 @@ Cons
     less stable?
 
 
-###################################################################################################
- Debugger
-###################################################################################################
-MSIE Script Debugger Sample
-http://msdn.microsoft.com/en-us/magazine/cc301316.aspx
-
-
-###################################################################################################
+---------------------------------------------------------------------------------------------------
  Inherited Styles
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
     Some of that functionality is built into DOM Inspector, but you can look at 
     the parts that Firebug does itself.
@@ -1002,19 +572,9 @@ http://msdn.microsoft.com/en-us/magazine/cc301316.aspx
 
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 To organize
-###################################################################################################
-
 ---------------------------------------------------------------------------------------------------
-Document Cache
----------------------------------------------------------------------------------------------------
-
-[ELEMENT_ID]
-    - element
-    - context
-    - styles
-    - MD5
 
 ---------------------------------------------------------------------------------------------------
 DOMPLATE
@@ -1029,9 +589,9 @@ IE problems with templates
 
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Disable Text Selection
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 <script language="JavaScript1.2">
 
@@ -1055,9 +615,9 @@ document.onclick=reEnable
 
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 XPATH
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 function getXPath(node, path) {
   path = path || [];
@@ -1097,32 +657,9 @@ function getXPath(node, path) {
 document.evaluate("/html/body/div/ul/li[2]", document, null, XPathResult.ANY_TYPE, null ).iterateNext()
 
 
-
-###################################################################################################
-DomPlate changes pieces
-###################################################################################################
-
-//Returns true if it is a DOM node
-function isNode(o){
-  return (
-    typeof Node === "object" ? o instanceof Node : 
-    typeof o === "object" && typeof o.nodeType === "number" && typeof o.nodeName==="string"
-  );
-}
-
-//Returns true if it is a DOM element    
-function isElement(o){
-  return (
-    typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
-    typeof o === "object" && o.nodeType === 1 && typeof o.nodeName==="string"
-);
-}
-
-
-
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Advanced CSS Features brainstorm
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 
 styleCache = {};
@@ -1162,9 +699,9 @@ for(stylesheet in stylesheets)
 }
 
 
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 Advanced CSS Features Implementation
-###################################################################################################
+---------------------------------------------------------------------------------------------------
 
 function getInlineStyles(el)
 {

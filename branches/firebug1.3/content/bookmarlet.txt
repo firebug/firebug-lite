@@ -9,7 +9,30 @@ F.getElementsByTagName('head')[0].appendChild(L);
 })(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js#remote');
 
 javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js#remote');
-javascript:(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'http://firebug.local:8740/firebug1.3/build/firebug.full.js#remote');
+
+//*************************************************************************************************
+
+(function(F,i,r,e,b,u,g,L,I,T,E){
+if(F.getElementById(b))return;
+
+E=F.documentElement.namespaceURI;
+E=E?F[i+'NS'](E,'script'):F[i]('script');
+
+E=F[i]('script');
+E[r]('id',b);
+E[r]('src',I+g+T);
+E[r](b,u);
+(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);
+
+E=new Image;
+E[r]('src',I+L);
+})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.3','build/firebug.jgz','skin/xp/sprite.png','http://firebug.local:8740/firebug1.3/','#startOpened');
+})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.3','build/firebug.jgz','skin/xp/sprite.png','http://fbug.googlecode.com/svn/lite/branches/firebug1.3/','#startOpened');
+//  F         i               r              e                      b                       u         g                    L                   I                                                          T
+
+
+http://firebug.local:8740/firebug1.3/
+http://fbug.googlecode.com/svn/lite/branches/firebug1.3/
 
 
 //*************************************************************************************************
