@@ -122,7 +122,7 @@ FBL.FirebugChrome =
         
         if (Env.chrome.type == "frame" || Env.chrome.type == "div")
             ChromeMini.create(Env.chrome);
-            
+        
         var chrome = Firebug.chrome = new Chrome(Env.chrome);
         FirebugChrome.chromeMap[chrome.type] = chrome;
         
@@ -204,7 +204,7 @@ var createChromeWindow = function(options)
         
         createChromeDiv = function()
         {
-            //Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
+            Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
         
             var node = chrome.node = createGlobalElement("div"),
                 style = createGlobalElement("style"),
@@ -245,8 +245,8 @@ var createChromeWindow = function(options)
             {
                 // IE7 CSS bug (FbChrome table bigger than its parent div)
                 setTimeout(function(){
-                node.firstChild.style.height = "1px";
-                node.firstChild.style.position = "static";
+                    node.firstChild.style.height = "1px";
+                    node.firstChild.style.position = "static";
                 },0);
                 /**/
             }
@@ -877,8 +877,8 @@ append(ChromeBase,
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        //if (Firebug.Console)
-        //    Firebug.Console.flush();
+        if (Firebug.Console)
+            Firebug.Console.flush();
         
         if (Firebug.Trace)
             FBTrace.flush(Firebug.Trace);
@@ -1470,6 +1470,9 @@ var ChromeFrameBase = extend(ChromeBase,
         {
             FirebugChrome.isOpen = true;
             
+            if (Env.isChromeExtension)
+                localStorage.setItem("FB_isOpen", "true");
+            
             var node = this.node;
             
             node.style.visibility = "hidden"; // Avoid flickering
@@ -1515,6 +1518,9 @@ var ChromeFrameBase = extend(ChromeBase,
             }
             
             FirebugChrome.isOpen = false;
+            
+            if (Env.isChromeExtension)
+                localStorage.setItem("FB_isOpen", "");
             
             var node = this.node;
             

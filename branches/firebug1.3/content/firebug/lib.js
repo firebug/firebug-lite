@@ -25,6 +25,10 @@ var FBL = {};
 // ************************************************************************************************
 // Constants
     
+var productionDir = "http://getfirebug.com/releases/lite/";
+
+// ************************************************************************************************
+
 var reNotWhitespace = /[^\s]/;
 var reSplitFile = /:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
 
@@ -306,10 +310,11 @@ var findLocation =  function findLocation()
         }
     }
 
+    if (script)
+        script.firebugIgnore = true;
+    
     if (file)
     {
-        script.firebugIgnore = true;
-        
         var fileName = file[1];
         var fileOptions = file[2];
         
@@ -358,6 +363,14 @@ var findLocation =  function findLocation()
                 }
             }
         }
+    }
+    
+    FBL.Env.isChromeExtension = script && script.getAttribute("extension") == "Chrome"; 
+    if (FBL.Env.isChromeExtension)
+    {
+        //path = productionDir;
+        path = "http://firebug.local:8740/firebug1.3/build/";
+        script = {innerHTML: "{showIconWhenHidden:false}"};
     }
     
     var m = path && path.match(/([^\/]+)\/$/) || null;
@@ -422,7 +435,7 @@ var findLocation =  function findLocation()
         }
         
         var loc = Env.Location;
-        var isProductionRelease = path.indexOf("http://getfirebug.com/releases/lite/") != -1;
+        var isProductionRelease = path.indexOf(productionDir) != -1;
         
         loc.sourceDir = path;
         loc.baseDir = path.substr(0, path.length - m[1].length - 1);
