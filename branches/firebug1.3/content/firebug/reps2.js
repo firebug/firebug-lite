@@ -1016,7 +1016,10 @@ this.SourceLink = domplate(Firebug.Rep,
                 FBTrace.sysout("reps.getSourceLinkTitle decodeURIComponent fails for \'"+fileName+"\': "+exc, exc);
         }
         
-        return fileName + " (line " + sourceLink.line + ")";
+        return typeof sourceLink.line == "number" ?
+                fileName + " (line " + sourceLink.line + ")" :
+                fileName;
+        
         // TODO: xxxpedro
         //return $STRF("Line", [fileName, sourceLink.line]);
     },
