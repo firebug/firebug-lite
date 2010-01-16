@@ -3,6 +3,20 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+// ************************************************************************************************
+// Globals
+
+var ignoreHTMLProps =
+{
+    // ignores the attributes injected by Sizzle, otherwise it will 
+    // be visible on IE (when enumerating element.attributes)
+    sizcache: 1,
+    sizset: 1
+};
+
+// ignores also the cache property injected by firebug
+ignoreHTMLProps[cacheID] = 1;
+
 
 // ************************************************************************************************
 // HTML Module
@@ -64,8 +78,9 @@ Firebug.HTML = extend(Firebug.Module,
                 for (var i = 0; i < node.attributes.length; ++i)
                 {
                     var attr = node.attributes[i];
-                    if (!attr.specified || attr.nodeName == cacheID)
-                        continue;
+                    if (!attr.specified || Firebug.ignoreFirebugElements && 
+                        ignoreHTMLProps.hasOwnProperty(attr.nodeName))
+                            continue;
                     
                     var name = attr.nodeName.toLowerCase();
                     var value = name == "style" ? formatStyles(node.style.cssText) : attr.nodeValue;
