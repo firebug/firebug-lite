@@ -65,13 +65,13 @@ Firebug.Inspector =
     {
         isInspecting = false;
         
-        destroyInspectorFrame();
-        
-        Firebug.chrome.inspectButton.restore();
-        
         if (outlineVisible) this.hideOutline();
         removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
         removeEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
+        
+        destroyInspectorFrame();
+        
+        Firebug.chrome.inspectButton.restore();
         
         if (Firebug.chrome.type == "popup")
             Firebug.chrome.node.focus();
@@ -431,7 +431,11 @@ var createInspectorFrame = function createInspectorFrame()
 
 var destroyInspectorFrame = function destroyInspectorFrame()
 {
-    Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
+    if (fbInspectFrame)
+    {
+        Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
+        fbInspectFrame = null;
+    }
 };
 
 var createOutlineInspector = function createOutlineInspector()
