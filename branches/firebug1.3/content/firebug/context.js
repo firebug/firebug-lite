@@ -218,7 +218,10 @@ FBL.Context.prototype =
 
     getElementFromPoint: function(x, y)
     {
-        if (isOpera || isSafari)
+        // TODO: xxxpedro
+        // getElementFromPoint results are different from Chrome 3 and 4 (beta) versions!
+        // Check if this behavior will be the official one in the 4 final release
+        if (isOpera || isSafari && !Env.isChromeExtension)
         {
             var scroll = this.getWindowScrollPosition();
             return this.document.elementFromPoint(x + scroll.left, y + scroll.top);
