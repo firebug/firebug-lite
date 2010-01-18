@@ -1,8 +1,8 @@
 var firebug = {
-  version:[1.23,20090506],
+  version:[1.231,20100118],
   el:{}, 
   env:{ 
-    "css":"http://fbug.googlecode.com/svn/lite/branches/firebug1.2/firebug-lite.css", 
+    "css":"http://getfirebug.com/releases/lite/1.2/firebug-lite.css", 
     "debug":true,
     "detectFirebug":true,
     "dIndex":"console", 
