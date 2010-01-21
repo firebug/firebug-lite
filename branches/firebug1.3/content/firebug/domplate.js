@@ -946,6 +946,63 @@ var Renderer =
         return [firstRow, lastRow];
     },
 
+    insertBefore: function(args, before, self)
+    {
+        return this.insertNode(args, before.ownerDocument, before, false, self);
+    },
+
+    insertAfter: function(args, after, self)
+    {
+        return this.insertNode(args, after.ownerDocument, after, true, self);
+    },
+
+    insertNode: function(args, doc, element, isAfter, self)
+    {
+        if (!args)
+            args = {};
+
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+        
+        //if (FBTrace.DBG_DOM)
+        //    FBTrace.sysout("domplate.insertNode html: "+html+"\n");
+
+        var doc = element.ownerDocument;
+        if (!womb || womb.ownerDocument != doc)
+            womb = doc.createElement("div");
+        
+        womb.innerHTML = html;
+  
+        var root = womb.firstChild;
+        if (isAfter)
+        {
+            while (womb.firstChild)
+                if (element.nextSibling)
+                    element.parentNode.insertBefore(womb.firstChild, element.nextSibling);
+                else
+                    element.parentNode.appendChild(womb.firstChild);
+        }
+        else
+        {
+            while (womb.lastChild)
+                element.parentNode.insertBefore(womb.lastChild, element);
+        }
+
+        var domArgs = [root, this.tag.context, 0];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+
+        //if (FBTrace.DBG_DOM)
+        //    FBTrace.sysout("domplate.insertNode domArgs:", domArgs);
+        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
+
+        return root;
+    },
+    /**/
+
+    /*
     insertAfter: function(args, before, self)
     {
         this.tag.compile();
@@ -959,7 +1016,7 @@ var Renderer =
         
         womb.innerHTML = html;
   
-        root = womb.firstChild;
+        var root = womb.firstChild;
         while (womb.firstChild)
             if (before.nextSibling)
                 before.parentNode.insertBefore(womb.firstChild, before.nextSibling);
@@ -975,7 +1032,8 @@ var Renderer =
 
         return root;
     },
-
+    /**/
+    
     replace: function(args, parent, self)
     {
         this.tag.compile();
