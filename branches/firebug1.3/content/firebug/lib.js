@@ -1,6 +1,6 @@
 /*!*************************************************************
  *
- *    Firebug Lite 1.3a5
+ *    Firebug Lite 1.3a6
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -458,6 +458,12 @@ this.bind = function()  // fn, thisObject, args => thisObject.fn(args, arguments
    return function() { return fn.apply(object, arrayInsert(cloneArray(args), 0, arguments)); }
 };
 
+this.bindFixed = function() // fn, thisObject, args => thisObject.fn(args);
+{
+    var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
+    return function() { return fn.apply(object, args); }
+};
+
 this.extend = function(l, r)
 {
     var newOb = {};
@@ -619,17 +625,267 @@ this.getCSS = this.isIE ?
 
 
 // ************************************************************************************************
-// String Util
+// Whitespace and Entity conversions
 
-var reTrim = /^\s+|\s+$/g;
-this.trim = function(s)
+var entityConversionLists = this.entityConversionLists = {
+    normal : {
+        whitespace : {
+            '\t' : '\u200c\u2192',
+            '\n' : '\u200c\u00b6',
+            '\r' : '\u200c\u00ac',
+            ' '  : '\u200c\u00b7'
+        }
+    },
+    reverse : {
+        whitespace : {
+            '&Tab;' : '\t',
+            '&NewLine;' : '\n',
+            '\u200c\u2192' : '\t',
+            '\u200c\u00b6' : '\n',
+            '\u200c\u00ac' : '\r',
+            '\u200c\u00b7' : ' '
+        }
+    }
+};
+
+var normal = entityConversionLists.normal,
+    reverse = entityConversionLists.reverse;
+
+function addEntityMapToList(ccode, entity)
 {
-    return s.replace(reTrim, "");
+    var lists = Array.prototype.slice.call(arguments, 2),
+        len = lists.length,
+        ch = String.fromCharCode(ccode);
+    for (var i = 0; i < len; i++)
+    {
+        var list = lists[i];
+        normal[list]=normal[list] || {};
+        normal[list][ch] = '&' + entity + ';';
+        reverse[list]=reverse[list] || {};
+        reverse[list]['&' + entity + ';'] = ch;
+    }
+};
+
+var e = addEntityMapToList,
+    white = 'whitespace',
+    text = 'text',
+    attr = 'attributes',
+    css = 'css',
+    editor = 'editor';
+
+e(0x0022, 'quot', attr, css);
+e(0x0026, 'amp', attr, text, css);
+e(0x0027, 'apos', css);
+e(0x003c, 'lt', attr, text, css);
+e(0x003e, 'gt', attr, text, css);
+e(0xa9, 'copy', text, editor);
+e(0xae, 'reg', text, editor);
+e(0x2122, 'trade', text, editor);
+
+// See http://en.wikipedia.org/wiki/Dash
+e(0x2012, '#8210', attr, text, editor); // figure dash
+e(0x2013, 'ndash', attr, text, editor); // en dash
+e(0x2014, 'mdash', attr, text, editor); // em dash
+e(0x2015, '#8213', attr, text, editor); // horizontal bar
+
+e(0x00a0, 'nbsp', attr, text, white, editor);
+e(0x2002, 'ensp', attr, text, white, editor);
+e(0x2003, 'emsp', attr, text, white, editor);
+e(0x2009, 'thinsp', attr, text, white, editor);
+e(0x200c, 'zwnj', attr, text, white, editor);
+e(0x200d, 'zwj', attr, text, white, editor);
+e(0x200e, 'lrm', attr, text, white, editor);
+e(0x200f, 'rlm', attr, text, white, editor);
+e(0x200b, '#8203', attr, text, white, editor); // zero-width space (ZWSP)
+
+//************************************************************************************************
+// Entity escaping
+
+var entityConversionRegexes = {
+        normal : {},
+        reverse : {}
+    };
+
+var escapeEntitiesRegEx = {
+    normal : function(list)
+    {
+        var chars = [];
+        for ( var ch in list)
+        {
+            chars.push(ch);
+        }
+        return new RegExp('([' + chars.join('') + '])', 'gm');
+    },
+    reverse : function(list)
+    {
+        var chars = [];
+        for ( var ch in list)
+        {
+            chars.push(ch);
+        }
+        return new RegExp('(' + chars.join('|') + ')', 'gm');
+    }
+};
+
+function getEscapeRegexp(direction, lists)
+{
+    var name = '', re;
+    var groups = [].concat(lists);
+    for (i = 0; i < groups.length; i++)
+    {
+        name += groups[i].group;
+    }
+    re = entityConversionRegexes[direction][name];
+    if (!re)
+    {
+        var list = {};
+        if (groups.length > 1)
+        {
+            for ( var i = 0; i < groups.length; i++)
+            {
+                var aList = entityConversionLists[direction][groups[i].group];
+                for ( var item in aList)
+                    list[item] = aList[item];
+            }
+        } else if (groups.length==1)
+        {
+            list = entityConversionLists[direction][groups[0].group]; // faster for special case
+        } else {
+            list = {}; // perhaps should print out an error here?
+        }
+        re = entityConversionRegexes[direction][name] = escapeEntitiesRegEx[direction](list);
+    }
+    return re;
+};
+
+function createSimpleEscape(name, direction)
+{
+    return function(value)
+    {
+        var list = entityConversionLists[direction][name];
+        return String(value).replace(
+                getEscapeRegexp(direction, {
+                    group : name,
+                    list : list
+                }),
+                function(ch)
+                {
+                    return list[ch];
+                }
+               );
+    }
+};
+
+function escapeGroupsForEntities(str, lists)
+{
+    lists = [].concat(lists);
+    var re = getEscapeRegexp('normal', lists),
+        split = String(str).split(re),
+        len = split.length,
+        results = [],
+        cur, r, i, ri = 0, l, list, last = '';
+    if (!len)
+        return [ {
+            str : String(str),
+            group : '',
+            name : ''
+        } ];
+    for (i = 0; i < len; i++)
+    {
+        cur = split[i];
+        if (cur == '')
+            continue;
+        for (l = 0; l < lists.length; l++)
+        {
+            list = lists[l];
+            r = entityConversionLists.normal[list.group][cur];
+            // if (cur == ' ' && list.group == 'whitespace' && last == ' ') // only show for runs of more than one space
+            //     r = ' ';
+            if (r)
+            {
+                results[ri] = {
+                    'str' : r,
+                    'class' : list['class'],
+                    'extra' : list.extra[cur] ? list['class']
+                            + list.extra[cur] : ''
+                };
+                break;
+            }
+        }
+        // last=cur;
+        if (!r)
+            results[ri] = {
+                'str' : cur,
+                'class' : '',
+                'extra' : ''
+            };
+        ri++;
+    }
+    return results;
+};
+
+this.escapeGroupsForEntities = escapeGroupsForEntities;
+
+
+function unescapeEntities(str, lists)
+{
+    var re = getEscapeRegexp('reverse', lists),
+        split = String(str).split(re),
+        len = split.length,
+        results = [],
+        cur, r, i, ri = 0, l, list;
+    if (!len)
+        return str;
+    lists = [].concat(lists);
+    for (i = 0; i < len; i++)
+    {
+        cur = split[i];
+        if (cur == '')
+            continue;
+        for (l = 0; l < lists.length; l++)
+        {
+            list = lists[l];
+            r = entityConversionLists.reverse[list.group][cur];
+            if (r)
+            {
+                results[ri] = r;
+                break;
+            }
+        }
+        if (!r)
+            results[ri] = cur;
+        ri++;
+    }
+    return results.join('') || '';
 };
 
 
 // ************************************************************************************************
 // String escaping
+
+var escapeForTextNode = this.escapeForTextNode = createSimpleEscape('text', 'normal');
+var escapeForHtmlEditor = this.escapeForHtmlEditor = createSimpleEscape('editor', 'normal');
+var escapeForElementAttribute = this.escapeForElementAttribute = createSimpleEscape('attributes', 'normal');
+var escapeForCss = this.escapeForCss = createSimpleEscape('css', 'normal');
+
+// deprecated compatibility functions
+//this.deprecateEscapeHTML = createSimpleEscape('text', 'normal');
+//this.deprecatedUnescapeHTML = createSimpleEscape('text', 'reverse');
+//this.escapeHTML = deprecated("use appropriate escapeFor... function", this.deprecateEscapeHTML);
+//this.unescapeHTML = deprecated("use appropriate unescapeFor... function", this.deprecatedUnescapeHTML);
+
+var escapeForSourceLine = this.escapeForSourceLine = createSimpleEscape('text', 'normal');
+
+var unescapeWhitespace = createSimpleEscape('whitespace', 'reverse');
+
+this.unescapeForTextNode = function(str)
+{
+    if (Firebug.showTextNodesWithWhitespace)
+        str = unescapeWhitespace(str);
+    if (!Firebug.showTextNodesWithEntities)
+        str = escapeForElementAttribute(str);
+    return str;
+};
 
 this.escapeNewLines = function(value)
 {
@@ -737,6 +993,16 @@ this.safeToString = function(ob)
 };
 
 // ************************************************************************************************
+// String Util
+
+var reTrim = /^\s+|\s+$/g;
+this.trim = function(s)
+{
+    return s.replace(reTrim, "");
+};
+
+
+// ************************************************************************************************
 // Empty
 
 this.emptyFn = function(){};
@@ -838,7 +1104,7 @@ this.getClientOffset = function(elt)
     {
         var p = elt.offsetParent;
 
-        var style = view.getComputedStyle(elt, "");
+        var style = isIE ? elt.currentStyle : view.getComputedStyle(elt, "");
 
         if (elt.offsetLeft)
             coords.x += elt.offsetLeft + parseInt(style.borderLeftWidth);
@@ -850,14 +1116,19 @@ this.getClientOffset = function(elt)
             if (p.nodeType == 1)
                 addOffset(p, coords, view);
         }
-        else if (elt.ownerDocument.defaultView.frameElement)
-            addOffset(elt.ownerDocument.defaultView.frameElement, coords, elt.ownerDocument.defaultView);
+        else 
+        {
+            var otherView = isIE ? elt.ownerDocument.parentWindow : elt.ownerDocument.defaultView;
+            if (otherView.frameElement)
+                addOffset(otherView.frameElement, coords, otherView);
+        }
     }
 
+    var isIE = this.isIE;
     var coords = {x: 0, y: 0};
     if (elt)
     {
-        var view = elt.ownerDocument.defaultView;
+        var view = isIE ? elt.ownerDocument.parentWindow : elt.ownerDocument.defaultView;
         addOffset(elt, coords, view);
     }
 
@@ -1116,6 +1387,229 @@ this.scrollIntoCenterView = function(element, scrollBox, notX, notY)
         FBTrace.sysout("lib.scrollIntoCenterView ","Element:"+element.innerHTML);
 };
 
+
+// ************************************************************************************************
+// CSS
+
+var cssKeywordMap = null;
+var cssPropNames = null;
+var cssColorNames = null;
+var imageRules = null;
+
+this.getCSSKeywordsByProperty = function(propName)
+{
+    if (!cssKeywordMap)
+    {
+        cssKeywordMap = {};
+
+        for (var name in this.cssInfo)
+        {
+            var list = [];
+
+            var types = this.cssInfo[name];
+            for (var i = 0; i < types.length; ++i)
+            {
+                var keywords = this.cssKeywords[types[i]];
+                if (keywords)
+                    list.push.apply(list, keywords);
+            }
+
+            cssKeywordMap[name] = list;
+        }
+    }
+
+    return propName in cssKeywordMap ? cssKeywordMap[propName] : [];
+};
+
+this.getCSSPropertyNames = function()
+{
+    if (!cssPropNames)
+    {
+        cssPropNames = [];
+
+        for (var name in this.cssInfo)
+            cssPropNames.push(name);
+    }
+
+    return cssPropNames;
+};
+
+this.isColorKeyword = function(keyword)
+{
+    if (keyword == "transparent")
+        return false;
+
+    if (!cssColorNames)
+    {
+        cssColorNames = [];
+
+        var colors = this.cssKeywords["color"];
+        for (var i = 0; i < colors.length; ++i)
+            cssColorNames.push(colors[i].toLowerCase());
+
+        var systemColors = this.cssKeywords["systemColor"];
+        for (var i = 0; i < systemColors.length; ++i)
+            cssColorNames.push(systemColors[i].toLowerCase());
+    }
+
+    return cssColorNames.indexOf(keyword.toLowerCase()) != -1;
+};
+
+this.isImageRule = function(rule)
+{
+    if (!imageRules)
+    {
+        imageRules = [];
+
+        for (var i in this.cssInfo)
+        {
+            var r = i.toLowerCase();
+            var suffix = "image";
+            if (r.match(suffix + "$") == suffix || r == "background")
+                imageRules.push(r);
+        }
+    }
+
+    return imageRules.indexOf(rule.toLowerCase()) != -1;
+};
+
+this.copyTextStyles = function(fromNode, toNode, style)
+{
+    var view = this.isIE ?
+            fromNode.ownerDocument.parentWindow :
+            fromNode.ownerDocument.defaultView;
+    
+    if (view)
+    {
+        if (!style)
+            style = this.isIE ? fromNode.currentStyle : view.getComputedStyle(fromNode, "");
+
+        toNode.style.fontFamily = style.fontFamily;
+        
+        // TODO: xxxpedro need to create a FBL.getComputedStyle() because IE
+        // returns wrong computed styles for inherited properties (like font-*)
+        //
+        // Also would be good to create a FBL.getStyle() 
+        toNode.style.fontSize = style.fontSize;
+        toNode.style.fontWeight = style.fontWeight;
+        toNode.style.fontStyle = style.fontStyle;
+
+        return style;
+    }
+};
+
+this.copyBoxStyles = function(fromNode, toNode, style)
+{
+    var view = this.isIE ?
+            fromNode.ownerDocument.parentWindow :
+            fromNode.ownerDocument.defaultView;
+    
+    if (view)
+    {
+        if (!style)
+            style = this.isIE ? fromNode.currentStyle : view.getComputedStyle(fromNode, "");
+
+        toNode.style.marginTop = style.marginTop;
+        toNode.style.marginRight = style.marginRight;
+        toNode.style.marginBottom = style.marginBottom;
+        toNode.style.marginLeft = style.marginLeft;
+        toNode.style.borderTopWidth = style.borderTopWidth;
+        toNode.style.borderRightWidth = style.borderRightWidth;
+        toNode.style.borderBottomWidth = style.borderBottomWidth;
+        toNode.style.borderLeftWidth = style.borderLeftWidth;
+
+        return style;
+    }
+};
+
+this.readBoxStyles = function(style)
+{
+    var styleNames = {
+        "margin-top": "marginTop", "margin-right": "marginRight",
+        "margin-left": "marginLeft", "margin-bottom": "marginBottom",
+        "border-top-width": "borderTop", "border-right-width": "borderRight",
+        "border-left-width": "borderLeft", "border-bottom-width": "borderBottom",
+        "padding-top": "paddingTop", "padding-right": "paddingRight",
+        "padding-left": "paddingLeft", "padding-bottom": "paddingBottom",
+        "z-index": "zIndex"
+    };
+
+    var styles = {};
+    for (var styleName in styleNames)
+        styles[styleNames[styleName]] = parseInt(style.getPropertyCSSValue(styleName).cssText) || 0;
+    if (FBTrace.DBG_INSPECT)
+        FBTrace.sysout("readBoxStyles ", styles);
+    return styles;
+};
+
+this.getBoxFromStyles = function(style, element)
+{
+    var args = this.readBoxStyles(style);
+    args.width = element.offsetWidth
+        - (args.paddingLeft+args.paddingRight+args.borderLeft+args.borderRight);
+    args.height = element.offsetHeight
+        - (args.paddingTop+args.paddingBottom+args.borderTop+args.borderBottom);
+    return args;
+};
+
+this.getElementCSSSelector = function(element)
+{
+    var label = element.localName.toLowerCase();
+    if (element.id)
+        label += "#" + element.id;
+    if (element.hasAttribute("class"))
+        label += "." + element.getAttribute("class").split(" ")[0];
+
+    return label;
+};
+
+this.getURLForStyleSheet= function(styleSheet)
+{
+    //http://www.w3.org/TR/DOM-Level-2-Style/stylesheets.html#StyleSheets-StyleSheet. For inline style sheets, the value of this attribute is null.
+    return (styleSheet.href ? styleSheet.href : styleSheet.ownerNode.ownerDocument.URL);
+};
+
+this.getDocumentForStyleSheet = function(styleSheet)
+{
+    while (styleSheet.parentStyleSheet && !styleSheet.ownerNode)
+    {
+        styleSheet = styleSheet.parentStyleSheet;
+    }
+    if (styleSheet.ownerNode)
+      return styleSheet.ownerNode.ownerDocument;
+};
+
+/**
+ * Retrieves the instance number for a given style sheet. The instance number
+ * is sheet's index within the set of all other sheets whose URL is the same.
+ */
+this.getInstanceForStyleSheet = function(styleSheet, ownerDocument)
+{
+    // System URLs are always unique (or at least we are making this assumption)
+    if (FBL.isSystemStyleSheet(styleSheet))
+        return 0;
+
+    // ownerDocument is an optional hint for performance
+    if (FBTrace.DBG_CSS) FBTrace.sysout("getInstanceForStyleSheet: " + styleSheet.href + " " + styleSheet.media.mediaText + " " + (styleSheet.ownerNode && FBL.getElementXPath(styleSheet.ownerNode)), ownerDocument);
+    ownerDocument = ownerDocument || FBL.getDocumentForStyleSheet(styleSheet);
+
+    var ret = 0,
+        styleSheets = ownerDocument.styleSheets,
+        href = styleSheet.href;
+    for (var i = 0; i < styleSheets.length; i++)
+    {
+        var curSheet = styleSheets[i];
+        if (FBTrace.DBG_CSS) FBTrace.sysout("getInstanceForStyleSheet: compare href " + i + " " + curSheet.href + " " + curSheet.media.mediaText + " " + (curSheet.ownerNode && FBL.getElementXPath(curSheet.ownerNode)));
+        if (curSheet == styleSheet)
+            break;
+        if (curSheet.href == href)
+            ret++;
+    }
+    return ret;
+};
+
+
+
 // ************************************************************************************************
 // CSS classes
 
@@ -1287,6 +1781,33 @@ this.getElementByClass = function(node, className)  // className, className, ...
     return null;
 };
 
+this.isAncestor = function(node, potentialAncestor)
+{
+    for (var parent = node; parent; parent = parent.parentNode)
+    {
+        if (parent == potentialAncestor)
+            return true;
+    }
+
+    return false;
+};
+
+this.getNextElement = function(node)
+{
+    while (node && node.nodeType != 1)
+        node = node.nextSibling;
+
+    return node;
+};
+
+this.getPreviousElement = function(node)
+{
+    while (node && node.nodeType != 1)
+        node = node.previousSibling;
+
+    return node;
+};
+
 this.getBody = function(doc)
 {
     if (doc.body)
@@ -1297,6 +1818,107 @@ this.getBody = function(doc)
         return body;
 
     return doc.firstChild;  // For non-HTML docs
+};
+
+this.findNextDown = function(node, criteria)
+{
+    if (!node)
+        return null;
+
+    for (var child = node.firstChild; child; child = child.nextSibling)
+    {
+        if (criteria(child))
+            return child;
+
+        var next = this.findNextDown(child, criteria);
+        if (next)
+            return next;
+    }
+};
+
+this.findPreviousUp = function(node, criteria)
+{
+    if (!node)
+        return null;
+
+    for (var child = node.lastChild; child; child = child.previousSibling)
+    {
+        var next = this.findPreviousUp(child, criteria);
+        if (next)
+            return next;
+
+        if (criteria(child))
+            return child;
+    }
+};
+
+this.findNext = function(node, criteria, upOnly, maxRoot)
+{
+    if (!node)
+        return null;
+
+    if (!upOnly)
+    {
+        var next = this.findNextDown(node, criteria);
+        if (next)
+            return next;
+    }
+
+    for (var sib = node.nextSibling; sib; sib = sib.nextSibling)
+    {
+        if (criteria(sib))
+            return sib;
+
+        var next = this.findNextDown(sib, criteria);
+        if (next)
+            return next;
+    }
+
+    if (node.parentNode && node.parentNode != maxRoot)
+        return this.findNext(node.parentNode, criteria, true);
+};
+
+this.findPrevious = function(node, criteria, downOnly, maxRoot)
+{
+    if (!node)
+        return null;
+
+    for (var sib = node.previousSibling; sib; sib = sib.previousSibling)
+    {
+        var prev = this.findPreviousUp(sib, criteria);
+        if (prev)
+            return prev;
+
+        if (criteria(sib))
+            return sib;
+    }
+
+    if (!downOnly)
+    {
+        var next = this.findPreviousUp(node, criteria);
+        if (next)
+            return next;
+    }
+
+    if (node.parentNode && node.parentNode != maxRoot)
+    {
+        if (criteria(node.parentNode))
+            return node.parentNode;
+
+        return this.findPrevious(node.parentNode, criteria, true);
+    }
+};
+
+this.getNextByClass = function(root, state)
+{
+    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); }
+    return this.findNext(root, iter);
+};
+
+this.getPreviousByClass = function(root, state)
+{
+    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); }
+    return this.findPrevious(root, iter);
 };
 
 this.isElement = function(o)
@@ -4164,6 +4786,127 @@ var invisibleTags = this.invisibleTags =
     "TABBROWSER": 1,
     */
 };
+
+
+if (typeof KeyEvent == "undefined") {
+    this.KeyEvent = {
+        DOM_VK_CANCEL: 3,
+        DOM_VK_HELP: 6,
+        DOM_VK_BACK_SPACE: 8,
+        DOM_VK_TAB: 9,
+        DOM_VK_CLEAR: 12,
+        DOM_VK_RETURN: 13,
+        DOM_VK_ENTER: 14,
+        DOM_VK_SHIFT: 16,
+        DOM_VK_CONTROL: 17,
+        DOM_VK_ALT: 18,
+        DOM_VK_PAUSE: 19,
+        DOM_VK_CAPS_LOCK: 20,
+        DOM_VK_ESCAPE: 27,
+        DOM_VK_SPACE: 32,
+        DOM_VK_PAGE_UP: 33,
+        DOM_VK_PAGE_DOWN: 34,
+        DOM_VK_END: 35,
+        DOM_VK_HOME: 36,
+        DOM_VK_LEFT: 37,
+        DOM_VK_UP: 38,
+        DOM_VK_RIGHT: 39,
+        DOM_VK_DOWN: 40,
+        DOM_VK_PRINTSCREEN: 44,
+        DOM_VK_INSERT: 45,
+        DOM_VK_DELETE: 46,
+        DOM_VK_0: 48,
+        DOM_VK_1: 49,
+        DOM_VK_2: 50,
+        DOM_VK_3: 51,
+        DOM_VK_4: 52,
+        DOM_VK_5: 53,
+        DOM_VK_6: 54,
+        DOM_VK_7: 55,
+        DOM_VK_8: 56,
+        DOM_VK_9: 57,
+        DOM_VK_SEMICOLON: 59,
+        DOM_VK_EQUALS: 61,
+        DOM_VK_A: 65,
+        DOM_VK_B: 66,
+        DOM_VK_C: 67,
+        DOM_VK_D: 68,
+        DOM_VK_E: 69,
+        DOM_VK_F: 70,
+        DOM_VK_G: 71,
+        DOM_VK_H: 72,
+        DOM_VK_I: 73,
+        DOM_VK_J: 74,
+        DOM_VK_K: 75,
+        DOM_VK_L: 76,
+        DOM_VK_M: 77,
+        DOM_VK_N: 78,
+        DOM_VK_O: 79,
+        DOM_VK_P: 80,
+        DOM_VK_Q: 81,
+        DOM_VK_R: 82,
+        DOM_VK_S: 83,
+        DOM_VK_T: 84,
+        DOM_VK_U: 85,
+        DOM_VK_V: 86,
+        DOM_VK_W: 87,
+        DOM_VK_X: 88,
+        DOM_VK_Y: 89,
+        DOM_VK_Z: 90,
+        DOM_VK_CONTEXT_MENU: 93,
+        DOM_VK_NUMPAD0: 96,
+        DOM_VK_NUMPAD1: 97,
+        DOM_VK_NUMPAD2: 98,
+        DOM_VK_NUMPAD3: 99,
+        DOM_VK_NUMPAD4: 100,
+        DOM_VK_NUMPAD5: 101,
+        DOM_VK_NUMPAD6: 102,
+        DOM_VK_NUMPAD7: 103,
+        DOM_VK_NUMPAD8: 104,
+        DOM_VK_NUMPAD9: 105,
+        DOM_VK_MULTIPLY: 106,
+        DOM_VK_ADD: 107,
+        DOM_VK_SEPARATOR: 108,
+        DOM_VK_SUBTRACT: 109,
+        DOM_VK_DECIMAL: 110,
+        DOM_VK_DIVIDE: 111,
+        DOM_VK_F1: 112,
+        DOM_VK_F2: 113,
+        DOM_VK_F3: 114,
+        DOM_VK_F4: 115,
+        DOM_VK_F5: 116,
+        DOM_VK_F6: 117,
+        DOM_VK_F7: 118,
+        DOM_VK_F8: 119,
+        DOM_VK_F9: 120,
+        DOM_VK_F10: 121,
+        DOM_VK_F11: 122,
+        DOM_VK_F12: 123,
+        DOM_VK_F13: 124,
+        DOM_VK_F14: 125,
+        DOM_VK_F15: 126,
+        DOM_VK_F16: 127,
+        DOM_VK_F17: 128,
+        DOM_VK_F18: 129,
+        DOM_VK_F19: 130,
+        DOM_VK_F20: 131,
+        DOM_VK_F21: 132,
+        DOM_VK_F22: 133,
+        DOM_VK_F23: 134,
+        DOM_VK_F24: 135,
+        DOM_VK_NUM_LOCK: 144,
+        DOM_VK_SCROLL_LOCK: 145,
+        DOM_VK_COMMA: 188,
+        DOM_VK_PERIOD: 190,
+        DOM_VK_SLASH: 191,
+        DOM_VK_BACK_QUOTE: 192,
+        DOM_VK_OPEN_BRACKET: 219,
+        DOM_VK_BACK_SLASH: 220,
+        DOM_VK_CLOSE_BRACKET: 221,
+        DOM_VK_QUOTE: 222,
+        DOM_VK_META: 224
+    };
+}
 
 
 // ************************************************************************************************
