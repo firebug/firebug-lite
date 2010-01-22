@@ -390,6 +390,7 @@ var CSSPropTag = domplate(CSSDomplateBase, {
     tag: DIV({"class": "cssProp focusRow", $disabledStyle: "$prop.disabled",
           $editGroup: "$rule|isEditable",
           $cssOverridden: "$prop.overridden", role : "option"},
+        A({"class": "cssPropDisable"}, "&nbsp;"),
         SPAN({"class": "cssPropName", $editable: "$rule|isEditable"}, "$prop.name"),
         SPAN({"class": "cssColon"}, ":"),
         SPAN({"class": "cssPropValue", $editable: "$rule|isEditable"}, "$prop.value$prop.important"),
@@ -608,7 +609,7 @@ Firebug.CSSModule = extend(Firebug.Module,
         // good browsers
         if (style.getPropertyValue)
         {
-            //var prevValue = style.getPropertyValue(propName);
+            var prevValue = style.getPropertyValue(propName);
             var prevPriority = style.getPropertyPriority(propName);
     
             // XXXjoe Gecko bug workaround: Just changing priority doesn't have any effect
@@ -637,11 +638,19 @@ Firebug.CSSModule = extend(Firebug.Module,
         // Record the original CSS text for the inline case so we can reconstruct at a later
         // point for diffing purposes
         var baseText = style.cssText;
-
-        var prevValue = style.getPropertyValue(propName);
-        var prevPriority = style.getPropertyPriority(propName);
-
-        style.removeProperty(propName);
+        
+        if (style.getPropertyValue)
+        {
+    
+            var prevValue = style.getPropertyValue(propName);
+            var prevPriority = style.getPropertyPriority(propName);
+    
+            style.removeProperty(propName);
+        }
+        else
+        {
+            style[toCamelCase(propName)] = "";
+        }
 
         if (propName) {
             dispatch(this.fbListeners, "onCSSRemoveProperty", [style, propName, prevValue, prevPriority, rule, baseText]);
