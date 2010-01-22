@@ -60,7 +60,7 @@ CSS imported styles
     
 
 ---------------------------------------------------------------------------------------------------
- 1.3.0a4 IMPORTANT TODOs
+ 1.3.0 IMPORTANT TODOs
 ---------------------------------------------------------------------------------------------------
 
   - Panel Interfaces 
@@ -71,40 +71,43 @@ CSS imported styles
 
   - Data Sharing / Cache
 
-  - Chrome Synchronization
-        ~~  - divide sync proccess into separated functions
-        ok  - move FirebugApplication to Firebug namespace
-
   - Panel as Controller?
+
+  - Computed Styles
+  
+  - CSS "Run CSS" sidePanel?
+
+  - Use "offline" mode when switching panels (to avoid loose any message)?    
 
   - SidePanelBar
         sidePanel group? to show/hide multiple tabs
             OK - NO. PANEL inherits SIDEPANELBAR
 
-  - OK - domplate uses 2 global namespaces: domplate, DomplateTag
+  - Chrome Synchronization
+        ~~  - divide sync proccess into separated functions
+        ok  - move FirebugApplication to Firebug namespace
 
-  - Computed Styles
-
-  - Console "multiline" sidePanel????
-
-  - CSS "Run CSS" sidePanel????
-
-  - Use "offline" mode when switching panels (to avoid loose any message)?    
+  ok - domplate uses 2 global namespaces: domplate, DomplateTag
+  ok - Console "multiline" sidePanel
 
 
 ---------------------------------------------------------------------------------------------------
  1.4?
 ---------------------------------------------------------------------------------------------------
-    cross-iframe
     persistent popups
     inherited styles
     live edit
+    cross-iframe
     live highlight dom changes?
     unit tests
     Panel options menu
     Context menu
     tooltips (CSS color, images)
     Layout Ruler
+    code Parser
+        - proxy/plugin (cross-domain issue)?    
+        - line number
+        - correct CSS rules
 
 ---------------------------------------------------------------------------------------------------
  Firebug Lite Future
@@ -138,6 +141,7 @@ Low level of portability
  Major changes between Firebug and Firebug Lite codebase
 ---------------------------------------------------------------------------------------------------
     addEvent/removeEvent
+    constants
     instanceof
     scope problem (local named functions)
     "top" scope

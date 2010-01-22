@@ -169,3 +169,21 @@ F.getElementsByTagName('head')[0].appendChild(e);
 })(document,navigator,'http://fbug.googlecode.com/svn/lite/branches/firebug1.3/build/firebug.min.js');
 
 //*************************************************************************************************
+
+// firebug lite 1.2 bookmarlet
+javascript:
+
+var firebug=document.createElement('script');
+firebug.setAttribute('src','http://getfirebug.com/releases/lite/1.2/firebug-lite-compressed.js');
+document.body.appendChild(firebug);
+(function(){
+  if(window.firebug.version)
+  {
+    firebug.init();
+  }
+  else
+  {
+    setTimeout(arguments.callee);
+  }
+})();
+void(firebug);

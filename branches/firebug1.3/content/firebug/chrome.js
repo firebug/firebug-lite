@@ -204,7 +204,7 @@ var createChromeWindow = function(options)
         
         createChromeDiv = function()
         {
-            Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
+            //Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
         
             var node = chrome.node = createGlobalElement("div"),
                 style = createGlobalElement("style"),
@@ -245,8 +245,8 @@ var createChromeWindow = function(options)
             {
                 // IE7 CSS bug (FbChrome table bigger than its parent div)
                 setTimeout(function(){
-                    node.firstChild.style.height = "1px";
-                    node.firstChild.style.position = "static";
+                node.firstChild.style.height = "1px";
+                node.firstChild.style.position = "static";
                 },0);
                 /**/
             }
@@ -994,6 +994,87 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //this.draw();
+        
+        
+        
+        
+        
+        
+        
+
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+        var onPanelMouseDown = function onPanelMouseDown(event)
+        {
+            var target = event.target || event.srcElement;
+            
+            if (FBL.isLeftClick(event))
+            {
+                var editable = FBL.getAncestorByClass(target, "editable");
+                if (editable)
+                {
+                    Firebug.Editor.startEditing(editable);
+                    FBL.cancelEvent(event);
+                }
+            }
+            else if (FBL.isMiddleClick(event) && Firebug.getRepNode(target))
+            {
+                // Prevent auto-scroll when middle-clicking a rep object
+                FBL.cancelEvent(event);
+            }
+        }
+        
+        Firebug.getElementPanel = function()
+        {
+            return Firebug.chrome.getPanel("HTML").sidePanelBar.getPanel("CSS");
+        };
+        
+
+        Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
+        {
+            if (!filter)
+                filter = FBL.noKeyModifiers;
+    
+            var keyCode = KeyEvent["DOM_VK_"+key];
+    
+            var fn = function fn(event)
+            {
+                if (event.keyCode == keyCode && (!filter || filter(event)))
+                {
+                    listener();
+                    FBL.cancelEvent(event, true);
+                    return false;
+                }
+            }
+    
+            addEvent(Firebug.chrome.document, "keydown", fn);
+            
+            return [fn, capture];
+        };
+        
+        Firebug.chrome.keyIgnore = function(listener)
+        {
+            removeEvent(Firebug.chrome.document, "keydown", listener[0]);
+        };
+
+        
+        
+        this.addController(
+                [fbPanel2, "mousedown", onPanelMouseDown]
+             );
+/**/
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
         
         // menus can be used without domplate
         if (FBL.domplate)

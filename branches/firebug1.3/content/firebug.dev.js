@@ -62,10 +62,11 @@ window.FBDev =
         //"firebug/insideOutBox.js", // too experimental
         //"firebug/html2.js", // too experimental
         
-        "firebug/css.js",
+        //"firebug/css.js",
         
-        //"firebug/editor.js",
-        //"firebug/css2.js",
+        "firebug/infotip.js",
+        "firebug/editor.js",
+        "firebug/css2.js",
         
         "firebug/script.js",
         "firebug/dom.js", // experimental
