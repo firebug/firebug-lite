@@ -37,7 +37,7 @@ Context
 -------------------------------------------------------------------------------
 Style
 -------------------------------------------------------------------------------
-    - Editing feature of inline styles (Style panel)
+    - Basic editing feature of inline styles (Style panel)
 
 -------------------------------------------------------------------------------
 HTML
@@ -62,6 +62,7 @@ Console
 -------------------------------------------------------------------------------
 Core
 -------------------------------------------------------------------------------
+    - new XHR watcher (with response and headers tabs) 
     - fixed variable "root" leaking to global namespace (domplate.js) 
     - improved development build functions
 

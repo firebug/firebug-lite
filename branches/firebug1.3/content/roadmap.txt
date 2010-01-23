@@ -48,7 +48,7 @@ DOM
 
 
 ###################################################################################################
- 1.4
+ 1.4 - December 2010
 ###################################################################################################
 Panels:
     New Console Panel
@@ -60,11 +60,13 @@ User Interface:
     Panel options menu
     Context menu
     Tooltips (CSS color, images)
+    Internationalization
 
 
-Core:    
+Core:
+    Search feature
     Unit tests
-    Plugin system
+    Bookmarlet Plugin system
     Support pages with multiple iframes / frameset
     New Chrome/Panel architecture (make easier to port Firebug code)
         - Panels and SidePanels in different "windows"
@@ -77,8 +79,9 @@ Core:
 
 
 ###################################################################################################
- 1.5
+ 1.5 - July 2011
 ###################################################################################################
+    Use the code directly from Firebug from the "shared layer" (non XPCOM dependent layer)    
     live highlight dom changes?
 
     ~~ - persistent popups

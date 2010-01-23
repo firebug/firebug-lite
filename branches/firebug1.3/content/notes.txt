@@ -73,11 +73,11 @@ CSS imported styles
 
   - Panel as Controller?
 
-  - Computed Styles
-  
-  - CSS "Run CSS" sidePanel?
-
   - Use "offline" mode when switching panels (to avoid loose any message)?    
+
+  ~~ - Computed Styles
+  
+  ~~ - CSS "Run CSS" sidePanel?
 
   - SidePanelBar
         sidePanel group? to show/hide multiple tabs
