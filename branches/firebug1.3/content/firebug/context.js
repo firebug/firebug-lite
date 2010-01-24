@@ -12,6 +12,8 @@ FBL.Context = function(win)
     this.window = win.window;
     this.document = win.document;
     
+    this.browser = Env.browser;
+    
     // Some windows in IE, like iframe, doesn't have the eval() method
     if (isIE && !this.window.eval)
     {
@@ -32,7 +34,68 @@ FBL.Context = function(win)
 
 FBL.Context.prototype =
 {  
-  
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // partial-port of Firebug tabContext.js
+    
+    browser: null,
+    loaded: true,
+    
+    setTimeout: function(fn, delay)
+    {
+        var win = this.window;
+        
+        if (win.setTimeout == this.setTimeout)
+            throw new Error("setTimeout recursion");
+        
+        var timeout = win.setTimeout.apply ? // IE doesn't have apply method on setTimeout
+                win.setTimeout.apply(win, arguments) :
+                win.setTimeout(fn, delay);
+
+        if (!this.timeouts)
+            this.timeouts = {};
+
+        this.timeouts[timeout] = 1;
+
+        return timeout;
+    },
+
+    clearTimeout: function(timeout)
+    {
+        clearTimeout(timeout);
+
+        if (this.timeouts)
+            delete this.timeouts[timeout];
+    },
+
+    setInterval: function(fn, delay)
+    {
+        var win = this.window;
+        
+        var timeout = win.setInterval.apply ? // IE doesn't have apply method on setTimeout
+                win.setInterval.apply(win, arguments) :
+                win.setInterval(fn, delay);
+
+        if (!this.intervals)
+            this.intervals = {};
+
+        this.intervals[timeout] = 1;
+
+        return timeout;
+    },
+
+    clearInterval: function(timeout)
+    {
+        clearInterval(timeout);
+
+        if (this.intervals)
+            delete this.intervals[timeout];
+    },
+
+    invalidatePanels: function()
+    {
+    },
+    
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Evalutation Method
     

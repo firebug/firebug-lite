@@ -346,7 +346,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                     
                     
                     // enable to measure rendering performance
-                    if (isLast) alert(new Date().getTime() - renderStart + "ms");
+                    //if (isLast) alert(new Date().getTime() - renderStart + "ms");
                     
                     
                 }, delay));
@@ -378,6 +378,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         this.timeouts = timeouts;
     },
 
+    /*
     // new
     showMembers: function(members, update, scrollTop)
     {
@@ -421,7 +422,6 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         var delay = 0;
         var _insertSliceSize = insertSliceSize;
         var _insertInterval = insertInterval;
-        var _setTimeout = this.context.setTimeout;
 
         // enable to measure rendering performance
         var renderStart = new Date().getTime();
@@ -436,7 +436,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                 var _panelNode = panelNode;
                 var _priorScrollTop = priorScrollTop;
                 
-                timeouts.push(_setTimeout(function()
+                timeouts.push(this.context.setTimeout(function()
                 {
                     // TODO: xxxpedro can this be a timing error related to the
                     // "iteration number" approach insted of "duration time"?
@@ -486,6 +486,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         }
         this.timeouts = timeouts;
     },
+    /**/
     
     showEmptyMembers: function()
     {
@@ -721,7 +722,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
     create: function()
     {
         // TODO: xxxpedro
-        this.context = Firebug.browser.window;
+        this.context = Firebug.browser;
         
         this.objectPath = [];
         this.propertyPath = [];
@@ -1190,7 +1191,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         //this.select(Firebug.browser.window);
         
         // TODO: xxxpedro dom leaking to global namespace (need to create a proper context object)
-        this.context.loaded = true;
+        //this.context.loaded = true;
         this.ishow();
         
         //TODO: xxxpedro
