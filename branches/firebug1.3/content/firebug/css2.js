@@ -1106,7 +1106,10 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onClick: function(event)
     {
-        if (!isLeftClick(event) || event.clientX <= 20)
+        // xxxpedro adjusting coordinates because the panel isn't a window yet
+        var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
+        
+        if (!isLeftClick(event) || offset <= 20)
             return;
 
         var target = event.target || event.srcElement;
@@ -1118,7 +1121,6 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             cancelEvent(event);
         }
     },
-    
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
@@ -1148,7 +1150,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         this.context = Firebug.chrome;
         this.initializeNode();
         
-        this.updateLocation(Firebug.browser.document.styleSheets[0]);
+        if (this.name == "stylesheet")
+            this.updateLocation(Firebug.browser.document.styleSheets[0]);
         
         //Firebug.SourceBoxPanel.initialize.apply(this, arguments);
     },
@@ -1845,7 +1848,7 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
         this.context = Firebug.chrome; // TODO: xxxpedro css2
         this.document = Firebug.chrome.document; // TODO: xxxpedro css2
         
-        //Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
+        Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
         
         // TODO: xxxpedro css2
         var selection = documentCache[FirebugChrome.selectedHTMLElementId];

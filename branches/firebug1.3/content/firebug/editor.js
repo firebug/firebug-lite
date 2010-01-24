@@ -584,10 +584,15 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             x: target.offsetLeft,
             y: target.offsetTop
         };
-        /**/
-        /*
-        if (this.targetOffset.x < 28)
-            this.targetOffset.x = 28;/**/
+        
+        // Webkit has some problems trying to get the position of 
+        // an empty cssPropName element, so we make this ugly workaround,
+        // adjusting the position by hand
+        if (isSafari && hasClass(target, "cssPropName"))
+        {
+            if (this.targetOffset.x < 28)
+                this.targetOffset.x = 28;
+        }
 
         this.originalClassName = this.box.className;
 
@@ -626,7 +631,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         else
             target.offsetParent.appendChild(this.box);        
         
-        console.log(target);
+        //console.log(target);
         //this.input.select(); // it's called bellow, with setTimeout
         
         if (isIE)
