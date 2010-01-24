@@ -497,7 +497,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             DIV({"class": "textEditorInner1"},
                 DIV({"class": "textEditorInner2"},
                     INPUT({"class": "textEditorInner", type: "text",
-                        oninput: "$onInput", onkeypress: "$onKeyPress", onoverflow: "$onOverflow",
+                        /*oninput: "$onInput", */onkeypress: "$onKeyPress", onoverflow: "$onOverflow",
                         oncontextmenu: "$onContextMenu"}
                     )
                 )
@@ -509,7 +509,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
     inputTag :
         INPUT({"class": "textEditorInner", type: "text",
-            oninput: "$onInput", onkeypress: "$onKeyPress", onoverflow: "$onOverflow"}
+            /*oninput: "$onInput",*/ onkeypress: "$onKeyPress", onoverflow: "$onOverflow"}
         ),
 
     expanderTag:
@@ -792,6 +792,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
     onKeyPress: function(event)
     {
+        //console.log("onKeyPress");
         if (event.keyCode == 27 && !this.completeAsYouType)
         {
             var reverted = this.getAutoCompleter().revert(this.input);
@@ -812,6 +813,12 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             {
                 // If the user backspaces, don't autocomplete after the upcoming input event
                 this.ignoreNextInput = event.keyCode == 8;
+                
+                // TODO: xxxpedro IE and oninput                
+                var self = this;
+                setTimeout(function(){
+                    self.onInput();
+                },0)
             }
         }
     },
@@ -823,6 +830,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
     onInput: function()
     {
+        //console.log("onInput");
         if (this.ignoreNextInput)
         {
             this.ignoreNextInput = false;
@@ -995,11 +1003,13 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         // TODO: xxxpedro important port to firebug (variable leak)
         //var value = lastValue = textBox.value;
         var value = textBox.value;
-        var offset = textBox.selectionStart;
+        
+        //var offset = textBox.selectionStart;
+        var offset = getInputCaretPosition(textBox);
         
         // The result of selectionStart() in Safari/Chrome is 1 unit less than the result
         // in Firebug. Therefore, we need to manually adjust the value here.
-        if (isSafari && offset >= 0) offset++;
+        //if (isSafari && offset >= 0) offset++;
         
         if (!selectMode && originalOffset != -1)
             offset = originalOffset;
@@ -1163,6 +1173,9 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         textBox.value = preParsed + preExpr + preCompletion + postCompletion + postExpr;
         var offsetEnd = preParsed.length + preExpr.length + completion.length;
         
+        // TODO: xxxpedro remove the following commented code, if the lib.selectInputRange()
+        // is working well.
+        /*
         if (textBox.setSelectionRange)
         {
             // we must select the range with a timeout, otherwise the text won't
@@ -1175,6 +1188,18 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
                     textBox.setSelectionRange(offsetEnd, offsetEnd);
             },0);
         }
+        /**/
+        
+        // we must select the range with a timeout, otherwise the text won't
+        // be properly selected (because after this function executes, the editor's
+        // input will be resized to fit the whole text)
+        setTimeout(function(){
+            if (selectMode)
+                selectInputRange(textBox, offset, offsetEnd);
+            else
+                selectInputRange(textBox, offsetEnd, offsetEnd);
+        },0);
+                
 
         return true;
     };
