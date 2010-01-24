@@ -742,8 +742,9 @@ Firebug.Panel =
         {
             if (!this.context.browser) // XXXjjb this is bug. Somehow the panel context is not FirebugContext.
             {
-              if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("firebug.Panel showToolbarButtons this.context has no browser, this:", this)
+                if (FBTrace.DBG_ERRORS)
+                    FBTrace.sysout("firebug.Panel showToolbarButtons this.context has no browser, this:", this)
+
                 return;
             }
             var buttons = this.context.browser.chrome.$(buttonsId);

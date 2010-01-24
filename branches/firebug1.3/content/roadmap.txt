@@ -68,6 +68,8 @@ Core:
     Unit tests
     Bookmarlet Plugin system
     Support pages with multiple iframes / frameset
+    TabWatcher port
+    TabContext port
     New Chrome/Panel architecture (make easier to port Firebug code)
         - Panels and SidePanels in different "windows"
         - port of TabContext/TabWatcher

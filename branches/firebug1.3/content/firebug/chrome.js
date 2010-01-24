@@ -498,8 +498,9 @@ var Chrome = function Chrome(chrome)
     var type = chrome.type;
     var Base = type == "frame" || type == "div" ? ChromeFrameBase : ChromePopupBase; 
     
-    append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
+    append(this, Base);   // inherit from base class (ChromeFrameBase or ChromePopupBase)
     append(this, chrome); // inherit chrome window properties
+    append(this, new Context(chrome.window)); // inherit from Context class
     
     FirebugChrome.chromeMap[type] = this;
     Firebug.chrome = this;
@@ -519,7 +520,6 @@ var Chrome = function Chrome(chrome)
 var ChromeBase = {};
 append(ChromeBase, Controller); 
 append(ChromeBase, PanelBar);
-append(ChromeBase, Context.prototype);
 append(ChromeBase,
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

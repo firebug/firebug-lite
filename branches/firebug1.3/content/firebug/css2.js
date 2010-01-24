@@ -64,7 +64,7 @@ this.getRuleMatchingElements = function(rule, doc)
 };
 
 
-})(FBL);
+}).call(FBL);
 
 
 
@@ -102,7 +102,7 @@ var toCamelCaseReplaceFn = function toCamelCaseReplaceFn(m,g)
 
 var cacheUID = -1;
 
-createCache = function()
+var createCache = function()
 {
     var map = {};
     var CID = cacheID;
@@ -221,11 +221,11 @@ var processAllStyleSheets = function(doc)
     console.log("Concluded in " + time + "ms");
 };
 
-StyleSheetCache = createCache();
-ElementCache = createCache();
+var StyleSheetCache = createCache();
+var ElementCache = createCache();
 
-CSSRuleMap = {}
-ElementCSSRulesMap = {}
+var CSSRuleMap = {}
+var ElementCSSRulesMap = {}
 
 var processStyleSheet = function(doc, styleSheet)
 {
@@ -335,8 +335,6 @@ var getCSSRuleSpecificity = function(selector)
     
     return tagCount + 10*classCount + 100*idCount;
 };
-
-window.processAllStyleSheets = processAllStyleSheets;
 
 // ************************************************************************************************
 // ************************************************************************************************
@@ -655,7 +653,7 @@ Firebug.CSSModule = extend(Firebug.Module,
         if (propName) {
             dispatch(this.fbListeners, "onCSSRemoveProperty", [style, propName, prevValue, prevPriority, rule, baseText]);
         }
-    },
+    }/*,
 
     cleanupSheets: function(doc, context)
     {
@@ -720,6 +718,7 @@ Firebug.CSSModule = extend(Firebug.Module,
             self.cleanupSheets(subwin.document, context);
         });
     }
+    /**/
 });
 
 // ************************************************************************************************

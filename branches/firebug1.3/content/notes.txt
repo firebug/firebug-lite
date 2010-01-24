@@ -1,4 +1,28 @@
 ---------------------------------------------------------------------------------------------------
+Context
+---------------------------------------------------------------------------------------------------
+
+Panel
+    - document (should link to Firebug.chrome.document)
+    - context (should link to Firebug.chrome)
+    - show
+    - hide
+    - select
+    - rebuild
+
+Context
+    - getName()
+    - browser = ex: iterateWindows(context.browser.contentWindow, function(subwin)
+    - window
+    - selectorMap (css)
+    - sourceCache (css) = ex: context.sourceCache.load(sheet.href).join("")
+
+    - loaded (must be set to true, when the doc is ready)
+    - setTimeout
+    - invalidatePanels
+
+
+---------------------------------------------------------------------------------------------------
 Development brainstorming and notes
 ---------------------------------------------------------------------------------------------------
     - bookmarlet problem with XML+XSL documents!
