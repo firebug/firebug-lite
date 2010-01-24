@@ -2730,6 +2730,48 @@ this.objectToString = function(object)
 };
 
 // ************************************************************************************************
+// Input Caret Position
+
+this.selectInputRange = function (input, start, length)
+{
+    if (input.createTextRange)
+    {
+        var range = input.createTextRange(); 
+        range.moveStart("character", start); 
+        range.moveEnd("character", length - input.value.length); 
+        range.select();
+    }
+    else if (input.setSelectionRange)
+    {
+        input.setSelectionRange(start, length);
+    }
+    
+    input.focus(); 
+};
+
+// ************************************************************************************************
+// Input Caret Position
+
+this.getInputCaretPosition = function(input)
+{
+    var position = 0;
+    
+    if (document.selection)
+    { 
+        input.focus();
+        
+        var range = document.selection.createRange();
+        range.moveStart("character", -input.value.length);
+        
+        position = range.text.length;
+    }
+    else if (input.selectionStart || input.selectionStart == "0")
+        position = input.selectionStart;
+    
+    return (position);
+};
+
+// ************************************************************************************************
 // Opera Tab Fix
 
 function onOperaTabBlur(e)
