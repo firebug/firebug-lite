@@ -991,6 +991,11 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         //var value = lastValue = textBox.value;
         var value = textBox.value;
         var offset = textBox.selectionStart;
+        
+        // The result of selectionStart() in Safari/Chrome is 1 unit less than the result
+        // in Firebug. Therefore, we need to manually adjust the value here.
+        if (isSafari && offset >= 0) offset++;
+        
         if (!selectMode && originalOffset != -1)
             offset = originalOffset;
 
@@ -1155,10 +1160,15 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         
         if (textBox.setSelectionRange)
         {
-            if (selectMode)
-                textBox.setSelectionRange(offset, offsetEnd);
-            else
-                textBox.setSelectionRange(offsetEnd, offsetEnd);
+            // we must select the range with a timeout, otherwise the text won't
+            // be properly selected (because after this function executes, the editor's
+            // input will be resized to fit the whole text)
+            setTimeout(function(){
+                if (selectMode)
+                    textBox.setSelectionRange(offset, offsetEnd);
+                else
+                    textBox.setSelectionRange(offsetEnd, offsetEnd);
+            },0);
         }
 
         return true;
