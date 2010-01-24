@@ -311,8 +311,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if(!this.sidePanelBar.selectedPanel)
         {
-            this.sidePanelBar.selectPanel("DOMSidePanel");
-        }            
+            this.sidePanelBar.selectPanel("css");
+        }
     },
     
     destroy: function()

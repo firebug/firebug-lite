@@ -174,13 +174,14 @@ var createCache = function()
 
 var globalCSSRuleIndex;
 
-var processAllStyleSheets = function(doc)
+FBL.processAllStyleSheets = function(doc)
 {
     globalCSSRuleIndex = -1;
     var index = 0;
     var styleSheets = doc.styleSheets;
     
-    var start = new Date().getTime();
+    if (FBTrace.DBG_CSS)
+        var start = new Date().getTime();
     
     for(var i=0, length=styleSheets.length; i<length; i++)
     {
@@ -217,8 +218,10 @@ var processAllStyleSheets = function(doc)
         processStyleSheet(doc, styleSheet);
     };
     
-    var time = new Date().getTime() - start;
-    console.log("Concluded in " + time + "ms");
+    if (FBTrace.DBG_CSS)
+    {
+        FBTrace.sysout("FBL.processAllStyleSheets", "all stylesheet rules processed in " + (new Date().getTime() - start) + "ms");
+    }
 };
 
 var StyleSheetCache = createCache();
@@ -821,7 +824,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                 if (rule instanceof CSSStyleRule)
                 {
                     var props = this.getRuleProperties(context, rule);
-                    var line = domUtils.getRuleLine(rule);
+                    //var line = domUtils.getRuleLine(rule);
+                    var line = null;
                     var ruleId = rule.selectorText+"/"+line;
                     rules.push({tag: CSSStyleRuleTag.tag, rule: rule, id: ruleId,
                                 selector: rule.selectorText, props: props,
@@ -879,6 +883,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
         return props;
     },
+
     getRuleProperties: function(context, rule, inheritMode)
     {
         var props = this.parseCSSProps(rule.style, inheritMode);
@@ -1101,7 +1106,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onClick: function(event)
     {
-        if (!isLeftClick(event) || event.clientX <= 20 || event.detail != 2)
+        if (!isLeftClick(event) || event.clientX <= 20)
             return;
 
         var target = event.target || event.srcElement;
@@ -1119,29 +1124,31 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     // extends Panel
 
     name: "stylesheet",
+    title: "CSS",
     parentPanel: null,
     searchable: true,
     dependents: ["css", "stylesheet", "dom", "domSide", "layout"],
 
     initialize: function()
     {
-        /*
-        if (!domUtils)
-        {
-            try {
-                domUtils = CCSV("@mozilla.org/inspector/dom-utils;1", "inIDOMUtils");
-            } catch (exc) {
-                if (FBTrace.DBG_ERRORS)
-                    FBTrace.sysout("@mozilla.org/inspector/dom-utils;1 FAILED to load: "+exc, exc);
-            }
-        }
-        /**/
+        //if (!domUtils)
+        //{
+        //    try {
+        //        domUtils = CCSV("@mozilla.org/inspector/dom-utils;1", "inIDOMUtils");
+        //    } catch (exc) {
+        //        if (FBTrace.DBG_ERRORS)
+        //            FBTrace.sysout("@mozilla.org/inspector/dom-utils;1 FAILED to load: "+exc, exc);
+        //    }
+        //}
         
         this.onMouseDown = bind(this.onMouseDown, this);
         this.onClick = bind(this.onClick, this);
 
         //TODO: xxxpedro
+        this.context = Firebug.chrome;
         this.initializeNode();
+        
+        this.updateLocation(Firebug.browser.document.styleSheets[0]);
         
         //Firebug.SourceBoxPanel.initialize.apply(this, arguments);
     },
@@ -1581,7 +1588,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         ];
     }
 });
-
+/**/
 // ************************************************************************************************
 
 function CSSElementPanel() {}
@@ -1828,25 +1835,22 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
-    name: "CSS",
-    title: "CSS",
+    name: "css",
+    title: "Style",
     parentPanel: "HTML",
     order: 0,
 
     initialize: function()
     {
-        // TODO: xxxpedro css2
-        this.context = Firebug.chrome;
-        this.context.setTimeout = function(fn, delay)
-        {
-            return Firebug.chrome.window.setTimeout(fn, delay);
-        }
-        this.context.invalidatePanels = function(){};
-        this.document = Firebug.chrome.document;
+        this.context = Firebug.chrome; // TODO: xxxpedro css2
+        this.document = Firebug.chrome.document; // TODO: xxxpedro css2
+        
+        //Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
         
         // TODO: xxxpedro css2
-        processAllStyleSheets(Firebug.browser.document);
-        Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
+        var selection = documentCache[FirebugChrome.selectedHTMLElementId];
+        if (selection)
+            this.select(selection, true);
         
         //this.updateCascadeView(document.getElementsByTagName("h1")[0]);
         //this.updateCascadeView(document.getElementById("build"));
@@ -1988,20 +1992,20 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
 
     contentStateCheck: function(state)
     {
-      if (!state || this.contentState & state)
-      {
-          var timeoutRunner = bindFixed(function()
-              {
-                  var newState = safeGetContentState(this.selection);
-                  if (newState != this.contentState)
-                  {
-                      this.context.invalidatePanels(this.name);
-                  }
-              }, this);
+        if (!state || this.contentState & state)
+        {
+            var timeoutRunner = bindFixed(function()
+            {
+                var newState = safeGetContentState(this.selection);
+                if (newState != this.contentState)
+                {
+                    this.context.invalidatePanels(this.name);
+                }
+            }, this);
 
-          // Delay exec until after the event has processed and the state has been updated
-          setTimeout(timeoutRunner, 0);
-      }
+            // Delay exec until after the event has processed and the state has been updated
+            setTimeout(timeoutRunner, 0);
+        }
     }
 });
 
@@ -2546,7 +2550,7 @@ function getSelectionController(panel)
 // ************************************************************************************************
 
 Firebug.registerModule(Firebug.CSSModule);
-//Firebug.registerPanel(Firebug.CSSStyleSheetPanel);
+Firebug.registerPanel(Firebug.CSSStyleSheetPanel);
 Firebug.registerPanel(CSSElementPanel);
 Firebug.registerPanel(CSSComputedElementPanel);
 

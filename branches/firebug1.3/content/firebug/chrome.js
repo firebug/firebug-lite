@@ -97,7 +97,7 @@ FBL.FirebugChrome =
     
     isOpen: false,
     height: 250,
-    sidePanelWidth: 300,
+    sidePanelWidth: 350,
     
     selectedPanelName: "Console",
     selectedHTMLElementId: null,
@@ -1031,7 +1031,7 @@ append(ChromeBase,
         
         Firebug.getElementPanel = function()
         {
-            return Firebug.chrome.getPanel("HTML").sidePanelBar.getPanel("CSS");
+            return Firebug.chrome.getPanel("HTML").sidePanelBar.getPanel("css");
         };
         
 
@@ -1065,6 +1065,7 @@ append(ChromeBase,
         
         
         this.addController(
+                [fbPanel1, "mousedown", onPanelMouseDown],
                 [fbPanel2, "mousedown", onPanelMouseDown]
              );
 /**/

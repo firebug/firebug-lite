@@ -2421,6 +2421,12 @@ this.isSystemPage = function(win)
     }
 };
 
+this.isSystemStyleSheet = function(sheet)
+{
+    var href = sheet && sheet.href;
+    return href && FBL.isSystemURL(href);
+};
+
 this.getURIHost = function(uri)
 {
     try

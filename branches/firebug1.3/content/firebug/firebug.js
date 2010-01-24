@@ -51,6 +51,9 @@ window.Firebug = FBL.Firebug =
         if (Firebug.Inspector)
             Firebug.Inspector.create();
         
+        if (FBL.processAllStyleSheets)
+            processAllStyleSheets(Firebug.browser.document);
+        
         FirebugChrome.initialize();
         
         dispatch(modules, "initialize", []);
@@ -697,6 +700,8 @@ Firebug.Panel =
         
         this.panelNode.style.display = "block";
         
+        this.visible = true;
+        
         if (!this.parentPanel)
             Firebug.chrome.layout(this);
     },
@@ -717,6 +722,8 @@ Firebug.Panel =
         }
         
         this.panelNode.style.display = "none";
+        
+        this.visible = false;
     },
 
     watchWindow: function(win)

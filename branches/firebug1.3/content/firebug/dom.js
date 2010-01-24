@@ -1188,10 +1188,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         
         addEvent(this.panelNode, "click", this.onClick);
         
-        //this.select(Firebug.browser.window);
-        
-        // TODO: xxxpedro dom leaking to global namespace (need to create a proper context object)
-        //this.context.loaded = true;
+        // TODO: xxxpedro dom 
         this.ishow();
         
         //TODO: xxxpedro
@@ -1669,6 +1666,11 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         Firebug.DOMBasePanel.prototype.initialize.apply(this, arguments);
         
         addEvent(this.panelNode, "click", this.onClick);
+        
+        // TODO: xxxpedro css2
+        var selection = documentCache[FirebugChrome.selectedHTMLElementId];
+        if (selection)
+            this.select(selection, true);
     },
     
     shutdown: function()
