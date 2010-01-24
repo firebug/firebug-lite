@@ -3,6 +3,10 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+// ************************************************************************************************
+// Globals
+
+var refreshDelay = 300;
 
 // ************************************************************************************************
 // Context
@@ -93,6 +97,66 @@ FBL.Context.prototype =
 
     invalidatePanels: function()
     {
+        if (!this.invalidPanels)
+            this.invalidPanels = {};
+
+        for (var i = 0; i < arguments.length; ++i)
+        {
+            var panelName = arguments[i];
+            
+            //var panel = this.getPanel(panelName, true);
+            //TODO: xxxpedro context how to get all panels using a single function?
+            // the current workaround to make the invalidation works is invalidating
+            // only sidePanels. There's also a problem with panel name (LowerCase in Firebug Lite)
+            var panel = Firebug.chrome.selectedPanel.sidePanelBar ?
+                    Firebug.chrome.selectedPanel.sidePanelBar.getPanel(panelName, true) :
+                    null;
+            
+            if (panel && !panel.noRefresh)
+                this.invalidPanels[panelName] = 1;
+        }
+
+        if (this.refreshTimeout)
+        {
+            this.clearTimeout(this.refreshTimeout);
+            delete this.refreshTimeout;
+        }
+
+        this.refreshTimeout = this.setTimeout(bindFixed(function()
+        {
+            var invalids = [];
+
+            for (var panelName in this.invalidPanels)
+            {
+                //var panel = this.getPanel(panelName, true);
+                //TODO: xxxpedro context how to get all panels using a single function?
+                // the current workaround to make the invalidation works is invalidating
+                // only sidePanels. There's also a problem with panel name (LowerCase in Firebug Lite)
+                var panel = Firebug.chrome.selectedPanel.sidePanelBar ?
+                        Firebug.chrome.selectedPanel.sidePanelBar.getPanel(panelName, true) :
+                        null;
+
+                if (panel)
+                {
+                    if (panel.visible && !panel.editing)
+                        panel.refresh();
+                    else
+                        panel.needsRefresh = true;
+
+                    // If the panel is being edited, we'll keep trying to
+                    // refresh it until editing is done
+                    if (panel.editing)
+                        invalids.push(panelName);
+                }
+            }
+
+            delete this.invalidPanels;
+            delete this.refreshTimeout;
+
+            // Keep looping until every tab is valid
+            if (invalids.length)
+                this.invalidatePanels.apply(this, invalids);
+        }, this), refreshDelay);
     },
     
     
