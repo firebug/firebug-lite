@@ -2867,6 +2867,17 @@ this.instanceOf = function(object, className)
         if (className in win)
             return object instanceof win[className];
     }
+    // If the object doesn't have the ownerDocument property, we'll try to look at
+    // the current context's window
+    else
+    {
+        // TODO: xxxpedro context
+        // Since we're not using yet a Firebug.context, we'll just use the top window
+        // (browser) as a reference
+        var win = Firebug.browser.window;
+        if (className in win)
+            return object instanceof win[className];
+    }
     
     var cache = instanceCheckMap[className];
     if (!cache)
