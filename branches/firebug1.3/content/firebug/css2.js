@@ -76,8 +76,6 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // ************************************************************************************************
 // ************************************************************************************************
-    
-
 
 var toCamelCase = function toCamelCase(s)
 {
@@ -821,7 +819,12 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             for (var i = 0; i < cssRules.length; ++i)
             {
                 var rule = cssRules[i];
-                if (rule instanceof CSSStyleRule)
+                
+                // TODO: xxxpedro opera instanceof stylesheet remove the following comments when 
+                // the issue with opera and style sheet Classes has been solved.
+                
+                //if (rule instanceof CSSStyleRule)
+                if (instanceOf(rule, "CSSStyleRule"))
                 {
                     var props = this.getRuleProperties(context, rule);
                     //var line = domUtils.getRuleLine(rule);
@@ -832,9 +835,11 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                                 isSystemSheet: isSystemSheet,
                                 isSelectorEditable: true});
                 }
-                else if (rule instanceof CSSImportRule)
+                //else if (rule instanceof CSSImportRule)
+                else if (instanceOf(rule, "CSSImportRule"))
                     rules.push({tag: CSSImportRuleTag.tag, rule: rule});
-                else if (rule instanceof CSSMediaRule)
+                //else if (rule instanceof CSSMediaRule)
+                else if (instanceOf(rule, "CSSMediaRule"))
                     appendRules.apply(this, [rule.cssRules]);
                 else
                 {
@@ -2057,8 +2062,13 @@ CSSComputedElementPanel.prototype = extend(CSSElementPanel.prototype,
 
     updateComputedView: function(element)
     {
-        var win = element.ownerDocument.defaultView;
-        var style = win.getComputedStyle(element, "");
+        var win = isIE ?
+                element.ownerDocument.parentWindow :
+                element.ownerDocument.defaultView;
+        
+        var style = isIE ?
+                element.currentStyle :
+                win.getComputedStyle(element, "");
 
         var groups = [];
 
@@ -2072,7 +2082,9 @@ CSSComputedElementPanel.prototype = extend(CSSElementPanel.prototype,
             for (var i = 0; i < props.length; ++i)
             {
                 var propName = props[i];
-                var propValue = style.getPropertyValue(propName);
+                var propValue = style.getPropertyValue ?
+                        style.getPropertyValue(propName) :
+                        ""+style[toCamelCase(propName)];
                 
                 if (propValue === undefined || propValue === null) 
                     continue;
