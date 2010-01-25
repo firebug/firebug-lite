@@ -84,7 +84,7 @@
 
 h1.groupHeader {
     padding: 2px 4px;
-    margin: 1px 0 4px 0;
+    margin: 0 0 4px 0;
     border-top: 1px solid #CCCCCC;
     border-bottom: 1px solid #CCCCCC;
     background: #eee url(group.gif) repeat-x;
