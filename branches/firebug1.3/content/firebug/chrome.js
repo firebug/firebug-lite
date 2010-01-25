@@ -1029,9 +1029,20 @@ append(ChromeBase,
             }
         }
         
-        Firebug.getElementPanel = function()
+        Firebug.getElementPanel = function(element)
         {
-            return Firebug.chrome.getPanel("HTML").sidePanelBar.getPanel("css");
+            var panelNode = getAncestorByClass(element, "fbPanel");
+            var id = panelNode.id.substr(2);
+            
+            var panel = Firebug.chrome.panelMap[id];
+            
+            if (!panel)
+            {
+                if (Firebug.chrome.selectedPanel.sidePanelBar)
+                    panel = Firebug.chrome.selectedPanel.sidePanelBar.panelMap[id];
+            }
+            
+            return panel;
         };
         
 
@@ -1357,6 +1368,9 @@ append(ChromeBase,
         changeSidePanelVisibility(panel.hasSidePanel);
         
         Firebug.chrome.draw();
+        
+        if (fbVSplitterStyle)
+            fbVSplitterStyle.right = FirebugChrome.sidePanelWidth -5 + "px";
     },
     
     showLargeCommandLine: function(hideToggleIcon)

@@ -7,8 +7,8 @@
     
 var bookmarletMode = true;
 
-var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
-//var bookmarletSkinURL = "http://getfirebug.com/releases/lite/alpha/skin/xp/";
+//var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
+var bookmarletSkinURL = "http://getfirebug.com/releases/lite/alpha/skin/xp/";
 
 // ************************************************************************************************
 
@@ -36,9 +36,9 @@ window.FBDev =
         
         // ****************************************************************************************
         // Experimental
-        "firebug/domplate.js", // not used yet
+        "firebug/domplate.js",
         //"firebug/domplate.optmized.loops.js", // not used yet
-        "firebug/reps2.js",  // experimental
+        "firebug/reps2.js",
         
         // ****************************************************************************************
         // Console / CommandLine core
@@ -58,17 +58,17 @@ window.FBDev =
         // Application Panels
         "firebug/html.js",
         
-        //"firebug/insideOutBox.js", // too experimental
-        //"firebug/html2.js", // too experimental
+        //"firebug/insideOutBox.js", // experimental
+        //"firebug/html2.js", // experimental
         
         //"firebug/css.js",
         
-        "firebug/infotip.js",
+        //"firebug/infotip.js", // experimental
         "firebug/editor.js",
         "firebug/css2.js",
         
         "firebug/script.js",
-        "firebug/dom.js", // experimental
+        "firebug/dom.js",
         
         // ****************************************************************************************
         // Trace Module and Panel
@@ -358,7 +358,7 @@ function findLocation()
     
     var path = null;
     
-    for(var i=0, c=head.childNodes, ci; ci=c[i]; i++)
+    for(var i=0, c=document.getElementsByTagName("script"), ci; ci=c[i]; i++)
     {
         var file = null;
         if ( ci.nodeName.toLowerCase() == "script" && 
@@ -417,7 +417,7 @@ function findLocation()
             break;
         }
     }
-                    
+
     var m = path.match(/([^\/]+)\/$/);
     
     if (path && m)

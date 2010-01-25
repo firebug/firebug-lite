@@ -103,7 +103,8 @@ var cacheUID = -1;
 var createCache = function()
 {
     var map = {};
-    var CID = cacheID;
+    // TODO: xxxpedro unify the cache system, using a single expando property
+    var CID = cacheID+"b";
     
     var cacheFunction = function(element)
     {
@@ -172,8 +173,10 @@ var createCache = function()
 
 var globalCSSRuleIndex;
 
-FBL.processAllStyleSheets = function(doc)
+FBL.processAllStyleSheets = function(doc, styleSheetIterator)
 {
+    styleSheetIterator = styleSheetIterator || processStyleSheet;
+    
     globalCSSRuleIndex = -1;
     var index = 0;
     var styleSheets = doc.styleSheets;
@@ -192,7 +195,7 @@ FBL.processAllStyleSheets = function(doc)
             
             for(var j=0, importsLength=imports.length; j<importsLength; j++)
             {
-                processStyleSheet(doc, imports[j]);
+                styleSheetIterator(doc, imports[j]);
             }
         }
         else
@@ -204,7 +207,7 @@ FBL.processAllStyleSheets = function(doc)
                 var rule = rules[j];
                 
                 if (rule.styleSheet)
-                    processStyleSheet(doc, rule.styleSheet);
+                    styleSheetIterator(doc, rule.styleSheet);
                 else
                     break;
             }
@@ -213,7 +216,7 @@ FBL.processAllStyleSheets = function(doc)
         }
         
         // process internal and external styleSheets
-        processStyleSheet(doc, styleSheet);
+        styleSheetIterator(doc, styleSheet);
     };
     
     if (FBTrace.DBG_CSS)
@@ -222,7 +225,7 @@ FBL.processAllStyleSheets = function(doc)
     }
 };
 
-var StyleSheetCache = createCache();
+StyleSheetCache = createCache();
 var ElementCache = createCache();
 
 var CSSRuleMap = {}
@@ -389,7 +392,7 @@ var CSSPropTag = domplate(CSSDomplateBase, {
     tag: DIV({"class": "cssProp focusRow", $disabledStyle: "$prop.disabled",
           $editGroup: "$rule|isEditable",
           $cssOverridden: "$prop.overridden", role : "option"},
-        A({"class": "cssPropDisable"}, "&nbsp;"),
+        A({"class": "cssPropDisable"}, "&nbsp;&nbsp;"),
         SPAN({"class": "cssPropName", $editable: "$rule|isEditable"}, "$prop.name"),
         SPAN({"class": "cssColon"}, ":"),
         SPAN({"class": "cssPropValue", $editable: "$rule|isEditable"}, "$prop.value$prop.important"),
@@ -537,6 +540,15 @@ var styleGroups =
         "user-modify",
         "user-input"
     ]
+};
+
+var styleGroupTitles =
+{
+    text: "Text",
+    background: "Background",
+    box: "Box Model",
+    layout: "Layout",
+    other: "Other"
 };
 
 Firebug.CSSModule = extend(Firebug.Module,
@@ -829,9 +841,18 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                     var props = this.getRuleProperties(context, rule);
                     //var line = domUtils.getRuleLine(rule);
                     var line = null;
+                    
+                    var selector = rule.selectorText;
+                    
+                    if (isIE)
+                    {
+                        selector = selector.replace(reSelectorTag, 
+                                function(s){return s.toLowerCase()});
+                    }
+                    
                     var ruleId = rule.selectorText+"/"+line;
                     rules.push({tag: CSSStyleRuleTag.tag, rule: rule, id: ruleId,
-                                selector: rule.selectorText, props: props,
+                                selector: selector, props: props,
                                 isSystemSheet: isSystemSheet,
                                 isSelectorEditable: true});
                 }
@@ -850,7 +871,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         }
 
         var rules = [];
-        appendRules.apply(this, [styleSheet.cssRules]);
+        appendRules.apply(this, [styleSheet.cssRules || styleSheet.rules]);
         return rules;
     },
 
@@ -1135,9 +1156,55 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     parentPanel: null,
     searchable: true,
     dependents: ["css", "stylesheet", "dom", "domSide", "layout"],
+    
+    options:
+    {
+        hasToolButtons: true
+    },
 
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        this.onMouseDown = bind(this.onMouseDown, this);
+        this.onClick = bind(this.onClick, this);
+
+        if (this.name == "stylesheet")
+        {
+            this.onChangeSelect = bind(this.onChangeSelect, this);
+            
+            var doc = Firebug.browser.document;
+            var selectNode = this.selectNode = createElement("select");
+            
+            processAllStyleSheets(doc, function(doc, styleSheet)
+            {
+                var key = StyleSheetCache.key(styleSheet);
+                var fileName = getFileName(styleSheet.href) || getFileName(doc.location.href);
+                var option = createElement("option", {value: key});
+                
+                option.appendChild(Firebug.chrome.document.createTextNode(fileName));
+                selectNode.appendChild(option);
+            });
+            
+            this.toolButtonsNode.appendChild(selectNode);
+        }
+        /**/
+    },
+    
+    onChangeSelect: function(event)
+    {
+        event = event || window.event;
+        var target = event.srcElement || event.currentTarget;
+        var key = target.value;
+        var styleSheet = StyleSheetCache.get(key);
+        
+        this.updateLocation(styleSheet);
+    },
+    
     initialize: function()
     {
+        Firebug.Panel.initialize.apply(this, arguments);
+        
         //if (!domUtils)
         //{
         //    try {
@@ -1148,17 +1215,32 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         //    }
         //}
         
-        this.onMouseDown = bind(this.onMouseDown, this);
-        this.onClick = bind(this.onClick, this);
-
         //TODO: xxxpedro
-        this.context = Firebug.chrome;
+        this.context = Firebug.chrome; // TODO: xxxpedro css2
+        this.document = Firebug.chrome.document; // TODO: xxxpedro css2
+        
         this.initializeNode();
         
         if (this.name == "stylesheet")
+        {
+            addEvent(this.selectNode, "change", this.onChangeSelect);
+            
             this.updateLocation(Firebug.browser.document.styleSheets[0]);
+        }
         
         //Firebug.SourceBoxPanel.initialize.apply(this, arguments);
+    },
+    
+    shutdown: function()
+    {
+        if (this.name == "stylesheet")
+        {
+            removeEvent(this.selectNode, "change", this.onChangeSelect);
+        }
+        
+        this.destroyNode();
+        
+        Firebug.Panel.shutdown.apply(this, arguments);
     },
 
     destroy: function(state)
@@ -1183,7 +1265,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     {
         removeEvent(this.panelNode, "mousedown", this.onMouseDown);
         removeEvent(this.panelNode, "click", this.onClick);
-        Firebug.SourceBoxPanel.destroyNode.apply(this, arguments);
+        //Firebug.SourceBoxPanel.destroyNode.apply(this, arguments);
         //dispatch([Firebug.A11yModel], 'onDestroyNode', [this, 'css']);
     },
 
@@ -1614,7 +1696,6 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
                 ),
                 DIV({role : "list", 'aria-label' :$STR('aria.labels.inherited style rules')},
                     FOR("section", "$inherited",
-
                         H1({"class": "cssInheritHeader groupHeader focusRow", role : 'listitem' },
                             SPAN({"class": "cssInheritLabel"}, "$inheritLabel"),
                             TAG(FirebugReps.Element.shortTag, {object: "$section.element"})
@@ -2074,7 +2155,9 @@ CSSComputedElementPanel.prototype = extend(CSSElementPanel.prototype,
 
         for (var groupName in styleGroups)
         {
-            var title = $STR("StyleGroup-" + groupName);
+            // TODO: xxxpedro i18n $STR
+            //var title = $STR("StyleGroup-" + groupName);
+            var title = styleGroupTitles[groupName];
             var group = {title: title, props: []};
             groups.push(group);
 

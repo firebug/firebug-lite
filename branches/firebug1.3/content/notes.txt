@@ -35,6 +35,28 @@ Memory leaks
     - XHRSpy
 
 ---------------------------------------------------------------------------------------------------
+Ranges and Selections
+---------------------------------------------------------------------------------------------------
+
+    Creating an Autosuggest Textbox with JavaScript, Part 1
+    http://www.webreference.com/programming/javascript/ncz/
+    http://www.webreference.com/programming/javascript/ncz/example.htm
+    
+    Introduction to Range
+    http://www.quirksmode.org/dom/range_intro.html
+    
+    W3C DOM Compatibility - Range
+    http://www.quirksmode.org/dom/w3c_range.html
+    
+    Get/Set Caret Code for IE and Mozilla
+    http://www.webdeveloper.com/forum/showpost.php?s=bfd315ad0f2b3f0e324e60a485611f4e&p=423545&postcount=3
+    
+    Working with the Cursor Position
+    http://parentnode.org/javascript/working-with-the-cursor-position/
+    http://pastebin.parentnode.org/78
+
+
+---------------------------------------------------------------------------------------------------
 CSS Cascading and Inheritance
 ---------------------------------------------------------------------------------------------------
 

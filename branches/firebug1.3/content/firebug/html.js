@@ -16,6 +16,8 @@ var ignoreHTMLProps =
 
 // ignores also the cache property injected by firebug
 ignoreHTMLProps[cacheID] = 1;
+// TODO: xxxpedro cache remove this expando property
+ignoreHTMLProps[cacheID+"b"] = 1;
 
 
 // ************************************************************************************************
