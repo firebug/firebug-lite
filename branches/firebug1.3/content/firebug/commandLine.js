@@ -239,10 +239,10 @@ Firebug.CommandLine = extend(Firebug.Module,
         // that is being executed in the command line
         if (result != Firebug.Console.LOG_COMMAND)
         {
-            Firebug.Console.log(result);
-            //var html = [];
-            //Firebug.Reps.appendObject(result, html)
-            //Firebug.Console.writeMessage(html, "command");
+            //Firebug.Console.log(result);
+            var html = [];
+            Firebug.Reps.appendObject(result, html)
+            Firebug.Console.writeMessage(html, "command");
         }
     },
     
