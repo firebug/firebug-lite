@@ -1031,7 +1031,15 @@ this.isVisible = function(elt)
 
 this.collapse = function(elt, collapsed)
 {
-    elt.setAttribute("collapsed", collapsed ? "true" : "false");
+    if (this.isIE6)
+    {
+        if (collapsed)
+            this.setClass(elt, "collapsed")
+        else
+            this.removeClass(elt, "collapsed");
+    }
+    else
+        elt.setAttribute("collapsed", collapsed ? "true" : "false");
 };
 
 this.obscure = function(elt, obscured)
@@ -2995,6 +3003,11 @@ var instanceCheckMap =
     HTMLHtmlElement:
     {
         
+    },
+    
+    CSSStyleRule:
+    {
+        property: ["selectorText", "style"]
     }
     
 };
