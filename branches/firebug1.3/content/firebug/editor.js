@@ -579,21 +579,27 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         
         // TODO: xxxpedro editor
         //this.targetOffset = getClientOffset(target);
+        
+        // Some browsers (IE, Google Chrome and Safari) will have problem trying to get the 
+        // offset values of invisible elements, or empty elements. So, in order to get the 
+        // correct values, we temporary inject a character in the innerHTML of the empty element, 
+        // then we get the offset values, and next, we restore the original innerHTML value.
+        var innerHTML = target.innerHTML;
+        var isEmptyElement = !innerHTML;
+        if (isEmptyElement)
+            target.innerHTML = ".";
+        
+        // Get the position of the target element (that is about to be edited)
         this.targetOffset = 
         {
             x: target.offsetLeft,
             y: target.offsetTop
         };
         
-        // Webkit has some problems trying to get the position of 
-        // an empty cssPropName element, so we make this ugly workaround,
-        // adjusting the position by hand
-        if (isSafari && hasClass(target, "cssPropName"))
-        {
-            if (this.targetOffset.x < 28)
-                this.targetOffset.x = 28;
-        }
-
+        // Restore the original innerHTML value of the empty element
+        if (isEmptyElement)
+            target.innerHTML = innerHTML;
+        
         this.originalClassName = this.box.className;
 
         var classNames = target.className.split(" ");
@@ -653,9 +659,12 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         //TODO: xxxpedro
         //scrollIntoCenterView(this.box, null, true);
         
+        // Display the editor after change its size and position to avoid flickering
+        this.box.style.display = "block";
+        
         var self = this;
         setTimeout(function(){
-            //self.input.focus();
+            self.input.focus();
             self.input.select();
         },0);        
     },
