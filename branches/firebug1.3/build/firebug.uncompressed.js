@@ -2,7 +2,7 @@
 
 /*!*************************************************************
  *
- *    Firebug Lite 1.3a5
+ *    Firebug Lite 1.3a6
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -460,6 +460,12 @@ this.bind = function()  // fn, thisObject, args => thisObject.fn(args, arguments
    return function() { return fn.apply(object, arrayInsert(cloneArray(args), 0, arguments)); }
 };
 
+this.bindFixed = function() // fn, thisObject, args => thisObject.fn(args);
+{
+    var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
+    return function() { return fn.apply(object, args); }
+};
+
 this.extend = function(l, r)
 {
     var newOb = {};
@@ -621,17 +627,267 @@ this.getCSS = this.isIE ?
 
 
 // ************************************************************************************************
-// String Util
+// Whitespace and Entity conversions
 
-var reTrim = /^\s+|\s+$/g;
-this.trim = function(s)
+var entityConversionLists = this.entityConversionLists = {
+    normal : {
+        whitespace : {
+            '\t' : '\u200c\u2192',
+            '\n' : '\u200c\u00b6',
+            '\r' : '\u200c\u00ac',
+            ' '  : '\u200c\u00b7'
+        }
+    },
+    reverse : {
+        whitespace : {
+            '&Tab;' : '\t',
+            '&NewLine;' : '\n',
+            '\u200c\u2192' : '\t',
+            '\u200c\u00b6' : '\n',
+            '\u200c\u00ac' : '\r',
+            '\u200c\u00b7' : ' '
+        }
+    }
+};
+
+var normal = entityConversionLists.normal,
+    reverse = entityConversionLists.reverse;
+
+function addEntityMapToList(ccode, entity)
 {
-    return s.replace(reTrim, "");
+    var lists = Array.prototype.slice.call(arguments, 2),
+        len = lists.length,
+        ch = String.fromCharCode(ccode);
+    for (var i = 0; i < len; i++)
+    {
+        var list = lists[i];
+        normal[list]=normal[list] || {};
+        normal[list][ch] = '&' + entity + ';';
+        reverse[list]=reverse[list] || {};
+        reverse[list]['&' + entity + ';'] = ch;
+    }
+};
+
+var e = addEntityMapToList,
+    white = 'whitespace',
+    text = 'text',
+    attr = 'attributes',
+    css = 'css',
+    editor = 'editor';
+
+e(0x0022, 'quot', attr, css);
+e(0x0026, 'amp', attr, text, css);
+e(0x0027, 'apos', css);
+e(0x003c, 'lt', attr, text, css);
+e(0x003e, 'gt', attr, text, css);
+e(0xa9, 'copy', text, editor);
+e(0xae, 'reg', text, editor);
+e(0x2122, 'trade', text, editor);
+
+// See http://en.wikipedia.org/wiki/Dash
+e(0x2012, '#8210', attr, text, editor); // figure dash
+e(0x2013, 'ndash', attr, text, editor); // en dash
+e(0x2014, 'mdash', attr, text, editor); // em dash
+e(0x2015, '#8213', attr, text, editor); // horizontal bar
+
+e(0x00a0, 'nbsp', attr, text, white, editor);
+e(0x2002, 'ensp', attr, text, white, editor);
+e(0x2003, 'emsp', attr, text, white, editor);
+e(0x2009, 'thinsp', attr, text, white, editor);
+e(0x200c, 'zwnj', attr, text, white, editor);
+e(0x200d, 'zwj', attr, text, white, editor);
+e(0x200e, 'lrm', attr, text, white, editor);
+e(0x200f, 'rlm', attr, text, white, editor);
+e(0x200b, '#8203', attr, text, white, editor); // zero-width space (ZWSP)
+
+//************************************************************************************************
+// Entity escaping
+
+var entityConversionRegexes = {
+        normal : {},
+        reverse : {}
+    };
+
+var escapeEntitiesRegEx = {
+    normal : function(list)
+    {
+        var chars = [];
+        for ( var ch in list)
+        {
+            chars.push(ch);
+        }
+        return new RegExp('([' + chars.join('') + '])', 'gm');
+    },
+    reverse : function(list)
+    {
+        var chars = [];
+        for ( var ch in list)
+        {
+            chars.push(ch);
+        }
+        return new RegExp('(' + chars.join('|') + ')', 'gm');
+    }
+};
+
+function getEscapeRegexp(direction, lists)
+{
+    var name = '', re;
+    var groups = [].concat(lists);
+    for (i = 0; i < groups.length; i++)
+    {
+        name += groups[i].group;
+    }
+    re = entityConversionRegexes[direction][name];
+    if (!re)
+    {
+        var list = {};
+        if (groups.length > 1)
+        {
+            for ( var i = 0; i < groups.length; i++)
+            {
+                var aList = entityConversionLists[direction][groups[i].group];
+                for ( var item in aList)
+                    list[item] = aList[item];
+            }
+        } else if (groups.length==1)
+        {
+            list = entityConversionLists[direction][groups[0].group]; // faster for special case
+        } else {
+            list = {}; // perhaps should print out an error here?
+        }
+        re = entityConversionRegexes[direction][name] = escapeEntitiesRegEx[direction](list);
+    }
+    return re;
+};
+
+function createSimpleEscape(name, direction)
+{
+    return function(value)
+    {
+        var list = entityConversionLists[direction][name];
+        return String(value).replace(
+                getEscapeRegexp(direction, {
+                    group : name,
+                    list : list
+                }),
+                function(ch)
+                {
+                    return list[ch];
+                }
+               );
+    }
+};
+
+function escapeGroupsForEntities(str, lists)
+{
+    lists = [].concat(lists);
+    var re = getEscapeRegexp('normal', lists),
+        split = String(str).split(re),
+        len = split.length,
+        results = [],
+        cur, r, i, ri = 0, l, list, last = '';
+    if (!len)
+        return [ {
+            str : String(str),
+            group : '',
+            name : ''
+        } ];
+    for (i = 0; i < len; i++)
+    {
+        cur = split[i];
+        if (cur == '')
+            continue;
+        for (l = 0; l < lists.length; l++)
+        {
+            list = lists[l];
+            r = entityConversionLists.normal[list.group][cur];
+            // if (cur == ' ' && list.group == 'whitespace' && last == ' ') // only show for runs of more than one space
+            //     r = ' ';
+            if (r)
+            {
+                results[ri] = {
+                    'str' : r,
+                    'class' : list['class'],
+                    'extra' : list.extra[cur] ? list['class']
+                            + list.extra[cur] : ''
+                };
+                break;
+            }
+        }
+        // last=cur;
+        if (!r)
+            results[ri] = {
+                'str' : cur,
+                'class' : '',
+                'extra' : ''
+            };
+        ri++;
+    }
+    return results;
+};
+
+this.escapeGroupsForEntities = escapeGroupsForEntities;
+
+
+function unescapeEntities(str, lists)
+{
+    var re = getEscapeRegexp('reverse', lists),
+        split = String(str).split(re),
+        len = split.length,
+        results = [],
+        cur, r, i, ri = 0, l, list;
+    if (!len)
+        return str;
+    lists = [].concat(lists);
+    for (i = 0; i < len; i++)
+    {
+        cur = split[i];
+        if (cur == '')
+            continue;
+        for (l = 0; l < lists.length; l++)
+        {
+            list = lists[l];
+            r = entityConversionLists.reverse[list.group][cur];
+            if (r)
+            {
+                results[ri] = r;
+                break;
+            }
+        }
+        if (!r)
+            results[ri] = cur;
+        ri++;
+    }
+    return results.join('') || '';
 };
 
 
 // ************************************************************************************************
 // String escaping
+
+var escapeForTextNode = this.escapeForTextNode = createSimpleEscape('text', 'normal');
+var escapeForHtmlEditor = this.escapeForHtmlEditor = createSimpleEscape('editor', 'normal');
+var escapeForElementAttribute = this.escapeForElementAttribute = createSimpleEscape('attributes', 'normal');
+var escapeForCss = this.escapeForCss = createSimpleEscape('css', 'normal');
+
+// deprecated compatibility functions
+//this.deprecateEscapeHTML = createSimpleEscape('text', 'normal');
+//this.deprecatedUnescapeHTML = createSimpleEscape('text', 'reverse');
+//this.escapeHTML = deprecated("use appropriate escapeFor... function", this.deprecateEscapeHTML);
+//this.unescapeHTML = deprecated("use appropriate unescapeFor... function", this.deprecatedUnescapeHTML);
+
+var escapeForSourceLine = this.escapeForSourceLine = createSimpleEscape('text', 'normal');
+
+var unescapeWhitespace = createSimpleEscape('whitespace', 'reverse');
+
+this.unescapeForTextNode = function(str)
+{
+    if (Firebug.showTextNodesWithWhitespace)
+        str = unescapeWhitespace(str);
+    if (!Firebug.showTextNodesWithEntities)
+        str = escapeForElementAttribute(str);
+    return str;
+};
 
 this.escapeNewLines = function(value)
 {
@@ -739,6 +995,16 @@ this.safeToString = function(ob)
 };
 
 // ************************************************************************************************
+// String Util
+
+var reTrim = /^\s+|\s+$/g;
+this.trim = function(s)
+{
+    return s.replace(reTrim, "");
+};
+
+
+// ************************************************************************************************
 // Empty
 
 this.emptyFn = function(){};
@@ -767,7 +1033,15 @@ this.isVisible = function(elt)
 
 this.collapse = function(elt, collapsed)
 {
-    elt.setAttribute("collapsed", collapsed ? "true" : "false");
+    if (this.isIE6)
+    {
+        if (collapsed)
+            this.setClass(elt, "collapsed")
+        else
+            this.removeClass(elt, "collapsed");
+    }
+    else
+        elt.setAttribute("collapsed", collapsed ? "true" : "false");
 };
 
 this.obscure = function(elt, obscured)
@@ -840,7 +1114,7 @@ this.getClientOffset = function(elt)
     {
         var p = elt.offsetParent;
 
-        var style = view.getComputedStyle(elt, "");
+        var style = isIE ? elt.currentStyle : view.getComputedStyle(elt, "");
 
         if (elt.offsetLeft)
             coords.x += elt.offsetLeft + parseInt(style.borderLeftWidth);
@@ -852,14 +1126,19 @@ this.getClientOffset = function(elt)
             if (p.nodeType == 1)
                 addOffset(p, coords, view);
         }
-        else if (elt.ownerDocument.defaultView.frameElement)
-            addOffset(elt.ownerDocument.defaultView.frameElement, coords, elt.ownerDocument.defaultView);
+        else 
+        {
+            var otherView = isIE ? elt.ownerDocument.parentWindow : elt.ownerDocument.defaultView;
+            if (otherView.frameElement)
+                addOffset(otherView.frameElement, coords, otherView);
+        }
     }
 
+    var isIE = this.isIE;
     var coords = {x: 0, y: 0};
     if (elt)
     {
-        var view = elt.ownerDocument.defaultView;
+        var view = isIE ? elt.ownerDocument.parentWindow : elt.ownerDocument.defaultView;
         addOffset(elt, coords, view);
     }
 
@@ -1118,6 +1397,229 @@ this.scrollIntoCenterView = function(element, scrollBox, notX, notY)
         FBTrace.sysout("lib.scrollIntoCenterView ","Element:"+element.innerHTML);
 };
 
+
+// ************************************************************************************************
+// CSS
+
+var cssKeywordMap = null;
+var cssPropNames = null;
+var cssColorNames = null;
+var imageRules = null;
+
+this.getCSSKeywordsByProperty = function(propName)
+{
+    if (!cssKeywordMap)
+    {
+        cssKeywordMap = {};
+
+        for (var name in this.cssInfo)
+        {
+            var list = [];
+
+            var types = this.cssInfo[name];
+            for (var i = 0; i < types.length; ++i)
+            {
+                var keywords = this.cssKeywords[types[i]];
+                if (keywords)
+                    list.push.apply(list, keywords);
+            }
+
+            cssKeywordMap[name] = list;
+        }
+    }
+
+    return propName in cssKeywordMap ? cssKeywordMap[propName] : [];
+};
+
+this.getCSSPropertyNames = function()
+{
+    if (!cssPropNames)
+    {
+        cssPropNames = [];
+
+        for (var name in this.cssInfo)
+            cssPropNames.push(name);
+    }
+
+    return cssPropNames;
+};
+
+this.isColorKeyword = function(keyword)
+{
+    if (keyword == "transparent")
+        return false;
+
+    if (!cssColorNames)
+    {
+        cssColorNames = [];
+
+        var colors = this.cssKeywords["color"];
+        for (var i = 0; i < colors.length; ++i)
+            cssColorNames.push(colors[i].toLowerCase());
+
+        var systemColors = this.cssKeywords["systemColor"];
+        for (var i = 0; i < systemColors.length; ++i)
+            cssColorNames.push(systemColors[i].toLowerCase());
+    }
+
+    return cssColorNames.indexOf(keyword.toLowerCase()) != -1;
+};
+
+this.isImageRule = function(rule)
+{
+    if (!imageRules)
+    {
+        imageRules = [];
+
+        for (var i in this.cssInfo)
+        {
+            var r = i.toLowerCase();
+            var suffix = "image";
+            if (r.match(suffix + "$") == suffix || r == "background")
+                imageRules.push(r);
+        }
+    }
+
+    return imageRules.indexOf(rule.toLowerCase()) != -1;
+};
+
+this.copyTextStyles = function(fromNode, toNode, style)
+{
+    var view = this.isIE ?
+            fromNode.ownerDocument.parentWindow :
+            fromNode.ownerDocument.defaultView;
+    
+    if (view)
+    {
+        if (!style)
+            style = this.isIE ? fromNode.currentStyle : view.getComputedStyle(fromNode, "");
+
+        toNode.style.fontFamily = style.fontFamily;
+        
+        // TODO: xxxpedro need to create a FBL.getComputedStyle() because IE
+        // returns wrong computed styles for inherited properties (like font-*)
+        //
+        // Also would be good to create a FBL.getStyle() 
+        toNode.style.fontSize = style.fontSize;
+        toNode.style.fontWeight = style.fontWeight;
+        toNode.style.fontStyle = style.fontStyle;
+
+        return style;
+    }
+};
+
+this.copyBoxStyles = function(fromNode, toNode, style)
+{
+    var view = this.isIE ?
+            fromNode.ownerDocument.parentWindow :
+            fromNode.ownerDocument.defaultView;
+    
+    if (view)
+    {
+        if (!style)
+            style = this.isIE ? fromNode.currentStyle : view.getComputedStyle(fromNode, "");
+
+        toNode.style.marginTop = style.marginTop;
+        toNode.style.marginRight = style.marginRight;
+        toNode.style.marginBottom = style.marginBottom;
+        toNode.style.marginLeft = style.marginLeft;
+        toNode.style.borderTopWidth = style.borderTopWidth;
+        toNode.style.borderRightWidth = style.borderRightWidth;
+        toNode.style.borderBottomWidth = style.borderBottomWidth;
+        toNode.style.borderLeftWidth = style.borderLeftWidth;
+
+        return style;
+    }
+};
+
+this.readBoxStyles = function(style)
+{
+    var styleNames = {
+        "margin-top": "marginTop", "margin-right": "marginRight",
+        "margin-left": "marginLeft", "margin-bottom": "marginBottom",
+        "border-top-width": "borderTop", "border-right-width": "borderRight",
+        "border-left-width": "borderLeft", "border-bottom-width": "borderBottom",
+        "padding-top": "paddingTop", "padding-right": "paddingRight",
+        "padding-left": "paddingLeft", "padding-bottom": "paddingBottom",
+        "z-index": "zIndex"
+    };
+
+    var styles = {};
+    for (var styleName in styleNames)
+        styles[styleNames[styleName]] = parseInt(style.getPropertyCSSValue(styleName).cssText) || 0;
+    if (FBTrace.DBG_INSPECT)
+        FBTrace.sysout("readBoxStyles ", styles);
+    return styles;
+};
+
+this.getBoxFromStyles = function(style, element)
+{
+    var args = this.readBoxStyles(style);
+    args.width = element.offsetWidth
+        - (args.paddingLeft+args.paddingRight+args.borderLeft+args.borderRight);
+    args.height = element.offsetHeight
+        - (args.paddingTop+args.paddingBottom+args.borderTop+args.borderBottom);
+    return args;
+};
+
+this.getElementCSSSelector = function(element)
+{
+    var label = element.localName.toLowerCase();
+    if (element.id)
+        label += "#" + element.id;
+    if (element.hasAttribute("class"))
+        label += "." + element.getAttribute("class").split(" ")[0];
+
+    return label;
+};
+
+this.getURLForStyleSheet= function(styleSheet)
+{
+    //http://www.w3.org/TR/DOM-Level-2-Style/stylesheets.html#StyleSheets-StyleSheet. For inline style sheets, the value of this attribute is null.
+    return (styleSheet.href ? styleSheet.href : styleSheet.ownerNode.ownerDocument.URL);
+};
+
+this.getDocumentForStyleSheet = function(styleSheet)
+{
+    while (styleSheet.parentStyleSheet && !styleSheet.ownerNode)
+    {
+        styleSheet = styleSheet.parentStyleSheet;
+    }
+    if (styleSheet.ownerNode)
+      return styleSheet.ownerNode.ownerDocument;
+};
+
+/**
+ * Retrieves the instance number for a given style sheet. The instance number
+ * is sheet's index within the set of all other sheets whose URL is the same.
+ */
+this.getInstanceForStyleSheet = function(styleSheet, ownerDocument)
+{
+    // System URLs are always unique (or at least we are making this assumption)
+    if (FBL.isSystemStyleSheet(styleSheet))
+        return 0;
+
+    // ownerDocument is an optional hint for performance
+    if (FBTrace.DBG_CSS) FBTrace.sysout("getInstanceForStyleSheet: " + styleSheet.href + " " + styleSheet.media.mediaText + " " + (styleSheet.ownerNode && FBL.getElementXPath(styleSheet.ownerNode)), ownerDocument);
+    ownerDocument = ownerDocument || FBL.getDocumentForStyleSheet(styleSheet);
+
+    var ret = 0,
+        styleSheets = ownerDocument.styleSheets,
+        href = styleSheet.href;
+    for (var i = 0; i < styleSheets.length; i++)
+    {
+        var curSheet = styleSheets[i];
+        if (FBTrace.DBG_CSS) FBTrace.sysout("getInstanceForStyleSheet: compare href " + i + " " + curSheet.href + " " + curSheet.media.mediaText + " " + (curSheet.ownerNode && FBL.getElementXPath(curSheet.ownerNode)));
+        if (curSheet == styleSheet)
+            break;
+        if (curSheet.href == href)
+            ret++;
+    }
+    return ret;
+};
+
+
+
 // ************************************************************************************************
 // CSS classes
 
@@ -1289,6 +1791,33 @@ this.getElementByClass = function(node, className)  // className, className, ...
     return null;
 };
 
+this.isAncestor = function(node, potentialAncestor)
+{
+    for (var parent = node; parent; parent = parent.parentNode)
+    {
+        if (parent == potentialAncestor)
+            return true;
+    }
+
+    return false;
+};
+
+this.getNextElement = function(node)
+{
+    while (node && node.nodeType != 1)
+        node = node.nextSibling;
+
+    return node;
+};
+
+this.getPreviousElement = function(node)
+{
+    while (node && node.nodeType != 1)
+        node = node.previousSibling;
+
+    return node;
+};
+
 this.getBody = function(doc)
 {
     if (doc.body)
@@ -1299,6 +1828,107 @@ this.getBody = function(doc)
         return body;
 
     return doc.firstChild;  // For non-HTML docs
+};
+
+this.findNextDown = function(node, criteria)
+{
+    if (!node)
+        return null;
+
+    for (var child = node.firstChild; child; child = child.nextSibling)
+    {
+        if (criteria(child))
+            return child;
+
+        var next = this.findNextDown(child, criteria);
+        if (next)
+            return next;
+    }
+};
+
+this.findPreviousUp = function(node, criteria)
+{
+    if (!node)
+        return null;
+
+    for (var child = node.lastChild; child; child = child.previousSibling)
+    {
+        var next = this.findPreviousUp(child, criteria);
+        if (next)
+            return next;
+
+        if (criteria(child))
+            return child;
+    }
+};
+
+this.findNext = function(node, criteria, upOnly, maxRoot)
+{
+    if (!node)
+        return null;
+
+    if (!upOnly)
+    {
+        var next = this.findNextDown(node, criteria);
+        if (next)
+            return next;
+    }
+
+    for (var sib = node.nextSibling; sib; sib = sib.nextSibling)
+    {
+        if (criteria(sib))
+            return sib;
+
+        var next = this.findNextDown(sib, criteria);
+        if (next)
+            return next;
+    }
+
+    if (node.parentNode && node.parentNode != maxRoot)
+        return this.findNext(node.parentNode, criteria, true);
+};
+
+this.findPrevious = function(node, criteria, downOnly, maxRoot)
+{
+    if (!node)
+        return null;
+
+    for (var sib = node.previousSibling; sib; sib = sib.previousSibling)
+    {
+        var prev = this.findPreviousUp(sib, criteria);
+        if (prev)
+            return prev;
+
+        if (criteria(sib))
+            return sib;
+    }
+
+    if (!downOnly)
+    {
+        var next = this.findPreviousUp(node, criteria);
+        if (next)
+            return next;
+    }
+
+    if (node.parentNode && node.parentNode != maxRoot)
+    {
+        if (criteria(node.parentNode))
+            return node.parentNode;
+
+        return this.findPrevious(node.parentNode, criteria, true);
+    }
+};
+
+this.getNextByClass = function(root, state)
+{
+    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); }
+    return this.findNext(root, iter);
+};
+
+this.getPreviousByClass = function(root, state)
+{
+    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); }
+    return this.findPrevious(root, iter);
 };
 
 this.isElement = function(o)
@@ -1801,6 +2431,12 @@ this.isSystemPage = function(win)
     }
 };
 
+this.isSystemStyleSheet = function(sheet)
+{
+    var href = sheet && sheet.href;
+    return href && FBL.isSystemURL(href);
+};
+
 this.getURIHost = function(uri)
 {
     try
@@ -2104,6 +2740,48 @@ this.objectToString = function(object)
 };
 
 // ************************************************************************************************
+// Input Caret Position
+
+this.selectInputRange = function (input, start, length)
+{
+    if (input.createTextRange)
+    {
+        var range = input.createTextRange(); 
+        range.moveStart("character", start); 
+        range.moveEnd("character", length - input.value.length); 
+        range.select();
+    }
+    else if (input.setSelectionRange)
+    {
+        input.setSelectionRange(start, length);
+    }
+    
+    input.focus(); 
+};
+
+// ************************************************************************************************
+// Input Caret Position
+
+this.getInputCaretPosition = function(input)
+{
+    var position = 0;
+    
+    if (document.selection)
+    { 
+        input.focus();
+        
+        var range = document.selection.createRange();
+        range.moveStart("character", -input.value.length);
+        
+        position = range.text.length;
+    }
+    else if (input.selectionStart || input.selectionStart == "0")
+        position = input.selectionStart;
+    
+    return (position);
+};
+
+// ************************************************************************************************
 // Opera Tab Fix
 
 function onOperaTabBlur(e)
@@ -2196,6 +2874,17 @@ this.instanceOf = function(object, className)
         var win = object.ownerDocument.defaultView || object.ownerDocument.parentWindow;
         
         // if the class is acessible in the window, uses the native instanceof operator
+        if (className in win)
+            return object instanceof win[className];
+    }
+    // If the object doesn't have the ownerDocument property, we'll try to look at
+    // the current context's window
+    else
+    {
+        // TODO: xxxpedro context
+        // Since we're not using yet a Firebug.context, we'll just use the top window
+        // (browser) as a reference
+        var win = Firebug.browser.window;
         if (className in win)
             return object instanceof win[className];
     }
@@ -2316,6 +3005,11 @@ var instanceCheckMap =
     HTMLHtmlElement:
     {
         
+    },
+    
+    CSSStyleRule:
+    {
+        property: ["selectorText", "style"]
     }
     
 };
@@ -4168,6 +4862,127 @@ var invisibleTags = this.invisibleTags =
 };
 
 
+if (typeof KeyEvent == "undefined") {
+    this.KeyEvent = {
+        DOM_VK_CANCEL: 3,
+        DOM_VK_HELP: 6,
+        DOM_VK_BACK_SPACE: 8,
+        DOM_VK_TAB: 9,
+        DOM_VK_CLEAR: 12,
+        DOM_VK_RETURN: 13,
+        DOM_VK_ENTER: 14,
+        DOM_VK_SHIFT: 16,
+        DOM_VK_CONTROL: 17,
+        DOM_VK_ALT: 18,
+        DOM_VK_PAUSE: 19,
+        DOM_VK_CAPS_LOCK: 20,
+        DOM_VK_ESCAPE: 27,
+        DOM_VK_SPACE: 32,
+        DOM_VK_PAGE_UP: 33,
+        DOM_VK_PAGE_DOWN: 34,
+        DOM_VK_END: 35,
+        DOM_VK_HOME: 36,
+        DOM_VK_LEFT: 37,
+        DOM_VK_UP: 38,
+        DOM_VK_RIGHT: 39,
+        DOM_VK_DOWN: 40,
+        DOM_VK_PRINTSCREEN: 44,
+        DOM_VK_INSERT: 45,
+        DOM_VK_DELETE: 46,
+        DOM_VK_0: 48,
+        DOM_VK_1: 49,
+        DOM_VK_2: 50,
+        DOM_VK_3: 51,
+        DOM_VK_4: 52,
+        DOM_VK_5: 53,
+        DOM_VK_6: 54,
+        DOM_VK_7: 55,
+        DOM_VK_8: 56,
+        DOM_VK_9: 57,
+        DOM_VK_SEMICOLON: 59,
+        DOM_VK_EQUALS: 61,
+        DOM_VK_A: 65,
+        DOM_VK_B: 66,
+        DOM_VK_C: 67,
+        DOM_VK_D: 68,
+        DOM_VK_E: 69,
+        DOM_VK_F: 70,
+        DOM_VK_G: 71,
+        DOM_VK_H: 72,
+        DOM_VK_I: 73,
+        DOM_VK_J: 74,
+        DOM_VK_K: 75,
+        DOM_VK_L: 76,
+        DOM_VK_M: 77,
+        DOM_VK_N: 78,
+        DOM_VK_O: 79,
+        DOM_VK_P: 80,
+        DOM_VK_Q: 81,
+        DOM_VK_R: 82,
+        DOM_VK_S: 83,
+        DOM_VK_T: 84,
+        DOM_VK_U: 85,
+        DOM_VK_V: 86,
+        DOM_VK_W: 87,
+        DOM_VK_X: 88,
+        DOM_VK_Y: 89,
+        DOM_VK_Z: 90,
+        DOM_VK_CONTEXT_MENU: 93,
+        DOM_VK_NUMPAD0: 96,
+        DOM_VK_NUMPAD1: 97,
+        DOM_VK_NUMPAD2: 98,
+        DOM_VK_NUMPAD3: 99,
+        DOM_VK_NUMPAD4: 100,
+        DOM_VK_NUMPAD5: 101,
+        DOM_VK_NUMPAD6: 102,
+        DOM_VK_NUMPAD7: 103,
+        DOM_VK_NUMPAD8: 104,
+        DOM_VK_NUMPAD9: 105,
+        DOM_VK_MULTIPLY: 106,
+        DOM_VK_ADD: 107,
+        DOM_VK_SEPARATOR: 108,
+        DOM_VK_SUBTRACT: 109,
+        DOM_VK_DECIMAL: 110,
+        DOM_VK_DIVIDE: 111,
+        DOM_VK_F1: 112,
+        DOM_VK_F2: 113,
+        DOM_VK_F3: 114,
+        DOM_VK_F4: 115,
+        DOM_VK_F5: 116,
+        DOM_VK_F6: 117,
+        DOM_VK_F7: 118,
+        DOM_VK_F8: 119,
+        DOM_VK_F9: 120,
+        DOM_VK_F10: 121,
+        DOM_VK_F11: 122,
+        DOM_VK_F12: 123,
+        DOM_VK_F13: 124,
+        DOM_VK_F14: 125,
+        DOM_VK_F15: 126,
+        DOM_VK_F16: 127,
+        DOM_VK_F17: 128,
+        DOM_VK_F18: 129,
+        DOM_VK_F19: 130,
+        DOM_VK_F20: 131,
+        DOM_VK_F21: 132,
+        DOM_VK_F22: 133,
+        DOM_VK_F23: 134,
+        DOM_VK_F24: 135,
+        DOM_VK_NUM_LOCK: 144,
+        DOM_VK_SCROLL_LOCK: 145,
+        DOM_VK_COMMA: 188,
+        DOM_VK_PERIOD: 190,
+        DOM_VK_SLASH: 191,
+        DOM_VK_BACK_QUOTE: 192,
+        DOM_VK_OPEN_BRACKET: 219,
+        DOM_VK_BACK_SLASH: 220,
+        DOM_VK_CLOSE_BRACKET: 221,
+        DOM_VK_QUOTE: 222,
+        DOM_VK_META: 224
+    };
+}
+
+
 // ************************************************************************************************
 // Ajax
 
@@ -4501,8 +5316,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.0a5",
-    revision: "$Revision: 5716 $",
+    version: "Firebug Lite 1.3.0a6",
+    revision: "$Revision: 5833 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -4525,6 +5340,9 @@ window.Firebug = FBL.Firebug =
         
         if (Firebug.Inspector)
             Firebug.Inspector.create();
+        
+        if (FBL.processAllStyleSheets)
+            processAllStyleSheets(Firebug.browser.document);
         
         FirebugChrome.initialize();
         
@@ -5172,6 +5990,8 @@ Firebug.Panel =
         
         this.panelNode.style.display = "block";
         
+        this.visible = true;
+        
         if (!this.parentPanel)
             Firebug.chrome.layout(this);
     },
@@ -5192,6 +6012,8 @@ Firebug.Panel =
         }
         
         this.panelNode.style.display = "none";
+        
+        this.visible = false;
     },
 
     watchWindow: function(win)
@@ -5217,8 +6039,9 @@ Firebug.Panel =
         {
             if (!this.context.browser) // XXXjjb this is bug. Somehow the panel context is not FirebugContext.
             {
-              if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("firebug.Panel showToolbarButtons this.context has no browser, this:", this)
+                if (FBTrace.DBG_ERRORS)
+                    FBTrace.sysout("firebug.Panel showToolbarButtons this.context has no browser, this:", this)
+
                 return;
             }
             var buttons = this.context.browser.chrome.$(buttonsId);
@@ -5273,11 +6096,28 @@ Firebug.Panel =
         }
     },
 
-
     updateSelection: function(object)
     {
     },
 
+    markChange: function(skipSelf)
+    {
+        if (this.dependents)
+        {
+            if (skipSelf)
+            {
+                for (var i = 0; i < this.dependents.length; ++i)
+                {
+                    var panelName = this.dependents[i];
+                    if (panelName != this.name)
+                        this.context.invalidatePanels(panelName);
+                }
+            }
+            else
+                this.context.invalidatePanels.apply(this.context, this.dependents);
+        }
+    },
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
     startInspecting: function()
@@ -5302,8 +6142,63 @@ Firebug.Panel =
     }
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+};
 
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+/*
+ * MeasureBox
+ * To get pixels size.width and size.height:
+ * <ul><li>     this.startMeasuring(view); </li>
+ *     <li>     var size = this.measureText(lineNoCharsSpacer); </li>
+ *     <li>     this.stopMeasuring(); </li>
+ * </ul>
+ */
+Firebug.MeasureBox =
+{
+    startMeasuring: function(target)
+    {
+        if (!this.measureBox)
+        {
+            this.measureBox = target.ownerDocument.createElement("span");
+            this.measureBox.className = "measureBox";
+        }
+
+        copyTextStyles(target, this.measureBox);
+        target.ownerDocument.body.appendChild(this.measureBox);
+    },
+
+    getMeasuringElement: function()
+    {
+        return this.measureBox;
+    },
+
+    measureText: function(value)
+    {
+        this.measureBox.innerHTML = value ? escapeForSourceLine(value) : "m";
+        return {width: this.measureBox.offsetWidth, height: this.measureBox.offsetHeight-1};
+    },
+
+    measureInputText: function(value)
+    {
+        value = value ? escapeForTextNode(value) : "m";
+        if (!Firebug.showTextNodesWithWhitespace)
+            value = value.replace(/\t/g,'mmmmmm').replace(/\ /g,'m');
+        this.measureBox.innerHTML = value;
+        return {width: this.measureBox.offsetWidth, height: this.measureBox.offsetHeight-1};
+    },
+
+    getBox: function(target)
+    {
+        var style = this.measureBox.ownerDocument.defaultView.getComputedStyle(this.measureBox, "");
+        var box = getBoxFromStyles(style, this.measureBox);
+        return box;
+    },
+
+    stopMeasuring: function()
+    {
+        this.measureBox.parentNode.removeChild(this.measureBox);
+    }
 };
 
 
@@ -6338,6 +7233,10 @@ StatusBar.prototype = extend(Controller, {
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+// ************************************************************************************************
+// Globals
+
+var refreshDelay = 300;
 
 // ************************************************************************************************
 // Context
@@ -6346,6 +7245,8 @@ FBL.Context = function(win)
 {
     this.window = win.window;
     this.document = win.document;
+    
+    this.browser = Env.browser;
     
     // Some windows in IE, like iframe, doesn't have the eval() method
     if (isIE && !this.window.eval)
@@ -6367,7 +7268,128 @@ FBL.Context = function(win)
 
 FBL.Context.prototype =
 {  
-  
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // partial-port of Firebug tabContext.js
+    
+    browser: null,
+    loaded: true,
+    
+    setTimeout: function(fn, delay)
+    {
+        var win = this.window;
+        
+        if (win.setTimeout == this.setTimeout)
+            throw new Error("setTimeout recursion");
+        
+        var timeout = win.setTimeout.apply ? // IE doesn't have apply method on setTimeout
+                win.setTimeout.apply(win, arguments) :
+                win.setTimeout(fn, delay);
+
+        if (!this.timeouts)
+            this.timeouts = {};
+
+        this.timeouts[timeout] = 1;
+
+        return timeout;
+    },
+
+    clearTimeout: function(timeout)
+    {
+        clearTimeout(timeout);
+
+        if (this.timeouts)
+            delete this.timeouts[timeout];
+    },
+
+    setInterval: function(fn, delay)
+    {
+        var win = this.window;
+        
+        var timeout = win.setInterval.apply ? // IE doesn't have apply method on setTimeout
+                win.setInterval.apply(win, arguments) :
+                win.setInterval(fn, delay);
+
+        if (!this.intervals)
+            this.intervals = {};
+
+        this.intervals[timeout] = 1;
+
+        return timeout;
+    },
+
+    clearInterval: function(timeout)
+    {
+        clearInterval(timeout);
+
+        if (this.intervals)
+            delete this.intervals[timeout];
+    },
+
+    invalidatePanels: function()
+    {
+        if (!this.invalidPanels)
+            this.invalidPanels = {};
+
+        for (var i = 0; i < arguments.length; ++i)
+        {
+            var panelName = arguments[i];
+            
+            //var panel = this.getPanel(panelName, true);
+            //TODO: xxxpedro context how to get all panels using a single function?
+            // the current workaround to make the invalidation works is invalidating
+            // only sidePanels. There's also a problem with panel name (LowerCase in Firebug Lite)
+            var panel = Firebug.chrome.selectedPanel.sidePanelBar ?
+                    Firebug.chrome.selectedPanel.sidePanelBar.getPanel(panelName, true) :
+                    null;
+            
+            if (panel && !panel.noRefresh)
+                this.invalidPanels[panelName] = 1;
+        }
+
+        if (this.refreshTimeout)
+        {
+            this.clearTimeout(this.refreshTimeout);
+            delete this.refreshTimeout;
+        }
+
+        this.refreshTimeout = this.setTimeout(bindFixed(function()
+        {
+            var invalids = [];
+
+            for (var panelName in this.invalidPanels)
+            {
+                //var panel = this.getPanel(panelName, true);
+                //TODO: xxxpedro context how to get all panels using a single function?
+                // the current workaround to make the invalidation works is invalidating
+                // only sidePanels. There's also a problem with panel name (LowerCase in Firebug Lite)
+                var panel = Firebug.chrome.selectedPanel.sidePanelBar ?
+                        Firebug.chrome.selectedPanel.sidePanelBar.getPanel(panelName, true) :
+                        null;
+
+                if (panel)
+                {
+                    if (panel.visible && !panel.editing)
+                        panel.refresh();
+                    else
+                        panel.needsRefresh = true;
+
+                    // If the panel is being edited, we'll keep trying to
+                    // refresh it until editing is done
+                    if (panel.editing)
+                        invalids.push(panelName);
+                }
+            }
+
+            delete this.invalidPanels;
+            delete this.refreshTimeout;
+
+            // Keep looping until every tab is valid
+            if (invalids.length)
+                this.invalidatePanels.apply(this, invalids);
+        }, this), refreshDelay);
+    },
+    
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Evalutation Method
     
@@ -6965,7 +7987,7 @@ FBL.FirebugChrome =
     
     isOpen: false,
     height: 250,
-    sidePanelWidth: 300,
+    sidePanelWidth: 350,
     
     selectedPanelName: "Console",
     selectedHTMLElementId: null,
@@ -7072,7 +8094,7 @@ var createChromeWindow = function(options)
         
         createChromeDiv = function()
         {
-            Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
+            //Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
         
             var node = chrome.node = createGlobalElement("div"),
                 style = createGlobalElement("style"),
@@ -7113,8 +8135,8 @@ var createChromeWindow = function(options)
             {
                 // IE7 CSS bug (FbChrome table bigger than its parent div)
                 setTimeout(function(){
-                    node.firstChild.style.height = "1px";
-                    node.firstChild.style.position = "static";
+                node.firstChild.style.height = "1px";
+                node.firstChild.style.position = "static";
                 },0);
                 /**/
             }
@@ -7366,8 +8388,9 @@ var Chrome = function Chrome(chrome)
     var type = chrome.type;
     var Base = type == "frame" || type == "div" ? ChromeFrameBase : ChromePopupBase; 
     
-    append(this, Base);   // inherit chrome class properties (ChromeFrameBase or ChromePopupBase)
+    append(this, Base);   // inherit from base class (ChromeFrameBase or ChromePopupBase)
     append(this, chrome); // inherit chrome window properties
+    append(this, new Context(chrome.window)); // inherit from Context class
     
     FirebugChrome.chromeMap[type] = this;
     Firebug.chrome = this;
@@ -7387,7 +8410,6 @@ var Chrome = function Chrome(chrome)
 var ChromeBase = {};
 append(ChromeBase, Controller); 
 append(ChromeBase, PanelBar);
-append(ChromeBase, Context.prototype);
 append(ChromeBase,
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -7863,6 +8885,99 @@ append(ChromeBase,
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //this.draw();
         
+        
+        
+        
+        
+        
+        
+
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+        var onPanelMouseDown = function onPanelMouseDown(event)
+        {
+            var target = event.target || event.srcElement;
+            
+            if (FBL.isLeftClick(event))
+            {
+                var editable = FBL.getAncestorByClass(target, "editable");
+                if (editable)
+                {
+                    Firebug.Editor.startEditing(editable);
+                    FBL.cancelEvent(event);
+                }
+            }
+            else if (FBL.isMiddleClick(event) && Firebug.getRepNode(target))
+            {
+                // Prevent auto-scroll when middle-clicking a rep object
+                FBL.cancelEvent(event);
+            }
+        }
+        
+        Firebug.getElementPanel = function(element)
+        {
+            var panelNode = getAncestorByClass(element, "fbPanel");
+            var id = panelNode.id.substr(2);
+            
+            var panel = Firebug.chrome.panelMap[id];
+            
+            if (!panel)
+            {
+                if (Firebug.chrome.selectedPanel.sidePanelBar)
+                    panel = Firebug.chrome.selectedPanel.sidePanelBar.panelMap[id];
+            }
+            
+            return panel;
+        };
+        
+
+        Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
+        {
+            if (!filter)
+                filter = FBL.noKeyModifiers;
+    
+            var keyCode = KeyEvent["DOM_VK_"+key];
+    
+            var fn = function fn(event)
+            {
+                if (event.keyCode == keyCode && (!filter || filter(event)))
+                {
+                    listener();
+                    FBL.cancelEvent(event, true);
+                    return false;
+                }
+            }
+    
+            addEvent(Firebug.chrome.document, "keydown", fn);
+            
+            return [fn, capture];
+        };
+        
+        Firebug.chrome.keyIgnore = function(listener)
+        {
+            removeEvent(Firebug.chrome.document, "keydown", listener[0]);
+        };
+
+        
+        
+        this.addController(
+                [fbPanel1, "mousedown", onPanelMouseDown],
+                [fbPanel2, "mousedown", onPanelMouseDown]
+             );
+/**/
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        
         // menus can be used without domplate
         if (FBL.domplate)
             this.testMenu();
@@ -8143,6 +9258,9 @@ append(ChromeBase,
         changeSidePanelVisibility(panel.hasSidePanel);
         
         Firebug.chrome.draw();
+        
+        if (fbVSplitterStyle)
+            fbVSplitterStyle.right = FirebugChrome.sidePanelWidth -5 + "px";
     },
     
     showLargeCommandLine: function(hideToggleIcon)
@@ -11393,6 +12511,63 @@ var Renderer =
         return [firstRow, lastRow];
     },
 
+    insertBefore: function(args, before, self)
+    {
+        return this.insertNode(args, before.ownerDocument, before, false, self);
+    },
+
+    insertAfter: function(args, after, self)
+    {
+        return this.insertNode(args, after.ownerDocument, after, true, self);
+    },
+
+    insertNode: function(args, doc, element, isAfter, self)
+    {
+        if (!args)
+            args = {};
+
+        this.tag.compile();
+
+        var outputs = [];
+        var html = this.renderHTML(args, outputs, self);
+        
+        //if (FBTrace.DBG_DOM)
+        //    FBTrace.sysout("domplate.insertNode html: "+html+"\n");
+
+        var doc = element.ownerDocument;
+        if (!womb || womb.ownerDocument != doc)
+            womb = doc.createElement("div");
+        
+        womb.innerHTML = html;
+  
+        var root = womb.firstChild;
+        if (isAfter)
+        {
+            while (womb.firstChild)
+                if (element.nextSibling)
+                    element.parentNode.insertBefore(womb.firstChild, element.nextSibling);
+                else
+                    element.parentNode.appendChild(womb.firstChild);
+        }
+        else
+        {
+            while (womb.lastChild)
+                element.parentNode.insertBefore(womb.lastChild, element);
+        }
+
+        var domArgs = [root, this.tag.context, 0];
+        domArgs.push.apply(domArgs, this.tag.domArgs);
+        domArgs.push.apply(domArgs, outputs);
+
+        //if (FBTrace.DBG_DOM)
+        //    FBTrace.sysout("domplate.insertNode domArgs:", domArgs);
+        this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
+
+        return root;
+    },
+    /**/
+
+    /*
     insertAfter: function(args, before, self)
     {
         this.tag.compile();
@@ -11406,7 +12581,7 @@ var Renderer =
         
         womb.innerHTML = html;
   
-        root = womb.firstChild;
+        var root = womb.firstChild;
         while (womb.firstChild)
             if (before.nextSibling)
                 before.parentNode.insertBefore(womb.firstChild, before.nextSibling);
@@ -11422,7 +12597,8 @@ var Renderer =
 
         return root;
     },
-
+    /**/
+    
     replace: function(args, parent, self)
     {
         this.tag.compile();
@@ -14223,10 +15399,10 @@ Firebug.CommandLine = extend(Firebug.Module,
         // that is being executed in the command line
         if (result != Firebug.Console.LOG_COMMAND)
         {
-            Firebug.Console.log(result);
-            //var html = [];
-            //Firebug.Reps.appendObject(result, html)
-            //Firebug.Console.writeMessage(html, "command");
+            //Firebug.Console.log(result);
+            var html = [];
+            Firebug.Reps.appendObject(result, html)
+            Firebug.Console.writeMessage(html, "command");
         }
     },
     
@@ -16602,6 +17778,8 @@ var ignoreHTMLProps =
 
 // ignores also the cache property injected by firebug
 ignoreHTMLProps[cacheID] = 1;
+// TODO: xxxpedro cache remove this expando property
+ignoreHTMLProps[cacheID+"b"] = 1;
 
 
 // ************************************************************************************************
@@ -16897,8 +18075,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if(!this.sidePanelBar.selectedPanel)
         {
-            this.sidePanelBar.selectPanel("DOMSidePanel");
-        }            
+            this.sidePanelBar.selectPanel("css");
+        }
     },
     
     destroy: function()
@@ -17185,573 +18363,3959 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
 /* See license.txt for terms of usage */
 
 FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
 
 // ************************************************************************************************
-// CSS Module
+// Constants
 
-Firebug.CSS = extend(Firebug.Module, 
+var saveTimeout = 400;
+var pageAmount = 10;
+
+// ************************************************************************************************
+// Globals
+
+var currentTarget = null;
+var currentGroup = null;
+var currentPanel = null;
+var currentEditor = null;
+
+var defaultEditor = null;
+
+var originalClassName = null;
+
+var originalValue = null;
+var defaultValue = null;
+var previousValue = null;
+
+var invalidEditor = false;
+var ignoreNextInput = false;
+
+// ************************************************************************************************
+
+Firebug.Editor = extend(Firebug.Module,
 {
-    getPanel: function()
+    supportsStopEvent: true,
+
+    dispatchName: "editor",
+    tabCharacter: "    ",
+
+    startEditing: function(target, value, editor)
     {
-        return Firebug.chrome ? Firebug.chrome.getPanel("CSS") : null;
-    },
-    
-    renderStyleSheet: function(index)
-    {
-        var panel = this.getPanel();
-        
-        if (panel.lastStyleSheetIndex != index)
+        this.stopEditing();
+
+        if (hasClass(target, "insertBefore") || hasClass(target, "insertAfter"))
+            return;
+
+        var panel = Firebug.getElementPanel(target);
+        if (!panel.editable)
+            return;
+
+        if (FBTrace.DBG_EDITOR)
+            FBTrace.sysout("editor.startEditing " + value, target);
+
+        defaultValue = target.getAttribute("defaultValue");
+        if (value == undefined)
         {
-            var str = renderStyleSheet(index);
-            
-            panel.contentNode.innerHTML = str.join("");
-            
-            // IE needs this timeout, otherwise the panel won't scroll
-            setTimeout(function(){
-                panel.synchronizeUI();
-            },0);
-            
-            panel.styleSheetIndex = index;
-            panel.lastStyleSheetIndex = index;
+            var textContent = isIE ? "innerText" : "textContent";
+            value = target[textContent];
+            if (value == defaultValue)
+                value = "";
         }
-    }
-});
 
-Firebug.registerModule(Firebug.CSS);
+        originalValue = previousValue = value;
 
+        invalidEditor = false;
+        currentTarget = target;
+        currentPanel = panel;
+        currentGroup = getAncestorByClass(target, "editGroup");
 
-// ************************************************************************************************
-// CSS Panel
+        currentPanel.editing = true;
 
-function CSSStyleSheetPanel(){};
+        var panelEditor = currentPanel.getEditor(target, value);
+        currentEditor = editor ? editor : panelEditor;
+        if (!currentEditor)
+            currentEditor = getDefaultEditor(currentPanel);
 
-CSSStyleSheetPanel.prototype = extend(Firebug.Panel,
-{
-    name: "CSS",
-    title: "CSS",
-    
-    styleSheetIndex: 0,
-    lastStyleSheetIndex: -1,
-    
-    options: {
-        hasToolButtons: true
+        var inlineParent = getInlineParent(target);
+        var targetSize = getOffsetSize(inlineParent);
+
+        setClass(panel.panelNode, "editing");
+        setClass(target, "editing");
+        if (currentGroup)
+            setClass(currentGroup, "editing");
+
+        currentEditor.show(target, currentPanel, value, targetSize);
+        //dispatch(this.fbListeners, "onBeginEditing", [currentPanel, currentEditor, target, value]);
+        currentEditor.beginEditing(target, value);
+        if (FBTrace.DBG_EDITOR)
+            FBTrace.sysout("Editor start panel "+currentPanel.name);
+        this.attachListeners(currentEditor, panel.context);
     },
 
-    create: function()
+    stopEditing: function(cancel)
     {
-        Firebug.Panel.create.apply(this, arguments);
-        
-        this.onChangeSelect = bind(this.onChangeSelect, this);
-        
-        var doc = Firebug.browser.document;
-        var styleSheets = doc.styleSheets;
-        var selectNode = this.selectNode = createElement("select");
-        
-        for(var i=0, length=styleSheets.length; i<length; i++)
-        {
-            var styleSheet = styleSheets[i];
-            var fileName = getFileName(styleSheet.href) || getFileName(doc.location.href);
-            var option = createElement("option", {value:i});
-            
-            option.appendChild(Firebug.chrome.document.createTextNode(fileName));
-            selectNode.appendChild(option);
-        };
-        
-        this.toolButtonsNode.appendChild(selectNode);
-    },
-    
-    initialize: function()
-    {
-        Firebug.Panel.initialize.apply(this, arguments);
-        
-        addEvent(this.selectNode, "change", this.onChangeSelect);
-        
-        this.selectStyleSheet(this.styleSheetIndex);
-    },
-    
-    detach: function(oldChrome, newChrome)
-    {
-        Firebug.Panel.detach.apply(this, arguments);
-        
-        var oldPanel = oldChrome.getPanel("CSS");
-        var index = oldPanel.styleSheetIndex;
-        
-        this.selectNode.selectedIndex = index;
-        this.styleSheetIndex = index;
-        this.lastStyleSheetIndex = -1;
-    },
-    
-    onChangeSelect: function(event)
-    {
-        event = event || window.event;
-        var target = event.srcElement || event.currentTarget;
-        var index = target.selectedIndex;
-        
-        Firebug.CSS.renderStyleSheet(index);
-    },
-    
-    selectStyleSheet: function(index)
-    {
-        this.selectNode.selectedIndex = index;
-        Firebug.CSS.renderStyleSheet(index);
-    }    
-});
+        if (!currentTarget)
+            return;
 
-Firebug.registerPanel(CSSStyleSheetPanel);
+        if (FBTrace.DBG_EDITOR)
+            FBTrace.sysout("editor.stopEditing cancel:" + cancel+" saveTimeout: "+this.saveTimeout);
 
+        clearTimeout(this.saveTimeout);
+        delete this.saveTimeout;
 
-// ************************************************************************************************
-// CSS Panel
+        this.detachListeners(currentEditor, currentPanel.context);
 
-function CSSElementPanel(){};
+        removeClass(currentPanel.panelNode, "editing");
+        removeClass(currentTarget, "editing");
+        if (currentGroup)
+            removeClass(currentGroup, "editing");
 
-CSSElementPanel.prototype = extend(Firebug.Panel,
-{
-    name: "CSSElementPanel",
-    parentPanel: "HTML",
-    title: "CSS",
-    
-    options: {
-        hasToolButtons: true
-    },
+        var value = currentEditor.getValue();
+        if (value == defaultValue)
+            value = "";
 
-    create: function()
-    {
-        Firebug.Panel.create.apply(this, arguments);
-        
-        var style = this.contentNode.style;
-        style.padding = "4px 8px";
-        style.fontFamily = "Monaco,monospace";        
-    },
-    
-    initialize: function()
-    {
-        Firebug.Panel.initialize.apply(this, arguments);
-        
-        var target = documentCache[FirebugChrome.selectedHTMLElementId];
-        if (!target) return;
-        
-        var str = renderStyles(target);
-        
-        var panel = this;
-        panel.contentNode.innerHTML = str.join("");
-        panel.containerNode.scrollTop = 0;
-    },
-    
-    select: function(node)
-    {
-        var str = renderStyles(node);
-        
-        var panel = this;
-        panel.contentNode.innerHTML = str.join("");
-        panel.containerNode.scrollTop = 0;        
-    }
-});
+        var removeGroup = currentEditor.endEditing(currentTarget, value, cancel);
 
-//Firebug.registerPanel(CSSElementPanel);
-
-// ************************************************************************************************
-
-
-// ************************************************************************************************
-// CSS Panel
-
-function CSSEditPanel(){};
-
-CSSEditPanel.prototype = extend(Firebug.Panel,
-{
-    name: "CSSEditPanel",
-    parentPanel: "HTML",
-    title: "Style",
-    
-    options: {
-        hasToolButtons: true
-    },
-
-    create: function()
-    {
-        Firebug.Panel.create.apply(this, arguments);
-        
-        var style = this.contentNode.style;
-        style.margin = "0";
-        //style.padding = "4px 8px";
-        style.fontFamily = "Monaco,monospace";        
-        
-        var doc = Firebug.chrome.document;
-        
-        var el = doc.createElement("pre");
-        el.innerHTML = "element.style {";
-        el.style.margin = "4px 0 0";
-        el.style.padding = "0 0 1px 8px";
-        this.contentNode.appendChild(el);
-        
-        var el = doc.createElement("textarea");
-        el.rows = 1;
-        el.style.width = "80%";
-        //el.style.height = "100%";
-        //el.style.position = "absolute";
-        el.style.fontSize = "11px";
-        el.style.resize = "none";
-        el.style.overflow = "hidden";
-        el.style.outline = "0";
-        el.style.border = "0";
-        el.style.padding = "0";
-        el.style.margin = "0 10%";
-        el.style.color = "darkblue";
-        
-        this.contentNode.appendChild(el);
-        
-        this.editNode = el;
-        
-        var el = doc.createElement("pre");
-        el.innerHTML = "}";
-        el.style.margin = "0";
-        el.style.padding = "0 0 10px 8px";
-        this.contentNode.appendChild(el);
-        
-        var el = doc.createElement("div");
-        el.innerHTML = "Computed Styles";
-        el.style.background = "#eee url(group.gif)";
-        el.style.fontWeight = "bold";
-        el.style.margin = "0 0 4px";
-        el.style.padding = "2px 5px";
-        el.style.border = "1px solid #ccc";
-        el.style.borderWidth = "1px 0";
-        el.style.fontFamily = "Lucida Grande,Tahoma,sans-serif";
-        this.contentNode.appendChild(el);
-        
-        var el = doc.createElement("div");
-        this.computedStylesNode = this.contentNode.appendChild(el);
-        
-        this.onKeyUp = bind(this.onKeyUp, this);
-        this.onKeyDown = bind(this.onKeyDown, this);
-        
-        addEvent(this.editNode, "keydown", this.onKeyDown);
-        addEvent(this.editNode, "keyup", this.onKeyUp);
-        
-    },
-    
-    initialize: function()
-    {
-        Firebug.Panel.initialize.apply(this, arguments);
-        
-        var target = documentCache[FirebugChrome.selectedHTMLElementId];
-        if (!target) return;
-        
-        var str = renderStyles2(target);
-        this.editNode.value = str;
-        
-        var str2 = renderStyles(target);
-        this.computedStylesNode.innerHTML = str2.join("");
-        
-        this.adjustEditSize();
-        /*
-        var panel = this;
-        panel.contentNode.innerHTML = str.join("");
-        panel.containerNode.scrollTop = 0;
-        /**/
-    },
-    
-    select: function(node)
-    {
-        var str = renderStyles2(node);
-        this.editNode.value = str;
-        this.adjustEditSize();
-        /*
-        var panel = this;
-        panel.contentNode.innerHTML = str.join("");
-        panel.containerNode.scrollTop = 0;
-        /**/        
-    },
-    
-    adjustEditSize: function(add)
-    {
-        add = add || 0;
-        var nodeValue = this.editNode.value + " ";
-        nodeValue = nodeValue.replace(/\n\r|\r\n/g, "\n");
-        var lines = nodeValue.split(/\n/)
-        var num = lines.length + add
-        this.editNode.rows = num;
-    },
-    
-    onKeyDown: function(event)
-    {
-        if (event.keyCode == 13 /* enter */)
-        {
-            this.adjustEditSize(1);
-        }
-        
-    },
-    
-    onKeyUp: function()
-    {
-        var nodeValue = this.editNode.value;
-        
-        var selectedElement = documentCache[FirebugChrome.selectedHTMLElementId];
-        
         try
         {
-            selectedElement.style.cssText = nodeValue;
-        }
-        catch(e)
-        {
-        }
-        
-        this.adjustEditSize();
-        
-        /*
-        var lines = nodeValue.split(/[\n\r]/);
-        
-        var reValue = /\s*([\w-]+):\s*(.*)/;
-        
-        for (var i=0, length=lines.length; i<length; i++)
-        {
-            var line = lines[i];
-            var value = line.match(reValue);
-            
-            if (value)
+            if (cancel)
             {
-                alert(value[1]);
+                //dispatch([Firebug.A11yModel], 'onInlineEditorClose', [currentPanel, currentTarget, removeGroup && !originalValue]);
+                if (value != originalValue)
+                    this.saveEditAndNotifyListeners(currentTarget, originalValue, previousValue);
+
+                if (removeGroup && !originalValue && currentGroup)
+                    currentGroup.parentNode.removeChild(currentGroup);
+            }
+            else if (!value)
+            {
+                this.saveEditAndNotifyListeners(currentTarget, null, previousValue);
+
+                if (removeGroup && currentGroup)
+                    currentGroup.parentNode.removeChild(currentGroup);
+            }
+            else
+                this.save(value);
+        }
+        catch (exc)
+        {
+            //throw exc.message;
+            //ERROR(exc);
+        }
+
+        currentEditor.hide();
+        currentPanel.editing = false;
+
+        //dispatch(this.fbListeners, "onStopEdit", [currentPanel, currentEditor, currentTarget]);
+        //if (FBTrace.DBG_EDITOR)
+        //    FBTrace.sysout("Editor stop panel "+currentPanel.name);
+        
+        currentTarget = null;
+        currentGroup = null;
+        currentPanel = null;
+        currentEditor = null;
+        originalValue = null;
+        invalidEditor = false;
+
+        return value;
+    },
+
+    cancelEditing: function()
+    {
+        return this.stopEditing(true);
+    },
+
+    update: function(saveNow)
+    {
+        if (this.saveTimeout)
+            clearTimeout(this.saveTimeout);
+
+        invalidEditor = true;
+
+        currentEditor.layout();
+
+        if (saveNow)
+            this.save();
+        else
+        {
+            var context = currentPanel.context;
+            this.saveTimeout = context.setTimeout(bindFixed(this.save, this), saveTimeout);
+            if (FBTrace.DBG_EDITOR)
+                FBTrace.sysout("editor.update saveTimeout: "+this.saveTimeout);
+        }
+    },
+
+    save: function(value)
+    {
+        if (!invalidEditor)
+            return;
+
+        if (value == undefined)
+            value = currentEditor.getValue();
+        if (FBTrace.DBG_EDITOR)
+            FBTrace.sysout("editor.save saveTimeout: "+this.saveTimeout+" currentPanel: "+(currentPanel?currentPanel.name:"null"));
+        try
+        {
+            this.saveEditAndNotifyListeners(currentTarget, value, previousValue);
+
+            previousValue = value;
+            invalidEditor = false;
+        }
+        catch (exc)
+        {
+            if (FBTrace.DBG_ERRORS)
+                FBTrace.sysout("editor.save FAILS "+exc, exc);
+        }
+    },
+
+    saveEditAndNotifyListeners: function(currentTarget, value, previousValue)
+    {
+        currentEditor.saveEdit(currentTarget, value, previousValue);
+        dispatch(this.fbListeners, "onSaveEdit", [currentPanel, currentEditor, currentTarget, value, previousValue]);
+    },
+
+    setEditTarget: function(element)
+    {
+        if (!element)
+        {
+            dispatch([Firebug.A11yModel], 'onInlineEditorClose', [currentPanel, currentTarget, true]);
+            this.stopEditing();
+        }
+        else if (hasClass(element, "insertBefore"))
+            this.insertRow(element, "before");
+        else if (hasClass(element, "insertAfter"))
+            this.insertRow(element, "after");
+        else
+            this.startEditing(element);
+    },
+
+    tabNextEditor: function()
+    {
+        if (!currentTarget)
+            return;
+
+        var value = currentEditor.getValue();
+        var nextEditable = currentTarget;
+        do
+        {
+            nextEditable = !value && currentGroup
+                ? getNextOutsider(nextEditable, currentGroup)
+                : getNextByClass(nextEditable, "editable");
+        }
+        while (nextEditable && !nextEditable.offsetHeight);
+
+        this.setEditTarget(nextEditable);
+    },
+
+    tabPreviousEditor: function()
+    {
+        if (!currentTarget)
+            return;
+
+        var value = currentEditor.getValue();
+        var prevEditable = currentTarget;
+        do
+        {
+            prevEditable = !value && currentGroup
+                ? getPreviousOutsider(prevEditable, currentGroup)
+                : getPreviousByClass(prevEditable, "editable");
+        }
+        while (prevEditable && !prevEditable.offsetHeight);
+
+        this.setEditTarget(prevEditable);
+    },
+
+    insertRow: function(relative, insertWhere)
+    {
+        var group =
+            relative || getAncestorByClass(currentTarget, "editGroup") || currentTarget;
+        var value = this.stopEditing();
+
+        currentPanel = Firebug.getElementPanel(group);
+
+        currentEditor = currentPanel.getEditor(group, value);
+        if (!currentEditor)
+            currentEditor = getDefaultEditor(currentPanel);
+
+        currentGroup = currentEditor.insertNewRow(group, insertWhere);
+        if (!currentGroup)
+            return;
+
+        var editable = hasClass(currentGroup, "editable")
+            ? currentGroup
+            : getNextByClass(currentGroup, "editable");
+
+        if (editable)
+            this.setEditTarget(editable);
+    },
+
+    insertRowForObject: function(relative)
+    {
+        var container = getAncestorByClass(relative, "insertInto");
+        if (container)
+        {
+            relative = getChildByClass(container, "insertBefore");
+            if (relative)
+                this.insertRow(relative, "before");
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    attachListeners: function(editor, context)
+    {
+        var win = isIE ?
+                currentTarget.ownerDocument.parentWindow :
+                currentTarget.ownerDocument.defaultView;
+        
+        addEvent(win, "resize", this.onResize);
+        addEvent(win, "blur", this.onBlur);
+
+        var chrome = Firebug.chrome;
+
+        this.listeners = [
+            chrome.keyCodeListen("ESCAPE", null, bind(this.cancelEditing, this))
+        ];
+
+        if (editor.arrowCompletion)
+        {
+            this.listeners.push(
+                chrome.keyCodeListen("UP", null, bindFixed(editor.completeValue, editor, -1)),
+                chrome.keyCodeListen("DOWN", null, bindFixed(editor.completeValue, editor, 1)),
+                chrome.keyCodeListen("PAGE_UP", null, bindFixed(editor.completeValue, editor, -pageAmount)),
+                chrome.keyCodeListen("PAGE_DOWN", null, bindFixed(editor.completeValue, editor, pageAmount))
+            );
+        }
+
+        if (currentEditor.tabNavigation)
+        {
+            this.listeners.push(
+                chrome.keyCodeListen("RETURN", null, bind(this.tabNextEditor, this)),
+                chrome.keyCodeListen("RETURN", isControl, bind(this.insertRow, this, null, "after")),
+                chrome.keyCodeListen("TAB", null, bind(this.tabNextEditor, this)),
+                chrome.keyCodeListen("TAB", isShift, bind(this.tabPreviousEditor, this))
+            );
+        }
+        else if (currentEditor.multiLine)
+        {
+            this.listeners.push(
+                chrome.keyCodeListen("TAB", null, insertTab)
+            );
+        }
+        else
+        {
+            this.listeners.push(
+                chrome.keyCodeListen("RETURN", null, bindFixed(this.stopEditing, this))
+            );
+
+            if (currentEditor.tabCompletion)
+            {
+                this.listeners.push(
+                    chrome.keyCodeListen("TAB", null, bind(editor.completeValue, editor, 1)),
+                    chrome.keyCodeListen("TAB", isShift, bind(editor.completeValue, editor, -1))
+                );
             }
         }
-        /**/
-        
-        //Firebug.Console.log("jhi");
-    }
-});
-
-Firebug.registerPanel(CSSEditPanel);
-
-
-// ************************************************************************************************
-
-// ************************************************************************************************
-// CSS Panel
-
-function CSSRulesEditPanel(){};
-
-CSSRulesEditPanel.prototype = extend(Firebug.Panel,
-{
-    name: "CSSRulesEditPanel",
-    parentPanel: "CSS",
-    title: "Add",
-    
-    options: {
-        hasToolButtons: true
     },
 
-    create: function()
+    detachListeners: function(editor, context)
     {
-        Firebug.Panel.create.apply(this, arguments);
+        if (!this.listeners)
+            return;
+
+        var win = isIE ?
+                currentTarget.ownerDocument.parentWindow :
+                currentTarget.ownerDocument.defaultView;
         
-        return;
-        
-        this.onKeyUp = bind(this.onKeyUp, this);
-        this.onKeyDown = bind(this.onKeyDown, this);
-        
-        addEvent(this.editNode, "keydown", this.onKeyDown);
-        addEvent(this.editNode, "keyup", this.onKeyUp);
-        
+        removeEvent(win, "resize", this.onResize);
+        removeEvent(win, "blur", this.onBlur);
+
+        var chrome = Firebug.chrome;
+        if (chrome)
+        {
+            for (var i = 0; i < this.listeners.length; ++i)
+                chrome.keyIgnore(this.listeners[i]);
+        }
+
+        delete this.listeners;
     },
-    
+
+    onResize: function(event)
+    {
+        currentEditor.layout(true);
+    },
+
+    onBlur: function(event)
+    {
+        if (currentEditor.enterOnBlur && isAncestor(event.target, currentEditor.box))
+            this.stopEditing();
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // extends Module
+
     initialize: function()
     {
-        Firebug.Panel.initialize.apply(this, arguments);
-        
-        return;
-        
-        var target = documentCache[FirebugChrome.selectedHTMLElementId];
-        if (!target) return;
-        
-        var str = renderStyles2(target);
-        this.editNode.value = str;
-        
-        var str2 = renderStyles(target);
-        this.computedStylesNode.innerHTML = str2.join("");
-        
-        this.adjustEditSize();
-    }/*,
-    
-    select: function(node)
-    {
-        var str = renderStyles2(node);
-        this.editNode.value = str;
-        this.adjustEditSize();
+        Firebug.Module.initialize.apply(this, arguments);
+
+        this.onResize = bindFixed(this.onResize, this);
+        this.onBlur = bind(this.onBlur, this);
     },
-    
-    adjustEditSize: function(add)
+
+    disable: function()
     {
-        add = add || 0;
-        var nodeValue = this.editNode.value + " ";
-        nodeValue = nodeValue.replace(/\n\r|\r\n/g, "\n");
-        var lines = nodeValue.split(/\n/)
-        var num = lines.length + add
-        this.editNode.rows = num;
+        this.stopEditing();
     },
-    
-    onKeyDown: function(event)
+
+    showContext: function(browser, context)
     {
-        if (event.keyCode == 13) // enter
-        {
-            this.adjustEditSize(1);
-        }
-        
+        this.stopEditing();
     },
-    
-    onKeyUp: function()
+
+    showPanel: function(browser, panel)
     {
-        var nodeValue = this.editNode.value;
-        
-        var selectedElement = documentCache[FirebugChrome.selectedHTMLElementId];
-        
-        try
-        {
-            selectedElement.style.cssText = nodeValue;
-        }
-        catch(e)
-        {
-        }
-        
-        this.adjustEditSize();
-    }/**/
+        this.stopEditing();
+    }
 });
 
-//Firebug.registerPanel(CSSRulesEditPanel);
+// ************************************************************************************************
+// BaseEditor
 
+Firebug.BaseEditor = extend(Firebug.MeasureBox,
+{
+    getValue: function()
+    {
+    },
+
+    setValue: function(value)
+    {
+    },
+
+    show: function(target, panel, value, textSize, targetSize)
+    {
+    },
+
+    hide: function()
+    {
+    },
+
+    layout: function(forceAll)
+    {
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Support for context menus within inline editors.
+
+    getContextMenuItems: function(target)
+    {
+        var items = [];
+        items.push({label: "Cut", commandID: "cmd_cut"});
+        items.push({label: "Copy", commandID: "cmd_copy"});
+        items.push({label: "Paste", commandID: "cmd_paste"});
+        return items;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Editor Module listeners will get "onBeginEditing" just before this call
+
+    beginEditing: function(target, value)
+    {
+    },
+
+    // Editor Module listeners will get "onSaveEdit" just after this call
+    saveEdit: function(target, value, previousValue)
+    {
+    },
+
+    endEditing: function(target, value, cancel)
+    {
+        // Remove empty groups by default
+        return true;
+    },
+
+    insertNewRow: function(target, insertWhere)
+    {
+    }
+});
 
 // ************************************************************************************************
+// InlineEditor
 
-var renderStyleSheet = function renderStyleSheet(index)
+Firebug.InlineEditor = function(doc)
 {
-    var styleSheet = Firebug.browser.document.styleSheets[index],
-        str = [], 
-        sl = -1;
-    
-    try
+    this.initializeInline(doc);
+};
+
+Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
+{
+    enterOnBlur: true,
+    outerMargin: 8,
+    shadowExpand: 7,
+
+    tag:
+        DIV({"class": "inlineEditor"},
+            DIV({"class": "textEditorTop1"},
+                DIV({"class": "textEditorTop2"})
+            ),
+            DIV({"class": "textEditorInner1"},
+                DIV({"class": "textEditorInner2"},
+                    INPUT({"class": "textEditorInner", type: "text",
+                        /*oninput: "$onInput", */onkeypress: "$onKeyPress", onoverflow: "$onOverflow",
+                        oncontextmenu: "$onContextMenu"}
+                    )
+                )
+            ),
+            DIV({"class": "textEditorBottom1"},
+                DIV({"class": "textEditorBottom2"})
+            )
+        ),
+
+    inputTag :
+        INPUT({"class": "textEditorInner", type: "text",
+            /*oninput: "$onInput",*/ onkeypress: "$onKeyPress", onoverflow: "$onOverflow"}
+        ),
+
+    expanderTag:
+        IMG({"class": "inlineExpander", src: "blank.gif"}),
+
+    initialize: function()
     {
-        var rules = styleSheet[isIE ? "rules" : "cssRules"];
+        this.fixedWidth = false;
+        this.completeAsYouType = true;
+        this.tabNavigation = true;
+        this.multiLine = false;
+        this.tabCompletion = false;
+        this.arrowCompletion = true;
+        this.noWrap = true;
+        this.numeric = false;
+    },
+
+    destroy: function()
+    {
+        this.destroyInput();
+    },
+
+    initializeInline: function(doc)
+    {
+        if (FBTrace.DBG_EDITOR)
+            FBTrace.sysout("Firebug.InlineEditor initializeInline()");
         
-        for (var i=0, rule; rule = rules[i]; i++)
+        //this.box = this.tag.replace({}, doc, this);
+        this.box = this.tag.append({}, doc.body, this);
+        
+        //this.input = this.box.childNodes[1].firstChild.firstChild;  // XXXjjb childNode[1] required
+        
+        this.input = this.box.getElementsByTagName("input")[0];  // XXXjjb childNode[1] required
+        
+        if (isIE)
         {
-            var selector = rule.selectorText;
-            var cssText = isIE ? 
-                    rule.style.cssText :
-                    rule.cssText.match(/\{(.*)\}/)[1];
-            
-            str[++sl] = renderRule(selector, cssText.split(";"));
+            this.input.style.top = "-8px";
         }
-    }
-    catch(e)
+        
+        this.expander = this.expanderTag.replace({}, doc, this);
+        this.initialize();
+    },
+
+    destroyInput: function()
     {
-        str[++sl] = "<em>Access to restricted URI denied</em>";
-    }
-    
-    return str;
-};
+        // XXXjoe Need to remove input/keypress handlers to avoid leaks
+    },
 
-var renderRule = function renderRule(selector, styles)
-{
-    var str = "<div class='Selector'>"+ selector.toLowerCase()+ " {</div>";
-    
-    for(var i=0, len=styles.length; i<len; i++)
+    getValue: function()
     {
-        var rule = styles[i];
-        str += rule.replace(/([^\:]+)\:(.+)/, renderRuleReplacer);
+        return this.input.value;
+    },
+
+    setValue: function(value)
+    {
+        // It's only a one-line editor, so new lines shouldn't be allowed
+        return this.input.value = stripNewLines(value);
+    },
+
+    show: function(target, panel, value, targetSize)
+    {
+        //dispatch([Firebug.A11yModel], "onInlineEditorShow", [panel, this]);
+        this.target = target;
+        this.panel = panel;
+
+        this.targetSize = targetSize;
+        
+        // TODO: xxxpedro editor
+        //this.targetOffset = getClientOffset(target);
+        
+        // Some browsers (IE, Google Chrome and Safari) will have problem trying to get the 
+        // offset values of invisible elements, or empty elements. So, in order to get the 
+        // correct values, we temporary inject a character in the innerHTML of the empty element, 
+        // then we get the offset values, and next, we restore the original innerHTML value.
+        var innerHTML = target.innerHTML;
+        var isEmptyElement = !innerHTML;
+        if (isEmptyElement)
+            target.innerHTML = ".";
+        
+        // Get the position of the target element (that is about to be edited)
+        this.targetOffset = 
+        {
+            x: target.offsetLeft,
+            y: target.offsetTop
+        };
+        
+        // Restore the original innerHTML value of the empty element
+        if (isEmptyElement)
+            target.innerHTML = innerHTML;
+        
+        this.originalClassName = this.box.className;
+
+        var classNames = target.className.split(" ");
+        for (var i = 0; i < classNames.length; ++i)
+            setClass(this.box, "editor-" + classNames[i]);
+
+        // Make the editor match the target's font style
+        copyTextStyles(target, this.box);
+
+        this.setValue(value);
+
+        if (this.fixedWidth)
+            this.updateLayout(true);
+        else
+        {
+            this.startMeasuring(target);
+            this.textSize = this.measureInputText(value);
+
+            // Correct the height of the box to make the funky CSS drop-shadow line up
+            var parent = this.input.parentNode;
+            if (hasClass(parent, "textEditorInner2"))
+            {
+                var yDiff = this.textSize.height - this.shadowExpand;
+                parent.style.height = yDiff + "px";
+                parent.parentNode.style.height = yDiff + "px";
+            }
+
+            this.updateLayout(true);
+        }
+
+        this.getAutoCompleter().reset();
+
+        if (isIE)
+            panel.panelNode.appendChild(this.box);
+        else
+            target.offsetParent.appendChild(this.box);        
+        
+        //console.log(target);
+        //this.input.select(); // it's called bellow, with setTimeout
+        
+        if (isIE)
+        {
+            this.input.style.fontFamily = "Monospace";
+            this.input.style.fontSize = "11px";
+        }
+
+        // Insert the "expander" to cover the target element with white space
+        if (!this.fixedWidth)
+        {
+            copyBoxStyles(target, this.expander);
+
+            target.parentNode.replaceChild(this.expander, target);
+            collapse(target, true);
+            this.expander.parentNode.insertBefore(target, this.expander);
+        }
+
+        //TODO: xxxpedro
+        //scrollIntoCenterView(this.box, null, true);
+        
+        // Display the editor after change its size and position to avoid flickering
+        this.box.style.display = "block";
+        
+        var self = this;
+        setTimeout(function(){
+            self.input.focus();
+            self.input.select();
+        },0);        
+    },
+
+    hide: function()
+    {
+        this.box.className = this.originalClassName;
+
+        if (!this.fixedWidth)
+        {
+            this.stopMeasuring();
+
+            collapse(this.target, false);
+
+            if (this.expander.parentNode)
+                this.expander.parentNode.removeChild(this.expander);
+        }
+
+        if (this.box.parentNode)
+        {
+            try { this.input.setSelectionRange(0, 0); } catch (exc) {}
+            this.box.parentNode.removeChild(this.box);
+        }
+
+        delete this.target;
+        delete this.panel;
+    },
+
+    layout: function(forceAll)
+    {
+        if (!this.fixedWidth)
+            this.textSize = this.measureInputText(this.input.value);
+
+        if (forceAll)
+            this.targetOffset = getClientOffset(this.expander);
+
+        this.updateLayout(false, forceAll);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    beginEditing: function(target, value)
+    {
+    },
+
+    saveEdit: function(target, value, previousValue)
+    {
+    },
+
+    endEditing: function(target, value, cancel)
+    {
+        // Remove empty groups by default
+        return true;
+    },
+
+    insertNewRow: function(target, insertWhere)
+    {
+    },
+
+    advanceToNext: function(target, charCode)
+    {
+        return false;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    getAutoCompleteRange: function(value, offset)
+    {
+    },
+
+    getAutoCompleteList: function(preExpr, expr, postExpr)
+    {
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    getAutoCompleter: function()
+    {
+        if (!this.autoCompleter)
+        {
+            this.autoCompleter = new Firebug.AutoCompleter(null,
+                bind(this.getAutoCompleteRange, this), bind(this.getAutoCompleteList, this),
+                true, false);
+        }
+
+        return this.autoCompleter;
+    },
+
+    completeValue: function(amt)
+    {
+        //console.log("completeValue");
+        
+        if (this.getAutoCompleter().complete(currentPanel.context, this.input, true, amt < 0))
+            Firebug.Editor.update(true);
+        else
+            this.incrementValue(amt);
+    },
+
+    incrementValue: function(amt)
+    {
+        var value = this.input.value;
+        var start = this.input.selectionStart, end = this.input.selectionEnd;
+
+        var range = this.getAutoCompleteRange(value, start);
+        if (!range || range.type != "int")
+            range = {start: 0, end: value.length-1};
+
+        var expr = value.substr(range.start, range.end-range.start+1);
+        preExpr = value.substr(0, range.start);
+        postExpr = value.substr(range.end+1);
+
+        // See if the value is an integer, and if so increment it
+        var intValue = parseInt(expr);
+        if (!!intValue || intValue == 0)
+        {
+            var m = /\d+/.exec(expr);
+            var digitPost = expr.substr(m.index+m[0].length);
+
+            var completion = intValue-amt;
+            this.input.value = preExpr + completion + digitPost + postExpr;
+            
+            if (this.input.setSelectionRange)
+                this.input.setSelectionRange(start, end);
+
+            Firebug.Editor.update(true);
+
+            return true;
+        }
+        else
+            return false;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    onKeyPress: function(event)
+    {
+        //console.log("onKeyPress");
+        if (event.keyCode == 27 && !this.completeAsYouType)
+        {
+            var reverted = this.getAutoCompleter().revert(this.input);
+            if (reverted)
+                cancelEvent(event);
+        }
+        else if (event.charCode && this.advanceToNext(this.target, event.charCode))
+        {
+            Firebug.Editor.tabNextEditor();
+            cancelEvent(event);
+        }
+        else
+        {
+            if (this.numeric && event.charCode && (event.charCode < 48 || event.charCode > 57)
+                && event.charCode != 45 && event.charCode != 46)
+                FBL.cancelEvent(event);
+            else
+            {
+                // If the user backspaces, don't autocomplete after the upcoming input event
+                this.ignoreNextInput = event.keyCode == 8;
+                
+                // TODO: xxxpedro IE and oninput                
+                var self = this;
+                setTimeout(function(){
+                    self.onInput();
+                },0)
+            }
+        }
+    },
+
+    onOverflow: function()
+    {
+        this.updateLayout(false, false, 3);
+    },
+
+    onInput: function()
+    {
+        //console.log("onInput");
+        if (this.ignoreNextInput)
+        {
+            this.ignoreNextInput = false;
+            this.getAutoCompleter().reset();
+        }
+        else if (this.completeAsYouType)
+            this.getAutoCompleter().complete(currentPanel.context, this.input, false);
+        else
+            this.getAutoCompleter().reset();
+
+        Firebug.Editor.update();
+    },
+
+    onContextMenu: function(event)
+    {
+        cancelEvent(event);
+
+        var popup = $("fbInlineEditorPopup");
+        FBL.eraseNode(popup);
+
+        var target = event.target || event.srcElement;
+        var menu = this.getContextMenuItems(target);
+        if (menu)
+        {
+            for (var i = 0; i < menu.length; ++i)
+                FBL.createMenuItem(popup, menu[i]);
+        }
+
+        if (!popup.firstChild)
+            return false;
+
+        popup.openPopupAtScreen(event.screenX, event.screenY, true);
+        return true;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    updateLayout: function(initial, forceAll, extraWidth)
+    {
+        if (this.fixedWidth)
+        {
+            this.box.style.left = (this.targetOffset.x) + "px";
+            this.box.style.top = (this.targetOffset.y) + "px";
+
+            var w = this.target.offsetWidth;
+            var h = this.target.offsetHeight;
+            this.input.style.width = w + "px";
+            this.input.style.height = (h-3) + "px";
+        }
+        else
+        {
+            if (initial || forceAll)
+            {
+                this.box.style.left = this.targetOffset.x + "px";
+                this.box.style.top = this.targetOffset.y + "px";
+            }
+
+            var approxTextWidth = this.textSize.width;
+            var maxWidth = (currentPanel.panelNode.scrollWidth - this.targetOffset.x)
+                - this.outerMargin;
+
+            var wrapped = initial
+                ? this.noWrap && this.targetSize.height > this.textSize.height+3
+                : this.noWrap && approxTextWidth > maxWidth;
+
+            if (wrapped)
+            {
+                var style = isIE ?
+                        this.target.currentStyle :
+                        this.target.ownerDocument.defaultView.getComputedStyle(this.target, "");
+                
+                targetMargin = parseInt(style.marginLeft) + parseInt(style.marginRight);
+
+                // Make the width fit the remaining x-space from the offset to the far right
+                approxTextWidth = maxWidth - targetMargin;
+
+                this.input.style.width = "100%";
+                this.box.style.width = approxTextWidth + "px";
+            }
+            else
+            {
+                // Make the input one character wider than the text value so that
+                // typing does not ever cause the textbox to scroll
+                var charWidth = this.measureInputText('m').width;
+
+                // Sometimes we need to make the editor a little wider, specifically when
+                // an overflow happens, otherwise it will scroll off some text on the left
+                if (extraWidth)
+                    charWidth *= extraWidth;
+
+                var inputWidth = approxTextWidth + charWidth;
+
+                if (initial)
+                {
+                    if (isIE)
+                    {
+                        // TODO: xxxpedro
+                        var xDiff = 13;
+                        this.box.style.width = (inputWidth + xDiff) + "px";
+                    }
+                    else
+                        this.box.style.width = "auto";
+                }
+                else
+                {
+                    // TODO: xxxpedro
+                    var xDiff = isIE ? 13: this.box.scrollWidth - this.input.offsetWidth;
+                    this.box.style.width = (inputWidth + xDiff) + "px";
+                }
+
+                this.input.style.width = inputWidth + "px";
+            }
+
+            this.expander.style.width = approxTextWidth + "px";
+            this.expander.style.height = (this.textSize.height-3) + "px";
+        }
+
+        if (forceAll)
+            scrollIntoCenterView(this.box, null, true);
     }
-    
-    str += "<div class='SelectorEnd'>}</div>";
-    return str;
-};
+});
 
-var renderRuleReplacer = function renderRuleReplacer(m, g1, g2)
-{
-    return "<div class='CSSText'><span class='CSSProperty'>" +
-        g1.toLowerCase() +
-        ": </span><span class='CSSValue'>" +
-        g2.replace(/\s*$/, "") +
-        ";</span></div>"; 
-};
+// ************************************************************************************************
+// Autocompletion
 
-var getFileName = function getFileName(path)
+Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode, caseSensitive)
 {
-    if (!path) return "";
-    
-    var match = path && path.match(/[^\/]+(\?.*)?(#.*)?$/);
-    
-    return match && match[0] || path;
+    var candidates = null;
+    var originalValue = null;
+    var originalOffset = -1;
+    var lastExpr = null;
+    var lastOffset = -1;
+    var exprOffset = 0;
+    var lastIndex = 0;
+    var preParsed = null;
+    var preExpr = null;
+    var postExpr = null;
+
+    this.revert = function(textBox)
+    {
+        if (originalOffset != -1)
+        {
+            textBox.value = originalValue;
+            
+            if (textBox.setSelectionRange)
+                textBox.setSelectionRange(originalOffset, originalOffset);
+
+            this.reset();
+            return true;
+        }
+        else
+        {
+            this.reset();
+            return false;
+        }
+    };
+
+    this.reset = function()
+    {
+        candidates = null;
+        originalValue = null;
+        originalOffset = -1;
+        lastExpr = null;
+        lastOffset = 0;
+        exprOffset = 0;
+    };
+
+    this.complete = function(context, textBox, cycle, reverse)
+    {
+        // TODO: xxxpedro important port to firebug (variable leak)
+        //var value = lastValue = textBox.value;
+        var value = textBox.value;
+        
+        //var offset = textBox.selectionStart;
+        var offset = getInputCaretPosition(textBox);
+        
+        // The result of selectionStart() in Safari/Chrome is 1 unit less than the result
+        // in Firebug. Therefore, we need to manually adjust the value here.
+        //if (isSafari && offset >= 0) offset++;
+        
+        if (!selectMode && originalOffset != -1)
+            offset = originalOffset;
+
+        if (!candidates || !cycle || offset != lastOffset)
+        {
+            originalOffset = offset;
+            originalValue = value;
+
+            // Find the part of the string that will be parsed
+            var parseStart = getExprOffset ? getExprOffset(value, offset, context) : 0;
+            preParsed = value.substr(0, parseStart);
+            var parsed = value.substr(parseStart);
+
+            // Find the part of the string that is being completed
+            var range = getRange ? getRange(parsed, offset-parseStart, context) : null;
+            if (!range)
+                range = {start: 0, end: parsed.length-1 };
+
+            var expr = parsed.substr(range.start, range.end-range.start+1);
+            preExpr = parsed.substr(0, range.start);
+            postExpr = parsed.substr(range.end+1);
+            exprOffset = parseStart + range.start;
+
+            if (!cycle)
+            {
+                if (!expr)
+                    return;
+                else if (lastExpr && lastExpr.indexOf(expr) != 0)
+                {
+                    candidates = null;
+                }
+                else if (lastExpr && lastExpr.length >= expr.length)
+                {
+                    candidates = null;
+                    lastExpr = expr;
+                    return;
+                }
+            }
+
+            lastExpr = expr;
+            lastOffset = offset;
+
+            var searchExpr;
+
+            // Check if the cursor is at the very right edge of the expression, or
+            // somewhere in the middle of it
+            if (expr && offset != parseStart+range.end+1)
+            {
+                if (cycle)
+                {
+                    // We are in the middle of the expression, but we can
+                    // complete by cycling to the next item in the values
+                    // list after the expression
+                    offset = range.start;
+                    searchExpr = expr;
+                    expr = "";
+                }
+                else
+                {
+                    // We can't complete unless we are at the ridge edge
+                    return;
+                }
+            }
+
+            var values = evaluator(preExpr, expr, postExpr, context);
+            if (!values)
+                return;
+
+            if (expr)
+            {
+                // Filter the list of values to those which begin with expr. We
+                // will then go on to complete the first value in the resulting list
+                candidates = [];
+
+                if (caseSensitive)
+                {
+                    for (var i = 0; i < values.length; ++i)
+                    {
+                        var name = values[i];
+                        if (name.indexOf && name.indexOf(expr) == 0)
+                            candidates.push(name);
+                    }
+                }
+                else
+                {
+                    var lowerExpr = caseSensitive ? expr : expr.toLowerCase();
+                    for (var i = 0; i < values.length; ++i)
+                    {
+                        var name = values[i];
+                        if (name.indexOf && name.toLowerCase().indexOf(lowerExpr) == 0)
+                            candidates.push(name);
+                    }
+                }
+
+                lastIndex = reverse ? candidates.length-1 : 0;
+            }
+            else if (searchExpr)
+            {
+                var searchIndex = -1;
+
+                // Find the first instance of searchExpr in the values list. We
+                // will then complete the string that is found
+                if (caseSensitive)
+                {
+                    searchIndex = values.indexOf(expr);
+                }
+                else
+                {
+                    var lowerExpr = searchExpr.toLowerCase();
+                    for (var i = 0; i < values.length; ++i)
+                    {
+                        var name = values[i];
+                        if (name && name.toLowerCase().indexOf(lowerExpr) == 0)
+                        {
+                            searchIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                // Nothing found, so there's nothing to complete to
+                if (searchIndex == -1)
+                    return this.reset();
+
+                expr = searchExpr;
+                candidates = cloneArray(values);
+                lastIndex = searchIndex;
+            }
+            else
+            {
+                expr = "";
+                candidates = [];
+                for (var i = 0; i < values.length; ++i)
+                {
+                    if (values[i].substr)
+                        candidates.push(values[i]);
+                }
+                lastIndex = -1;
+            }
+        }
+
+        if (cycle)
+        {
+            expr = lastExpr;
+            lastIndex += reverse ? -1 : 1;
+        }
+
+        if (!candidates.length)
+            return;
+
+        if (lastIndex >= candidates.length)
+            lastIndex = 0;
+        else if (lastIndex < 0)
+            lastIndex = candidates.length-1;
+
+        var completion = candidates[lastIndex];
+        var preCompletion = expr.substr(0, offset-exprOffset);
+        var postCompletion = completion.substr(offset-exprOffset);
+
+        textBox.value = preParsed + preExpr + preCompletion + postCompletion + postExpr;
+        var offsetEnd = preParsed.length + preExpr.length + completion.length;
+        
+        // TODO: xxxpedro remove the following commented code, if the lib.selectInputRange()
+        // is working well.
+        /*
+        if (textBox.setSelectionRange)
+        {
+            // we must select the range with a timeout, otherwise the text won't
+            // be properly selected (because after this function executes, the editor's
+            // input will be resized to fit the whole text)
+            setTimeout(function(){
+                if (selectMode)
+                    textBox.setSelectionRange(offset, offsetEnd);
+                else
+                    textBox.setSelectionRange(offsetEnd, offsetEnd);
+            },0);
+        }
+        /**/
+        
+        // we must select the range with a timeout, otherwise the text won't
+        // be properly selected (because after this function executes, the editor's
+        // input will be resized to fit the whole text)
+        setTimeout(function(){
+            if (selectMode)
+                selectInputRange(textBox, offset, offsetEnd);
+            else
+                selectInputRange(textBox, offsetEnd, offsetEnd);
+        },0);
+                
+
+        return true;
+    };
 };
 
 // ************************************************************************************************
+// Local Helpers
 
-var renderStyles = function renderStyles(node)
+var getDefaultEditor = function getDefaultEditor(panel)
 {
-    var property = ["opacity","filter","azimuth","background","backgroundAttachment","backgroundColor","backgroundImage","backgroundPosition","backgroundRepeat","border","borderCollapse","borderColor","borderSpacing","borderStyle","borderTop","borderRight","borderBottom","borderLeft","borderTopColor","borderRightColor","borderBottomColor","borderLeftColor","borderTopStyle","borderRightStyle","borderBottomStyle","borderLeftStyle","borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth","borderWidth","bottom","captionSide","clear","clip","color","content","counterIncrement","counterReset","cue","cueAfter","cueBefore","cursor","direction","display","elevation","emptyCells","cssFloat","font","fontFamily","fontSize","fontSizeAdjust","fontStretch","fontStyle","fontVariant","fontWeight","height","left","letterSpacing","lineHeight","listStyle","listStyleImage","listStylePosition","listStyleType","margin","marginTop","marginRight","marginBottom","marginLeft","markerOffset","marks","maxHeight","maxWidth","minHeight","minWidth","orphans","outline","outlineColor","outlineStyle","outlineWidth","overflow","padding","paddingTop","paddingRight","paddingBottom","paddingLeft","page","pageBreakAfter","pageBreakBefore","pageBreakInside","pause","pauseAfter","pauseBefore","pitch","pitchRange","playDuring","position","quotes","richness","right","size","speak","speakHeader","speakNumeral","speakPunctuation","speechRate","stress","tableLayout","textAlign","textDecoration","textIndent","textShadow","textTransform","top","unicodeBidi","verticalAlign","visibility","voiceFamily","volume","whiteSpace","widows","width","wordSpacing","zIndex"].sort();
-    
-    var view = document.defaultView ? 
-            document.defaultView.getComputedStyle(node, null) :
-            node.currentStyle;
-
-    var str = [], sl = -1;
-    for(var i=0,len=property.length; i<len; i++)
+    if (!defaultEditor)
     {
-        var item = property[i];
-        if(!view[item]) continue;
-        
-        str[++sl] = "<div class='CSSItem'><span class='CSSProperty'>"; 
-        str[++sl] = toSelectorCase(item);
-        str[++sl] = "</span>:<span class='CSSValue'>"; 
-        str[++sl] = view[item];
-        str[++sl] = "</span>;</div>";
+        var doc = panel.document;
+        defaultEditor = new Firebug.InlineEditor(doc);
     }
-    
-    return str;
+
+    return defaultEditor;
+}
+
+/**
+ * An outsider is the first element matching the stepper element that
+ * is not an child of group. Elements tagged with insertBefore or insertAfter
+ * classes are also excluded from these results unless they are the sibling
+ * of group, relative to group's parent editGroup. This allows for the proper insertion
+ * rows when groups are nested.
+ */
+var getOutsider = function getOutsider(element, group, stepper)
+{
+    var parentGroup = getAncestorByClass(group.parentNode, "editGroup");
+    var next;
+    do
+    {
+        next = stepper(next || element);
+    }
+    while (isAncestor(next, group) || isGroupInsert(next, parentGroup));
+
+    return next;
+}
+
+var isGroupInsert = function isGroupInsert(next, group)
+{
+    return (!group || isAncestor(next, group))
+        && (hasClass(next, "insertBefore") || hasClass(next, "insertAfter"));
+}
+
+var getNextOutsider = function getNextOutsider(element, group)
+{
+    return getOutsider(element, group, bind(getNextByClass, FBL, "editable"));
+}
+
+var getPreviousOutsider = function getPreviousOutsider(element, group)
+{
+    return getOutsider(element, group, bind(getPreviousByClass, FBL, "editable"));
+}
+
+var getInlineParent = function getInlineParent(element)
+{
+    var lastInline = element;
+    for (; element; element = element.parentNode)
+    {
+        //var s = element.ownerDocument.defaultView.getComputedStyle(element, "");
+        var s = isIE ?
+                element.currentStyle :
+                element.ownerDocument.defaultView.getComputedStyle(element, "");
+        
+        if (s.display != "inline")
+            return lastInline;
+        else
+            lastInline = element;
+    }
+    return null;
+}
+
+var insertTab = function insertTab()
+{
+    insertTextIntoElement(currentEditor.input, Firebug.Editor.tabCharacter);
+}
+
+// ************************************************************************************************
+
+Firebug.registerModule(Firebug.Editor);
+
+// ************************************************************************************************
+
+}});
+
+
+/* See license.txt for terms of usage */
+
+// move to FBL
+(function() { 
+
+// ************************************************************************************************
+// XPath
+
+/**
+ * Gets an XPath for an element which describes its hierarchical location.
+ */
+this.getElementXPath = function(element)
+{
+    if (element && element.id)
+        return '//*[@id="' + element.id + '"]';
+    else
+        return this.getElementTreeXPath(element);
 };
 
-var renderStyles2 = function renderStyles(node)
+this.getElementTreeXPath = function(element)
 {
-    var property = ["opacity","filter","azimuth","background","backgroundAttachment","backgroundColor","backgroundImage","backgroundPosition","backgroundRepeat","border","borderCollapse","borderColor","borderSpacing","borderStyle","borderTop","borderRight","borderBottom","borderLeft","borderTopColor","borderRightColor","borderBottomColor","borderLeftColor","borderTopStyle","borderRightStyle","borderBottomStyle","borderLeftStyle","borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth","borderWidth","bottom","captionSide","clear","clip","color","content","counterIncrement","counterReset","cue","cueAfter","cueBefore","cursor","direction","display","elevation","emptyCells","cssFloat","font","fontFamily","fontSize","fontSizeAdjust","fontStretch","fontStyle","fontVariant","fontWeight","height","left","letterSpacing","lineHeight","listStyle","listStyleImage","listStylePosition","listStyleType","margin","marginTop","marginRight","marginBottom","marginLeft","markerOffset","marks","maxHeight","maxWidth","minHeight","minWidth","orphans","outline","outlineColor","outlineStyle","outlineWidth","overflow","padding","paddingTop","paddingRight","paddingBottom","paddingLeft","page","pageBreakAfter","pageBreakBefore","pageBreakInside","pause","pauseAfter","pauseBefore","pitch","pitchRange","playDuring","position","quotes","richness","right","size","speak","speakHeader","speakNumeral","speakPunctuation","speechRate","stress","tableLayout","textAlign","textDecoration","textIndent","textShadow","textTransform","top","unicodeBidi","verticalAlign","visibility","voiceFamily","volume","whiteSpace","widows","width","wordSpacing","zIndex"].sort();
-    
-    var view = node.style;
+    var paths = [];
 
-    var str = [], sl = -1;
-    for(var i=0,len=property.length; i<len; i++)
+    for (; element && element.nodeType == 1; element = element.parentNode)
     {
-        var item = property[i];
-        if(!view[item]) continue;
-        
-        str[++sl] = toSelectorCase(item);
-        str[++sl] = ": "; 
-        str[++sl] = view[item];
-        str[++sl] = ";\n";
+        var index = 0;
+        for (var sibling = element.previousSibling; sibling; sibling = sibling.previousSibling)
+        {
+            if (sibling.nodeName == element.nodeName)
+                ++index;
+        }
+
+        var tagName = element.nodeName.toLowerCase();
+        var pathIndex = (index ? "[" + (index+1) + "]" : "");
+        paths.splice(0, 0, tagName + pathIndex);
     }
-    
-    str = str.join("");
-    return str.substr(0, str.length-1);
+
+    return paths.length ? "/" + paths.join("/") : null;
 };
 
+this.getElementsByXPath = function(doc, xpath)
+{
+    var nodes = [];
+
+    try {
+        var result = doc.evaluate(xpath, doc, null, XPathResult.ANY_TYPE, null);
+        for (var item = result.iterateNext(); item; item = result.iterateNext())
+            nodes.push(item);
+    }
+    catch (exc)
+    {
+        // Invalid xpath expressions make their way here sometimes.  If that happens,
+        // we still want to return an empty set without an exception.
+    }
+
+    return nodes;
+};
+
+this.getRuleMatchingElements = function(rule, doc)
+{
+    var css = rule.selectorText;
+    var xpath = this.cssToXPath(css);
+    return this.getElementsByXPath(doc, xpath);
+};
+
+
+}).call(FBL);
+
+
+
+
+FBL.ns(function() { with (FBL) {
+
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
 // ************************************************************************************************
 
 var toCamelCase = function toCamelCase(s)
 {
     return s.replace(reSelectorCase, toCamelCaseReplaceFn);
-}
+};
 
 var toSelectorCase = function toSelectorCase(s)
 {
   return s.replace(reCamelCase, "-$1").toLowerCase();
   
-}
+};
 
 var reCamelCase = /([A-Z])/g;
 var reSelectorCase = /\-(.)/g; 
 var toCamelCaseReplaceFn = function toCamelCaseReplaceFn(m,g)
 {
     return g.toUpperCase();
+};
+
+
+
+
+var cacheUID = -1;
+
+var createCache = function()
+{
+    var map = {};
+    // TODO: xxxpedro unify the cache system, using a single expando property
+    var CID = cacheID+"b";
+    
+    var cacheFunction = function(element)
+    {
+        return cacheAPI.set(element);
+    }
+    
+    var cacheAPI =  
+    {
+        get: function(key)
+        {
+            return map.hasOwnProperty(key) ?
+                    map[key] :
+                    null;
+        },
+        
+        set: function(element)
+        {
+            var id = element[CID];
+            
+            if (!id)
+            {
+                id = ++cacheUID;
+                element[CID] = id;
+            }
+            
+            if (!map.hasOwnProperty(id))
+            {
+                map[id] = element
+            }
+            
+            return id;
+        },
+        
+        key: function(element)
+        {
+            return element[CID];            
+        },
+        
+        has: function(element)
+        {
+            return map.hasOwnProperty(element[CID]);
+        },
+        
+        clear: function()
+        {
+            for (var name in map)
+            {
+                var element = map[name];
+                
+                element[CID] = null;
+                delete element[CID];
+                
+                map[name] = null;
+                delete map[name];
+            }
+        }
+    };
+    
+    append(cacheFunction, cacheAPI);
+    
+    return cacheFunction;
+}
+
+
+// ************************************************************************************************
+
+var globalCSSRuleIndex;
+
+FBL.processAllStyleSheets = function(doc, styleSheetIterator)
+{
+    styleSheetIterator = styleSheetIterator || processStyleSheet;
+    
+    globalCSSRuleIndex = -1;
+    var index = 0;
+    var styleSheets = doc.styleSheets;
+    
+    if (FBTrace.DBG_CSS)
+        var start = new Date().getTime();
+    
+    for(var i=0, length=styleSheets.length; i<length; i++)
+    {
+        var styleSheet = styleSheets[i];
+        
+        // process imported styleSheets
+        if (isIE)
+        {
+            var imports = styleSheet.imports;
+            
+            for(var j=0, importsLength=imports.length; j<importsLength; j++)
+            {
+                styleSheetIterator(doc, imports[j]);
+            }
+        }
+        else
+        {
+            var rules = styleSheet.cssRules;
+            
+            for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
+            {
+                var rule = rules[j];
+                
+                if (rule.styleSheet)
+                    styleSheetIterator(doc, rule.styleSheet);
+                else
+                    break;
+            }
+            
+            index = j;
+        }
+        
+        // process internal and external styleSheets
+        styleSheetIterator(doc, styleSheet);
+    };
+    
+    if (FBTrace.DBG_CSS)
+    {
+        FBTrace.sysout("FBL.processAllStyleSheets", "all stylesheet rules processed in " + (new Date().getTime() - start) + "ms");
+    }
+};
+
+StyleSheetCache = createCache();
+var ElementCache = createCache();
+
+var CSSRuleMap = {}
+var ElementCSSRulesMap = {}
+
+var processStyleSheet = function(doc, styleSheet)
+{
+    var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
+    
+    var ssid = StyleSheetCache(styleSheet);
+    
+    for (var i=0, length=rules.length; i<length; i++)
+    {
+        var rid = ssid + ":" + i;
+        var rule = rules[i];
+        var selector = rule.selectorText;
+        
+        if (isIE)
+        {
+            selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase()});
+        }
+        
+        // TODO: xxxpedro break grouped rules (,) into individual rules, otherwise
+        // it will result in a overestimated value for getCSSRuleSpecificity
+        
+        CSSRuleMap[rid] =
+        {
+            styleSheetId: ssid,
+            styleSheetIndex: i,
+            order: ++globalCSSRuleIndex,
+            specificity: selector ? getCSSRuleSpecificity(selector) : 0,
+            
+            rule: rule,
+            selector: selector,
+            cssText: rule.style ? rule.style.cssText : rule.cssText ? rule.cssText : ""        
+        };
+        
+        var elements = Firebug.Selector(selector, doc);
+        
+        for (var j=0, elementsLength=elements.length; j<elementsLength; j++)
+        {
+            var element = elements[j];
+            var eid = ElementCache(element);
+            
+            if (!ElementCSSRulesMap[eid])
+                ElementCSSRulesMap[eid] = [];
+            
+            ElementCSSRulesMap[eid].push(rid);
+        }
+        
+        //console.log(selector, elements);
+    }
+    
+    //sort
+    for (var name in ElementCSSRulesMap)
+    {
+        if (ElementCSSRulesMap.hasOwnProperty(name))
+        {
+            var rules = ElementCSSRulesMap[name];
+            
+            rules.sort(sortElementRules);
+            //rules.sort(solveRulesTied);
+        }
+    }
+    /**/
+};
+
+var sortElementRules = function(a, b)
+{
+    var ruleA = CSSRuleMap[a];
+    var ruleB = CSSRuleMap[b];
+    
+    var specificityA = ruleA.specificity;
+    var specificityB = ruleB.specificity
+    
+    if (specificityA > specificityB)
+        return 1;
+    
+    else if (specificityA < specificityB)
+        return -1;
+    
+    else
+        return ruleA.order > ruleB.order ? 1 : -1;
+};
+
+var solveRulesTied = function(a, b)
+{
+    var ruleA = CSSRuleMap[a];
+    var ruleB = CSSRuleMap[b];
+    
+    if (ruleA.specificity == ruleB.specificity)
+        return ruleA.order > ruleB.order ? 1 : -1;
+        
+    return null;
+};
+
+var reSelectorTag = /(^|\s)(?:\w+)/g;
+var reSelectorClass = /\.[\w\d_-]+/g;
+var reSelectorId = /#[\w\d_-]+/g;
+
+var getCSSRuleSpecificity = function(selector)
+{
+    var match = selector.match(reSelectorTag);
+    var tagCount = match ? match.length : 0;
+    
+    match = selector.match(reSelectorClass);
+    var classCount = match ? match.length : 0;
+    
+    match = selector.match(reSelectorId);
+    var idCount = match ? match.length : 0;
+    
+    return tagCount + 10*classCount + 100*idCount;
+};
+
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
+// ************************************************************************************************
+
+
+// ************************************************************************************************
+// Constants
+
+//const Cc = Components.classes;
+//const Ci = Components.interfaces;
+//const nsIDOMCSSStyleRule = Ci.nsIDOMCSSStyleRule;
+//const nsIInterfaceRequestor = Ci.nsIInterfaceRequestor;
+//const nsISelectionDisplay = Ci.nsISelectionDisplay;
+//const nsISelectionController = Ci.nsISelectionController;
+
+// See: http://mxr.mozilla.org/mozilla1.9.2/source/content/events/public/nsIEventStateManager.h#153
+//const STATE_ACTIVE  = 0x01;
+//const STATE_FOCUS   = 0x02;
+//const STATE_HOVER   = 0x04;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+Firebug.SourceBoxPanel = Firebug.Panel;
+
+var domUtils = null;
+
+var textContent = isIE ? "innerText" : "textContent";
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+var CSSDomplateBase = {
+    isEditable: function(rule)
+    {
+        return !rule.isSystemSheet;
+    },
+    isSelectorEditable: function(rule)
+    {
+        return rule.isSelectorEditable && this.isEditable(rule);
+    }
+};
+
+var CSSPropTag = domplate(CSSDomplateBase, {
+    tag: DIV({"class": "cssProp focusRow", $disabledStyle: "$prop.disabled",
+          $editGroup: "$rule|isEditable",
+          $cssOverridden: "$prop.overridden", role : "option"},
+        A({"class": "cssPropDisable"}, "&nbsp;&nbsp;"),
+        SPAN({"class": "cssPropName", $editable: "$rule|isEditable"}, "$prop.name"),
+        SPAN({"class": "cssColon"}, ":"),
+        SPAN({"class": "cssPropValue", $editable: "$rule|isEditable"}, "$prop.value$prop.important"),
+        SPAN({"class": "cssSemi"}, ";")
+    )
+});
+
+var CSSRuleTag =
+    TAG("$rule.tag", {rule: "$rule"});
+
+var CSSImportRuleTag = domplate({
+    tag: DIV({"class": "cssRule insertInto focusRow importRule", _repObject: "$rule.rule"},
+        "@import &quot;",
+        A({"class": "objectLink", _repObject: "$rule.rule.styleSheet"}, "$rule.rule.href"),
+        "&quot;;"
+    )
+});
+
+var CSSStyleRuleTag = domplate(CSSDomplateBase, {
+    tag: DIV({"class": "cssRule insertInto",
+            $cssEditableRule: "$rule|isEditable",
+            $editGroup: "$rule|isSelectorEditable",
+            _repObject: "$rule.rule",
+            "ruleId": "$rule.id", role : 'presentation'},
+        DIV({"class": "cssHead focusRow", role : 'listitem'},
+            SPAN({"class": "cssSelector", $editable: "$rule|isSelectorEditable"}, "$rule.selector"), " {"
+        ),
+        DIV({role : 'group'},
+            DIV({"class": "cssPropertyListBox", role : 'listbox'},
+                FOR("prop", "$rule.props",
+                    TAG(CSSPropTag.tag, {rule: "$rule", prop: "$prop"})
+                )
+            )
+        ),
+        DIV({"class": "editable insertBefore", role:"presentation"}, "}")
+    )
+});
+
+var reSplitCSS =  /(url\("?[^"\)]+?"?\))|(rgb\(.*?\))|(#[\dA-Fa-f]+)|(-?\d+(\.\d+)?(%|[a-z]{1,2})?)|([^,\s]+)|"(.*?)"/;
+
+var reURL = /url\("?([^"\)]+)?"?\)/;
+
+var reRepeat = /no-repeat|repeat-x|repeat-y|repeat/;
+
+//const sothinkInstalled = !!$("swfcatcherKey_sidebar");
+var sothinkInstalled = false;
+var styleGroups =
+{
+    text: [
+        "font-family",
+        "font-size",
+        "font-weight",
+        "font-style",
+        "color",
+        "text-transform",
+        "text-decoration",
+        "letter-spacing",
+        "word-spacing",
+        "line-height",
+        "text-align",
+        "vertical-align",
+        "direction",
+        "column-count",
+        "column-gap",
+        "column-width"
+    ],
+
+    background: [
+        "background-color",
+        "background-image",
+        "background-repeat",
+        "background-position",
+        "background-attachment",
+        "opacity"
+    ],
+
+    box: [
+        "width",
+        "height",
+        "top",
+        "right",
+        "bottom",
+        "left",
+        "margin-top",
+        "margin-right",
+        "margin-bottom",
+        "margin-left",
+        "padding-top",
+        "padding-right",
+        "padding-bottom",
+        "padding-left",
+        "border-top-width",
+        "border-right-width",
+        "border-bottom-width",
+        "border-left-width",
+        "border-top-color",
+        "border-right-color",
+        "border-bottom-color",
+        "border-left-color",
+        "border-top-style",
+        "border-right-style",
+        "border-bottom-style",
+        "border-left-style",
+        "-moz-border-top-radius",
+        "-moz-border-right-radius",
+        "-moz-border-bottom-radius",
+        "-moz-border-left-radius",
+        "outline-top-width",
+        "outline-right-width",
+        "outline-bottom-width",
+        "outline-left-width",
+        "outline-top-color",
+        "outline-right-color",
+        "outline-bottom-color",
+        "outline-left-color",
+        "outline-top-style",
+        "outline-right-style",
+        "outline-bottom-style",
+        "outline-left-style"
+    ],
+
+    layout: [
+        "position",
+        "display",
+        "visibility",
+        "z-index",
+        "overflow-x",  // http://www.w3.org/TR/2002/WD-css3-box-20021024/#overflow
+        "overflow-y",
+        "overflow-clip",
+        "white-space",
+        "clip",
+        "float",
+        "clear",
+        "-moz-box-sizing"
+    ],
+
+    other: [
+        "cursor",
+        "list-style-image",
+        "list-style-position",
+        "list-style-type",
+        "marker-offset",
+        "user-focus",
+        "user-select",
+        "user-modify",
+        "user-input"
+    ]
+};
+
+var styleGroupTitles =
+{
+    text: "Text",
+    background: "Background",
+    box: "Box Model",
+    layout: "Layout",
+    other: "Other"
+};
+
+Firebug.CSSModule = extend(Firebug.Module,
+{
+    freeEdit: function(styleSheet, value)
+    {
+        if (!styleSheet.editStyleSheet)
+        {
+            var ownerNode = getStyleSheetOwnerNode(styleSheet);
+            styleSheet.disabled = true;
+
+            var url = CCSV("@mozilla.org/network/standard-url;1", Components.interfaces.nsIURL);
+            url.spec = styleSheet.href;
+
+            var editStyleSheet = ownerNode.ownerDocument.createElementNS(
+                "http://www.w3.org/1999/xhtml",
+                "style");
+            unwrapObject(editStyleSheet).firebugIgnore = true;
+            editStyleSheet.setAttribute("type", "text/css");
+            editStyleSheet.setAttributeNS(
+                "http://www.w3.org/XML/1998/namespace",
+                "base",
+                url.directory);
+            if (ownerNode.hasAttribute("media"))
+            {
+              editStyleSheet.setAttribute("media", ownerNode.getAttribute("media"));
+            }
+
+            // Insert the edited stylesheet directly after the old one to ensure the styles
+            // cascade properly.
+            ownerNode.parentNode.insertBefore(editStyleSheet, ownerNode.nextSibling);
+
+            styleSheet.editStyleSheet = editStyleSheet;
+        }
+
+        styleSheet.editStyleSheet.innerHTML = value;
+        if (FBTrace.DBG_CSS)
+            FBTrace.sysout("css.saveEdit styleSheet.href:"+styleSheet.href+" got innerHTML:"+value+"\n");
+
+        dispatch(this.fbListener, "onCSSFreeEdit", [styleSheet, value]);
+    },
+
+    insertRule: function(styleSheet, cssText, ruleIndex)
+    {
+        if (FBTrace.DBG_CSS) FBTrace.sysout("Insert: " + ruleIndex + " " + cssText);
+        var insertIndex = styleSheet.insertRule(cssText, ruleIndex);
+
+        dispatch(this.fbListeners, "onCSSInsertRule", [styleSheet, cssText, ruleIndex]);
+
+        return insertIndex;
+    },
+
+    deleteRule: function(styleSheet, ruleIndex)
+    {
+        if (FBTrace.DBG_CSS) FBTrace.sysout("deleteRule: " + ruleIndex + " " + styleSheet.cssRules.length, styleSheet.cssRules);
+        dispatch(this.fbListeners, "onCSSDeleteRule", [styleSheet, ruleIndex]);
+
+        styleSheet.deleteRule(ruleIndex);
+    },
+
+    setProperty: function(rule, propName, propValue, propPriority)
+    {
+        var style = rule.style || rule;
+
+        // Record the original CSS text for the inline case so we can reconstruct at a later
+        // point for diffing purposes
+        var baseText = style.cssText;
+        
+        // good browsers
+        if (style.getPropertyValue)
+        {
+            var prevValue = style.getPropertyValue(propName);
+            var prevPriority = style.getPropertyPriority(propName);
+    
+            // XXXjoe Gecko bug workaround: Just changing priority doesn't have any effect
+            // unless we remove the property first
+            style.removeProperty(propName);
+    
+            style.setProperty(propName, propValue, propPriority);
+        }
+        // sad browsers
+        else
+        {
+            // TODO: xxxpedro parse CSS rule to find property priority in IE?
+            //console.log(propName, propValue);
+            style[toCamelCase(propName)] = propValue;
+        }
+
+        if (propName) {
+            dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
+        }
+    },
+
+    removeProperty: function(rule, propName, parent)
+    {
+        var style = rule.style || rule;
+
+        // Record the original CSS text for the inline case so we can reconstruct at a later
+        // point for diffing purposes
+        var baseText = style.cssText;
+        
+        if (style.getPropertyValue)
+        {
+    
+            var prevValue = style.getPropertyValue(propName);
+            var prevPriority = style.getPropertyPriority(propName);
+    
+            style.removeProperty(propName);
+        }
+        else
+        {
+            style[toCamelCase(propName)] = "";
+        }
+
+        if (propName) {
+            dispatch(this.fbListeners, "onCSSRemoveProperty", [style, propName, prevValue, prevPriority, rule, baseText]);
+        }
+    }/*,
+
+    cleanupSheets: function(doc, context)
+    {
+        // Due to the manner in which the layout engine handles multiple
+        // references to the same sheet we need to kick it a little bit.
+        // The injecting a simple stylesheet then removing it will force
+        // Firefox to regenerate it's CSS hierarchy.
+        //
+        // WARN: This behavior was determined anecdotally.
+        // See http://code.google.com/p/fbug/issues/detail?id=2440
+        var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
+        style.setAttribute("charset","utf-8");
+        unwrapObject(style).firebugIgnore = true;
+        style.setAttribute("type", "text/css");
+        style.innerHTML = "#fbIgnoreStyleDO_NOT_USE {}";
+        addStyleSheet(doc, style);
+        style.parentNode.removeChild(style);
+
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=500365
+        // This voodoo touches each style sheet to force some Firefox internal change to allow edits.
+        var styleSheets = getAllStyleSheets(context);
+        for(var i = 0; i < styleSheets.length; i++)
+        {
+            try
+            {
+                var rules = styleSheets[i].cssRules;
+                if (rules.length > 0)
+                    var touch = rules[0];
+                if (FBTrace.DBG_CSS && touch)
+                    FBTrace.sysout("css.show() touch "+typeof(touch)+" in "+(styleSheets[i].href?styleSheets[i].href:context.getName()));
+            }
+            catch(e)
+            {
+                if (FBTrace.DBG_ERRORS)
+                    FBTrace.sysout("css.show: sheet.cssRules FAILS for "+(styleSheets[i]?styleSheets[i].href:"null sheet")+e, e);
+            }
+        }
+    },
+    cleanupSheetHandler: function(event, context)
+    {
+        var target = event.target || event.srcElement,
+            tagName = (target.tagName || "").toLowerCase();
+        if (tagName == "link")
+        {
+            this.cleanupSheets(target.ownerDocument, context);
+        }
+    },
+    watchWindow: function(context, win)
+    {
+        var cleanupSheets = bind(this.cleanupSheets, this),
+            cleanupSheetHandler = bind(this.cleanupSheetHandler, this, context),
+            doc = win.document;
+
+        //doc.addEventListener("DOMAttrModified", cleanupSheetHandler, false);
+        //doc.addEventListener("DOMNodeInserted", cleanupSheetHandler, false);
+    },
+    loadedContext: function(context)
+    {
+        var self = this;
+        iterateWindows(context.browser.contentWindow, function(subwin)
+        {
+            self.cleanupSheets(subwin.document, context);
+        });
+    }
+    /**/
+});
+
+// ************************************************************************************************
+
+Firebug.CSSStyleSheetPanel = function() {}
+
+Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
+{
+    template: domplate(
+    {
+        tag:
+            DIV({"class": "cssSheet insertInto a11yCSSView"},
+                FOR("rule", "$rules",
+                    CSSRuleTag
+                ),
+                DIV({"class": "cssSheet editable insertBefore"}, "")
+                )
+    }),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    refresh: function()
+    {
+        if (this.location)
+            this.updateLocation(this.location);
+        else if (this.selection)
+            this.updateSelection(this.selection);
+    },
+
+    toggleEditing: function()
+    {
+        if (!this.stylesheetEditor)
+            this.stylesheetEditor = new StyleSheetEditor(this.document);
+
+        if (this.editing)
+            Firebug.Editor.stopEditing();
+        else
+        {
+            if (!this.location)
+                return;
+
+            var styleSheet = this.location.editStyleSheet
+                ? this.location.editStyleSheet.sheet
+                : this.location;
+
+            var css = getStyleSheetCSS(styleSheet, this.context);
+            //var topmost = getTopmostRuleLine(this.panelNode);
+
+            this.stylesheetEditor.styleSheet = this.location;
+            Firebug.Editor.startEditing(this.panelNode, css, this.stylesheetEditor);
+            //this.stylesheetEditor.scrollToLine(topmost.line, topmost.offset);
+        }
+    },
+
+    getStylesheetURL: function(rule)
+    {
+        if (this.location.href)
+            return this.location.href;
+        else
+            return this.context.window.location.href;
+    },
+
+    getRuleByLine: function(styleSheet, line)
+    {
+        if (!domUtils)
+            return null;
+
+        var cssRules = styleSheet.cssRules;
+        for (var i = 0; i < cssRules.length; ++i)
+        {
+            var rule = cssRules[i];
+            if (rule instanceof CSSStyleRule)
+            {
+                var ruleLine = domUtils.getRuleLine(rule);
+                if (ruleLine >= line)
+                    return rule;
+            }
+        }
+    },
+
+    highlightRule: function(rule)
+    {
+        var ruleElement = Firebug.getElementByRepObject(this.panelNode.firstChild, rule);
+        if (ruleElement)
+        {
+            scrollIntoCenterView(ruleElement, this.panelNode);
+            setClassTimed(ruleElement, "jumpHighlight", this.context);
+        }
+    },
+
+    getStyleSheetRules: function(context, styleSheet)
+    {
+        var isSystemSheet = isSystemStyleSheet(styleSheet);
+
+        function appendRules(cssRules)
+        {
+            for (var i = 0; i < cssRules.length; ++i)
+            {
+                var rule = cssRules[i];
+                
+                // TODO: xxxpedro opera instanceof stylesheet remove the following comments when 
+                // the issue with opera and style sheet Classes has been solved.
+                
+                //if (rule instanceof CSSStyleRule)
+                if (instanceOf(rule, "CSSStyleRule"))
+                {
+                    var props = this.getRuleProperties(context, rule);
+                    //var line = domUtils.getRuleLine(rule);
+                    var line = null;
+                    
+                    var selector = rule.selectorText;
+                    
+                    if (isIE)
+                    {
+                        selector = selector.replace(reSelectorTag, 
+                                function(s){return s.toLowerCase()});
+                    }
+                    
+                    var ruleId = rule.selectorText+"/"+line;
+                    rules.push({tag: CSSStyleRuleTag.tag, rule: rule, id: ruleId,
+                                selector: selector, props: props,
+                                isSystemSheet: isSystemSheet,
+                                isSelectorEditable: true});
+                }
+                //else if (rule instanceof CSSImportRule)
+                else if (instanceOf(rule, "CSSImportRule"))
+                    rules.push({tag: CSSImportRuleTag.tag, rule: rule});
+                //else if (rule instanceof CSSMediaRule)
+                else if (instanceOf(rule, "CSSMediaRule"))
+                    appendRules.apply(this, [rule.cssRules]);
+                else
+                {
+                    if (FBTrace.DBG_ERRORS || FBTrace.DBG_CSS)
+                        FBTrace.sysout("css getStyleSheetRules failed to classify a rule ", rule);
+                }
+            }
+        }
+
+        var rules = [];
+        appendRules.apply(this, [styleSheet.cssRules || styleSheet.rules]);
+        return rules;
+    },
+
+    parseCSSProps: function(style, inheritMode)
+    {
+        var props = [];
+
+        if (Firebug.expandShorthandProps)
+        {
+            var count = style.length-1,
+                index = style.length;
+            while (index--)
+            {
+                var propName = style.item(count - index);
+                this.addProperty(propName, style.getPropertyValue(propName), !!style.getPropertyPriority(propName), false, inheritMode, props);
+            }
+        }
+        else
+        {
+            var lines = style.cssText.match(/(?:[^;\(]*(?:\([^\)]*?\))?[^;\(]*)*;?/g);
+            var propRE = /\s*([^:\s]*)\s*:\s*(.*?)\s*(! important)?;?$/;
+            var line,i=0;
+            // TODO: xxxpedro port to firebug: variable leaked into global namespace
+            var m;
+            
+            while(line=lines[i++]){
+                m = propRE.exec(line);
+                if(!m)
+                    continue;
+                //var name = m[1], value = m[2], important = !!m[3];
+                if (m[2])
+                    this.addProperty(m[1], m[2], !!m[3], false, inheritMode, props);
+            };
+        }
+
+        return props;
+    },
+
+    getRuleProperties: function(context, rule, inheritMode)
+    {
+        var props = this.parseCSSProps(rule.style, inheritMode);
+
+        // TODO: xxxpedro port to firebug: variable leaked into global namespace 
+        //var line = domUtils.getRuleLine(rule);
+        var line;
+        var ruleId = rule.selectorText+"/"+line;
+        this.addOldProperties(context, ruleId, inheritMode, props);
+        sortProperties(props);
+
+        return props;
+    },
+
+    addOldProperties: function(context, ruleId, inheritMode, props)
+    {
+        if (context.selectorMap && context.selectorMap.hasOwnProperty(ruleId) )
+        {
+            var moreProps = context.selectorMap[ruleId];
+            for (var i = 0; i < moreProps.length; ++i)
+            {
+                var prop = moreProps[i];
+                this.addProperty(prop.name, prop.value, prop.important, true, inheritMode, props);
+            }
+        }
+    },
+
+    addProperty: function(name, value, important, disabled, inheritMode, props)
+    {
+        name = name.toLowerCase();
+        
+        if (inheritMode && !inheritedStyleNames[name])
+            return;
+
+        name = this.translateName(name, value);
+        if (name)
+        {
+            value = stripUnits(rgbToHex(value));
+            important = important ? " !important" : "";
+
+            var prop = {name: name, value: value, important: important, disabled: disabled};
+            props.push(prop);
+        }
+    },
+
+    translateName: function(name, value)
+    {
+        // Don't show these proprietary Mozilla properties
+        if ((value == "-moz-initial"
+            && (name == "-moz-background-clip" || name == "-moz-background-origin"
+                || name == "-moz-background-inline-policy"))
+        || (value == "physical"
+            && (name == "margin-left-ltr-source" || name == "margin-left-rtl-source"
+                || name == "margin-right-ltr-source" || name == "margin-right-rtl-source"))
+        || (value == "physical"
+            && (name == "padding-left-ltr-source" || name == "padding-left-rtl-source"
+                || name == "padding-right-ltr-source" || name == "padding-right-rtl-source")))
+            return null;
+
+        // Translate these back to the form the user probably expects
+        if (name == "margin-left-value")
+            return "margin-left";
+        else if (name == "margin-right-value")
+            return "margin-right";
+        else if (name == "margin-top-value")
+            return "margin-top";
+        else if (name == "margin-bottom-value")
+            return "margin-bottom";
+        else if (name == "padding-left-value")
+            return "padding-left";
+        else if (name == "padding-right-value")
+            return "padding-right";
+        else if (name == "padding-top-value")
+            return "padding-top";
+        else if (name == "padding-bottom-value")
+            return "padding-bottom";
+        // XXXjoe What about border!
+        else
+            return name;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    editElementStyle: function()
+    {
+        var rulesBox = this.panelNode.getElementsByClassName("cssElementRuleContainer")[0];
+        var styleRuleBox = rulesBox && Firebug.getElementByRepObject(rulesBox, this.selection);
+        if (!styleRuleBox)
+        {
+            var rule = {rule: this.selection, inherited: false, selector: "element.style", props: []};
+            if (!rulesBox)
+            {
+                // The element did not have any displayed styles. We need to create the whole tree and remove
+                // the no styles message
+                styleRuleBox = this.template.cascadedTag.replace({
+                    rules: [rule], inherited: [], inheritLabel: "Inherited from" // $STR("InheritedFrom")
+                }, this.panelNode);
+
+                styleRuleBox = styleRuleBox.getElementsByClassName("cssElementRuleContainer")[0];
+            }
+            else
+                styleRuleBox = this.template.ruleTag.insertBefore({rule: rule}, rulesBox);
+
+            styleRuleBox = styleRuleBox.getElementsByClassName("insertInto")[0];
+        }
+
+        Firebug.Editor.insertRowForObject(styleRuleBox);
+    },
+
+    insertPropertyRow: function(row)
+    {
+        Firebug.Editor.insertRowForObject(row);
+    },
+
+    insertRule: function(row)
+    {
+        var location = getAncestorByClass(row, "cssRule");
+        if (!location)
+        {
+            location = getChildByClass(this.panelNode, "cssSheet");
+            Firebug.Editor.insertRowForObject(location);
+        }
+        else
+        {
+            Firebug.Editor.insertRow(location, "before");
+        }
+    },
+
+    editPropertyRow: function(row)
+    {
+        var propValueBox = getChildByClass(row, "cssPropValue");
+        Firebug.Editor.startEditing(propValueBox);
+    },
+
+    deletePropertyRow: function(row)
+    {
+        var rule = Firebug.getRepObject(row);
+        var propName = getChildByClass(row, "cssPropName")[textContent];
+        Firebug.CSSModule.removeProperty(rule, propName);
+
+        // Remove the property from the selector map, if it was disabled
+        var ruleId = Firebug.getRepNode(row).getAttribute("ruleId");
+        if ( this.context.selectorMap && this.context.selectorMap.hasOwnProperty(ruleId) )
+        {
+            var map = this.context.selectorMap[ruleId];
+            for (var i = 0; i < map.length; ++i)
+            {
+                if (map[i].name == propName)
+                {
+                    map.splice(i, 1);
+                    break;
+                }
+            }
+        }
+        if (this.name == "stylesheet")
+            dispatch([Firebug.A11yModel], 'onInlineEditorClose', [this, row.firstChild, true]);
+        row.parentNode.removeChild(row);
+
+        this.markChange(this.name == "stylesheet");
+    },
+
+    disablePropertyRow: function(row)
+    {
+        toggleClass(row, "disabledStyle");
+
+        var rule = Firebug.getRepObject(row);
+        var propName = getChildByClass(row, "cssPropName")[textContent];
+
+        if (!this.context.selectorMap)
+            this.context.selectorMap = {};
+
+        // XXXjoe Generate unique key for elements too
+        var ruleId = Firebug.getRepNode(row).getAttribute("ruleId");
+        if (!(this.context.selectorMap.hasOwnProperty(ruleId)))
+            this.context.selectorMap[ruleId] = [];
+
+        var map = this.context.selectorMap[ruleId];
+        var propValue = getChildByClass(row, "cssPropValue")[textContent];
+        var parsedValue = parsePriority(propValue);
+        if (hasClass(row, "disabledStyle"))
+        {
+            Firebug.CSSModule.removeProperty(rule, propName);
+
+            map.push({"name": propName, "value": parsedValue.value,
+                "important": parsedValue.priority});
+        }
+        else
+        {
+            Firebug.CSSModule.setProperty(rule, propName, parsedValue.value, parsedValue.priority);
+
+            var index = findPropByName(map, propName);
+            map.splice(index, 1);
+        }
+
+        this.markChange(this.name == "stylesheet");
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    onMouseDown: function(event)
+    {
+        // xxxpedro adjusting coordinates because the panel isn't a window yet
+        var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
+        
+        // XXjoe Hack to only allow clicking on the checkbox
+        if (!isLeftClick(event) || offset > 20)
+            return;
+
+        var target = event.target || event.srcElement;
+        if (hasClass(target, "textEditor"))
+            return;
+
+        var row = getAncestorByClass(target, "cssProp");
+        if (row && hasClass(row, "editGroup"))
+        {
+            this.disablePropertyRow(row);
+            cancelEvent(event);
+        }
+    },
+
+    onClick: function(event)
+    {
+        // xxxpedro adjusting coordinates because the panel isn't a window yet
+        var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
+        
+        if (!isLeftClick(event) || offset <= 20)
+            return;
+
+        var target = event.target || event.srcElement;
+        var row = getAncestorByClass(target, "cssRule");
+        if (row && !getAncestorByClass(target, "cssPropName")
+            && !getAncestorByClass(target, "cssPropValue"))
+        {
+            this.insertPropertyRow(row);
+            cancelEvent(event);
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // extends Panel
+
+    name: "stylesheet",
+    title: "CSS",
+    parentPanel: null,
+    searchable: true,
+    dependents: ["css", "stylesheet", "dom", "domSide", "layout"],
+    
+    options:
+    {
+        hasToolButtons: true
+    },
+
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        this.onMouseDown = bind(this.onMouseDown, this);
+        this.onClick = bind(this.onClick, this);
+
+        if (this.name == "stylesheet")
+        {
+            this.onChangeSelect = bind(this.onChangeSelect, this);
+            
+            var doc = Firebug.browser.document;
+            var selectNode = this.selectNode = createElement("select");
+            
+            processAllStyleSheets(doc, function(doc, styleSheet)
+            {
+                var key = StyleSheetCache.key(styleSheet);
+                var fileName = getFileName(styleSheet.href) || getFileName(doc.location.href);
+                var option = createElement("option", {value: key});
+                
+                option.appendChild(Firebug.chrome.document.createTextNode(fileName));
+                selectNode.appendChild(option);
+            });
+            
+            this.toolButtonsNode.appendChild(selectNode);
+        }
+        /**/
+    },
+    
+    onChangeSelect: function(event)
+    {
+        event = event || window.event;
+        var target = event.srcElement || event.currentTarget;
+        var key = target.value;
+        var styleSheet = StyleSheetCache.get(key);
+        
+        this.updateLocation(styleSheet);
+    },
+    
+    initialize: function()
+    {
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        //if (!domUtils)
+        //{
+        //    try {
+        //        domUtils = CCSV("@mozilla.org/inspector/dom-utils;1", "inIDOMUtils");
+        //    } catch (exc) {
+        //        if (FBTrace.DBG_ERRORS)
+        //            FBTrace.sysout("@mozilla.org/inspector/dom-utils;1 FAILED to load: "+exc, exc);
+        //    }
+        //}
+        
+        //TODO: xxxpedro
+        this.context = Firebug.chrome; // TODO: xxxpedro css2
+        this.document = Firebug.chrome.document; // TODO: xxxpedro css2
+        
+        this.initializeNode();
+        
+        if (this.name == "stylesheet")
+        {
+            addEvent(this.selectNode, "change", this.onChangeSelect);
+            
+            this.updateLocation(Firebug.browser.document.styleSheets[0]);
+        }
+        
+        //Firebug.SourceBoxPanel.initialize.apply(this, arguments);
+    },
+    
+    shutdown: function()
+    {
+        if (this.name == "stylesheet")
+        {
+            removeEvent(this.selectNode, "change", this.onChangeSelect);
+        }
+        
+        this.destroyNode();
+        
+        Firebug.Panel.shutdown.apply(this, arguments);
+    },
+
+    destroy: function(state)
+    {
+        //state.scrollTop = this.panelNode.scrollTop ? this.panelNode.scrollTop : this.lastScrollTop;
+
+        //persistObjects(this, state);
+
+        Firebug.Editor.stopEditing();
+        Firebug.Panel.destroy.apply(this, arguments);
+    },
+
+    initializeNode: function(oldPanelNode)
+    {
+        addEvent(this.panelNode, "mousedown", this.onMouseDown);
+        addEvent(this.panelNode, "click", this.onClick);
+        //Firebug.SourceBoxPanel.initializeNode.apply(this, arguments);
+        //dispatch([Firebug.A11yModel], 'onInitializeNode', [this, 'css']);
+    },
+
+    destroyNode: function()
+    {
+        removeEvent(this.panelNode, "mousedown", this.onMouseDown);
+        removeEvent(this.panelNode, "click", this.onClick);
+        //Firebug.SourceBoxPanel.destroyNode.apply(this, arguments);
+        //dispatch([Firebug.A11yModel], 'onDestroyNode', [this, 'css']);
+    },
+
+    ishow: function(state)
+    {
+        Firebug.Inspector.stopInspecting(true);
+
+        this.showToolbarButtons("fbCSSButtons", true);
+
+        if (this.context.loaded && !this.location) // wait for loadedContext to restore the panel
+        {
+            restoreObjects(this, state);
+
+            if (!this.location)
+                this.location = this.getDefaultLocation();
+
+            if (state && state.scrollTop)
+                this.panelNode.scrollTop = state.scrollTop;
+        }
+    },
+
+    ihide: function()
+    {
+        this.showToolbarButtons("fbCSSButtons", false);
+
+        this.lastScrollTop = this.panelNode.scrollTop;
+    },
+
+    supportsObject: function(object)
+    {
+        if (object instanceof CSSStyleSheet)
+            return 1;
+        else if (object instanceof CSSStyleRule)
+            return 2;
+        else if (object instanceof CSSStyleDeclaration)
+            return 2;
+        else if (object instanceof SourceLink && object.type == "css" && reCSS.test(object.href))
+            return 2;
+        else
+            return 0;
+    },
+
+    updateLocation: function(styleSheet)
+    {
+        if (!styleSheet)
+            return;
+        if (styleSheet.editStyleSheet)
+            styleSheet = styleSheet.editStyleSheet.sheet;
+
+        var rules = this.getStyleSheetRules(this.context, styleSheet);
+
+        var result;
+        if (rules.length)
+            result = this.template.tag.replace({rules: rules}, this.panelNode);
+        else
+            result = FirebugReps.Warning.tag.replace({object: "EmptyStyleSheet"}, this.panelNode);
+
+        this.showToolbarButtons("fbCSSButtons", !isSystemStyleSheet(this.location));
+
+        dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, this.panelNode]);
+    },
+
+    updateSelection: function(object)
+    {
+        this.selection = null;
+
+        if (object instanceof CSSStyleDeclaration) {
+            object = object.parentRule;
+        }
+
+        if (object instanceof CSSStyleRule)
+        {
+            this.navigate(object.parentStyleSheet);
+            this.highlightRule(object);
+        }
+        else if (object instanceof CSSStyleSheet)
+        {
+            this.navigate(object);
+        }
+        else if (object instanceof SourceLink)
+        {
+            try
+            {
+                var sourceLink = object;
+
+                var sourceFile = getSourceFileByHref(sourceLink.href, this.context);
+                if (sourceFile)
+                {
+                    clearNode(this.panelNode);  // replace rendered stylesheets
+                    this.showSourceFile(sourceFile);
+
+                    var lineNo = object.line;
+                    if (lineNo)
+                        this.scrollToLine(lineNo, this.jumpHighlightFactory(lineNo, this.context));
+                }
+                else // XXXjjb we should not be taking this path
+                {
+                    var stylesheet = getStyleSheetByHref(sourceLink.href, this.context);
+                    if (stylesheet)
+                        this.navigate(stylesheet);
+                    else
+                    {
+                        if (FBTrace.DBG_CSS)
+                            FBTrace.sysout("css.updateSelection no sourceFile for "+sourceLink.href, sourceLink);
+                    }
+                }
+            }
+            catch(exc) {
+                if (FBTrace.DBG_CSS)
+                    FBTrace.sysout("css.upDateSelection FAILS "+exc, exc);
+            }
+        }
+    },
+
+    updateOption: function(name, value)
+    {
+        if (name == "expandShorthandProps")
+            this.refresh();
+    },
+
+    getLocationList: function()
+    {
+        var styleSheets = getAllStyleSheets(this.context);
+        return styleSheets;
+    },
+
+    getOptionsMenuItems: function()
+    {
+        return [
+            {label: "Expand Shorthand Properties", type: "checkbox", checked: Firebug.expandShorthandProps,
+                    command: bindFixed(Firebug.togglePref, Firebug, "expandShorthandProps") },
+            "-",
+            {label: "Refresh", command: bind(this.refresh, this) }
+        ];
+    },
+
+    getContextMenuItems: function(style, target)
+    {
+        var items = [];
+
+        if (this.infoTipType == "color")
+        {
+            items.push(
+                {label: "CopyColor",
+                    command: bindFixed(copyToClipboard, FBL, this.infoTipObject) }
+            );
+        }
+        else if (this.infoTipType == "image")
+        {
+            items.push(
+                {label: "CopyImageLocation",
+                    command: bindFixed(copyToClipboard, FBL, this.infoTipObject) },
+                {label: "OpenImageInNewTab",
+                    command: bindFixed(openNewTab, FBL, this.infoTipObject) }
+            );
+        }
+
+        if (this.selection instanceof Element)
+        {
+            items.push(
+                "-",
+                {label: "EditStyle",
+                    command: bindFixed(this.editElementStyle, this) }
+            );
+        }
+        else if (!isSystemStyleSheet(this.selection))
+        {
+            items.push(
+                    "-",
+                    {label: "NewRule",
+                        command: bindFixed(this.insertRule, this, target) }
+                );
+        }
+
+        var cssRule = getAncestorByClass(target, "cssRule")
+        if (cssRule && hasClass(cssRule, "cssEditableRule"))
+        {
+            items.push(
+                "-",
+                {label: "NewProp",
+                    command: bindFixed(this.insertPropertyRow, this, target) }
+            );
+
+            var propRow = getAncestorByClass(target, "cssProp");
+            if (propRow)
+            {
+                var propName = getChildByClass(propRow, "cssPropName")[textContent];
+                var isDisabled = hasClass(propRow, "disabledStyle");
+
+                items.push(
+                    {label: $STRF("EditProp", [propName]), nol10n: true,
+                        command: bindFixed(this.editPropertyRow, this, propRow) },
+                    {label: $STRF("DeleteProp", [propName]), nol10n: true,
+                        command: bindFixed(this.deletePropertyRow, this, propRow) },
+                    {label: $STRF("DisableProp", [propName]), nol10n: true,
+                        type: "checkbox", checked: isDisabled,
+                        command: bindFixed(this.disablePropertyRow, this, propRow) }
+                );
+            }
+        }
+
+        items.push(
+            "-",
+            {label: "Refresh", command: bind(this.refresh, this) }
+        );
+
+        return items;
+    },
+
+    browseObject: function(object)
+    {
+        if (this.infoTipType == "image")
+        {
+            openNewTab(this.infoTipObject);
+            return true;
+        }
+    },
+
+    showInfoTip: function(infoTip, target, x, y)
+    {
+        var propValue = getAncestorByClass(target, "cssPropValue");
+        if (propValue)
+        {
+            var offset = getClientOffset(propValue);
+            var offsetX = x-offset.x;
+
+            var text = propValue[textContent];
+            var charWidth = propValue.offsetWidth/text.length;
+            var charOffset = Math.floor(offsetX/charWidth);
+
+            var cssValue = parseCSSValue(text, charOffset);
+            if (cssValue)
+            {
+                if (cssValue.value == this.infoTipValue)
+                    return true;
+
+                this.infoTipValue = cssValue.value;
+
+                if (cssValue.type == "rgb" || (!cssValue.type && isColorKeyword(cssValue.value)))
+                {
+                    this.infoTipType = "color";
+                    this.infoTipObject = cssValue.value;
+
+                    return Firebug.InfoTip.populateColorInfoTip(infoTip, cssValue.value);
+                }
+                else if (cssValue.type == "url")
+                {
+                    var propNameNode = target.parentNode.getElementsByClassName("cssPropName").item(0);
+                    if (propNameNode && isImageRule(propNameNode[textContent]))
+                    {
+                        var rule = Firebug.getRepObject(target);
+                        var baseURL = this.getStylesheetURL(rule);
+                        var relURL = parseURLValue(cssValue.value);
+                        var absURL = isDataURL(relURL) ? relURL:absoluteURL(relURL, baseURL);
+                        var repeat = parseRepeatValue(text);
+
+                        this.infoTipType = "image";
+                        this.infoTipObject = absURL;
+
+                        return Firebug.InfoTip.populateImageInfoTip(infoTip, absURL, repeat);
+                    }
+                }
+            }
+        }
+
+        delete this.infoTipType;
+        delete this.infoTipValue;
+        delete this.infoTipObject;
+    },
+
+    getEditor: function(target, value)
+    {
+        if (target == this.panelNode
+            || hasClass(target, "cssSelector") || hasClass(target, "cssRule")
+            || hasClass(target, "cssSheet"))
+        {
+            if (!this.ruleEditor)
+                this.ruleEditor = new CSSRuleEditor(this.document);
+
+            return this.ruleEditor;
+        }
+        else
+        {
+            if (!this.editor)
+                this.editor = new CSSEditor(this.document);
+
+            return this.editor;
+        }
+    },
+
+    getDefaultLocation: function()
+    {
+        try
+        {
+            var styleSheets = this.context.window.document.styleSheets;
+            if (styleSheets.length)
+            {
+                var sheet = styleSheets[0];
+                return (Firebug.filterSystemURLs && isSystemURL(getURLForStyleSheet(sheet))) ? null : sheet;
+            }
+        }
+        catch (exc)
+        {
+            if (FBTrace.DBG_LOCATIONS)
+                FBTrace.sysout("css.getDefaultLocation FAILS "+exc, exc);
+        }
+    },
+
+    getObjectDescription: function(styleSheet)
+    {
+        var url = getURLForStyleSheet(styleSheet);
+        var instance = getInstanceForStyleSheet(styleSheet);
+
+        var baseDescription = splitURLBase(url);
+        if (instance) {
+          baseDescription.name = baseDescription.name + " #" + (instance + 1);
+        }
+        return baseDescription;
+    },
+
+    search: function(text, reverse)
+    {
+        var curDoc = this.searchCurrentDoc(!Firebug.searchGlobal, text, reverse);
+        if (!curDoc && Firebug.searchGlobal)
+        {
+            return this.searchOtherDocs(text, reverse);
+        }
+        return curDoc;
+    },
+
+    searchOtherDocs: function(text, reverse)
+    {
+        var scanRE = Firebug.Search.getTestingRegex(text);
+        function scanDoc(styleSheet) {
+            // we don't care about reverse here as we are just looking for existence,
+            // if we do have a result we will handle the reverse logic on display
+            for (var i = 0; i < styleSheet.cssRules.length; i++)
+            {
+                if (scanRE.test(styleSheet.cssRules[i].cssText))
+                {
+                    return true;
+                }
+            }
+        }
+
+        if (this.navigateToNextDocument(scanDoc, reverse))
+        {
+            return this.searchCurrentDoc(true, text, reverse);
+        }
+    },
+
+    searchCurrentDoc: function(wrapSearch, text, reverse)
+    {
+        if (!text)
+        {
+            delete this.currentSearch;
+            return false;
+        }
+
+        var row;
+        if (this.currentSearch && text == this.currentSearch.text)
+        {
+            row = this.currentSearch.findNext(wrapSearch, false, reverse, Firebug.Search.isCaseSensitive(text));
+        }
+        else
+        {
+            if (this.editing)
+            {
+                this.currentSearch = new TextSearch(this.stylesheetEditor.box);
+                row = this.currentSearch.find(text, reverse, Firebug.Search.isCaseSensitive(text));
+
+                if (row)
+                {
+                    var sel = this.document.defaultView.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(this.currentSearch.range);
+                    scrollSelectionIntoView(this);
+                    return true;
+                }
+                else
+                    return false;
+            }
+            else
+            {
+                function findRow(node) { return node.nodeType == 1 ? node : node.parentNode; }
+                this.currentSearch = new TextSearch(this.panelNode, findRow);
+                row = this.currentSearch.find(text, reverse, Firebug.Search.isCaseSensitive(text));
+            }
+        }
+
+        if (row)
+        {
+            this.document.defaultView.getSelection().selectAllChildren(row);
+            scrollIntoCenterView(row, this.panelNode);
+            dispatch([Firebug.A11yModel], 'onCSSSearchMatchFound', [this, text, row]);
+            return true;
+        }
+        else
+        {
+            dispatch([Firebug.A11yModel], 'onCSSSearchMatchFound', [this, text, null]);
+            return false;
+        }
+    },
+
+    getSearchOptionsMenuItems: function()
+    {
+        return [
+            Firebug.Search.searchOptionMenu("search.Case_Sensitive", "searchCaseSensitive"),
+            Firebug.Search.searchOptionMenu("search.Multiple_Files", "searchGlobal")
+        ];
+    }
+});
+/**/
+// ************************************************************************************************
+
+function CSSElementPanel() {}
+
+CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
+{
+    template: domplate(
+    {
+        cascadedTag:
+            DIV({"class": "a11yCSSView",  role : 'presentation'},
+                DIV({role : 'list', 'aria-label' : $STR('aria.labels.style rules') },
+                    FOR("rule", "$rules",
+                        TAG("$ruleTag", {rule: "$rule"})
+                    )
+                ),
+                DIV({role : "list", 'aria-label' :$STR('aria.labels.inherited style rules')},
+                    FOR("section", "$inherited",
+                        H1({"class": "cssInheritHeader groupHeader focusRow", role : 'listitem' },
+                            SPAN({"class": "cssInheritLabel"}, "$inheritLabel"),
+                            TAG(FirebugReps.Element.shortTag, {object: "$section.element"})
+                        ),
+                        DIV({role : 'group'},
+                            FOR("rule", "$section.rules",
+                                TAG("$ruleTag", {rule: "$rule"})
+                            )
+                        )
+                    )
+                 )
+            ),
+
+        ruleTag:
+            isIE ?
+            // IE needs the sourceLink first, otherwise it will be rendered outside the panel
+            DIV({"class": "cssElementRuleContainer"},
+                TAG(FirebugReps.SourceLink.tag, {object: "$rule.sourceLink"}),
+                TAG(CSSStyleRuleTag.tag, {rule: "$rule"})                
+            )
+            :
+            // other browsers need the sourceLink last, otherwise it will cause an extra space
+            // before the rule representation
+            DIV({"class": "cssElementRuleContainer"},
+                TAG(CSSStyleRuleTag.tag, {rule: "$rule"}),
+                TAG(FirebugReps.SourceLink.tag, {object: "$rule.sourceLink"})
+            )
+    }),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    updateCascadeView: function(element)
+    {
+        //dispatch([Firebug.A11yModel], 'onBeforeCSSRulesAdded', [this]);
+        var rules = [], sections = [], usedProps = {};
+        this.getInheritedRules(element, sections, usedProps);
+        this.getElementRules(element, rules, usedProps);
+
+        if (rules.length || sections.length)
+        {
+            var inheritLabel = "Inherited from"; // $STR("InheritedFrom");
+            var result = this.template.cascadedTag.replace({rules: rules, inherited: sections,
+                inheritLabel: inheritLabel}, this.panelNode);
+            //dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, result]);
+        }
+        else
+        {
+            var result = FirebugReps.Warning.tag.replace({object: "EmptyElementCSS"}, this.panelNode);
+            //dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, result]);
+        }
+    },
+
+    getStylesheetURL: function(rule)
+    {
+        // if the parentStyleSheet.href is null, CSS std says its inline style
+        if (rule && rule.parentStyleSheet.href)
+            return rule.parentStyleSheet.href;
+        else
+            return this.selection.ownerDocument.location.href;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    getInheritedRules: function(element, sections, usedProps)
+    {
+        var parent = element.parentNode;
+        if (parent && parent.nodeType == 1)
+        {
+            this.getInheritedRules(parent, sections, usedProps);
+
+            var rules = [];
+            this.getElementRules(parent, rules, usedProps, true);
+
+            if (rules.length)
+                sections.splice(0, 0, {element: parent, rules: rules});
+        }
+    },
+
+    getElementRules: function(element, rules, usedProps, inheritMode)
+    {
+        var inspectedRules, displayedRules = {};
+        
+        var eid = ElementCache(element);
+        
+        inspectedRules = ElementCSSRulesMap[eid];
+
+        if (inspectedRules)
+        {
+            for (var i = 0, length=inspectedRules.length; i < length; ++i)
+            {
+                var ruleId = inspectedRules[i];
+                var ruleData = CSSRuleMap[ruleId];
+                var rule = ruleData.rule;
+                
+                var ssid = ruleData.styleSheetId;
+                var parentStyleSheet = StyleSheetCache.get(ssid); 
+
+                var href = parentStyleSheet.href;  // Null means inline
+
+                var instance = null;
+                //var instance = getInstanceForStyleSheet(rule.parentStyleSheet, element.ownerDocument);
+
+                var isSystemSheet = false;
+                //var isSystemSheet = isSystemStyleSheet(rule.parentStyleSheet);
+                
+                if (!Firebug.showUserAgentCSS && isSystemSheet) // This removes user agent rules
+                    continue;
+                
+                if (!href)
+                    href = element.ownerDocument.location.href; // http://code.google.com/p/fbug/issues/detail?id=452
+
+                var props = this.getRuleProperties(this.context, rule, inheritMode);
+                if (inheritMode && !props.length)
+                    continue;
+
+                //
+                //var line = domUtils.getRuleLine(rule);
+                var line;
+                
+                var ruleId = rule.selectorText+"/"+line;
+                var sourceLink = new SourceLink(href, line, "css", rule, instance);
+
+                this.markOverridenProps(props, usedProps, inheritMode);
+
+                rules.splice(0, 0, {rule: rule, id: ruleId,
+                        selector: ruleData.selector, sourceLink: sourceLink,
+                        props: props, inherited: inheritMode,
+                        isSystemSheet: isSystemSheet});
+            }
+        }
+
+        if (element.style)
+            this.getStyleProperties(element, rules, usedProps, inheritMode);
+
+        if (FBTrace.DBG_CSS)
+            FBTrace.sysout("getElementRules "+rules.length+" rules for "+getElementXPath(element), rules);
+    },
+    /*
+    getElementRules: function(element, rules, usedProps, inheritMode)
+    {
+        var inspectedRules, displayedRules = {};
+        try
+        {
+            inspectedRules = domUtils ? domUtils.getCSSStyleRules(element) : null;
+        } catch (exc) {}
+
+        if (inspectedRules)
+        {
+            for (var i = 0; i < inspectedRules.Count(); ++i)
+            {
+                var rule = QI(inspectedRules.GetElementAt(i), nsIDOMCSSStyleRule);
+
+                var href = rule.parentStyleSheet.href;  // Null means inline
+
+                var instance = getInstanceForStyleSheet(rule.parentStyleSheet, element.ownerDocument);
+
+                var isSystemSheet = isSystemStyleSheet(rule.parentStyleSheet);
+                if (!Firebug.showUserAgentCSS && isSystemSheet) // This removes user agent rules
+                    continue;
+                if (!href)
+                    href = element.ownerDocument.location.href; // http://code.google.com/p/fbug/issues/detail?id=452
+
+                var props = this.getRuleProperties(this.context, rule, inheritMode);
+                if (inheritMode && !props.length)
+                    continue;
+
+                var line = domUtils.getRuleLine(rule);
+                var ruleId = rule.selectorText+"/"+line;
+                var sourceLink = new SourceLink(href, line, "css", rule, instance);
+
+                this.markOverridenProps(props, usedProps, inheritMode);
+
+                rules.splice(0, 0, {rule: rule, id: ruleId,
+                        selector: rule.selectorText, sourceLink: sourceLink,
+                        props: props, inherited: inheritMode,
+                        isSystemSheet: isSystemSheet});
+            }
+        }
+
+        if (element.style)
+            this.getStyleProperties(element, rules, usedProps, inheritMode);
+
+        if (FBTrace.DBG_CSS)
+            FBTrace.sysout("getElementRules "+rules.length+" rules for "+getElementXPath(element), rules);
+    },
+    /**/
+    markOverridenProps: function(props, usedProps, inheritMode)
+    {
+        for (var i = 0; i < props.length; ++i)
+        {
+            var prop = props[i];
+            if ( usedProps.hasOwnProperty(prop.name) )
+            {
+                var deadProps = usedProps[prop.name]; // all previous occurrences of this property
+                for (var j = 0; j < deadProps.length; ++j)
+                {
+                    var deadProp = deadProps[j];
+                    if (!deadProp.disabled && !deadProp.wasInherited && deadProp.important && !prop.important)
+                        prop.overridden = true;  // new occurrence overridden
+                    else if (!prop.disabled)
+                        deadProp.overridden = true;  // previous occurrences overridden
+                }
+            }
+            else
+                usedProps[prop.name] = [];
+
+            prop.wasInherited = inheritMode ? true : false;
+            usedProps[prop.name].push(prop);  // all occurrences of a property seen so far, by name
+        }
+    },
+
+    getStyleProperties: function(element, rules, usedProps, inheritMode)
+    {
+        var props = this.parseCSSProps(element.style, inheritMode);
+        this.addOldProperties(this.context, getElementXPath(element), inheritMode, props);
+
+        sortProperties(props);
+        this.markOverridenProps(props, usedProps, inheritMode);
+
+        if (props.length)
+            rules.splice(0, 0,
+                    {rule: element, id: getElementXPath(element),
+                        selector: "element.style", props: props, inherited: inheritMode});
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // extends Panel
+
+    name: "css",
+    title: "Style",
+    parentPanel: "HTML",
+    order: 0,
+
+    initialize: function()
+    {
+        this.context = Firebug.chrome; // TODO: xxxpedro css2
+        this.document = Firebug.chrome.document; // TODO: xxxpedro css2
+        
+        Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
+        
+        // TODO: xxxpedro css2
+        var selection = documentCache[FirebugChrome.selectedHTMLElementId];
+        if (selection)
+            this.select(selection, true);
+        
+        //this.updateCascadeView(document.getElementsByTagName("h1")[0]);
+        //this.updateCascadeView(document.getElementById("build"));
+        
+        /*
+        this.onStateChange = bindFixed(this.contentStateCheck, this);
+        this.onHoverChange = bindFixed(this.contentStateCheck, this, STATE_HOVER);
+        this.onActiveChange = bindFixed(this.contentStateCheck, this, STATE_ACTIVE);
+        /**/
+    },
+
+    ishow: function(state)
+    {
+    },
+
+    watchWindow: function(win)
+    {
+        if (domUtils)
+        {
+            // Normally these would not be required, but in order to update after the state is set
+            // using the options menu we need to monitor these global events as well
+            var doc = win.document;
+            addEvent(doc, "mouseover", this.onHoverChange);
+            addEvent(doc, "mousedown", this.onActiveChange);
+        }
+    },
+    unwatchWindow: function(win)
+    {
+        var doc = win.document;
+        removeEvent(doc, "mouseover", this.onHoverChange);
+        removeEvent(doc, "mousedown", this.onActiveChange);
+
+        if (isAncestor(this.stateChangeEl, doc))
+        {
+            this.removeStateChangeHandlers();
+        }
+    },
+
+    supportsObject: function(object)
+    {
+        return object instanceof Element ? 1 : 0;
+    },
+
+    updateView: function(element)
+    {
+        this.updateCascadeView(element);
+        if (domUtils)
+        {
+            this.contentState = safeGetContentState(element);
+            this.addStateChangeHandlers(element);
+        }
+    },
+
+    updateSelection: function(element)
+    {
+        if ( !instanceOf(element , "Element") ) // html supports SourceLink
+            return;
+
+        if (sothinkInstalled)
+        {
+            FirebugReps.Warning.tag.replace({object: "SothinkWarning"}, this.panelNode);
+            return;
+        }
+
+        /*
+        if (!domUtils)
+        {
+            FirebugReps.Warning.tag.replace({object: "DOMInspectorWarning"}, this.panelNode);
+            return;
+        }
+        /**/
+
+        if (!element)
+            return;
+
+        this.updateView(element);
+    },
+
+    updateOption: function(name, value)
+    {
+        if (name == "showUserAgentCSS" || name == "expandShorthandProps")
+            this.refresh();
+    },
+
+    getOptionsMenuItems: function()
+    {
+        var ret = [
+            {label: "Show User Agent CSS", type: "checkbox", checked: Firebug.showUserAgentCSS,
+                    command: bindFixed(Firebug.togglePref, Firebug, "showUserAgentCSS") },
+            {label: "Expand Shorthand Properties", type: "checkbox", checked: Firebug.expandShorthandProps,
+                    command: bindFixed(Firebug.togglePref, Firebug, "expandShorthandProps") }
+        ];
+        if (domUtils && this.selection)
+        {
+            var state = safeGetContentState(this.selection);
+
+            ret.push("-");
+            ret.push({label: ":active", type: "checkbox", checked: state & STATE_ACTIVE,
+              command: bindFixed(this.updateContentState, this, STATE_ACTIVE, state & STATE_ACTIVE)});
+            ret.push({label: ":hover", type: "checkbox", checked: state & STATE_HOVER,
+              command: bindFixed(this.updateContentState, this, STATE_HOVER, state & STATE_HOVER)});
+        }
+        return ret;
+    },
+
+    updateContentState: function(state, remove)
+    {
+        domUtils.setContentState(remove ? this.selection.ownerDocument.documentElement : this.selection, state);
+        this.refresh();
+    },
+
+    addStateChangeHandlers: function(el)
+    {
+      this.removeStateChangeHandlers();
+
+      addEvent(el, "focus", this.onStateChange);
+      addEvent(el, "blur", this.onStateChange);
+      addEvent(el, "mouseup", this.onStateChange);
+      addEvent(el, "mousedown", this.onStateChange);
+      addEvent(el, "mouseover", this.onStateChange);
+      addEvent(el, "mouseout", this.onStateChange);
+
+      this.stateChangeEl = el;
+    },
+
+    removeStateChangeHandlers: function()
+    {
+        var sel = this.stateChangeEl;
+        if (sel)
+        {
+            removeEvent(sel, "focus", this.onStateChange);
+            removeEvent(sel, "blur", this.onStateChange);
+            removeEvent(sel, "mouseup", this.onStateChange);
+            removeEvent(sel, "mousedown", this.onStateChange);
+            removeEvent(sel, "mouseover", this.onStateChange);
+            removeEvent(sel, "mouseout", this.onStateChange);
+        }
+    },
+
+    contentStateCheck: function(state)
+    {
+        if (!state || this.contentState & state)
+        {
+            var timeoutRunner = bindFixed(function()
+            {
+                var newState = safeGetContentState(this.selection);
+                if (newState != this.contentState)
+                {
+                    this.context.invalidatePanels(this.name);
+                }
+            }, this);
+
+            // Delay exec until after the event has processed and the state has been updated
+            setTimeout(timeoutRunner, 0);
+        }
+    }
+});
+
+function safeGetContentState(selection)
+{
+    try
+    {
+        return domUtils.getContentState(selection);
+    }
+    catch (e)
+    {
+        if (FBTrace.DBG_ERRORS)
+            FBTrace.sysout("css.safeGetContentState; EXCEPTION", e);
+    }
 }
 
 // ************************************************************************************************
+
+function CSSComputedElementPanel() {}
+
+CSSComputedElementPanel.prototype = extend(CSSElementPanel.prototype,
+{
+    template: domplate(
+    {
+        computedTag:
+            DIV({"class": "a11yCSSView", role : "list", "aria-label" : $STR('aria.labels.computed styles')},
+                FOR("group", "$groups",
+                    H1({"class": "cssInheritHeader groupHeader focusRow", role : "listitem"},
+                        SPAN({"class": "cssInheritLabel"}, "$group.title")
+                    ),
+                    TABLE({width: "100%", role : 'group'},
+                        TBODY({role : 'presentation'},
+                            FOR("prop", "$group.props",
+                                TR({"class": 'focusRow computedStyleRow', role : 'listitem'},
+                                    TD({"class": "stylePropName", role : 'presentation'}, "$prop.name"),
+                                    TD({"class": "stylePropValue", role : 'presentation'}, "$prop.value")
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+    }),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    updateComputedView: function(element)
+    {
+        var win = isIE ?
+                element.ownerDocument.parentWindow :
+                element.ownerDocument.defaultView;
+        
+        var style = isIE ?
+                element.currentStyle :
+                win.getComputedStyle(element, "");
+
+        var groups = [];
+
+        for (var groupName in styleGroups)
+        {
+            // TODO: xxxpedro i18n $STR
+            //var title = $STR("StyleGroup-" + groupName);
+            var title = styleGroupTitles[groupName];
+            var group = {title: title, props: []};
+            groups.push(group);
+
+            var props = styleGroups[groupName];
+            for (var i = 0; i < props.length; ++i)
+            {
+                var propName = props[i];
+                var propValue = style.getPropertyValue ?
+                        style.getPropertyValue(propName) :
+                        ""+style[toCamelCase(propName)];
+                
+                if (propValue === undefined || propValue === null) 
+                    continue;
+                
+                propValue = stripUnits(rgbToHex(propValue));
+                if (propValue)
+                    group.props.push({name: propName, value: propValue});
+            }
+        }
+
+        var result = this.template.computedTag.replace({groups: groups}, this.panelNode);
+        //dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, result]);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // extends Panel
+
+    name: "computed",
+    title: "Computed",
+    parentPanel: "HTML",
+    order: 1,
+
+    updateView: function(element)
+    {
+        this.updateComputedView(element);
+    },
+
+    getOptionsMenuItems: function()
+    {
+        return [
+            {label: "Refresh", command: bind(this.refresh, this) }
+        ];
+    }
+});
+
+// ************************************************************************************************
+// CSSEditor
+
+function CSSEditor(doc)
+{
+    this.initializeInline(doc);
+}
+
+CSSEditor.prototype = domplate(Firebug.InlineEditor.prototype,
+{
+    insertNewRow: function(target, insertWhere)
+    {
+        var rule = Firebug.getRepObject(target);
+        var emptyProp = 
+        {
+            // TODO: xxxpedro - uses charCode(255) to force the element being rendered, 
+            // allowing webkit to get the correct position of the property name "span",
+            // when inserting a new CSS rule?
+            name: "",
+            value: "",
+            important: ""
+        };
+
+        if (insertWhere == "before")
+            return CSSPropTag.tag.insertBefore({prop: emptyProp, rule: rule}, target);
+        else
+            return CSSPropTag.tag.insertAfter({prop: emptyProp, rule: rule}, target);
+    },
+
+    saveEdit: function(target, value, previousValue)
+    {
+        target.innerHTML = escapeForCss(value);
+
+        var row = getAncestorByClass(target, "cssProp");
+        if (hasClass(row, "disabledStyle"))
+            toggleClass(row, "disabledStyle");
+
+        var rule = Firebug.getRepObject(target);
+
+        if (hasClass(target, "cssPropName"))
+        {
+            if (value && previousValue != value)  // name of property has changed.
+            {
+                var propValue = getChildByClass(row, "cssPropValue")[textContent];
+                var parsedValue = parsePriority(propValue);
+
+                if (propValue && propValue != "undefined") {
+                    if (FBTrace.DBG_CSS)
+                        FBTrace.sysout("CSSEditor.saveEdit : "+previousValue+"->"+value+" = "+propValue+"\n");
+                    if (previousValue)
+                        Firebug.CSSModule.removeProperty(rule, previousValue);
+                    Firebug.CSSModule.setProperty(rule, value, parsedValue.value, parsedValue.priority);
+                }
+            }
+            else if (!value) // name of the property has been deleted, so remove the property.
+                Firebug.CSSModule.removeProperty(rule, previousValue);
+        }
+        else if (getAncestorByClass(target, "cssPropValue"))
+        {
+            var propName = getChildByClass(row, "cssPropName")[textContent];
+            var propValue = getChildByClass(row, "cssPropValue")[textContent];
+
+            if (FBTrace.DBG_CSS)
+            {
+                FBTrace.sysout("CSSEditor.saveEdit propName=propValue: "+propName +" = "+propValue+"\n");
+               // FBTrace.sysout("CSSEditor.saveEdit BEFORE style:",style);
+            }
+
+            if (value && value != "null")
+            {
+                var parsedValue = parsePriority(value);
+                Firebug.CSSModule.setProperty(rule, propName, parsedValue.value, parsedValue.priority);
+            }
+            else if (previousValue && previousValue != "null")
+                Firebug.CSSModule.removeProperty(rule, propName);
+        }
+
+        this.panel.markChange(this.panel.name == "stylesheet");
+    },
+
+    advanceToNext: function(target, charCode)
+    {
+        if (charCode == 58 /*":"*/ && hasClass(target, "cssPropName"))
+            return true;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    getAutoCompleteRange: function(value, offset)
+    {
+        if (hasClass(this.target, "cssPropName"))
+            return {start: 0, end: value.length-1};
+        else
+            return parseCSSValue(value, offset);
+    },
+
+    getAutoCompleteList: function(preExpr, expr, postExpr)
+    {
+        if (hasClass(this.target, "cssPropName"))
+        {
+            return getCSSPropertyNames();
+        }
+        else
+        {
+            var row = getAncestorByClass(this.target, "cssProp");
+            var propName = getChildByClass(row, "cssPropName")[textContent];
+            return getCSSKeywordsByProperty(propName);
+        }
+    }
+});
+
+//************************************************************************************************
+//CSSRuleEditor
+
+function CSSRuleEditor(doc)
+{
+    this.initializeInline(doc);
+    this.completeAsYouType = false;
+}
+CSSRuleEditor.uniquifier = 0;
+CSSRuleEditor.prototype = domplate(Firebug.InlineEditor.prototype,
+{
+    insertNewRow: function(target, insertWhere)
+    {
+         var emptyRule = {
+                 selector: "",
+                 id: "",
+                 props: [],
+                 isSelectorEditable: true
+         };
+
+         if (insertWhere == "before")
+             return CSSStyleRuleTag.tag.insertBefore({rule: emptyRule}, target);
+         else
+             return CSSStyleRuleTag.tag.insertAfter({rule: emptyRule}, target);
+    },
+
+    saveEdit: function(target, value, previousValue)
+    {
+        if (FBTrace.DBG_CSS)
+            FBTrace.sysout("CSSRuleEditor.saveEdit: '" + value + "'  '" + previousValue + "'", target);
+
+        target.innerHTML = escapeForCss(value);
+
+        if (value === previousValue)     return;
+
+        var row = getAncestorByClass(target, "cssRule");
+        var styleSheet = this.panel.location;
+        styleSheet = styleSheet.editStyleSheet ? styleSheet.editStyleSheet.sheet : styleSheet;
+
+        var cssRules = styleSheet.cssRules;
+        var rule = Firebug.getRepObject(target), oldRule = rule;
+        var ruleIndex = cssRules.length;
+        if (rule || Firebug.getRepObject(row.nextSibling))
+        {
+            var searchRule = rule || Firebug.getRepObject(row.nextSibling);
+            for (ruleIndex=0; ruleIndex<cssRules.length && searchRule!=cssRules[ruleIndex]; ruleIndex++) {}
+        }
+
+        // Delete in all cases except for new add
+        // We want to do this before the insert to ease change tracking
+        if (oldRule)
+        {
+            Firebug.CSSModule.deleteRule(styleSheet, ruleIndex);
+        }
+
+        // Firefox does not follow the spec for the update selector text case.
+        // When attempting to update the value, firefox will silently fail.
+        // See https://bugzilla.mozilla.org/show_bug.cgi?id=37468 for the quite
+        // old discussion of this bug.
+        // As a result we need to recreate the style every time the selector
+        // changes.
+        if (value)
+        {
+            var cssText = [ value, "{", ];
+            var props = row.getElementsByClassName("cssProp");
+            for (var i = 0; i < props.length; i++) {
+                var propEl = props[i];
+                if (!hasClass(propEl, "disabledStyle")) {
+                    cssText.push(getChildByClass(propEl, "cssPropName")[textContent]);
+                    cssText.push(":");
+                    cssText.push(getChildByClass(propEl, "cssPropValue")[textContent]);
+                    cssText.push(";");
+                }
+            }
+            cssText.push("}");
+            cssText = cssText.join("");
+
+            try
+            {
+                var insertLoc = Firebug.CSSModule.insertRule(styleSheet, cssText, ruleIndex);
+                rule = cssRules[insertLoc];
+                ruleIndex++;
+            }
+            catch (err)
+            {
+                if (FBTrace.DBG_CSS || FBTrace.DBG_ERRORS)
+                    FBTrace.sysout("CSS Insert Error: "+err, err);
+
+                target.innerHTML = escapeForCss(previousValue);
+                row.repObject = undefined;
+                return;
+            }
+        } else {
+            rule = undefined;
+        }
+
+        // Update the rep object
+        row.repObject = rule;
+        if (!oldRule)
+        {
+            // Who knows what the domutils will return for rule line
+            // for a recently created rule. To be safe we just generate
+            // a unique value as this is only used as an internal key.
+            var ruleId = "new/"+value+"/"+(++CSSRuleEditor.uniquifier);
+            row.setAttribute("ruleId", ruleId);
+        }
+
+        this.panel.markChange(this.panel.name == "stylesheet");
+    }
+});
+
+// ************************************************************************************************
+// StyleSheetEditor
+
+function StyleSheetEditor(doc)
+{
+    this.box = this.tag.replace({}, doc, this);
+    this.input = this.box.firstChild;
+}
+
+StyleSheetEditor.prototype = domplate(Firebug.BaseEditor,
+{
+    multiLine: true,
+
+    tag: DIV(
+        TEXTAREA({"class": "styleSheetEditor fullPanelEditor", oninput: "$onInput"})
+    ),
+
+    getValue: function()
+    {
+        return this.input.value;
+    },
+
+    setValue: function(value)
+    {
+        return this.input.value = value;
+    },
+
+    show: function(target, panel, value, textSize, targetSize)
+    {
+        this.target = target;
+        this.panel = panel;
+
+        this.panel.panelNode.appendChild(this.box);
+
+        this.input.value = value;
+        this.input.focus();
+
+        var command = Firebug.chrome.$("cmd_toggleCSSEditing");
+        command.setAttribute("checked", true);
+    },
+
+    hide: function()
+    {
+        var command = Firebug.chrome.$("cmd_toggleCSSEditing");
+        command.setAttribute("checked", false);
+
+        if (this.box.parentNode == this.panel.panelNode)
+            this.panel.panelNode.removeChild(this.box);
+
+        delete this.target;
+        delete this.panel;
+        delete this.styleSheet;
+    },
+
+    saveEdit: function(target, value, previousValue)
+    {
+        Firebug.CSSModule.freeEdit(this.styleSheet, value);
+    },
+
+    endEditing: function()
+    {
+        this.panel.refresh();
+        return true;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    onInput: function()
+    {
+        Firebug.Editor.update();
+    },
+
+    scrollToLine: function(line, offset)
+    {
+        this.startMeasuring(this.input);
+        var lineHeight = this.measureText().height;
+        this.stopMeasuring();
+
+        this.input.scrollTop = (line * lineHeight) + offset;
+    }
+});
+
+// ************************************************************************************************
+// Local Helpers
+
+var rgbToHex = function rgbToHex(value)
+{
+    return value.replace(/\brgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)/gi, rgbToHexReplacer);
+}
+
+var rgbToHexReplacer = function(_, r, g, b) {
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + (b << 0)).toString(16).substr(-6).toUpperCase();
+}
+
+var stripUnits = function stripUnits(value)
+{
+    // remove units from '0px', '0em' etc. leave non-zero units in-tact.
+    return value.replace(/(url\(.*?\)|[^0]\S*\s*)|0(%|em|ex|px|in|cm|mm|pt|pc)(\s|$)/gi, stripUnitsReplacer);
+}
+
+var stripUnitsReplacer = function(_, skip, remove, whitespace) {
+    return skip || ('0' + whitespace);
+}
+
+function parsePriority(value)
+{
+    var rePriority = /(.*?)\s*(!important)?$/;
+    var m = rePriority.exec(value);
+    var propValue = m ? m[1] : "";
+    var priority = m && m[2] ? "important" : "";
+    return {value: propValue, priority: priority};
+}
+
+function parseURLValue(value)
+{
+    var m = reURL.exec(value);
+    return m ? m[1] : "";
+}
+
+function parseRepeatValue(value)
+{
+    var m = reRepeat.exec(value);
+    return m ? m[0] : "";
+}
+
+function parseCSSValue(value, offset)
+{
+    var start = 0;
+    var m;
+    while (1)
+    {
+        m = reSplitCSS.exec(value);
+        if (m && m.index+m[0].length < offset)
+        {
+            value = value.substr(m.index+m[0].length);
+            start += m.index+m[0].length;
+            offset -= m.index+m[0].length;
+        }
+        else
+            break;
+    }
+
+    if (m)
+    {
+        var type;
+        if (m[1])
+            type = "url";
+        else if (m[2] || m[3])
+            type = "rgb";
+        else if (m[4])
+            type = "int";
+
+        return {value: m[0], start: start+m.index, end: start+m.index+(m[0].length-1), type: type};
+    }
+}
+
+function findPropByName(props, name)
+{
+    for (var i = 0; i < props.length; ++i)
+    {
+        if (props[i].name == name)
+            return i;
+    }
+}
+
+function sortProperties(props)
+{
+    props.sort(function(a, b)
+    {
+        return a.name > b.name ? 1 : -1;
+    });
+}
+
+function getTopmostRuleLine(panelNode)
+{
+    for (var child = panelNode.firstChild; child; child = child.nextSibling)
+    {
+        if (child.offsetTop+child.offsetHeight > panelNode.scrollTop)
+        {
+            var rule = child.repObject;
+            if (rule)
+                return {
+                    line: domUtils.getRuleLine(rule),
+                    offset: panelNode.scrollTop-child.offsetTop
+                };
+        }
+    }
+    return 0;
+}
+
+function getStyleSheetCSS(sheet, context)
+{
+    if (sheet.ownerNode instanceof HTMLStyleElement)
+        return sheet.ownerNode.innerHTML;
+    else
+        return context.sourceCache.load(sheet.href).join("");
+}
+
+function getStyleSheetOwnerNode(sheet) {
+    for (; sheet && !sheet.ownerNode; sheet = sheet.parentStyleSheet);
+
+    return sheet.ownerNode;
+}
+
+function scrollSelectionIntoView(panel)
+{
+    var selCon = getSelectionController(panel);
+    selCon.scrollSelectionIntoView(
+            nsISelectionController.SELECTION_NORMAL,
+            nsISelectionController.SELECTION_FOCUS_REGION, true);
+}
+
+function getSelectionController(panel)
+{
+    var browser = Firebug.chrome.getPanelBrowser(panel);
+    return browser.docShell.QueryInterface(nsIInterfaceRequestor)
+        .getInterface(nsISelectionDisplay)
+        .QueryInterface(nsISelectionController);
+}
+
+// ************************************************************************************************
+
+Firebug.registerModule(Firebug.CSSModule);
+Firebug.registerPanel(Firebug.CSSStyleSheetPanel);
+Firebug.registerPanel(CSSElementPanel);
+Firebug.registerPanel(CSSComputedElementPanel);
+
+// ************************************************************************************************
+
 }});
+
 
 /* See license.txt for terms of usage */
 
@@ -18374,7 +22938,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                     
                     
                     // enable to measure rendering performance
-                    if (isLast) alert(new Date().getTime() - renderStart + "ms");
+                    //if (isLast) alert(new Date().getTime() - renderStart + "ms");
                     
                     
                 }, delay));
@@ -18406,6 +22970,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         this.timeouts = timeouts;
     },
 
+    /*
     // new
     showMembers: function(members, update, scrollTop)
     {
@@ -18449,7 +23014,6 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         var delay = 0;
         var _insertSliceSize = insertSliceSize;
         var _insertInterval = insertInterval;
-        var _setTimeout = this.context.setTimeout;
 
         // enable to measure rendering performance
         var renderStart = new Date().getTime();
@@ -18464,7 +23028,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                 var _panelNode = panelNode;
                 var _priorScrollTop = priorScrollTop;
                 
-                timeouts.push(_setTimeout(function()
+                timeouts.push(this.context.setTimeout(function()
                 {
                     // TODO: xxxpedro can this be a timing error related to the
                     // "iteration number" approach insted of "duration time"?
@@ -18514,6 +23078,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         }
         this.timeouts = timeouts;
     },
+    /**/
     
     showEmptyMembers: function()
     {
@@ -18749,7 +23314,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
     create: function()
     {
         // TODO: xxxpedro
-        this.context = Firebug.browser.window;
+        this.context = Firebug.browser;
         
         this.objectPath = [];
         this.propertyPath = [];
@@ -19215,10 +23780,7 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         
         addEvent(this.panelNode, "click", this.onClick);
         
-        //this.select(Firebug.browser.window);
-        
-        // TODO: xxxpedro dom leaking to global namespace (need to create a proper context object)
-        this.context.loaded = true;
+        // TODO: xxxpedro dom 
         this.ishow();
         
         //TODO: xxxpedro
@@ -19696,6 +24258,11 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         Firebug.DOMBasePanel.prototype.initialize.apply(this, arguments);
         
         addEvent(this.panelNode, "click", this.onClick);
+        
+        // TODO: xxxpedro css2
+        var selection = documentCache[FirebugChrome.selectedHTMLElementId];
+        if (selection)
+            this.select(selection, true);
     },
     
     shutdown: function()
@@ -19731,7 +24298,8 @@ var traceOptions = {
     DBG_INITIALIZE: 1,
     DBG_CHROME: 1,
     DBG_ERRORS: 1,
-    DBG_DISPATCH: 1
+    DBG_DISPATCH: 1,
+    DBG_CSS: 1
 };
 
 this.module = null;
@@ -19970,7 +24538,7 @@ FBL.ns(function() { with (FBL) {
 
 FirebugChrome.injected = 
 {
-    CSS: '.collapsed{display:none;}[collapsed="true"]{display:none;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;}.netInfoTextSelected{display:block;}.netInfoParamName{padding:0 10px 0 0;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.useA11y .panelNode-net .a11yFocus:focus,.useA11y .panelNode-net .focusRow:focus{outline-offset:-2px;background-color:#FFFFD6 !important;}.useA11y .panelNode-net .netHeaderCell:focus,.useA11y .panelNode-net:focus .netHeaderCell,.useA11y .panelNode-net:focus .netReceivingBar,.useA11y .netSummaryRow:focus .netBar,.useA11y .netSummaryRow:focus .netBar{background-color:#FFFFD6;background-image:none;border-color:#FFFFD6;}.logRow-spy .spyHead .spyTitle,.logGroup .logGroupLabel,.hasChildren .memberLabelCell .memberLabel,.hasHeaders .netHrefLabel{background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}.opened .spyHead .spyTitle,.opened .logGroupLabel,.opened .memberLabelCell .memberLabel{background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/tree_close.gif);}.twisty{background-position:2px 0;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectPropValue{font-weight:normal;font-style:italic;color:#555555;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.arrayLeftBracket{margin-right:4px;}.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbCSSButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(http://getfirebug.com/releases/lite/alpha/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://getfirebug.com/releases/lite/alpha/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(http://getfirebug.com/releases/lite/alpha/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/errorIcon.png) no-repeat !important;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;top:0;left:0;height:100%;width:100%;border-collapse:collapse;background:#fff;overflow:hidden;}#fbTop{height:49px;}#fbToolbar{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(http://getfirebug.com/releases/lite/alpha/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(http://getfirebug.com/releases/lite/alpha/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:50px;padding:5px 0 5px 5px;z-index:6;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:absolute;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;margin-right:4px;}#fbWindow_btClose{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) 0 -119px;}#fbWindow_btClose:hover{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) -16px -119px;}#fbWindow_btDetach{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) -32px -119px;}#fbWindow_btDetach:hover{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em Monaco,monospace;position:absolute;top:0;left:0;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://getfirebug.com/releases/lite/alpha/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/infoIcon.png) !important;background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/infoIcon.gif);}.logRow-warning{background-color:cyan;background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/warningIcon.png) !important;background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/errorIcon.png) !important;background-image:url(http://getfirebug.com/releases/lite/alpha/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    CSS: '.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{min-width:100px;text-align:center;}.infoTipCaption{font:message-box;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:1px 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;_margin-left:-7px;_margin-top:-5px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;_border:1px solid #999 !important;_padding:1px !important;_filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2,OffY=2,Color="#55404040");}.textEditorInner1{padding-left:11px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/textEditorBorders.png) repeat-y;_background:none;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:none;}.textEditorTop1{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:none;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/textEditorCorners.png) no-repeat;_background:none;}.textEditorBottom1{position:relative;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:none;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:none;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/disable.png) no-repeat 2px 1px;_background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;}.netInfoTextSelected{display:block;}.netInfoParamName{padding:0 10px 0 0;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.logRow-spy .spyHead .spyTitle,.logGroup .logGroupLabel,.hasChildren .memberLabelCell .memberLabel,.hasHeaders .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}.opened .spyHead .spyTitle,.opened .logGroupLabel,.opened .memberLabelCell .memberLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}.twisty{background-position:2px 0;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectPropValue{font-weight:normal;font-style:italic;color:#555555;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.arrayLeftBracket{margin-right:4px;}.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) no-repeat !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;background:#fff;overflow:hidden;}#fbTop{height:49px;}#fbToolbar{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:50px;padding:5px 0 5px 5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:absolute;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;margin-right:4px;}#fbWindow_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -119px;}#fbWindow_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -119px;}#fbWindow_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -32px -119px;}#fbWindow_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -48px -119px;}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em Monaco,monospace;position:absolute;top:0;left:0;margin:0;padding:0 5px 0 20px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warning{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.png) !important;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/infoIcon.gif);}.logRow-warning{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.png) !important;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.png) !important;background-image:url(http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.logRow-group{background:#EEEEEE;border-bottom:none;}.logGroup{background:#EEEEEE;}.logGroupBox{margin-left:24px;border-top:1px solid #D7D7D7;border-left:1px solid #D7D7D7;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
     HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbWindowButtons"><a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a><a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div><textarea id="fbLargeCommandLine" class="fbFitHeight"></textarea><div id="fbLargeCommandButtons"><a id="fbCommand_btRun" class="fbButton fbHover">Run</a><a id="fbCommand_btClear" class="fbButton fbHover">Clear</a><a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/><a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
 };
 
