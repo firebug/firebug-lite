@@ -1,4 +1,73 @@
 ---------------------------------------------------------------------------------------------------
+Versions
+---------------------------------------------------------------------------------------------------
+    Firebug 1.3a5 - 2009-01-16 - Revision: 5719
+    Firebug 1.3a4 - 2009-12-31 - Revision: 5505 
+    Firebug 1.3a3 - 2009-09-13 - Revision: 4882
+    Firebug 1.3a2 - 2009-08-03 - Revision: 3847
+    Firebug 1.3a1 - 2009-05-03 - Revision: 2729
+    Firebug 1.3a0 - 2009-01-24 - Revision: 1765
+    
+---------------------------------------------------------------------------------------------------
+BUGS
+---------------------------------------------------------------------------------------------------
+    - When loading the bookmarlet in IE it shows a security warning
+        https://www.google.com/accounts/ServiceLogin?service=adwords&cd=null&hl=en-US&ltmpl=adwords&passive=true&ifr=false&alwf=true&continue=https%3A%2F%2Fadwords.google.com%2Fselect%2Fgaiaauth%3Fapt%3DNone%26ugl%3Dtrue&sourceid=awo&subid=ww-en-et-ads-0-adsC-all
+        
+    - Need to use https in the bookmarlet (including images), and also in the live include
+
+    - context.evaluate
+    
+    - define FBL.console to point to the global console
+    
+    - console should be installed in each Chrome window
+    
+    - commandLine API should be place in console.firebuglite.commandLineAPI
+    
+    - commandLine API not well defined, when in persistent mode
+
+    - problem with IE and and frame.close() function that uses $(). picking wrong window in persistent mode.
+    
+    - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
+      the "open tag" node (<div>).
+    
+    - remove events added in disableTextSelection
+
+    - window.onerror is being turned off when UI is minimized (and should not)
+    
+OK  - rename the id "FirebugChrome" to "FirebugUI"
+    
+OK  - put IE6CSS in injected chrome (not necessary anymore)
+    
+OK  - context is not being properly handled in persistent mode, when using
+      the autocomplete function in commandLine. It is using the wrong "window".
+      
+OK  - tabLStyle reference in Chrome
+
+OK  - commandLine API. Firebug.browser isn't avaiable when the library is initialized
+    
+OK  - Chrome options inheritance (extend) is not working as expected
+
+OK  - Popup in IE, problem in the draw method
+
+OK  - when NOT in injected mode, the new application load system doesn't work.
+
+OK  - when in injected DEVELOPMENT mode, in XHTML documents, Google Chrome
+      is having problems with the loading order of the multiple scripts.
+
+OK  - IE6 and problem with CSS. Selected element in HTML Tree.
+    
+OK  - bookmarlet fail in getfirebug.com/lite.html
+    
+OK  - reference to wrong URL in var inspectFrameStyle in Inspector module.
+     
+OK  - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
+    
+1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
+      and is getting hidden 
+
+
+---------------------------------------------------------------------------------------------------
 Context
 ---------------------------------------------------------------------------------------------------
 
@@ -257,76 +326,11 @@ Firebug Lite 1.3a6
 
 
 
----------------------------------------------------------------------------------------------------
-Versions
----------------------------------------------------------------------------------------------------
-    Firebug 1.3a3 - Revision: 4882
-    Firebug 1.3a2 - Revision: 3847
-
-    
----------------------------------------------------------------------------------------------------
-BUGS
----------------------------------------------------------------------------------------------------
-    - context.evaluate
-    
-    - define FBL.console to point to the global console
-    
-    - console should be installed in each Chrome window
-    
-    - commandLine API should be place in console.firebuglite.commandLineAPI
-    
-    - commandLine API not well defined, when in persistent mode
-
-    - When loading the bookmarlet in IE it shows a security warning
-        https://www.google.com/accounts/ServiceLogin?service=adwords&cd=null&hl=en-US&ltmpl=adwords&passive=true&ifr=false&alwf=true&continue=https%3A%2F%2Fadwords.google.com%2Fselect%2Fgaiaauth%3Fapt%3DNone%26ugl%3Dtrue&sourceid=awo&subid=ww-en-et-ads-0-adsC-all
-
-    - problem with IE and and frame.close() function that uses $(). picking wrong window in persistent mode.
-    
-    - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
-      the "open tag" node (<div>).
-    
-    - remove events added in disableTextSelection
-
-    - rename the id "FirebugChrome" to "FirebugFrame" or "FirebugChromeFrame" or "FirebugWindow"
-    
-    - window.onerror is being turned off when UI is minimized (and should not)
-    
-    - put IE6CSS in injected chrome
-    
-OK  - context is not being properly handled in persistent mode, when using
-      the autocomplete function in commandLine. It is using the wrong "window".
-      
-OK  - tabLStyle reference in Chrome
-
-OK  - commandLine API. Firebug.browser isn't avaiable when the library is initialized
-    
-OK  - Chrome options inheritance (extend) is not working as expected
-
-OK  - Popup in IE, problem in the draw method
-
-OK  - when NOT in injected mode, the new application load system doesn't work.
-
-OK  - when in injected DEVELOPMENT mode, in XHTML documents, Google Chrome
-      is having problems with the loading order of the multiple scripts.
-
-OK  - IE6 and problem with CSS. Selected element in HTML Tree.
-    
-OK  - bookmarlet fail in getfirebug.com/lite.html
-    
-OK  - reference to wrong URL in var inspectFrameStyle in Inspector module.
-     
-OK  - nodeControl in HTMLTree should not fire the node highlight (include rule in delegation func)
-    
-1.4 - The CSS rule of popup hide the "main controls" element, but the search box is inside of it
-      and is getting hidden 
 
 
 ---------------------------------------------------------------------------------------------------
 Domplate/Reps
 ---------------------------------------------------------------------------------------------------
-    IE6:
-        - create special rules to IE6 in a separated file
-
     Opera:
         - native function: "prototype" in fn == true && listed in for..in
         - user function: "prototype" in fn == true && not listed in for..in
