@@ -1,0 +1,145 @@
+<script>
+// *************************************************************************************************
+
+var firebugVersion = "Firebug Lite 1.3a5";
+var bookmarlet = "javascript:(typeof Firebug!='undefined')?Firebug.chrome.toggle():(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'https://getfirebug.com/releases/lite/alpha/firebug.jgz#startOpened,showIconWhenHidden=false');";
+
+var active = false;
+
+// *************************************************************************************************
+
+function onIconClick(tab)
+{
+    if (tab.url.indexOf("https://chrome.google.com/extensions") == 0)
+    {
+        chrome.tabs.update(tab.id, {url: bookmarlet});
+        
+        if (!active)
+        {
+            chrome.browserAction.setTitle({title: firebugVersion + " (On)"});
+            chrome.browserAction.setIcon({path:"firebug24.png"});
+            active = true;
+        }
+        
+        return;
+    }
+    
+    chrome.tabs.sendRequest( tab.id, {name: "FB_isActive"}, 
+    
+        function(response)
+        {
+            if (response.value == "true")
+            {
+                chrome.tabs.update(tab.id, {url: "javascript:Firebug.chrome.toggle()"});
+            }
+            else
+            {
+                chrome.tabs.sendRequest(tab.id, {name: "FB_updateSource"});
+                /*
+                if (confirm("Firebug Lite is now activated for this page. " +
+                            "You need to reload the page in order to seet it in action.\n\n" +
+                            "Do you want to reload now?"))
+                {
+                    activateFirebug(tab);
+                    chrome.tabs.update(tab.id, {url: tab.url});
+                }
+                else
+                /**/
+                    activateFirebug(tab);
+            }
+        }
+    );
+};
+
+chrome.browserAction.onClicked.addListener(onIconClick);
+
+// *************************************************************************************************
+
+chrome.tabs.onSelectionChanged.addListener
+( 
+    function(tabId, selectInfo)
+    {
+        chrome.browserAction.setTitle({title: firebugVersion + " (Off)"});
+        chrome.browserAction.setIcon({path:"firebug24_disabled.png"});
+        active = false;
+        
+        chrome.tabs.sendRequest(tabId, {name: "FB_isActive"}, 
+        
+            function(response)
+            {
+                if (response.value == "true")
+                {
+                    chrome.browserAction.setTitle({title: firebugVersion + " (On)"});
+                    chrome.browserAction.setIcon({path:"firebug24.png"});
+                    active = true;
+                }
+                else
+                {
+                }
+            }
+        );
+    }
+);
+
+// *************************************************************************************************
+
+chrome.tabs.onUpdated.addListener
+( 
+    function(tabId, updateInfo, tab)
+    {
+        if (updateInfo.status == "complete") return;
+        
+        chrome.browserAction.setTitle({title: firebugVersion + " (Off)"});
+        chrome.browserAction.setIcon({path:"firebug24_disabled.png"});
+        active = false;
+        
+        chrome.tabs.sendRequest(tabId, {name: "FB_isActive"}, 
+        
+            function(response)
+            {
+                if (response.value == "true")
+                {
+                    chrome.browserAction.setTitle({title: firebugVersion + " (On)"});
+                    chrome.browserAction.setIcon({path:"firebug24.png"});
+                    active = true;
+                }
+                else
+                {
+                }
+            }
+        );
+    }
+);
+
+// *************************************************************************************************
+
+chrome.extension.onRequest.addListener
+(
+    function(request, sender, sendResponse)
+    {
+        if (request.name == "FB_enableIcon")
+            chrome.browserAction.setIcon({path:"firebug24.png"});
+        
+        else if (request.name == "FB_disableIcon")
+            chrome.browserAction.setIcon({path:"firebug24_disabled.png"});
+          
+        sendResponse({}); // snub them.
+    }
+);
+
+// *************************************************************************************************
+
+function activateFirebug(tab)
+{
+    chrome.tabs.update(tab.id, {url: "javascript:localStorage.setItem('FB_isActive','true'),localStorage.setItem('FB_isOpen','true')"});
+    active = true;
+};
+
+function deactivateFirebug(tab)
+{
+    chrome.tabs.update(tab.id, {url: "javascript:localStorage.setItem('FB_isActive','')"});
+    active = false;
+};
+
+// *************************************************************************************************
+</script>
