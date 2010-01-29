@@ -80,7 +80,6 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         addEvent(Firebug.browser.window, "error", this.onError);
         addEvent(Firebug.chrome.window, "error", this.onError);
-    
     },
     
     shutdown: function(doc)
@@ -95,6 +94,8 @@ Firebug.CommandLine = extend(Firebug.Module,
     
     activate: function(multiLine, hideToggleIcon, onRun)
     {
+        defineCommandLineAPI();
+        
         if (this.isActive)
         {
             if (this.isMultiLine == multiLine) return;
@@ -229,9 +230,11 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         _stack(command);
         
-        // TODO: remove this when console2 is finished
-        Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
-        //Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
+        // TODO: console2 - remove this when console2 is finished
+        if (Firebug.Console2)
+            Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
+        else
+            Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
         
         var result = this.evaluate(command);
         
@@ -239,10 +242,15 @@ Firebug.CommandLine = extend(Firebug.Module,
         // that is being executed in the command line
         if (result != Firebug.Console.LOG_COMMAND)
         {
-            //Firebug.Console.log(result);
-            var html = [];
-            Firebug.Reps.appendObject(result, html)
-            Firebug.Console.writeMessage(html, "command");
+            // TODO: console2 - remove this when console2 is finished
+            if (Firebug.Console2)
+                Firebug.Console.log(result);
+            else
+            {
+                var html = [];
+                Firebug.Reps.appendObject(result, html)
+                Firebug.Console.writeMessage(html, "command");
+            }
         }
     },
     
@@ -518,15 +526,13 @@ var CommandLineAPI =
 
 // ************************************************************************************************
 
-Firebug.CommandLine.API = {};
-var initializeCommandLineAPI = function initializeCommandLineAPI()
+var defineCommandLineAPI = function defineCommandLineAPI()
 {
+    Firebug.CommandLine.API = {};
     for (var m in CommandLineAPI)
         if (!Env.browser.window[m])
             Firebug.CommandLine.API[m] = CommandLineAPI[m];
 };
-
-initializeCommandLineAPI();
 
 // ************************************************************************************************
 }});
