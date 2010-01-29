@@ -90,6 +90,7 @@ h1.groupHeader {
     background: #eee url(group.gif) repeat-x;
     font-size: 11px;
     font-weight: bold;
+    _position: relative;
 }
 
 /************************************************************************************************/
@@ -104,8 +105,10 @@ h1.groupHeader {
 .inlineEditor {
     margin-left: -6px;
     margin-top: -3px;
+    /*
     _margin-left: -7px;
     _margin-top: -5px;
+    /**/
 }
 
 .textEditorInner,
@@ -131,15 +134,17 @@ h1.groupHeader {
     outline: none;
     resize: none;
     
+    /*
     _border: 1px solid #999 !important;
     _padding: 1px !important;
     _filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="#55404040");
+    /**/
 }
 
 .textEditorInner1 {
     padding-left: 11px;
     background: url(textEditorBorders.png) repeat-y;
-    _background: none;
+    _background: url(textEditorBorders.gif) repeat-y;
     _overflow: hidden;
 }
 
@@ -147,14 +152,15 @@ h1.groupHeader {
     position: relative;
     padding-right: 2px;
     background: url(textEditorBorders.png) repeat-y 100% 0;
-    _background: none;
+    _background: url(textEditorBorders.gif) repeat-y 100% 0;
+    _position: fixed;
 }
 
 .textEditorTop1 {
     background: url(textEditorCorners.png) no-repeat 100% 0;
     margin-left: 11px;
     height: 10px;
-    _background: none;
+    _background: url(textEditorCorners.gif) no-repeat 100% 0;
     _overflow: hidden;
 }
 
@@ -164,7 +170,7 @@ h1.groupHeader {
     width: 11px;
     height: 10px;
     background: url(textEditorCorners.png) no-repeat;
-    _background: none;
+    _background: url(textEditorCorners.gif) no-repeat;
 }
 
 .textEditorBottom1 {
@@ -172,7 +178,7 @@ h1.groupHeader {
     background: url(textEditorCorners.png) no-repeat 100% 100%;
     margin-left: 11px;
     height: 12px;
-    _background: none;
+    _background: url(textEditorCorners.gif) no-repeat 100% 100%;
 }
 
 .textEditorBottom2 {
@@ -181,7 +187,7 @@ h1.groupHeader {
     width: 11px;
     height: 12px;
     background: url(textEditorCorners.png) no-repeat 0 100%;
-    _background: none;
+    _background: url(textEditorCorners.gif) no-repeat 0 100%;
 }
 
 
@@ -2504,7 +2510,7 @@ h1.groupHeader {
     width: 294px;
     height: 21px;
     padding-top: 1px;
-    position: absolute;
+    position: fixed;
     border-top: 1px solid #ACA899;
     z-index: 9;
 }
