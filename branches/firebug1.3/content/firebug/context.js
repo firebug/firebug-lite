@@ -411,7 +411,7 @@ FBL.Context.prototype =
     {
         var result = {value: 0, unit: "px"};
         
-        var cssValue = this.getCSS(el, name);
+        var cssValue = this.getStyle(el, name);
         
         if (!cssValue) return result;
         if (cssValue.toLowerCase() == "auto") return result;
@@ -633,7 +633,7 @@ FBL.Context.prototype =
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    getCSS: isIE ? function(el, name)
+    getStyle: isIE ? function(el, name)
     {
         return el.currentStyle[name] || el.style[name] || undefined;
     }

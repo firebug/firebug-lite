@@ -611,7 +611,7 @@ this.addStyleSheet = function(doc, style)
 
 // ************************************************************************************************
 
-this.getCSS = this.isIE ? 
+this.getStyle = this.isIE ? 
     function(el, name)
     {
         return el.currentStyle[name] || el.style[name] || undefined;
@@ -1022,7 +1022,7 @@ this.isVisible = function(elt)
     }
     /**/
     
-    return this.getCSS(elt, "visibility") != "hidden" &&
+    return this.getStyle(elt, "visibility") != "hidden" &&
         ( elt.offsetWidth > 0 || elt.offsetHeight > 0 
         || elt.tagName in invisibleTags
         || elt.namespaceURI == "http://www.w3.org/2000/svg"
@@ -1031,7 +1031,11 @@ this.isVisible = function(elt)
 
 this.collapse = function(elt, collapsed)
 {
-    if (this.isIE6)
+    // IE6 doesn't support the [collapsed] CSS selector. IE7 does support the selector, 
+    // but it is causing a bug (the element disappears when you set the "collapsed" 
+    // attribute, but it doesn't appear when you remove the attribute. So, for those
+    // cases, we need to use the class attribute.
+    if (this.isIElt8)
     {
         if (collapsed)
             this.setClass(elt, "collapsed")
@@ -1108,7 +1112,7 @@ this.getRootWindow = function(win)
 
 this.getClientOffset = function(elt)
 {
-    function addOffset(elt, coords, view)
+    var addOffset = function addOffset(elt, coords, view)
     {
         var p = elt.offsetParent;
 
@@ -2740,7 +2744,7 @@ this.objectToString = function(object)
 // ************************************************************************************************
 // Input Caret Position
 
-this.selectInputRange = function (input, start, length)
+this.setSelectionRange = function (input, start, length)
 {
     if (input.createTextRange)
     {
@@ -2752,9 +2756,8 @@ this.selectInputRange = function (input, start, length)
     else if (input.setSelectionRange)
     {
         input.setSelectionRange(start, length);
+        input.focus();
     }
-    
-    input.focus(); 
 };
 
 // ************************************************************************************************
@@ -2765,9 +2768,10 @@ this.getInputCaretPosition = function(input)
     var position = 0;
     
     if (document.selection)
-    { 
+    {
         input.focus();
         
+        //var range = input.ownerDocument.selection.createRange();
         var range = document.selection.createRange();
         range.moveStart("character", -input.value.length);
         
