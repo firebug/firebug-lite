@@ -544,7 +544,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         
         this.input = this.box.getElementsByTagName("input")[0];  // XXXjjb childNode[1] required
         
-        if (isIE)
+        if (isIElt8)
         {
             this.input.style.top = "-8px";
         }
@@ -623,6 +623,11 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             if (hasClass(parent, "textEditorInner2"))
             {
                 var yDiff = this.textSize.height - this.shadowExpand;
+                
+                // IE6 height offset
+                if (isIE6)
+                    yDiff -= 2;
+                
                 parent.style.height = yDiff + "px";
                 parent.parentNode.style.height = yDiff + "px";
             }
@@ -632,7 +637,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
         this.getAutoCompleter().reset();
 
-        if (isIE)
+        if (isIElt8)
             panel.panelNode.appendChild(this.box);
         else
             target.offsetParent.appendChild(this.box);        
@@ -685,7 +690,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
         if (this.box.parentNode)
         {
-            try { this.input.setSelectionRange(0, 0); } catch (exc) {}
+            setSelectionRange(this.input, 0, 0);
             this.box.parentNode.removeChild(this.box);
         }
 
@@ -766,7 +771,12 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
     incrementValue: function(amt)
     {
         var value = this.input.value;
-        var start = this.input.selectionStart, end = this.input.selectionEnd;
+        
+        // TODO: xxxpedro editor
+        if (isIE)
+            var start = getInputCaretPosition(this.input), end = start;
+        else
+            var start = this.input.selectionStart, end = this.input.selectionEnd;
 
         var range = this.getAutoCompleteRange(value, start);
         if (!range || range.type != "int")
@@ -786,8 +796,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             var completion = intValue-amt;
             this.input.value = preExpr + completion + digitPost + postExpr;
             
-            if (this.input.setSelectionRange)
-                this.input.setSelectionRange(start, end);
+            setSelectionRange(this.input, start, end);
 
             Firebug.Editor.update(true);
 
@@ -984,8 +993,7 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         {
             textBox.value = originalValue;
             
-            if (textBox.setSelectionRange)
-                textBox.setSelectionRange(originalOffset, originalOffset);
+            setSelectionRange(textBox, originalOffset, originalOffset);
 
             this.reset();
             return true;
@@ -1182,7 +1190,7 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         textBox.value = preParsed + preExpr + preCompletion + postCompletion + postExpr;
         var offsetEnd = preParsed.length + preExpr.length + completion.length;
         
-        // TODO: xxxpedro remove the following commented code, if the lib.selectInputRange()
+        // TODO: xxxpedro remove the following commented code, if the lib.setSelectionRange()
         // is working well.
         /*
         if (textBox.setSelectionRange)
@@ -1204,9 +1212,9 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         // input will be resized to fit the whole text)
         setTimeout(function(){
             if (selectMode)
-                selectInputRange(textBox, offset, offsetEnd);
+                setSelectionRange(textBox, offset, offsetEnd);
             else
-                selectInputRange(textBox, offsetEnd, offsetEnd);
+                setSelectionRange(textBox, offsetEnd, offsetEnd);
         },0);
                 
 
