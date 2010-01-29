@@ -55,12 +55,14 @@ var RowTag =
 // TODO: xxxpedro localization
 var oSTR =
 {
-    NoMembersWarning: "There are no properties to show for this object."    
-}
+    NoMembersWarning: "There are no properties to show for this object.",
+    EmptyStyleSheet: "There are no rules in this stylesheet.",
+    EmptyElementCSS: "This element has no style rules."
+};
 
 FBL.$STR = function(name)
 {
-    return oSTR.hasOwnProperty(name) ? oSTR[name] : "";
+    return oSTR.hasOwnProperty(name) ? oSTR[name] : name;
 };
 
 var WatchRowTag =
