@@ -877,7 +877,8 @@ append(ChromeBase,
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (Firebug.Console)
+        // TODO: console2 - remove "&& !Firebug.Console2" when console2 is finished
+        if (Firebug.Console && !Firebug.Console2)
             Firebug.Console.flush();
         
         if (Firebug.Trace)
@@ -1368,9 +1369,6 @@ append(ChromeBase,
         changeSidePanelVisibility(panel.hasSidePanel);
         
         Firebug.chrome.draw();
-        
-        if (fbVSplitterStyle)
-            fbVSplitterStyle.right = FirebugChrome.sidePanelWidth -5 + "px";
     },
     
     showLargeCommandLine: function(hideToggleIcon)
