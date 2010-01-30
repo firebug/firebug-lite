@@ -637,9 +637,9 @@ Firebug.CSSModule = extend(Firebug.Module,
             style[toCamelCase(propName)] = propValue;
         }
 
-        if (propName) {
-            dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
-        }
+        //if (propName) {
+        //    dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
+        //}
     },
 
     removeProperty: function(rule, propName, parent)
@@ -1139,6 +1139,11 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             return;
 
         var target = event.target || event.srcElement;
+        
+        // if the inline editor was clicked, don't insert a new rule
+        if (hasClass(target, "textEditorInner"))
+            return;
+            
         var row = getAncestorByClass(target, "cssRule");
         if (row && !getAncestorByClass(target, "cssPropName")
             && !getAncestorByClass(target, "cssPropValue"))
@@ -1325,7 +1330,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
         this.showToolbarButtons("fbCSSButtons", !isSystemStyleSheet(this.location));
 
-        dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, this.panelNode]);
+        //dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, this.panelNode]);
     },
 
     updateSelection: function(object)
