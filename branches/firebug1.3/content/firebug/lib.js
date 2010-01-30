@@ -368,8 +368,7 @@ var findLocation =  function findLocation()
     FBL.Env.isChromeExtension = script && script.getAttribute("extension") == "Chrome"; 
     if (FBL.Env.isChromeExtension)
     {
-        //path = productionDir;
-        path = "http://firebug.local:8740/firebug1.3/build/";
+        path = productionDir;
         script = {innerHTML: "{showIconWhenHidden:false}"};
     }
     
