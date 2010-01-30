@@ -497,7 +497,10 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             DIV({"class": "textEditorInner1"},
                 DIV({"class": "textEditorInner2"},
                     INPUT({"class": "textEditorInner", type: "text",
-                        /*oninput: "$onInput", */onkeypress: "$onKeyPress", onoverflow: "$onOverflow",
+                        /*oninput: "$onInput", */
+                        onkeypress: "$onKeyPress",
+                        onkeyup: "$onKeyUp",
+                        onoverflow: "$onOverflow",
                         oncontextmenu: "$onContextMenu"}
                     )
                 )
@@ -808,9 +811,19 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+    onKeyUp: function(event)
+    {
+        // IE and Safari won't fire the onkeypress event for special keys like insert/delete,
+        // up/down arrows and others. So, we must listen for the onkeyup event too, and
+        // call the onKeyPress handler manually
+        if (isIE || isSafari)
+        {
+            this.onKeyPress(event);
+        }
+    },
+    
     onKeyPress: function(event)
     {
-        //console.log("onKeyPress");
         if (event.keyCode == 27 && !this.completeAsYouType)
         {
             var reverted = this.getAutoCompleter().revert(this.input);
