@@ -197,8 +197,8 @@ FBL.PanelBar =
             if (selectedPanel)
             {
                 removeClass(selectedPanel.tabNode, "fbSelectedTab");
-                selectedPanel.hide();
                 selectedPanel.shutdown();
+                selectedPanel.hide();
             }
             
             if (!panel.parentPanel)
@@ -207,8 +207,8 @@ FBL.PanelBar =
             this.selectedPanel = panel;
             
             setClass(panel.tabNode, "fbSelectedTab");
-            panel.initialize();
             panel.show();
+            panel.initialize();
         }
     },
     

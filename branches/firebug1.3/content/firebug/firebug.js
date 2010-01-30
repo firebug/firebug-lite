@@ -599,6 +599,10 @@ Firebug.Panel =
         this.contentNode = null;
         this.containerNode = null;
         
+        this.toolButtonsNode = null;
+        this.statusBarBox = null;
+        this.statusBarNode = null;
+        
         //if (this.panelNode)
         //    delete this.panelNode.ownerPanel;
 
@@ -637,7 +641,7 @@ Firebug.Panel =
         this.containerNode = this.panelNode.parentNode;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // store persistent state
+        // restore persistent state
         this.containerNode.scrollTop = this.lastScrollTop;
     },
     
@@ -660,10 +664,6 @@ Firebug.Panel =
         
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
-        
-        this.toolButtonsNode = null;
-        this.statusBarBox = null;
-        this.statusBarNode = null;
     },
 
     detach: function(oldChrome, newChrome)
