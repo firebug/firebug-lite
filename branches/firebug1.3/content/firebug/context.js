@@ -104,6 +104,10 @@ FBL.Context.prototype =
         {
             var panelName = arguments[i];
             
+            // avoid error. need to create a better getPanel() function as explained below
+            if (!Firebug.chrome || !Firebug.chrome.selectedPanel)
+                return;
+            
             //var panel = this.getPanel(panelName, true);
             //TODO: xxxpedro context how to get all panels using a single function?
             // the current workaround to make the invalidation works is invalidating
