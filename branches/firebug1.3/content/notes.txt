@@ -1,32 +1,112 @@
----------------------------------------------------------------------------------------------------
-Versions
----------------------------------------------------------------------------------------------------
+###################################################################################################
+ Versions
+###################################################################################################
     Firebug 1.3a5 - 2009-01-16 - Revision: 5719
     Firebug 1.3a4 - 2009-12-31 - Revision: 5505 
     Firebug 1.3a3 - 2009-09-13 - Revision: 4882
     Firebug 1.3a2 - 2009-08-03 - Revision: 3847
     Firebug 1.3a1 - 2009-05-03 - Revision: 2729
     Firebug 1.3a0 - 2009-01-24 - Revision: 1765
+
+
+###################################################################################################
+ Important TODOs
+###################################################################################################
     
+---------------------------------------------------------------------------------------------------
+Core
+---------------------------------------------------------------------------------------------------
+    - Panel Interfaces - initialize / initializeNode / show / hide
+    - Contexts - TabWatcher and TabContext - what exactly are they?
+    - Data Sharing / Cache
+    - Panel as Controller?
+
+---------------------------------------------------------------------------------------------------
+Chrome
+---------------------------------------------------------------------------------------------------
+    - Use "offline" mode when switching panels (to avoid loose any message)?    
+    - one function to get a panel (no matter if it is a sidepanel or not)
+      currently, we must know where the sidepanel is, or look in each main
+      panel.
+
+---------------------------------------------------------------------------------------------------
+Editor
+---------------------------------------------------------------------------------------------------
+    - Slow in IE8?
+    - onInput in Firefox - the behavior is different. Specially when autocompleting font-family
+
+---------------------------------------------------------------------------------------------------
+Console
+---------------------------------------------------------------------------------------------------
+    - clickable object links
+    - more robust ability to listen offline messages
+    - ability to listen offline XHR messages
+    
+    
+    - the offline handler should be compatible with the next generation console
+        the problem: we cannot create a DocumentFragment, because there's no chrome.document
+        when executing script in the HEAD
+        
+        confirm: if you can do this on all browsers:
+            - create an iframe at startup (before main doc load)
+            - append it to the documentElement
+            - create a Fragment
+            - create iframe doc element 
+            - attach event to it
+            - append it to fragment
+            - later, when iframe doc is loaded, append the element to it
+            - check if the event still attached to the element 
+        
+        the solution: create chrome iframe (or popup) at startup, but only append it
+        to the document's body (and initialize), when the doc is ready
+    
+
+---------------------------------------------------------------------------------------------------
+Memory leaks
+---------------------------------------------------------------------------------------------------
+    - Menu
+    - XHRSpy
+
+
+###################################################################################################
+ Bugs
+###################################################################################################
+
 ---------------------------------------------------------------------------------------------------
 BUGS
 ---------------------------------------------------------------------------------------------------
+    - command line API $() makes jQuery's $ not acessible in the command-line 
+    
+    - XHR request made before UI load will fail
+    
+    - XHR requests and file:/// URLs
+    
+    - Error when trying to parse external stylesheets
+    
+    - Inspector and Google Chrome 4.0
+    
+    - Inspector stays visible after the mouse leave the panel content
+
     - When loading the bookmarlet in IE it shows a security warning
         https://www.google.com/accounts/ServiceLogin?service=adwords&cd=null&hl=en-US&ltmpl=adwords&passive=true&ifr=false&alwf=true&continue=https%3A%2F%2Fadwords.google.com%2Fselect%2Fgaiaauth%3Fapt%3DNone%26ugl%3Dtrue&sourceid=awo&subid=ww-en-et-ads-0-adsC-all
         
     - Need to use https in the bookmarlet (including images), and also in the live include
-
-    - context.evaluate
     
-    - define FBL.console to point to the global console
+    - bookmarlet problem with XML+XSL documents!
+
+    -----------------------------------------------------------------------------------------------
+    
+    Bugs in Firefox 2
+     
+        - Some minor CSS bugs
+        - document.elementFromPoint() is not available (context.js)
+          We *NEED* elementFromPoint in order to Inspect work (we can't rely 
+          on attaching mouse events in the document, because it can be cancelled
+          by the user's application) 
+
+    -----------------------------------------------------------------------------------------------
     
     - console should be installed in each Chrome window
-    
-    - commandLine API should be place in console.firebuglite.commandLineAPI
-    
-    - commandLine API not well defined, when in persistent mode
-
-    - problem with IE and and frame.close() function that uses $(). picking wrong window in persistent mode.
     
     - "close tag" node (</div>) should not be selectable, instead, when clicked it should select
       the "open tag" node (<div>).
@@ -34,6 +114,145 @@ BUGS
     - remove events added in disableTextSelection
 
     - window.onerror is being turned off when UI is minimized (and should not)
+
+
+###################################################################################################
+ 1.4 features
+###################################################################################################
+    persistent popups
+    inherited styles
+    live edit
+    cross-iframe
+    live highlight dom changes?
+    unit tests
+    Panel options menu
+    Context menu
+    tooltips (CSS color, images)
+    Layout Ruler
+    code Parser
+        - proxy/plugin (cross-domain issue)?    
+        - line number
+        - correct CSS rules
+     
+    1.4 - divide .css files? so new skins can be easier to write, and changes in UI can be easily 
+          ported across skins 
+        
+    1.4 - each skin has in his own folder a file called "firebug.json" (or similar)
+    1.4 - improve the build skin methods in FBDev
+    1.4 - loadJSON method
+    1.4 - loadSkin method
+    
+    - Tests
+        - Unit Tests
+        - Manual Tests
+        - Test generation?
+
+
+###################################################################################################
+ TODOs
+###################################################################################################
+
+---------------------------------------------------------------------------------------------------
+Domplate/Reps
+---------------------------------------------------------------------------------------------------
+    Opera:
+        - native function: "prototype" in fn == true && listed in for..in
+        - user function: "prototype" in fn == true && not listed in for..in
+    
+---------------------------------------------------------------------------------------------------
+Statistics
+---------------------------------------------------------------------------------------------------
+    Use Google Analytics to track Firebug Lite statistics.
+    It could run inside the Chrome iframe (no global pollution).
+    Not called when used locally, included when in development mode.
+
+
+---------------------------------------------------------------------------------------------------
+XML + XSL
+---------------------------------------------------------------------------------------------------
+Opera doesn't have document.elementFromPoint in XML documents
+
+revise the use of createElement and createGlobalElement
+    createElement --> createChromeElement
+    createGlobalElement --> createElement
+
+---------------------------------------------------------------------------------------------------
+ Popup
+---------------------------------------------------------------------------------------------------
+    - Frame/Popup settings
+
+---------------------------------------------------------------------------------------------------
+ Loading
+---------------------------------------------------------------------------------------------------
+    - Firebug.initialize should create console namespace
+    - window onerror - wrong time? 
+    - Check the initializing order. 
+    
+---------------------------------------------------------------------------------------------------
+Tool Buttons
+---------------------------------------------------------------------------------------------------
+    - button location: Fixed buttons (inspect) and Panel buttons 
+ 
+---------------------------------------------------------------------------------------------------
+ScrollArea Class
+---------------------------------------------------------------------------------------------------
+    - isScrolled
+    - isVerticalScrolled
+    - isHorizontalScrolled
+    - isScrolledToBottom
+    - scrollToElement(el)
+    - isElementVisible(el)
+    - interceptMouseWheel
+
+---------------------------------------------------------------------------------------------------
+User Interface
+---------------------------------------------------------------------------------------------------
+    - Where exactly the errors indicator should be placed in the UI?
+    
+    - Highlighted nodes in HTML tree with round corners (with OS color)
+        - current implementation isn't good (it uses both CSS hack and JS)
+        - Opera round corner SVG trick
+        - best way to go is dynamically create a CSS rule according each browser 
+    
+    - UI styling
+        - (?) detect Windows theme (XP or classic?)
+        - (?) detect OS (windows or mac?)
+    
+    - error UI indications (like FB in status bar)
+
+---------------------------------------------------------------------------------------------------
+Chrome
+---------------------------------------------------------------------------------------------------
+    - Panel event delegation?
+    - Opera problem with onunload and popups (context is not being destroyed)
+
+---------------------------------------------------------------------------------------------------
+Controllers
+---------------------------------------------------------------------------------------------------
+    - (?) add option to skip frames
+
+---------------------------------------------------------------------------------------------------
+Core
+---------------------------------------------------------------------------------------------------
+    - (?) how to auto-load FirebugLite + Extension in a single bookmarlet?
+    - custom Errors = throw new FirebugError("message")
+ 
+---------------------------------------------------------------------------------------------------
+Core
+---------------------------------------------------------------------------------------------------
+    - Problem with id conflits. The same attribute is being used in the document
+      elements and in the HTML Tree, in the user interface.
+
+---------------------------------------------------------------------------------------------------
+Events
+---------------------------------------------------------------------------------------------------
+    - handle disble mouse wheel in Chrome, when in frame mode?
+
+
+
+###################################################################################################
+ Fixed
+###################################################################################################
     
 OK  - rename the id "FirebugChrome" to "FirebugUI"
     
@@ -67,6 +286,11 @@ OK  - nodeControl in HTMLTree should not fire the node highlight (include rule i
       and is getting hidden 
 
 
+
+###################################################################################################
+ References and notes
+###################################################################################################
+
 ---------------------------------------------------------------------------------------------------
 Context
 ---------------------------------------------------------------------------------------------------
@@ -91,17 +315,6 @@ Context
     - invalidatePanels
 
 
----------------------------------------------------------------------------------------------------
-Development brainstorming and notes
----------------------------------------------------------------------------------------------------
-    - bookmarlet problem with XML+XSL documents!
-
----------------------------------------------------------------------------------------------------
-Memory leaks
----------------------------------------------------------------------------------------------------
-    - Menu
-    
-    - XHRSpy
 
 ---------------------------------------------------------------------------------------------------
 Ranges and Selections
@@ -142,6 +355,7 @@ CSS Cascading and Inheritance
     http://www.w3.org/TR/CSS21/propidx.html
 
 
+
 CSS imported styles
 
       @import-rule as first rule in the first stylesheet:
@@ -173,57 +387,6 @@ CSS imported styles
         http://github.com/lsmith/javascript-stack-trace/blob/master/getStackTrace.js
         http://eriwen.com/javascript/js-stack-trace/
     
-
----------------------------------------------------------------------------------------------------
- 1.3.0 IMPORTANT TODOs
----------------------------------------------------------------------------------------------------
-
-  - Panel Interfaces 
-          - initialize / initializeNode / show / hide
-
-  - Contexts
-          - TabWatcher and TabContext - what exactly are they?
-
-  - Data Sharing / Cache
-
-  - Panel as Controller?
-
-  - Use "offline" mode when switching panels (to avoid loose any message)?    
-
-  ~~ - Computed Styles
-  
-  ~~ - CSS "Run CSS" sidePanel?
-
-  - SidePanelBar
-        sidePanel group? to show/hide multiple tabs
-            OK - NO. PANEL inherits SIDEPANELBAR
-
-  - Chrome Synchronization
-        ~~  - divide sync proccess into separated functions
-        ok  - move FirebugApplication to Firebug namespace
-
-  ok - domplate uses 2 global namespaces: domplate, DomplateTag
-  ok - Console "multiline" sidePanel
-
-
----------------------------------------------------------------------------------------------------
- 1.4?
----------------------------------------------------------------------------------------------------
-    persistent popups
-    inherited styles
-    live edit
-    cross-iframe
-    live highlight dom changes?
-    unit tests
-    Panel options menu
-    Context menu
-    tooltips (CSS color, images)
-    Layout Ruler
-    code Parser
-        - proxy/plugin (cross-domain issue)?    
-        - line number
-        - correct CSS rules
-
 ---------------------------------------------------------------------------------------------------
  Firebug Lite Future
 ---------------------------------------------------------------------------------------------------
@@ -281,206 +444,11 @@ Low level of portability
     http://support.microsoft.com/kb/321722/EN-US/
     http://support.microsoft.com/default.aspx?scid=kb;LN;Q312496
     http://support.microsoft.com/default.aspx?scid=kb;en-us;823386&Product=ie600
-    
-
----------------------------------------------------------------------------------------------------
-Firebug Lite 1.3a3
----------------------------------------------------------------------------------------------------
-    - settings
-        - url settings "remote"/"local" should be replace
-            remote - should be the default
-            local - should be replace by "dev"
-
-    - getfirebug release instructions page
-        - what to test?
-            - bookmarlet
-            - UI
-                - positioning
-                - display
-                - resizing
-                - popup loading
-                - popup/frame synchronization
-                
-            - different scenarios (XHTML, XSL+XML)
 
 
----------------------------------------------------------------------------------------------------
-Firebug Lite 1.3a4
----------------------------------------------------------------------------------------------------
-    - DOM Panel
-    - basic doc? 
-    - settings
-    - getLocation - split('/') method
-
-
----------------------------------------------------------------------------------------------------
-Firebug Lite 1.3a5
----------------------------------------------------------------------------------------------------
-    - Computed Style Panel
-    - CSS Panel
-
----------------------------------------------------------------------------------------------------
-Firebug Lite 1.3a6
----------------------------------------------------------------------------------------------------
-    - Script Panel
-
-
-
-
-
----------------------------------------------------------------------------------------------------
-Domplate/Reps
----------------------------------------------------------------------------------------------------
-    Opera:
-        - native function: "prototype" in fn == true && listed in for..in
-        - user function: "prototype" in fn == true && not listed in for..in
-
-
-    
----------------------------------------------------------------------------------------------------
-Statistics
----------------------------------------------------------------------------------------------------
-    Use Google Analytics to track Firebug Lite statistics.
-    It could run inside the Chrome iframe (no global pollution).
-    Not called when used locally, included when in development mode.
-
-
-
----------------------------------------------------------------------------------------------------
-XML + XSL
----------------------------------------------------------------------------------------------------
-Opera doesn't have document.elementFromPoint in XML documents
-
-revise the use of createElement and createGlobalElement
-    createElement --> createChromeElement
-    createGlobalElement --> createElement
-
-
----------------------------------------------------------------------------------------------------
-Missing
----------------------------------------------------------------------------------------------------
-
----------------------------------------------------------------------------------------------------
- Popup
----------------------------------------------------------------------------------------------------
-    - Frame/Popup settings
-
----------------------------------------------------------------------------------------------------
- Loading
----------------------------------------------------------------------------------------------------
-    - Firebug.initialize should
-        - create console namespace
-    
-    - window onerror - wrong time 
-    
-    - Check the initializing order. 
-    
----------------------------------------------------------------------------------------------------
-
----------------------------------------------------------------------------------------------------
-    - Panel event delegation?
-
----------------------------------------------------------------------------------------------------
-Tool Buttons
----------------------------------------------------------------------------------------------------
-    - button location: Fixed buttons (inspect) and Panel buttons 
-
- 
- 
----------------------------------------------------------------------------------------------------
-User Interface
----------------------------------------------------------------------------------------------------
-
----------------------------------------------------------------------------------------------------
-General
----------------------------------------------------------------------------------------------------
-    - Where exactly the errors indicator should be placed in the UI?
-
----------------------------------------------------------------------------------------------------
-Skins
----------------------------------------------------------------------------------------------------
-     OK - port changes in XP skin to the "classic" and "light" ones
-     
-    1.4 - divide .css files? so new skins can be easier to write, and changes in UI can be easily 
-          ported across skins 
-        
-    1.4 - each skin has in his own folder a file called "firebug.json" (or similar)
-    1.4 - improve the build skin methods in FBDev
-    1.4 - loadJSON method
-    1.4 - loadSkin method
-
-
----------------------------------------------------------------------------------------------------
-TODO's
----------------------------------------------------------------------------------------------------
-
----------------------------------------------------------------------------------------------------
-ScrollArea Class
----------------------------------------------------------------------------------------------------
-    - isScrolled
-    - isVerticalScrolled
-    - isHorizontalScrolled
-    - isScrolledToBottom
-    - scrollToElement(el)
-    - isElementVisible(el)
-    - interceptMouseWheel
-
-
----------------------------------------------------------------------------------------------------
-User Interface
----------------------------------------------------------------------------------------------------
-    - Highlighted nodes in HTML tree with round corners (with OS color)
-        - current implementation isn't good (it uses both CSS hack and JS)
-        - Opera round corner SVG trick
-        - best way to go is dynamically create a CSS rule according each browser 
-    
-    - UI styling
-        - (?) detect Windows theme (XP or classic?)
-        - (?) detect OS (windows or mac?)
-    
-    - error UI indications (like FB in status bar)
-
----------------------------------------------------------------------------------------------------
-Chrome
----------------------------------------------------------------------------------------------------
-    - Opera problem with onunload and popups (context is not being destroyed)
- 
-    
----------------------------------------------------------------------------------------------------
-Controllers
----------------------------------------------------------------------------------------------------
-    - (?) add option to skip frames
-
----------------------------------------------------------------------------------------------------
-Core
----------------------------------------------------------------------------------------------------
-    - (?) How to proceed when the console global variable is already defined?
-    - (?) how to auto-load FirebugLite + Extension in a single bookmarlet?
-    - custom Errors = throw new FirebugError("message")
- ~~ - persitent popups
- 
----------------------------------------------------------------------------------------------------
-Core
----------------------------------------------------------------------------------------------------
-    - Problem with id conflits. The same attribute is being used in the document
-      elements and in the HTML Tree, in the user interface.
-    - Check if there's a problem using the Sizzle selector engine in the code
-
----------------------------------------------------------------------------------------------------
-Events
----------------------------------------------------------------------------------------------------
-    - handle disble mouse wheel in Chrome, when in frame mode?
-
-
-
----------------------------------------------------------------------------------------------------
-FBL 1.4
----------------------------------------------------------------------------------------------------
-    - Tests
-        - Unit Tests
-        - Manual Tests
-        - Test generation?
-
+###################################################################################################
+ Firebug related
+###################################################################################################
 
 ---------------------------------------------------------------------------------------------------
 Firebug
@@ -505,14 +473,14 @@ Form freak:
 http://code.google.com/p/fbug/issues/detail?id=534&q=array&colspec=ID%20Type%20Status%20Owner%20Test%20Summary
 
 
-
----------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
+###################################################################################################
+###################################################################################################
+###################################################################################################
 BRAINSTORMING SECTION
----------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
+###################################################################################################
+###################################################################################################
+###################################################################################################
+
 
 ---------------------------------------------------------------------------------------------------
 getPixelValue
@@ -594,36 +562,6 @@ Cons
     More complex
     More difficult to debug low level functions
     less stable?
-
-
----------------------------------------------------------------------------------------------------
- Inherited Styles
----------------------------------------------------------------------------------------------------
-
-    Some of that functionality is built into DOM Inspector, but you can look at 
-    the parts that Firebug does itself.
-
-    In lib.js there is a list of properties ("inheritedStyleNames") that can 
-    be automatically inherited, so for a given element it looks for such 
-    properties in the rules being applied to each ancestor. 
-    (That list doesn't include the special print or aural properties.)
-
-    The table here (http://www.w3.org/TR/CSS21/propidx.html) shows 
-    which properties are inherited by default.
-
-    "updateCascadeView" in css.js will also be of interest.
-
-    Via http://code.google.com/p/fbug/source/browse/ you can look at the files:
-
-    branches/firebug1.2/content/firebug/css.js
-    branches/firebug1.2/content/firebug/lib.js
-    
-    ----------------------------------------------------------------------------
-
-    Full CSS property table
-    http://www.w3.org/TR/CSS21/propidx.html
-
-
 
 
 ---------------------------------------------------------------------------------------------------

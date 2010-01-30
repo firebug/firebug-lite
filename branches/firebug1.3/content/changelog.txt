@@ -27,11 +27,30 @@ Editor
     - Increment/decrement with UP/DOWN, PAGE-UP/PAGE-DOWN
     - Navigation with TAB/SHIFT+TAB
     - Fixed the CSS of editor to work in all browsers
+    - Pretty inline editor support in IE6
 
 -------------------------------------------------------------------------------
 Console
 -------------------------------------------------------------------------------
     - Strings are properly rendered in console.* calls
+
+-------------------------------------------------------------------------------
+CommandLine
+-------------------------------------------------------------------------------
+    - Fixed Issue 2764: Fix problem with commandLine API and jQuery's $ shortcut.
+
+-------------------------------------------------------------------------------
+Script
+-------------------------------------------------------------------------------
+    - Don't show the Firebug Lite source code in the script list
+    - Refactored Script panel
+    - Fixed potential memory leak
+
+-------------------------------------------------------------------------------
+GUI
+-------------------------------------------------------------------------------
+    - Fixed problem with panel initialization that was breaking the scroll 
+      position persistence of the panels.
 
 -------------------------------------------------------------------------------
 Domplate
