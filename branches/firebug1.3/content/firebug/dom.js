@@ -57,7 +57,8 @@ var oSTR =
 {
     NoMembersWarning: "There are no properties to show for this object.",
     EmptyStyleSheet: "There are no rules in this stylesheet.",
-    EmptyElementCSS: "This element has no style rules."
+    EmptyElementCSS: "This element has no style rules.",
+    AccessRestricted: "Access to restricted URI denied."
 };
 
 FBL.$STR = function(name)

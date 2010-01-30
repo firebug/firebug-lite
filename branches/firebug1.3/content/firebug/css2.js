@@ -186,33 +186,41 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
     
     for(var i=0, length=styleSheets.length; i<length; i++)
     {
-        var styleSheet = styleSheets[i];
-        
-        // process imported styleSheets
-        if (isIE)
+        try
         {
-            var imports = styleSheet.imports;
+            var styleSheet = styleSheets[i];
             
-            for(var j=0, importsLength=imports.length; j<importsLength; j++)
+            // process imported styleSheets
+            if (isIE)
             {
-                styleSheetIterator(doc, imports[j]);
+                var imports = styleSheet.imports;
+                
+                for(var j=0, importsLength=imports.length; j<importsLength; j++)
+                {
+                    styleSheetIterator(doc, imports[j]);
+                }
+            }
+            else
+            {
+                var rules = styleSheet.cssRules;
+                
+                for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
+                {
+                    var rule = rules[j];
+                    
+                    if (rule.styleSheet)
+                        styleSheetIterator(doc, rule.styleSheet);
+                    else
+                        break;
+                }
+                
+                index = j;
             }
         }
-        else
+        catch(e)
         {
-            var rules = styleSheet.cssRules;
-            
-            for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
-            {
-                var rule = rules[j];
-                
-                if (rule.styleSheet)
-                    styleSheetIterator(doc, rule.styleSheet);
-                else
-                    break;
-            }
-            
-            index = j;
+            styleSheet.restricted = true;
+            var ssid = StyleSheetCache(styleSheet);
         }
         
         // process internal and external styleSheets
@@ -233,6 +241,9 @@ var ElementCSSRulesMap = {}
 
 var processStyleSheet = function(doc, styleSheet)
 {
+    if (styleSheet.restricted)
+        return;
+    
     var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
     
     var ssid = StyleSheetCache(styleSheet);
@@ -1319,6 +1330,13 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             return;
         if (styleSheet.editStyleSheet)
             styleSheet = styleSheet.editStyleSheet.sheet;
+        
+        // if it is a restricted stylesheet, show the warning message and abort the update process
+        if (styleSheet.restricted)
+        {
+            FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, this.panelNode);
+            return;
+        }
 
         var rules = this.getStyleSheetRules(this.context, styleSheet);
 

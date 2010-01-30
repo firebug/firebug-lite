@@ -165,7 +165,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             
             var updatePanel = function(html)
             {
-                self.contentNode.innerHTML = html.join("");
+                self.panelNode.innerHTML = html.join("");
                 
                 // IE needs this timeout, otherwise the panel won't scroll
                 setTimeout(function(){
@@ -195,11 +195,11 @@ ScriptPanel.prototype = extend(Firebug.Panel,
                 {
                     var src = script.innerHTML;
                     renderProcess(src);
-                }   
+                }
             }
             catch(e)
             {
-                renderProcess("Access to restricted URI denied");
+                FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, this.panelNode);                
             }
                 
             this.sourceIndex = index;
