@@ -5319,8 +5319,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.3.0b1",
-    revision: "$Revision: 5921 $",
+    version: "Firebug Lite 1.3.0b1",
+    revision: "$Revision: 5924 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -22572,7 +22572,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             
             var onFailure = function()
             {
-                renderProcess("Access to restricted URI denied");
+                FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, self.panelNode);
             };
             
             var self = this;
@@ -22596,7 +22596,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             }
             catch(e)
             {
-                FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, this.panelNode);                
+                onFailure();                
             }
                 
             this.sourceIndex = index;

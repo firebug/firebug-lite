@@ -1236,7 +1236,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 5921 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 5924 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -6167,7 +6167,7 @@ var updatePanel=function(html){self.panelNode.innerHTML=html.join("");
 setTimeout(function(){self.synchronizeUI()
 },0)
 };
-var onFailure=function(){renderProcess("Access to restricted URI denied")
+var onFailure=function(){FirebugReps.Warning.tag.replace({object:"AccessRestricted"},self.panelNode)
 };
 var self=this;
 var doc=Firebug.browser.document;
@@ -6177,7 +6177,7 @@ var isExternal=url&&url!=doc.location.href;
 try{if(isExternal){Ajax.request({url:url,onSuccess:renderProcess,onFailure:onFailure})
 }else{var src=script.innerHTML;
 renderProcess(src)
-}}catch(e){FirebugReps.Warning.tag.replace({object:"AccessRestricted"},this.panelNode)
+}}catch(e){onFailure()
 }this.sourceIndex=index
 }}});
 Firebug.registerPanel(ScriptPanel);
