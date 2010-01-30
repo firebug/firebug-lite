@@ -1,5 +1,5 @@
 ###################################################################################################
- 1.3.0a6 - 2009-01-xx - Revision: xxxx
+ 1.3.0b1 - 2009-01-xx - Revision: xxxx
 ###################################################################################################
 
 -------------------------------------------------------------------------------
@@ -28,6 +28,9 @@ Editor
     - Navigation with TAB/SHIFT+TAB
     - Fixed the CSS of editor to work in all browsers
     - Pretty inline editor support in IE6
+    - Fixed problem with inline editor in Safari/Chrome/IE: special keys doesn't 
+      trigger the onkeypress event, making some changes in the editor not apply 
+      to the CSS property.
 
 -------------------------------------------------------------------------------
 Console

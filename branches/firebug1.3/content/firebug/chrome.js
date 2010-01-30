@@ -1565,7 +1565,7 @@ var ChromeFrameBase = extend(ChromeBase,
             FirebugChrome.isOpen = true;
             
             if (Env.isChromeExtension)
-                localStorage.setItem("FB_isOpen", "true");
+                localStorage.setItem("Firebug", "1,1");
             
             var node = this.node;
             
@@ -1614,7 +1614,7 @@ var ChromeFrameBase = extend(ChromeBase,
             FirebugChrome.isOpen = false;
             
             if (Env.isChromeExtension)
-                localStorage.setItem("FB_isOpen", "");
+                localStorage.setItem("Firebug", "1,0");
             
             var node = this.node;
             
