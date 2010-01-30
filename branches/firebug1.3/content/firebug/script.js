@@ -32,8 +32,8 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     name: "Script",
     title: "Script",
     
-    sourceIndex: 0,
-    lastSourceIndex: -1,
+    selectIndex: 0, // index of the current selectNode's option
+    sourceIndex: -1, // index of the script node, based in doc.getElementsByTagName("script")
     
     options: {
         hasToolButtons: true
@@ -51,6 +51,10 @@ ScriptPanel.prototype = extend(Firebug.Panel,
         
         for(var i=0, script; script=scripts[i]; i++)
         {
+            // Don't show Firebug Lite source code in the list of options
+            if (Firebug.ignoreFirebugElements && script.getAttribute("firebugIgnore"))
+                continue;
+            
             var fileName = getFileName(script.src) || getFileName(doc.location.href);
             var option = createElement("option", {value:i});
             
@@ -63,11 +67,19 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     
     initialize: function()
     {
+        // we must render the code first, so the persistent state can be restore
+        this.selectSourceCode(this.selectIndex);
+        
         Firebug.Panel.initialize.apply(this, arguments);
         
         addEvent(this.selectNode, "change", this.onChangeSelect);
+    },
+    
+    shutdown: function()
+    {
+        removeEvent(this.selectNode, "change", this.onChangeSelect);
         
-        this.selectSourceCode(this.sourceIndex);
+        Firebug.Panel.shutdown.apply(this, arguments);        
     },
     
     detach: function(oldChrome, newChrome)
@@ -75,31 +87,45 @@ ScriptPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.detach.apply(this, arguments);
         
         var oldPanel = oldChrome.getPanel("Script");
-        var index = oldPanel.sourceIndex;
+        var index = oldPanel.selectIndex;
         
         this.selectNode.selectedIndex = index;
-        this.sourceIndex = index;
-        this.lastSourceIndex = -1;
+        this.selectIndex = index;
+        this.sourceIndex = -1;
     },
     
     onChangeSelect: function(event)
     {
-        event = event || window.event;
-        var target = event.srcElement || event.currentTarget;
-        var index = target.selectedIndex;
+        var select = this.selectNode;
         
-        this.renderSourceCode(index);
+        this.selectIndex = select.selectedIndex;
+        
+        var option = select.options[select.selectedIndex];
+        if (!option)
+            return;
+        
+        var selectedSourceIndex = parseInt(option.value);
+        
+        this.renderSourceCode(selectedSourceIndex);
     },
     
     selectSourceCode: function(index)
     {
-        this.selectNode.selectedIndex = index;
-        this.renderSourceCode(index);
+        var select = this.selectNode; 
+        select.selectedIndex = index;
+        
+        var option = select.options[index];
+        if (!option)
+            return;
+        
+        var selectedSourceIndex = parseInt(option.value);
+        
+        this.renderSourceCode(selectedSourceIndex);
     },
     
     renderSourceCode: function(index)
     {
-        if (this.lastSourceIndex != index)
+        if (this.sourceIndex != index)
         {
             var renderProcess = function renderProcess(src)
             {
@@ -177,7 +203,6 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             }
                 
             this.sourceIndex = index;
-            this.lastSourceIndex = index;
         }
     }
 });
