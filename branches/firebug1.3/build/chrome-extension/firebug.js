@@ -22601,7 +22601,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             }
             catch(e)
             {
-                onFailure();                
+                onFailure();
             }
                 
             this.sourceIndex = index;
