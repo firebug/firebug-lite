@@ -175,7 +175,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             
             var onFailure = function()
             {
-                renderProcess("Access to restricted URI denied");
+                FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, self.panelNode);
             };
             
             var self = this;
@@ -199,7 +199,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             }
             catch(e)
             {
-                FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, this.panelNode);                
+                onFailure();                
             }
                 
             this.sourceIndex = index;
