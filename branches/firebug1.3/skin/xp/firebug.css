@@ -2421,8 +2421,8 @@ h1.groupHeader {
     right: 0;
     top: 0;
     height: 17px;
-    width: 50px;
-    padding: 5px 0 5px 5px;
+    width: 48px;
+    padding: 5px;
     z-index: 6;
     background: url(sprite.png) #f1f2ee 0 0;
 }
@@ -2613,24 +2613,32 @@ div.fbFitHeight {
 
 #fbWindowButtons .fbSmallButton {
     float: right;
-    margin-right: 4px;
 }
 
 #fbWindow_btClose {
-    background: url(sprite.png) 0 -119px;
+    background: url(min.png);
 }
 
 #fbWindow_btClose:hover {
-    background: url(sprite.png) -16px -119px;
+    background: url(minHover.png);
 }
 
 #fbWindow_btDetach {
-    background: url(sprite.png) -32px -119px;
+    background: url(detach.png);
 }
 
 #fbWindow_btDetach:hover {
-    background: url(sprite.png) -48px -119px;
+    background: url(detachHover.png);
 }
+
+#fbWindow_btDeactivate {
+    background: url(off.png);
+}
+
+#fbWindow_btDeactivate:hover {
+    background: url(offHover.png);
+}
+
 
 /* fbPanelBarBox tabs 
 *************************************************************************************************/
