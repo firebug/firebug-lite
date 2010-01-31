@@ -1927,6 +1927,7 @@ h1.groupHeader {
     background: #fafafa;
     border: 1px inset #fff;
     width: 220px;
+    outline: none;
 }
 
 .Selector { margin-top:10px }
