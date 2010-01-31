@@ -1643,7 +1643,10 @@ var ChromeFrameBase = extend(ChromeBase,
         // if it is running as a Chrome extension, dispatch a message to the extension signaling 
         // that Firebug should be deactivated for the current tab
         if (Env.isChromeExtension)
+        {
+            localStorage.removeItem("Firebug");
             chromeExtensionDispatch("FB_deactivate");
+        }
     },
     
     fixIEPosition: function()

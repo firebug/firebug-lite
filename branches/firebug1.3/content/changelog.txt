@@ -18,6 +18,7 @@ CSS
     - Ported the CSS Panel
     - Ported the Style Panel
     - Ported the Computed Panel divided in categories (in a separated tab)
+    - Fixed the problem with external stylesheets (now shows a "Access restricted" message). 
 
 -------------------------------------------------------------------------------
 Editor
@@ -48,10 +49,22 @@ Script
     - Don't show the Firebug Lite source code in the script list
     - Refactored Script panel
     - Fixed potential memory leak
+    - Using the Warning template in the Script panel when failing to load external scripts.
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - When running as Chrome extension, all images used in the interface are
+      stored in the extension directory, hugely improving the perceived loading
+      time for GUI operations, specially in the startup.
+      
+    - Implemented the chrome.deactivate() method
 
 -------------------------------------------------------------------------------
 GUI
 -------------------------------------------------------------------------------
+    - Added the "off" button to the UI
+    - Updated "minimize" and "detach" buttons with new images used in Firebug 1.4+
     - Fixed problem with panel initialization that was breaking the scroll 
       position persistence of the panels.
 
@@ -86,6 +99,7 @@ Core
     - Ported editor.js module from Firebug
     - Ported a simplified version of tabContext.js
     - Implemented a more robust Cache system that will be used internally
+    - Implemented a message dispatching method to communicate with the Chrome extension
 
 
 ###################################################################################################

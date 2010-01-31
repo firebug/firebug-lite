@@ -171,7 +171,6 @@ this.initialize = function()
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // chromeExtensionDispatch
-    FBL.Env.isChromeExtension = true;
     
     if (FBL.Env.isChromeExtension)
     {
