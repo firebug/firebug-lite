@@ -1522,7 +1522,8 @@ var ChromeFrameBase = extend(ChromeBase,
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
             [$("fbWindow_btClose"), "click", this.close],
-            [$("fbWindow_btDetach"), "click", this.detach]       
+            [$("fbWindow_btDetach"), "click", this.detach],       
+            [$("fbWindow_btDeactivate"), "click", this.deactivate]       
         );
         
         if (!Env.Options.enablePersistent)
@@ -1633,6 +1634,16 @@ var ChromeFrameBase = extend(ChromeBase,
             else
                 node.style.display = "none";
         }
+    },
+    
+    deactivate: function()
+    {
+        Firebug.shutdown();
+        
+        // if it is running as a Chrome extension, dispatch a message to the extension signaling 
+        // that Firebug should be deactivated for the current tab
+        if (Env.isChromeExtension)
+            chromeExtensionDispatch("FB_deactivate");
     },
     
     fixIEPosition: function()

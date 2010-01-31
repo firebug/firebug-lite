@@ -99,7 +99,7 @@ this.initialize = function()
     {
         FBL.NS = document.documentElement.namespaceURI;
         FBL.Env.browser = window;
-        FBL.Env.destroy = destroyApplication;
+        FBL.Env.destroy = destroyEnvironment;
 
         if (document.documentElement.getAttribute("debug") == "true")
             FBL.Env.Options.startOpened = true;
@@ -169,6 +169,32 @@ this.initialize = function()
         }
     }
     
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // chromeExtensionDispatch
+    FBL.Env.isChromeExtension = true;
+    
+    if (FBL.Env.isChromeExtension)
+    {
+        var doc = FBL.Env.browser.document;
+        
+        if (!doc.getElementById("FirebugChannel"))
+        {
+            var channel = doc.createElement("div");
+            channel.id = "FirebugChannel";
+            channel.style.display = "none";
+            doc.documentElement.insertBefore(channel, doc.documentElement.firstChild);
+        }
+        
+        var channelEvent = document.createEvent("Event");
+        channelEvent.initEvent("FirebugChannelEvent", true, true);
+            
+        this.chromeExtensionDispatch = function(data)
+        {
+            channel.innerText = data
+            channel.dispatchEvent(channelEvent);
+        };
+    }
+    
     // wait document load
     waitForDocument();
 };
@@ -222,7 +248,8 @@ var onDocumentLoad = function onDocumentLoad()
 
 var sharedEnv;
 
-this.Env = {
+this.Env =
+{
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Env Options (will be transported to Firebug options)
     Options:
@@ -272,7 +299,7 @@ this.Env = {
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var destroyApplication = function destroyApplication()
+var destroyEnvironment = function destroyEnvironment()
 {
     setTimeout(function()
     {

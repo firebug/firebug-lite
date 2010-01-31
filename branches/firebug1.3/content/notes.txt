@@ -292,6 +292,30 @@ OK  - nodeControl in HTMLTree should not fire the node highlight (include rule i
 ###################################################################################################
 
 ---------------------------------------------------------------------------------------------------
+Using YQL as a proxy to read cross-domain CSS and JS files
+---------------------------------------------------------------------------------------------------
+
+Example: 
+
+To request the following file:
+http://getfirebug.com/css/master.css
+
+Use the following query:
+http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20html%20where%20url%3D'http://getfirebug.com/css/master.css'%0A&format=xml&diagnostics=false&callback=foo 
+
+~~~~~~~~~~
+
+    Using YQL as a proxy for cross-domain Ajax
+    http://ajaxian.com/archives/using-yql-as-a-proxy-for-cross-domain-ajax
+    
+    Using YQL with JSONP
+    http://james.padolsey.com/javascript/using-yql-with-jsonp/
+    
+    Cross-domain requests with JSONP? safe?
+    http://james.padolsey.com/javascript/cross-domain-requests-with-jsonp-safe/
+
+
+---------------------------------------------------------------------------------------------------
 Context
 ---------------------------------------------------------------------------------------------------
 
