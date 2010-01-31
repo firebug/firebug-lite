@@ -5,6 +5,7 @@
 
 var firebugVersion = "Firebug Lite 1.3.0b1";
 var bookmarlet = "javascript:(typeof Firebug!='undefined')?Firebug.chrome.toggle():(function(F,B,L){L=F.createElement('script');L.id='FirebugLite';L.src=B;F.getElementsByTagName('head')[0].appendChild(L);})(document,'https://getfirebug.com/releases/lite/alpha/firebug.jgz#startOpened,showIconWhenHidden=false');";
+var extensionURL = chrome.extension.getURL("");
 
 var active = false;
 
@@ -127,13 +128,13 @@ function disableIcon()
 
 function activateFirebug(tab)
 {
-    chrome.tabs.update(tab.id, {url: "javascript:localStorage.setItem('Firebug','1,1')"});
+    chrome.tabs.update(tab.id, {url: "javascript:localStorage.setItem('Firebug','1,1,"+extensionURL+"')"});
     active = true;
 };
 
 function deactivateFirebug(tab)
 {
-    chrome.tabs.update(tab.id, {url: "javascript:localStorage.removeItem('Firebug','1,1')"});
+    chrome.tabs.update(tab.id, {url: "javascript:localStorage.removeItem('Firebug')"});
     active = false;
 };
 
