@@ -5066,28 +5066,28 @@ this.Ajax =
     
     
     /**
-     * Realiza uma requisi√ß√£o ajax.
+     * Realiza uma requisiÁ„o ajax.
      * 
      * @name request
      * @param {Object}   options               Request options
      * @param {String}   options.url           URL to be requested
      * @param {String}   options.type          Request type ("get" ou "post"). Default is "get".
-     * @param {Boolean}  options.async         Indica se a requisi√ß√£o √© ass√≠ncrona. O padr√£o √© "true".   
-     * @param {String}   options.dataType      Dado requisitado ("text", "html", "xml" ou "json"). O padr√£o √© "text".
-     * @param {String}   options.contentType   ContentType a ser usado. O padr√£o √© "application/x-www-form-urlencoded".  
-     * @param {Function} options.onLoading     Fun√ß√£o a ser executada antes da requisi√ß√£o ser enviada.
-     * @param {Function} options.onLoaded      Fun√ß√£o a ser executada logo que a requisi√ß√£o for enviada.
-     * @param {Function} options.onInteractive Fun√ß√£o a ser executada durante o recebimento da requisi√ß√£o.
-     * @param {Function} options.onComplete    Fun√ß√£o a ser executada ao completar a requisi√ß√£o.
-     * @param {Function} options.onUpdate      Fun√ß√£o a ser executada ap√≥s completar a requisi√ß√£o.
-     * @param {Function} options.onSuccess     Fun√ß√£o a ser executada ao completar a requisi√ß√£o com sucesso.
-     * @param {Function} options.onFailure     Fun√ß√£o a ser executada ao completar a requisi√ß√£o com erro.
+     * @param {Boolean}  options.async         Indica se a requisiÁ„o È assÌncrona. O padr„o È "true".   
+     * @param {String}   options.dataType      Dado requisitado ("text", "html", "xml" ou "json"). O padr„o È "text".
+     * @param {String}   options.contentType   ContentType a ser usado. O padr„o È "application/x-www-form-urlencoded".  
+     * @param {Function} options.onLoading     FunÁ„o a ser executada antes da requisiÁ„o ser enviada.
+     * @param {Function} options.onLoaded      FunÁ„o a ser executada logo que a requisiÁ„o for enviada.
+     * @param {Function} options.onInteractive FunÁ„o a ser executada durante o recebimento da requisiÁ„o.
+     * @param {Function} options.onComplete    FunÁ„o a ser executada ao completar a requisiÁ„o.
+     * @param {Function} options.onUpdate      FunÁ„o a ser executada apÛs completar a requisiÁ„o.
+     * @param {Function} options.onSuccess     FunÁ„o a ser executada ao completar a requisiÁ„o com sucesso.
+     * @param {Function} options.onFailure     FunÁ„o a ser executada ao completar a requisiÁ„o com erro.
      */      
     request: function(options)
     {
         var o = options || {};
     
-        // Configura as op√ß√µes que n√£o foram definidas para o seu valor padr√£o
+        // Configura as opÁıes que n„o foram definidas para o seu valor padr„o
         o.type = o.type && o.type.toLowerCase() || "get";
         o.async = o.async || true;
         o.dataType = o.dataType || "text"; 
@@ -5135,7 +5135,7 @@ this.Ajax =
     
         //setRequestHeaders();
     
-        // Registra o objeto para que o servidor saiba que √© uma requisi√ß√£o AJAX
+        // Registra o objeto para que o servidor saiba que È uma requisiÁ„o AJAX
         t.setRequestHeader("X-Requested-With", "XMLHttpRequest");
     
         // Caso tenha sido informado algum dado
@@ -5143,18 +5143,18 @@ this.Ajax =
           t.setRequestHeader("Content-Type", r.contentType);
     
         /** @ignore */
-        // Tratamento de evento de mudan√ßa de estado
+        // Tratamento de evento de mudanÁa de estado
         t.onreadystatechange = function()
         { 
             FBL.Ajax.onStateChange(r); 
         }; 
     
-        // Envia a requisi√ß√£o
+        // Envia a requisiÁ„o
         t.send(data);
     },
   
     /**
-     * Fun√ß√£o de tratamento da mudan√ßa de estado da requisi√ß√£o ajax.
+     * FunÁ„o de tratamento da mudanÁa de estado da requisiÁ„o ajax.
      */     
     onStateChange: function(options)
     {
@@ -5195,7 +5195,7 @@ this.Ajax =
     },
   
     /**
-     * Retorna o atual estado da requisi√ß√£o ajax.
+     * Retorna o atual estado da requisiÁ„o ajax.
      */     
     getState: function()
     {
@@ -5351,7 +5351,7 @@ window.Firebug = FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version:  "Firebug Lite 1.3.0b1",
-    revision: "$Revision: 5937 $",
+    revision: "$Revision: 5942 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -18147,6 +18147,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.create.apply(this, arguments);
         
         this.panelNode.style.padding = "4px 3px 1px 15px";
+        this.contentNode.style.minWidth = "500px";
         
         if (Env.Options.enablePersistent || Firebug.chrome.type != "popup")
             this.createUI();
