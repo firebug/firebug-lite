@@ -5345,8 +5345,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.0b1",
-    revision: "$Revision: 5940 $",
+    version:  "Firebug Lite 1.3.0b1",
+    revision: "$Revision: 5942 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -18142,6 +18142,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.create.apply(this, arguments);
         
         this.panelNode.style.padding = "4px 3px 1px 15px";
+        this.contentNode.style.minWidth = "500px";
         
         if (Env.Options.enablePersistent || Firebug.chrome.type != "popup")
             this.createUI();

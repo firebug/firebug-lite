@@ -1246,7 +1246,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 5940 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 5942 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -4843,6 +4843,7 @@ fbPanel1.scrollTop=Math.round(node.offsetTop-fbPanel1.clientHeight/2)
 Firebug.registerModule(Firebug.HTML);
 function HTMLPanel(){}HTMLPanel.prototype=extend(Firebug.Panel,{name:"HTML",title:"HTML",options:{hasSidePanel:true,isPreRendered:true,innerHTMLSync:true},create:function(){Firebug.Panel.create.apply(this,arguments);
 this.panelNode.style.padding="4px 3px 1px 15px";
+this.contentNode.style.minWidth="500px";
 if(Env.Options.enablePersistent||Firebug.chrome.type!="popup"){this.createUI()
 }if(!this.sidePanelBar.selectedPanel){this.sidePanelBar.selectPanel("css")
 }},destroy:function(){selectedElement=null;
