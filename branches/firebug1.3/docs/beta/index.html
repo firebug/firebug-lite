@@ -8,6 +8,148 @@
  
 <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"> 
  
+<script src="../../build/firebug.js">
+{
+    startOpened: true,
+    
+    disableWhenFirebugActive: false,
+    
+    //skin: (window.firebugSkin = ["xp","classic","light"][Math.floor(Math.random()*3)]),
+    
+    onLoad: function()
+    {
+    
+        var getXHRObject = function()
+        {
+            var xhrObj = false;
+            try
+            {
+                xhrObj = new XMLHttpRequest();
+            }
+            catch(e)
+            {
+                var progid = [
+                        "MSXML2.XMLHTTP.5.0", "MSXML2.XMLHTTP.4.0", 
+                        "MSXML2.XMLHTTP.3.0", "MSXML2.XMLHTTP", "Microsoft.XMLHTTP"
+                    ];
+                  
+                for ( var i=0; i < progid.length; ++i ) {
+                    try
+                    {
+                        xhrObj = new ActiveXObject(progid[i]);
+                    }
+                    catch(e)
+                    {
+                        continue;
+                    }
+                    break;
+                }
+            }
+            finally
+            {
+                return xhrObj;
+            }
+        };
+
+        var console = Firebug.Console;
+        
+        console.info("Hello World, I'm " + Firebug.version + "!");
+        /*
+        console.warn('This is the "' + firebugSkin + 
+            '" skin, press Ctrl+F5 to reload with a random skin.');/**/
+        
+        var els = document.getElementsByTagName("div");
+        console.log("Move your mouse over here: ", els);
+        
+        console.info("Don't forget to check the XHR requests:");
+        
+        var xhr = getXHRObject();
+        xhr.open("get", "changelog.txt", true);
+        xhr.send();
+        
+        var xhr2 = getXHRObject();
+        xhr2.open("get", "error.txt", true);
+        xhr2.send();
+        
+        var random = function(i){return Math.floor(Math.random()*i)};
+        var randomPanel = ["Console", "HTML", "CSS", "Script", "DOM"][random(5)];
+        
+        Firebug.chrome.selectPanel(randomPanel);
+        
+        if (randomPanel == "HTML")
+        {
+            var randomElement = ["#boasting", "h1", "h2", "p"][random(4)];
+            var element = document.getElementsByTagName(randomElement)[0];
+            
+            setTimeout(function(){
+                Firebug.HTML.select(element);
+                Firebug.Inspector.drawBoxModel(element);
+            },0);
+            
+            setTimeout(Firebug.Inspector.hideBoxModel, 2500);
+            
+        }
+        else if (randomPanel == "DOM")
+        {
+            var randomElement = [null, "Firebug", "console", "document"][random(4)];
+            var element = Firebug.browser.window[randomElement];
+            
+            setTimeout(function(){
+                Firebug.chrome.getPanel("DOM").select(element);
+            },0);
+        }
+    }
+}
+</script>
+<script src="retweet.js"></script>
+<script type="text/javascript" src="http://getfirebug.com/js/main.js"></script> 
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js"></script> 
+<script type="text/javascript" src="http://getfirebug.com/js/jquery.mousewheel-3.0.2.js"></script> 
+<script type="text/javascript" src="http://getfirebug.com/js/fancybox.js"></script> 
+<script type="text/javascript"> 
+$(document).ready(function()
+{
+    $('a.view').fancybox({
+        autoScale: false,
+        centerOnScroll: true,
+        overlayShow: true,
+        overlayOpacity: 0.7,
+        overlayColor: '#EAF1FB',
+        
+        callbackOnStart: function()
+        {
+            alert(0);
+        },
+        
+        callbackOnClose: function()
+        {
+        alert(0);
+        }
+    });
+    
+    var firstScreenshot = $('.view').first();
+    $('.moreinfo').click(function(e){
+    
+        if (window.Firebug)
+            Firebug.chrome.close();
+
+        firstScreenshot.trigger('click');
+        
+        var ev = jQuery.Event(e);
+        ev.preventDefault();
+        ev.stopPropagation();
+        
+        return false;        
+    });
+    
+    firstScreenshot.click(function(){
+        if (window.Firebug)
+            Firebug.chrome.close();
+    });
+    
+});
+</script>
+ 
 <!--[if gte IE 7]><!--> 
 <link rel="stylesheet" type="text/css" media="screen,projection" href="http://getfirebug.com/css/screen.css">
 <style>
@@ -96,47 +238,7 @@ textarea {
     height: 220px;
 }
 </style>
- 
-<!-- <![endif] --> 
-<script src="retweet.js"></script>
-<script type="text/javascript" src="http://getfirebug.com/js/main.js"></script> 
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js"></script> 
-<script type="text/javascript" src="http://getfirebug.com/js/jquery.mousewheel-3.0.2.js"></script> 
-<script type="text/javascript" src="http://getfirebug.com/js/fancybox.js"></script> 
-<script type="text/javascript"> 
-$(document).ready(function()
-{
-    $('a.view').fancybox({
-        'autoScale' : false,
-        'centerOnScroll' : true,
-        'overlayShow': true,
-        'overlayOpacity': 0.7,
-        'overlayColor': '#EAF1FB'
-    });
-    
-    /*
-    $('a.lightbox').fancybox({
-     'transitionIn' : 'elastic',
-     'transitionOut' : 'elastic',
-     'hideOnContentClick' : true
-    });
-    $('a#whatsnew-show').click(function() {
-        $('#whatsnew15').toggle('slow');
-        return false;
-    });/**/
-    
-    var firstScreenshot = $('.view').first();
-    $('.moreinfo').click(function(){
-    
-        if (window.Firebug)
-            Firebug.chrome.close();
-        
-        firstScreenshot.trigger('click');
-        
-    });
-    
-});
-</script> 
+
 </head> 
  
 <body id="home"> 
