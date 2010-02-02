@@ -426,8 +426,6 @@ var selectElement= function selectElement(e)
         var stack = FirebugChrome.htmlSelectionStack;
         
         stack.unshift(target);
-        Firebug.CommandLine.API.$0 = stack[0];
-        Firebug.CommandLine.API.$1 = stack[1];
         
         if (stack.length > 2)
             stack.pop();

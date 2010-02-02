@@ -532,6 +532,13 @@ var defineCommandLineAPI = function defineCommandLineAPI()
     for (var m in CommandLineAPI)
         if (!Env.browser.window[m])
             Firebug.CommandLine.API[m] = CommandLineAPI[m];
+    
+    var stack = FirebugChrome.htmlSelectionStack;
+    if (stack)
+    {
+        Firebug.CommandLine.API.$0 = stack[0];
+        Firebug.CommandLine.API.$1 = stack[1];
+    }
 };
 
 // ************************************************************************************************
