@@ -1,0 +1,43 @@
+Overview
+--------
+
+Firebug Lite 1.3 beta for Google Chrome brings to Chrome some of the goodness we only see in Firebug.
+
+
+Benefits over Firebug Lite bookmarlet
+-------------------------------------
+
+  * Browser toolbar integration
+  * Able to activate Firebug Lite for a particular domain
+  * Firebug Lite will be loaded before all other scripts, allowing it to capture all console calls, and all XHR requests for that page
+  * It is faster to load, because all code and images will be store in the extension's directory in your machine
+  * Will be able to read external resources in the next version
+
+
+Limitations
+-----------
+
+ * Cannot read external resources
+ * Won't work well on pages with frames
+ * JavaScript debugger isn't available
+ * Net Panel isn't available
+
+
+Activation
+----------
+
+The Firebug Lite activation scheme is very simple. When you first visit a web page, Firebug icon will be gray, indicating that it is deactivated. Clicking on it will activate Firebug for all pages in that domain, and the icon will become orange.
+
+Next time you visit a page in that domain, Firebug will be automatically active, and the UI will be open or minimized according to the last time you used it.
+
+To deactivate for a particular domain, go to a page in that domain, and click on the "off" button. Since Firebug Lite uses localStorage to store the activation info, when you clear your browser's cache, Firebug will be deactivated for all pages.
+
+
+Contributing
+------------
+
+Your contribution is very important. Found a bug? Have a suggestion? Please 
+report us: http://code.google.com/p/fbug/issues/list
+
+If you would like to help with some code, or would like to develop an extension for Firebug Lite, don't hesitate, join our team:
+http://groups.google.com/group/firebug-working-group
