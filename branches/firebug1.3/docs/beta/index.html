@@ -408,7 +408,7 @@ textarea {
             <li>command line shortcuts $0 and $1 for recent selected elements</li>
             <li>autocomplete (tab, shift+tab)</li>
             <li>can capture console messages before DOM document creation 
-            when installed at the HTML header)</li>
+            (when installed at the HTML header)</li>
         </ul>
         <p>
             <b>Core</b>
@@ -554,18 +554,73 @@ textarea {
     <h2><a name="Options" rel="bookmark">Options</a></h2> 
     <div class="postDate"></div> 
     <div class="entry"> 
-        <p>Later this evening getfirebug.com will have <a href="http://getfirebug.com/releases/chromebug/">Chromebug 1.6a4.</a></p> 
-        <ul> 
-            <li>Attempt to delete Chromebug contexts when windows are destroyed. Seems to be working.</li> 
-            <li>Different approach to XUL / XBL files, now can debug XBL JS</li> 
-            <li>Only change the context by user control (not when windows open)</li> 
-            <li>Better naming of Sandbox and about:blank contexts</li> 
-            <li>Hacks to deal with jetpack hacks</li> 
-            <li>consolidate code to map stack frames to contexts</li> 
-            <li>avoid the gray blank area at the bottom of Firefox when inspecting.</li> 
-        </ul> 
-        <p>Overall I&#8217;m more confident of this version that any in a while.</p> 
-        <p>Also available is <a href="http://getfirebug.com/releases/firebug/1.6X/">Firebug 1.6a4</a>. About 10 tests fail, but I don&#8217;t know how to fix them. In these cases Firefox generates errors messages without file names, line numbers, or call stacks. I don&#8217;t know if we really have test failures or not.</p> 
+        <p>
+            The properties you can change include (with respective default values):
+        </p>
+        <ul>
+            <li><code>saveCookies</code> - false</li>
+            <li><code>startOpened</code> - false</li>
+            <li><code>startInNewWindow</code> - false</li>
+            <li><code>showIconWhenHidden</code> - true</li>
+            <li><code>overrideConsole</code> - true</li>
+            <li><code>ignoreFirebugElements</code> - true</li>
+            <li><code>disableWhenFirebugActive</code> - true</li>
+            <li><code>enableTrace</code> - false</li>
+            <li><code>enablePersistent</code> - false</li>
+        </ul>
+        <p>
+            You can change the options using any of the following methods 
+            (in ascendant order of priority):
+        </p>
+        <h3>a) debug="true"</h3>
+        <p>
+            For backwards compatibility you can still use the debug="true" attribute
+            in the &lt;html&gt; tag to make Firebug Lite starts opened, like:
+        </p>
+        <pre>&lt;html <em>debug="true"</em>&gt;</pre>
+        
+        <h3>b) Script URL options</h3>
+        <p>
+            You can also set the options using URL fragment, specially handy to tweak 
+            options in your bookmarlet.
+        </p>
+<pre>
+http://getfirebug.com/releases/lite/alpha/firebug.jgz<em>#enableTrace</em>
+</pre>
+        <p>
+            Options are separated by commas (<code>,</code>), and values are informed using
+            the equals to (<code>=</code>) symbol. If no value is informed, it is
+            assumed "<code>true</code>".
+        </p>
+<pre>
+path/to/firebug.jgz<em>#enableTrace,overrideConsole=false</em>
+</pre>
+        <p>is equivalent to:</p>
+<pre>
+path/to/firebug.jgz<em>#enableTrace=true,overrideConsole=false</em>
+</pre>
+<br/>
+        <h3>c) Script JSON options</h3>
+        <p>
+            It is possible to set options using a JSON object inside
+            the linked script:
+        </p>
+<pre>
+&lt;script type="text/javascript" 
+src="http://getfirebug.com/releases/lite/alpha/firebug.jgz"&gt;
+<em>{
+    overrideConsole: false,
+    startInNewWindow: true,
+    startOpened: true,
+    enableTrace: true
+}</em>
+&lt;/script&gt;
+</pre>
+        <h3>d) Cookies</h3>
+        <p>
+            Finally, you can override the options using cookies, via User Interface,
+            by clicking in the Firebug icon in the upper-left corner.
+        </p>
     </div>
 </div>
 
