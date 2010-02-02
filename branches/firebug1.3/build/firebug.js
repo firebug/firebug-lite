@@ -1246,7 +1246,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 5942 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 5957 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -4308,7 +4308,10 @@ return Firebug.Selector?Firebug.Selector(selector,context):Firebug.Console.error
 },$0:null,$1:null,dir:Firebug.Console.dir,dirxml:Firebug.Console.dirxml};
 var defineCommandLineAPI=function defineCommandLineAPI(){Firebug.CommandLine.API={};
 for(var m in CommandLineAPI){if(!Env.browser.window[m]){Firebug.CommandLine.API[m]=CommandLineAPI[m]
-}}}
+}}var stack=FirebugChrome.htmlSelectionStack;
+if(stack){Firebug.CommandLine.API.$0=stack[0];
+Firebug.CommandLine.API.$1=stack[1]
+}}
 }});
 (function(){with(FBL){var XHRSpy=function(){this.requestHeaders=[];
 this.responseHeaders=[]
@@ -4889,8 +4892,6 @@ var target=documentCache[e.id];
 var selectedSidePanel=Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
 var stack=FirebugChrome.htmlSelectionStack;
 stack.unshift(target);
-Firebug.CommandLine.API.$0=stack[0];
-Firebug.CommandLine.API.$1=stack[1];
 if(stack.length>2){stack.pop()
 }var lazySelect=function(){selectedSidePanelTS=new Date().getTime();
 selectedSidePanel.select(target,true)

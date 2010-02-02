@@ -5345,8 +5345,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.3.0b1",
-    revision: "$Revision: 5942 $",
+    version: "Firebug Lite 1.3.0b1",
+    revision: "$Revision: 5957 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -15737,6 +15737,13 @@ var defineCommandLineAPI = function defineCommandLineAPI()
     for (var m in CommandLineAPI)
         if (!Env.browser.window[m])
             Firebug.CommandLine.API[m] = CommandLineAPI[m];
+    
+    var stack = FirebugChrome.htmlSelectionStack;
+    if (stack)
+    {
+        Firebug.CommandLine.API.$0 = stack[0];
+        Firebug.CommandLine.API.$1 = stack[1];
+    }
 };
 
 // ************************************************************************************************
@@ -18261,8 +18268,6 @@ var selectElement= function selectElement(e)
         var stack = FirebugChrome.htmlSelectionStack;
         
         stack.unshift(target);
-        Firebug.CommandLine.API.$0 = stack[0];
-        Firebug.CommandLine.API.$1 = stack[1];
         
         if (stack.length > 2)
             stack.pop();
