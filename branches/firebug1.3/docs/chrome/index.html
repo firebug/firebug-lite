@@ -198,7 +198,7 @@ textarea {
     </div> 
     
     <div id="screencast">
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img01.png" title="Powerful console logging functions"><img src="./screenshots/firebug1.3-small.png" width="275" height="155" alt="Firebug Lite 1.3 screenshots" title="Firebug Lite 1.3 screenshots"  /></a>
+        <a class="view group" rel="group" href="./screenshots/firebug1.3-img01.png" title="Powerful console logging functions"><img src="../beta/screenshots/firebug1.3-small.png" width="275" height="155" alt="Firebug Lite 1.3 screenshots" title="Firebug Lite 1.3 screenshots"  /></a>
         <a class="view group" rel="group" href="./screenshots/firebug1.3-img02.png" title="Don't forget to click the Firebug menu for options"></a>
         <a class="view group" rel="group" href="./screenshots/firebug1.3-img03.png" title="Large command line"></a>
         <a class="view group" rel="group" href="./screenshots/firebug1.3-img04.png" title="Easy inspect elements in your page"></a>
@@ -286,12 +286,16 @@ textarea {
         
         <h3 name="KnownIssues">Known Issues</h3> 
         <p>
-            ... (need to be finished here) ...
+            The known issues of the Firebug Lite for Google Chrome extension are:
         </p>
         <ul>
-            <li>extentions gallery</li>
-            <li>popup</li>
-            <li>external resources</li>
+            <li>Fore security reasons, Google Chrome does not execute "content scripts" 
+            for some URLs like the Chrome Extentions Gallery. On those pages, Firebug will
+            try to load the bookmarlet version.</li>
+            <li>Google Chrome does not execute "content scripts" of popup windows,
+            so when you open Firebug Lite in a new window (popup), the Firebug icon
+            will become gray. This is a bug in Google Chrome, and should be fixed
+            soon by the Chrome dev team.</li>
         </ul>
     </div>
 </div>
