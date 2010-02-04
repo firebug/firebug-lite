@@ -7,7 +7,7 @@
 <title>Firebug Lite 1.3.0 beta</title> 
  
 <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"> 
- 
+
 <script src="../../build/firebug.js">
 {
     startOpened: true,
@@ -78,7 +78,7 @@
         
         if (randomPanel == "HTML")
         {
-            var randomElement = ["#boasting", "h1", "h2", "p"][random(4)];
+            var randomElement = ["h1", "h2", "p"][random(3)];
             var element = document.getElementsByTagName(randomElement)[0];
             
             setTimeout(function(){
@@ -149,8 +149,7 @@ $(document).ready(function()
     
 });
 </script>
- 
-<!--[if gte IE 7]><!--> 
+
 <link rel="stylesheet" type="text/css" media="screen,projection" href="http://getfirebug.com/styles/screen.css">
 <style>
 
@@ -234,8 +233,9 @@ textarea {
     margin-bottom: 10px;
 }
 
-.bottomSpacer {
-    height: 220px;
+.hidden {
+    position: absolute;
+    display: none;
 }
 </style>
 
@@ -287,18 +287,18 @@ textarea {
     
     <div id="screencast">
         <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img01.png" title="Powerful console logging functions"><img src="./screenshots/firebug1.3-small.png" width="275" height="155" alt="Firebug Lite 1.3 screenshots" title="Firebug Lite 1.3 screenshots"  /></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img02.png" title="Don't forget to click the Firebug menu for options"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img03.png" title="Large command line"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img04.png" title="Easy inspect elements in your page"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img05.png" title="Visualize box model shading"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img06.png" title="Edit css properties in real-time"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img07.png" title="Autocomplete as you type feature"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img08.png" title="Computed styles divided in categories"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img09.png" title="Explore the DOM of the inspected element"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img10.png" title="Visualize and edit CSS rules"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img11.png" title="Visualize scripts"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img12.png" title="Rich representation of DOM elements"></a>
-        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img13.png" title="Nested selection of DOM elements"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img02.png" title="Don't forget to click the Firebug menu for options"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img03.png" title="Large command line"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img04.png" title="Easy inspect elements in your page"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img05.png" title="Visualize box model shading"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img06.png" title="Edit css properties in real-time"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img07.png" title="Autocomplete as you type feature"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img08.png" title="Computed styles divided in categories"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img09.png" title="Explore the DOM of the inspected element"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img10.png" title="Visualize and edit CSS rules"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img11.png" title="Visualize scripts"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img12.png" title="Rich representation of DOM elements"></a>
+        <a class="view group hidden" rel="group" href="../beta/screenshots/firebug1.3-img13.png" title="Nested selection of DOM elements"></a>
     </div> 
     
     </div> <!-- END promo --> 
@@ -502,8 +502,8 @@ textarea {
             Bookmark the following links:
         </p>
         <ul>
-            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','http://getfirebug.com/releases/lite/beta/','#startOpened');">Firebug Lite 1.3a</a></li>
-            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','http://getfirebug.com/releases/lite/beta/','#startOpened');">Firebug Lite 1.3Xa</a> (with trace enabled**)</li>
+            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','http://getfirebug.com/releases/lite/beta/','#startOpened');">Firebug Lite 1.3b</a></li>
+            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','http://getfirebug.com/releases/lite/beta/','#startOpened');">Firebug Lite 1.3Xb</a> (with trace enabled**)</li>
         </ul>
         <p>
             <i>**The trace enabled bookmarlet is intended to help identify error in Firebug Lite.
@@ -515,7 +515,7 @@ textarea {
             You can also link directly to the hosted version at getfirebug.com. Copy the
             following code, and paste it in the TOP of the HEAD of your document:
         </p>
-<textarea rows="2">
+<textarea rows="3">
 &lt;script type="text/javascript" src="http://getfirebug.com/releases/lite/beta/firebug.jgz"&gt;&lt;/script&gt;
 </textarea>
         <h3>c) Local link (offline)</h3>
@@ -525,7 +525,7 @@ textarea {
             copy to a local destination, and link the <em>firebug.jgz</em> in the TOP
             of the HEAD of your document.
         </p>
-<textarea rows="1">
+<textarea rows="2">
 &lt;script type="text/javascript" src="/local/path/to/firebug.jgz"&gt;&lt;/script&gt;
 </textarea>
         <h3>d) Development mode:</h3>
@@ -535,7 +535,7 @@ textarea {
             <a href="http://fbug.googlecode.com/svn/lite/branches/firebug1.3/">checkout the latest version</a>
             in our repository, and then insert a script at the TOP of the HEAD of your document.
         </p>
-<textarea rows="1">
+<textarea rows="2">
 &lt;script type="text/javascript" src="/local/path/to/firebug.dev.js"&gt;&lt;/script&gt;
 </textarea>
         <p>
@@ -731,15 +731,17 @@ src="http://getfirebug.com/releases/lite/beta/firebug.jgz"&gt;
 <!-- Delicious --> 
 <h2 class="delicious-banner sidebar-title">Bookmarlets</h2> 
 <ul>
-    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','http://getfirebug.com/releases/lite/beta/','#startOpened');">Firebug Lite 1.3a</a></li>
-    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','http://getfirebug.com/releases/lite/beta/','#startOpened');">Firebug Lite 1.3Xa</a> (with trace enabled**)</li>
+    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','http://getfirebug.com/releases/lite/beta/','#startOpened');">Firebug Lite 1.3b</a></li>
+    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','http://getfirebug.com/releases/lite/beta/','#startOpened');">Firebug Lite 1.3Xb</a> (with trace enabled**)</li>
 </ul>
-  
+
 <!-- Delicious --> 
+<!--[!IE]>
 <div id="delicious-posts-firebug" class="delicious-posts"> 
 <h2 class="delicious-banner sidebar-title">Firebug around the web</h2> 
 <script type="text/javascript" src="http://feeds.delicious.com/v2/js/firebugnews?count=5&amp;title=&amp;sort=date&amp;extended"></script> 
-</div> 
+</div>
+<![endif]-->
  
 </div> <!-- /END links --> 
  
