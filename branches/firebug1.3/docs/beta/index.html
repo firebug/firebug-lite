@@ -151,7 +151,7 @@ $(document).ready(function()
 </script>
  
 <!--[if gte IE 7]><!--> 
-<link rel="stylesheet" type="text/css" media="screen,projection" href="http://getfirebug.com/css/screen.css">
+<link rel="stylesheet" type="text/css" media="screen,projection" href="http://getfirebug.com/styles/screen.css">
 <style>
 
 #install p {
@@ -287,19 +287,19 @@ textarea {
     </div> 
     
     <div id="screencast">
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img01.png" title="Powerful console logging functions"><img src="./screenshots/firebug1.3-small.png" width="275" height="155" alt="Firebug Lite 1.3 screenshots" title="Firebug Lite 1.3 screenshots"  /></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img02.png" title="Don't forget to click the Firebug menu for options"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img03.png" title="Large command line"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img04.png" title="Easy inspect elements in your page"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img05.png" title="Visualize box model shading"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img06.png" title="Edit css properties in real-time"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img07.png" title="Autocomplete as you type feature"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img08.png" title="Computed styles divided in categories"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img09.png" title="Explore the DOM of the inspected element"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img10.png" title="Visualize and edit CSS rules"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img11.png" title="Visualize scripts"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img12.png" title="Rich representation of DOM elements"></a>
-        <a class="view group" rel="group" href="./screenshots/firebug1.3-img13.png" title="Nested selection of DOM elements"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img01.png" title="Powerful console logging functions"><img src="./screenshots/firebug1.3-small.png" width="275" height="155" alt="Firebug Lite 1.3 screenshots" title="Firebug Lite 1.3 screenshots"  /></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img02.png" title="Don't forget to click the Firebug menu for options"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img03.png" title="Large command line"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img04.png" title="Easy inspect elements in your page"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img05.png" title="Visualize box model shading"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img06.png" title="Edit css properties in real-time"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img07.png" title="Autocomplete as you type feature"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img08.png" title="Computed styles divided in categories"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img09.png" title="Explore the DOM of the inspected element"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img10.png" title="Visualize and edit CSS rules"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img11.png" title="Visualize scripts"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img12.png" title="Rich representation of DOM elements"></a>
+        <a class="view group" rel="group" href="../beta/screenshots/firebug1.3-img13.png" title="Nested selection of DOM elements"></a>
     </div> 
     
     </div> <!-- END promo --> 
@@ -319,15 +319,9 @@ textarea {
 
 <div class="intro"> 
     <p>
-        <span class="spread">
-            <strong class="spreadText">Spread the word:</strong>
-            <a class="retweet" href="http://getfirebug.com/releases/lite/alpha/">New Firebug Lite 1.3 alpha released</a>
-        </span>
-        We are releasing an alpha version of the next generation of Firebug Lite.
-        If you would like to test this version, please star 
-        <a href="http://code.google.com/p/fbug/issues/detail?id=2655">this issue</a> 
-        so you can receive updates about the alpha versions, 
-        or <a href="http://groups.google.com/group/firebug/browse_thread/thread/e8917283cbe27f9c">follow up the discussion</a>.
+        The next generation of Firebug Lite graduated to beta! This version
+        is pretty stable but we need your help to make sure it is stable enough 
+        to make a wider release.
     </p>
 </div> 
 
@@ -384,6 +378,17 @@ textarea {
             <li>Menu options</li>
             <li>Resizable sidePanel</li>
             <li>Skinnable Interface</li>
+        </ul>
+        <p>
+            <b>CSS</b>
+        </p>
+        <ul>
+            <li>CSS cascading view</li>
+            <li>CSS inheritance view</li>
+            <li>Live editing CSS rules and properties</li>
+            <li>Smart autocomplete (you'll get only the suggestions you need for each property)</li>
+            <li>Autocomplete as you type feature</li>
+            <li>Increment/decrement with UP/DOWN and PAGE UP/PAGE DOWN keys</li>
         </ul>
         <p>
             <b>Inspector</b>
@@ -443,9 +448,10 @@ textarea {
             final Firebug Lite 1.3 release:
         </p>
         <ul>
-            <li>Live editing CSS rules</li>
-            <li>CSS cascading view</li>
-            <li>CSS inheritance view</li>
+            <li>Object links in console should be clickable</li>
+            <li>XHR watching need to work with synchronous requests</li>
+            <li>Some internal code need to be refactored (Chrome and Panels API)</li>
+            <li>Make sure the code is stable enough</li>
         </ul>
         
         <h3 id="WhatsNot">1.3. What's Not in Lite?</h3>
@@ -493,8 +499,8 @@ textarea {
             Bookmark the following links:
         </p>
         <ul>
-            <li><a href="javascript:(function(F,B,L,i,t,e){e=F[B]('script');e.id='FirebugLite';e.src=L+t;F.getElementsByTagName('head')[0].appendChild(e);e=F[B]('img');e.src=L+i;})(document,'createElement','http://getfirebug.com/releases/lite/alpha/','skin/xp/sprite.png','firebug.jgz#startOpened');">Firebug Lite 1.3a</a></li>
-            <li><a href="javascript:(function(F,B,L,i,t,e){e=F[B]('script');e.id='FirebugLite';e.src=L+t;F.getElementsByTagName('head')[0].appendChild(e);e=F[B]('img');e.src=L+i;})(document,'createElement','http://getfirebug.com/releases/lite/alpha/','skin/xp/sprite.png','firebug.jgz#startOpened,enableTrace');">Firebug Lite 1.3Xa</a> (with trace enabled**)</li>
+            <li><a href="javascript:(function(F,B,L,i,t,e){e=F[B]('script');e.id='FirebugLite';e.src=L+t;F.getElementsByTagName('head')[0].appendChild(e);e=F[B]('img');e.src=L+i;})(document,'createElement','http://getfirebug.com/releases/lite/beta/','skin/xp/sprite.png','firebug.jgz#startOpened');">Firebug Lite 1.3a</a></li>
+            <li><a href="javascript:(function(F,B,L,i,t,e){e=F[B]('script');e.id='FirebugLite';e.src=L+t;F.getElementsByTagName('head')[0].appendChild(e);e=F[B]('img');e.src=L+i;})(document,'createElement','http://getfirebug.com/releases/lite/beta/','skin/xp/sprite.png','firebug.jgz#startOpened,enableTrace');">Firebug Lite 1.3Xa</a> (with trace enabled**)</li>
         </ul>
         <p>
             <i>**The trace enabled bookmarlet is intended to help identify error in Firebug Lite.
@@ -507,7 +513,7 @@ textarea {
             following code, and paste it in the TOP of the HEAD of your document:
         </p>
 <textarea rows="2">
-&lt;script type="text/javascript" src="http://getfirebug.com/releases/lite/alpha/firebug.jgz"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="http://getfirebug.com/releases/lite/beta/firebug.jgz"&gt;&lt;/script&gt;
 </textarea>
         <h3>c) Local link (offline)</h3>
         <p>
@@ -585,7 +591,7 @@ textarea {
             options in your bookmarlet.
         </p>
 <pre>
-http://getfirebug.com/releases/lite/alpha/firebug.jgz<em>#enableTrace</em>
+http://getfirebug.com/releases/lite/beta/firebug.jgz<em>#enableTrace</em>
 </pre>
         <p>
             Options are separated by commas (<code>,</code>), and values are informed using
@@ -607,7 +613,7 @@ path/to/firebug.jgz<em>#enableTrace=true,overrideConsole=false</em>
         </p>
 <pre>
 &lt;script type="text/javascript" 
-src="http://getfirebug.com/releases/lite/alpha/firebug.jgz"&gt;
+src="http://getfirebug.com/releases/lite/beta/firebug.jgz"&gt;
 <em>{
     overrideConsole: false,
     startInNewWindow: true,
@@ -645,7 +651,7 @@ src="http://getfirebug.com/releases/lite/alpha/firebug.jgz"&gt;
             1.3 versions contains some problems and limitations (it won't load
             for example in XHTML and/or XML+XSL documents). We're particularly
             insterested in find such problems in the bookmarlet now we're in
-            alpha stage, because updating bookmarlets is a boring task, and
+            beta stage, because updating bookmarlets is a boring task, and
             should be done by the user individually, in each browser. 
         </p>
         <p>
@@ -691,7 +697,7 @@ src="http://getfirebug.com/releases/lite/alpha/firebug.jgz"&gt;
         <p>
             <span class="spread">
                 <strong class="spreadText">Spread the word:</strong>
-                <a class="retweet" href="http://getfirebug.com/releases/lite/alpha/">New Firebug Lite 1.3 alpha released</a>
+                <a class="retweet" href="http://getfirebug.com/releases/lite/beta/">New Firebug Lite 1.3 beta released</a>
             </span>
             Last, but not least, you can also helping us by spreading the word, inviting
             more people to test this new version. Feel free to post about it in your
