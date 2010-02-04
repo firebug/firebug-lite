@@ -1,7 +1,7 @@
 {
-  "name": "Firebug Lite Extension for Google Chrome",
+  "name": "Firebug Lite 1.3.0 beta for Google Chrome",
   "version": "1.3.0.5957",
-  "description": "Firebug Lite Extension 1.3.0b1 for Google Chrome",
+  "description": "Firebug Lite 1.3.0 beta for Google Chrome, supported by the Firebug Working Group.",
   "background_page": "background.html",
   "browser_action":
   {
