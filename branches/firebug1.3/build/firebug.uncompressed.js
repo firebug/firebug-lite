@@ -5345,8 +5345,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.3.0b1",
-    revision: "$Revision: 5983 $",
+    version: "Firebug Lite 1.3.0b1",
+    revision: "$Revision: 5990 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
