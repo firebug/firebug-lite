@@ -1,7 +1,9 @@
 Overview
 -------------
 
-Firebug Lite 1.3 beta for Google Chrome brings to Chrome some of the goodness we only see in Firebug. For more detailed information, visit:
+Firebug Lite is not a substitute for Firebug, or Chrome Developer Tools. It is a tool to be used in conjunction with these tools. Firebug Lite provides the rich visual representation we are used to see in Firebug when it comes to HTML elements, DOM elements, and Box Model shading. It provides also some cool features like inspecting HTML elemements with your mouse, and live editing CSS properties.
+
+For more detailed information, visit:
 http://getfirebug.com/releases/lite/chrome/
 
 
@@ -29,9 +31,7 @@ Activation
 
 The Firebug Lite activation scheme is very simple. When you first visit a web page, Firebug icon will be gray, indicating that it is deactivated. Clicking on it will activate Firebug for all pages in that domain, and the icon will become orange.
 
-Next time you visit a page in that domain, Firebug will be automatically active, and the UI will be open or minimized according to the last time you used it.
-
-To deactivate for a particular domain, go to a page in that domain, and click on the "off" button. Since Firebug Lite uses localStorage to store the activation info, when you clear your browser's cache, Firebug will be deactivated for all pages.
+To deactivate for a particular domain, go to a page in that domain, and click on the "off" button.
 
 
 Contributing
