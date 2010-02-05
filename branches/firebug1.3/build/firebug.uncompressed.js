@@ -5345,8 +5345,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.0b1",
-    revision: "$Revision: 5990 $",
+    version:  "Firebug Lite 1.3.0b1",
+    revision: "$Revision: 6004 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -7608,10 +7608,10 @@ FBL.Context.prototype =
 
     getElementFromPoint: function(x, y)
     {
-        // TODO: xxxpedro
-        // getElementFromPoint results are different from Chrome 3 and 4 (beta) versions!
-        // Check if this behavior will be the official one in the 4 final release
-        if (isOpera || isSafari && !Env.isChromeExtension)
+        // getElementFromPoint results are different depending on the webkit version.
+        // Safari 4 (webkit/531.21.8) still have this issue. Google Chrome 4 (webkit/532.5)
+        // does not. So, we're assuming this issue was fixed in the 532 version
+        if (isOpera || isSafari && browserVersion < "532")
         {
             var scroll = this.getWindowScrollPosition();
             return this.document.elementFromPoint(x + scroll.left, y + scroll.top);
