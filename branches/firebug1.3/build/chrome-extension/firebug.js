@@ -7272,6 +7272,12 @@ FBL.ns(function() { with (FBL) {
 
 var refreshDelay = 300;
 
+// Opera and some versions of webkit returns the wrong value of document.elementFromPoint()
+// function, without taking into account the scroll position. Safari 4 (webkit/531.21.8) 
+// still have this issue. Google Chrome 4 (webkit/532.5) does not. So, we're assuming this 
+// issue was fixed in the 532 version
+var shouldFixElementFromPoint = isOpera || isSafari && browserVersion < "532";
+
 // ************************************************************************************************
 // Context
   
@@ -7613,10 +7619,7 @@ FBL.Context.prototype =
 
     getElementFromPoint: function(x, y)
     {
-        // getElementFromPoint results are different depending on the webkit version.
-        // Safari 4 (webkit/531.21.8) still have this issue. Google Chrome 4 (webkit/532.5)
-        // does not. So, we're assuming this issue was fixed in the 532 version
-        if (isOpera || isSafari && browserVersion < "532")
+        if (shouldFixElementFromPoint)
         {
             var scroll = this.getWindowScrollPosition();
             return this.document.elementFromPoint(x + scroll.left, y + scroll.top);
