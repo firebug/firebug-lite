@@ -1246,7 +1246,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 6004 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 6009 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -1744,6 +1744,7 @@ Menu.enable=function(element){removeClass(element,"fbMenuDisabled")
 function StatusBar(){}StatusBar.prototype=extend(Controller,{})
 }});
 FBL.ns(function(){with(FBL){var refreshDelay=300;
+var shouldFixElementFromPoint=isOpera||isSafari&&browserVersion<"532";
 FBL.Context=function(win){this.window=win.window;
 this.document=win.document;
 this.browser=Env.browser;
@@ -1822,7 +1823,7 @@ left=el.scrollLeft
 }else{if((el=this.document.documentElement)&&(el.scrollTop||el.scrollLeft)){top=el.scrollTop;
 left=el.scrollLeft
 }}}return{top:top,left:left}
-},getElementFromPoint:function(x,y){if(isOpera||isSafari&&browserVersion<"532"){var scroll=this.getWindowScrollPosition();
+},getElementFromPoint:function(x,y){if(shouldFixElementFromPoint){var scroll=this.getWindowScrollPosition();
 return this.document.elementFromPoint(x+scroll.left,y+scroll.top)
 }else{return this.document.elementFromPoint(x,y)
 }},getElementPosition:function(el){var left=0;
