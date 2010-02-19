@@ -555,7 +555,7 @@ Firebug.Spy.XHR = domplate(Firebug.Rep,
 
             if (hasClass(logRow, "opened"))
             {
-                updateHttpSpyInfo(spy);
+                updateHttpSpyInfo(spy, logRow);
                 if (spyHeadTable)
                     spyHeadTable.setAttribute('aria-expanded', 'true');
             }
@@ -671,8 +671,11 @@ function updateLogRow(spy)
     }
 }
 
-var updateHttpSpyInfo = function updateHttpSpyInfo(spy)
+var updateHttpSpyInfo = function updateHttpSpyInfo(spy, logRow)
 {
+    if (!spy.logRow && logRow)
+        spy.logRow = logRow;
+    
     if (!spy.logRow || !hasClass(spy.logRow, "opened"))
         return;
 

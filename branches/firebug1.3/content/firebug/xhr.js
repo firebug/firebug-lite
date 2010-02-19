@@ -64,6 +64,18 @@ var XMLHttpRequestWrapper = function(activeXObject)
     
     var logXHR = function() 
     {
+        var row = Firebug.Console.log(spy, null, "spy", Firebug.Spy.XHR);
+        
+        if (row)
+        {
+            setClass(row, "loading");
+            spy.logRow = row;
+        }
+        return;
+        
+        
+        
+        /*
         var panel = Firebug.chrome.getPanel("Console");
         var container = panel.panelNode;
         
@@ -76,7 +88,65 @@ var XMLHttpRequestWrapper = function(activeXObject)
         
         setTimeout(function(){
             container.appendChild(row);
-        },0);
+        },0);/**/
+    };
+    
+    var finishXHR = function() 
+    {
+        var duration = new Date().getTime() - reqStartTS;
+        var success = xhrRequest.status == 200;
+        
+        var responseHeadersText = xhrRequest.getAllResponseHeaders();
+        var responses = responseHeadersText.split(/[\n\r]/);
+        var reHeader = /^(\S+):\s*(.*)/;
+        
+        for (var i=0, l=responses.length; i<l; i++)
+        {
+            var text = responses[i];
+            var match = text.match(reHeader);
+            
+            if (match)
+            {
+                spy.responseHeaders.push({
+                   name: [match[1]],
+                   value: [match[2]]
+                });
+            }
+        }
+            
+        with({
+            row: spy.logRow, 
+            status: xhrRequest.status + " " + xhrRequest.statusText, 
+            time: duration,
+            success: success
+        })
+        {
+            setTimeout(function(){
+            
+                if (!row) return;
+                
+                // TODO: xxxpedro xhr - need to check if the chrome document is loaded here
+                FBL.removeClass(row, "loading");
+                
+                if (!success)
+                    FBL.setClass(row, "error");
+                
+                var item = FBL.$$(".spyStatus", row)[0];
+                item.innerHTML = status;
+                
+                var item = FBL.$$(".spyTime", row)[0];
+                item.innerHTML = time + "ms";
+                
+            },200);
+        }
+        
+        spy.loaded = true;
+        spy.responseText = xhrRequest.responseText;
+        
+        self.status = xhrRequest.status;
+        self.statusText = xhrRequest.statusText;
+        self.responseText = xhrRequest.responseText;
+        self.responseXML = xhrRequest.responseXML;
     };
     
     var handleStateChange = function()
@@ -87,58 +157,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
         
         if (xhrRequest.readyState == 4)
         {
-            var duration = new Date().getTime() - reqStartTS;
-            var success = xhrRequest.status == 200;
-            
-            var responseHeadersText = xhrRequest.getAllResponseHeaders();
-            var responses = responseHeadersText.split(/[\n\r]/);
-            var reHeader = /^(\S+):\s*(.*)/;
-            
-            for (var i=0, l=responses.length; i<l; i++)
-            {
-                var text = responses[i];
-                var match = text.match(reHeader);
-                
-                if (match)
-                {
-                    spy.responseHeaders.push({
-                       name: [match[1]],
-                       value: [match[2]]
-                    });
-                }
-            }
-                
-            with({
-                row: spy.logRow, 
-                status: xhrRequest.status + " " + xhrRequest.statusText, 
-                time: duration,
-                success: success
-            })
-            {
-                setTimeout(function(){
-                
-                    // TODO: xxxpedro xhr - need to check if the chrome document is loaded here
-                    FBL.removeClass(row, "loading");
-                    
-                    if (!success)
-                        FBL.setClass(row, "error");
-                    
-                    var item = FBL.$$(".spyStatus", row)[0];
-                    item.innerHTML = status;
-                    
-                    var item = FBL.$$(".spyTime", row)[0];
-                    item.innerHTML = time + "ms";
-                    
-                },200);
-            }
-            
-            spy.loaded = true;
-            spy.responseText = xhrRequest.responseText;
-            
-            self.status = xhrRequest.status;
-            self.statusText = xhrRequest.statusText;
-            self.responseText = xhrRequest.responseText;
-            self.responseXML = xhrRequest.responseXML;
+            finishXHR();
             
             xhrRequest.onreadystatechange = function(){};
         }
@@ -173,15 +192,16 @@ var XMLHttpRequestWrapper = function(activeXObject)
         if (!FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
         
-        xhrRequest.open(method, url, async);
+        // xhr.open.apply not available in IE
+        if (xhrRequest.open.apply)
+            xhrRequest.open.apply(xhrRequest, arguments)
+        else
+            // TODO: xxxpedro user and pass parameters?
+            xhrRequest.open(method, url, async);
         
         if (FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
         
-        if (!async)
-        {
-            Firebug.Console.log("handle sync");
-        }
     };
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -195,6 +215,13 @@ var XMLHttpRequestWrapper = function(activeXObject)
         reqStartTS = new Date().getTime();
         
         xhrRequest.send(data);
+        
+        if (!spy.async)
+        {
+            self.readyState = xhrRequest.readyState;
+            
+            finishXHR();
+        }
     };
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
