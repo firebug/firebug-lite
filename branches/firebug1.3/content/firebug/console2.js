@@ -14,7 +14,32 @@ const nsIPrefBranch2 = Ci.nsIPrefBranch2;
 const PrefService = Cc["@mozilla.org/preferences-service;1"];
 const prefs = PrefService.getService(nsIPrefBranch2);
 /**/
-    
+/*
+
+// new offline message handler
+o = {x:1,y:2};
+
+r = Firebug.getRep(o);
+
+r.tag.tag.compile();
+
+outputs = [];
+html = r.tag.renderHTML({object:o}, outputs);
+
+
+// finish rendering the template (the DOM part)
+target = $("build");
+target.innerHTML = html;
+root = target.firstChild;
+
+domArgs = [root, r.tag.context, 0];
+domArgs.push.apply(domArgs, r.tag.domArgs);
+domArgs.push.apply(domArgs, outputs);
+r.tag.tag.renderDOM.apply(self ? self : r.tag.subject, domArgs);
+
+
+ */
+consoleQueue = [];
 var FirebugContext = Env.browser;
 var $STRF = function(){
     return "$STRF not supported yet";
@@ -87,6 +112,10 @@ Firebug.ConsoleBase =
                 /**/
                 return row;
             }
+            else
+            {
+                consoleQueue.push([appender, objects, context, className, rep, sourceLink, noThrottle, noRow]);
+            }
         }
         else
         {
@@ -127,7 +156,7 @@ Firebug.ConsoleBase =
     {
         //return context.getPanel("console", noCreate);
         // TODO: xxxpedro console console2
-        return Firebug.chrome.getPanel("Console");
+        return Firebug.chrome ? Firebug.chrome.getPanel("Console") : null;
     }
 
 };
@@ -152,6 +181,15 @@ Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
     error: function()
     {
         Firebug.Console.logFormatted(arguments, Firebug.browser, "error");
+    },
+    
+    flush: function()
+    {
+        for (var i=0, length=consoleQueue.length; i<length; i++)
+        {
+            var args = consoleQueue[i];
+            this.logRow.apply(this, args);
+        }
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -624,12 +662,17 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         isPreRendered: true,
         hasCommandLine: true
     },
+    
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        this.context = Firebug.browser.window;
+        this.document = Firebug.chrome.document;
+    },
 
     initialize: function()
     {
-        this.context = Firebug.browser.window;
-        this.document = Firebug.chrome.document;
-        
         Firebug.Panel.initialize.apply(this, arguments);  // loads persisted content
         //Firebug.ActivablePanel.initialize.apply(this, arguments);  // loads persisted content
 
@@ -687,9 +730,6 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         this.destroyNode();
 
         Firebug.Panel.shutdown.apply(this, arguments);
-        
-        this.context = null;
-        this.document = null;
         
         //TODO: xxxpedro preferences prefs
         //prefs.removeObserver(Firebug.prefDomain, this, false);

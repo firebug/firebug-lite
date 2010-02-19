@@ -348,7 +348,9 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
     this.count = function(key)
     {
-        var frameId = FBL.getStackFrameId();
+        // TODO: xxxpedro console2: is there a better way to find a unique ID for the coun() call?
+        var frameId = "0";
+        //var frameId = FBL.getStackFrameId();
         if (frameId)
         {
             if (!context.frameCounters)
@@ -574,7 +576,9 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
     function getStackLink()
     {
-        return FBL.getFrameSourceLink(getComponentsStackDump());
+        // TODO: xxxpedro console2
+        return;
+        //return FBL.getFrameSourceLink(getComponentsStackDump());
     }
 
     function getJSDUserStack()
