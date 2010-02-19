@@ -1,12 +1,13 @@
 ###################################################################################################
  Versions
 ###################################################################################################
-    Firebug 1.3a5 - 2009-01-16 - Revision: 5719
-    Firebug 1.3a4 - 2009-12-31 - Revision: 5505 
-    Firebug 1.3a3 - 2009-09-13 - Revision: 4882
-    Firebug 1.3a2 - 2009-08-03 - Revision: 3847
-    Firebug 1.3a1 - 2009-05-03 - Revision: 2729
-    Firebug 1.3a0 - 2009-01-24 - Revision: 1765
+    Firebug 1.3.0b1 - 2009-02-05 - Revision: 6012
+    Firebug 1.3.0a5 - 2009-01-16 - Revision: 5719
+    Firebug 1.3.0a4 - 2009-12-31 - Revision: 5505 
+    Firebug 1.3.0a3 - 2009-09-13 - Revision: 4882
+    Firebug 1.3.0a2 - 2009-08-03 - Revision: 3847
+    Firebug 1.3.0a1 - 2009-05-03 - Revision: 2729
+    Firebug 1.3.0a0 - 2009-01-24 - Revision: 1765
 
 
 ###################################################################################################
@@ -47,25 +48,26 @@ Console
         the problem: we cannot create a DocumentFragment, because there's no chrome.document
         when executing script in the HEAD
         
-        confirm: if you can do this on all browsers:
+        the solution: create chrome iframe (or popup) at startup, but only append it
+        to the document's body (and initialize), when the doc is ready
+    
+        algorithm: confirm: if you can do this on all browsers:
             - create an iframe at startup (before main doc load)
             - append it to the documentElement
             - create a Fragment
             - create iframe doc element 
             - attach event to it
             - append it to fragment
-            - later, when iframe doc is loaded, append the element to it
+            - later, when iframe doc is loaded, append all fragment elements to it
             - check if the event still attached to the element 
         
-        the solution: create chrome iframe (or popup) at startup, but only append it
-        to the document's body (and initialize), when the doc is ready
-    
 
 ---------------------------------------------------------------------------------------------------
 Memory leaks
 ---------------------------------------------------------------------------------------------------
     - Menu
     - XHRSpy
+    - extension content script
 
 
 ###################################################################################################
@@ -75,24 +77,37 @@ Memory leaks
 ---------------------------------------------------------------------------------------------------
 BUGS
 ---------------------------------------------------------------------------------------------------
-    - command line API $() makes jQuery's $ not acessible in the command-line 
+    - some times (very rare, generally the first time only) when you open a popup, the UI is 
+      misplaced (you can't see most of the "console" tab).
+    
+    - getCSSRuleSpecificity is return the wrong value when you have a CSS Rule
+      with multiple Selectors (ex: div,span,p,a {color:red})
+        - it should return the biggest specificity of the rule that matches the element
+        - rules that does not match the element should be ignored
+    
+    - CSS problem with source code inside HTML tree (script tag).
+      The line numbers are positioned at the top of the panel.
+    
+    - cookies are not available in XML+XSL documents
     
     - XHR request made before UI load will fail
     
     - XHR requests and file:/// URLs
-    
-    - Error when trying to parse external stylesheets
-    
-    - Inspector and Google Chrome 4.0
     
     - Inspector stays visible after the mouse leave the panel content
 
     - When loading the bookmarlet in IE it shows a security warning
         https://www.google.com/accounts/ServiceLogin?service=adwords&cd=null&hl=en-US&ltmpl=adwords&passive=true&ifr=false&alwf=true&continue=https%3A%2F%2Fadwords.google.com%2Fselect%2Fgaiaauth%3Fapt%3DNone%26ugl%3Dtrue&sourceid=awo&subid=ww-en-et-ads-0-adsC-all
         
-    - Need to use https in the bookmarlet (including images), and also in the live include
+OK  - command line API $() makes jQuery's $ not acessible in the command-line 
     
-    - bookmarlet problem with XML+XSL documents!
+OK  - Error when trying to parse external stylesheets
+    
+OK  - Inspector and Google Chrome 4.0
+    
+OK  - Need to use https in the bookmarlet (including images), and also in the live include
+    
+OK  - bookmarlet problem with XML+XSL documents!
 
     -----------------------------------------------------------------------------------------------
     
@@ -114,6 +129,15 @@ BUGS
     - remove events added in disableTextSelection
 
     - window.onerror is being turned off when UI is minimized (and should not)
+
+---------------------------------------------------------------------------------------------------
+Console2 problems
+---------------------------------------------------------------------------------------------------
+    - doesn't listen offline log messages
+    - console.count
+    - console.profile / console.profileEnd
+    - lack of "clear" button
+
 
 
 ###################################################################################################

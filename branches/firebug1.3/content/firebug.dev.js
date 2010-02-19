@@ -44,9 +44,9 @@ window.FBDev =
         // ****************************************************************************************
         // Console / CommandLine core
         "firebug/reps.js",
-        "firebug/console.js",
-        //"firebug/console2.js",
-        //"firebug/consoleInjector.js",
+        //"firebug/console.js",
+        "firebug/console2.js",
+        "firebug/consoleInjector.js",
         
         "firebug/commandLine.js",
         
@@ -75,6 +75,8 @@ window.FBDev =
         // Trace Module and Panel
         "firebug/trace.js",
         "firebug/tracePanel.js",
+        
+        //"firebug/plugin.js",
         
         // ****************************************************************************************
         // Bootstrap

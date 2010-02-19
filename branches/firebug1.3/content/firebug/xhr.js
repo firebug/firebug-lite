@@ -71,24 +71,6 @@ var XMLHttpRequestWrapper = function(activeXObject)
             setClass(row, "loading");
             spy.logRow = row;
         }
-        return;
-        
-        
-        
-        /*
-        var panel = Firebug.chrome.getPanel("Console");
-        var container = panel.panelNode;
-        
-        var row = Firebug.chrome.document.createElement("div");
-        row.className = "logRow logRow-spy loading";
-        
-        spy.logRow = row;
-        
-        Firebug.Spy.XHR.tag.append({object: spy}, row);
-        
-        setTimeout(function(){
-            container.appendChild(row);
-        },0);/**/
     };
     
     var finishXHR = function() 
@@ -123,9 +105,9 @@ var XMLHttpRequestWrapper = function(activeXObject)
         {
             setTimeout(function(){
             
+                // if chrome document is not loaded, there will be no row yet, so just ignore
                 if (!row) return;
                 
-                // TODO: xxxpedro xhr - need to check if the chrome document is loaded here
                 FBL.removeClass(row, "loading");
                 
                 if (!success)
@@ -210,11 +192,18 @@ var XMLHttpRequestWrapper = function(activeXObject)
     {
         //Firebug.Console.log("xhrRequest send");
         
-        logXHR();
-        
         reqStartTS = new Date().getTime();
         
-        xhrRequest.send(data);
+        try
+        {
+            xhrRequest.send(data);
+        }
+        catch(e)
+        {
+            throw e;
+        }
+        
+        logXHR();
         
         if (!spy.async)
         {
