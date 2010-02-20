@@ -4,7 +4,7 @@ FBL.ns(function() { with (FBL) {
 
 // ************************************************************************************************
 // Constants
-
+/*
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 
@@ -12,12 +12,13 @@ const MODIFICATION = MutationEvent.MODIFICATION;
 const ADDITION = MutationEvent.ADDITION;
 const REMOVAL = MutationEvent.REMOVAL;
 
-const HTMLLib = Firebug.HTMLLib;
-
 const BP_BREAKONATTRCHANGE = 1;
 const BP_BREAKONCHILDCHANGE = 2;
 const BP_BREAKONREMOVE = 3;
 const BP_BREAKONTEXT = 4;
+/**/
+
+var HTMLLib = Firebug.HTMLLib;
 
 // ************************************************************************************************
 
@@ -796,6 +797,7 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
     {
         if (!isLeftClick(event))
             return;
+        
         if (getAncestorByClass(event.target, "nodeTag"))
         {
             var node = Firebug.getRepObject(event.target);
@@ -846,7 +848,9 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
-    name: "html",
+    name: "HTML3",
+    title: "HTML3",
+    
     searchable: true,
     breakable: true,
     dependents: ["css", "computed", "layout", "dom", "domSide", "watch"],
@@ -862,6 +866,11 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         this.onKeyPress = bind(this.onKeyPress, this);
 
         Firebug.Panel.initialize.apply(this, arguments);
+        
+        // TODO: xxxpedro html3
+        this.context = Firebug.browser;
+        this.document = Firebug.chrome.document;
+        this.initializeNode();
     },
 
     destroy: function(state)
@@ -876,6 +885,11 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         if (!this.ioBox)
             this.ioBox = new InsideOutBox(this, this.panelNode);
 
+        // TODO: xxxpedro html3
+        var object = Firebug.browser.document.documentElement;
+        this.select(object);
+        // END: xxxpedro html3
+        
         this.panelNode.addEventListener("click", this.onClick, false);
         this.panelNode.addEventListener("mousedown", this.onMouseDown, false);
         dispatch([Firebug.A11yModel], "onInitializeNode", [this]);
@@ -895,7 +909,8 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         dispatch([Firebug.A11yModel], "onDestroyNode", [this]);
     },
 
-    show: function(state)
+    // TODO: xxxpedro html3
+    ishow: function(state)
     {
         this.showToolbarButtons("fbHTMLButtons", true);
 
@@ -921,7 +936,8 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         }
     },
 
-    hide: function()
+    // TODO: xxxpedro html3
+    ihide: function()
     {
         this.showToolbarButtons("fbHTMLButtons", false);
         delete this.infoTipURL;  // clear the state that is tracking the infotip so it is reset after next show()
@@ -1064,7 +1080,8 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         }
         else
         {
-            Firebug.chrome.getSelectedSidePanel().panelNode.scrollTop = 0;
+            // TODO: xxxpedro html3
+            //Firebug.chrome.getSelectedSidePanel().panelNode.scrollTop = 0;
             this.ioBox.select(object, true, false, this.noScrollIntoView);
             this.inspectorHistory.unshift(object);
             if (this.inspectorHistory.length > 5)
@@ -1770,7 +1787,9 @@ function getNodeTag(node, expandAll)
     {
         if (node instanceof HTMLAppletElement)
             return getEmptyElementTag(node);
-        else if (unwrapObject(node).firebugIgnore)
+        // TODO: xxxpedro html3
+        //else if (unwrapObject(node).firebugIgnore)
+        else if (node.firebugIgnore)
             return null;
         else if (HTMLLib.isContainerElement(node))
             return expandAll ? Firebug.HTMLPanel.CompleteElement.tag : Firebug.HTMLPanel.Element.tag;
@@ -2095,7 +2114,7 @@ Firebug.HTMLModule.BreakpointRep = domplate(Firebug.Rep,
 });
 
 // ************************************************************************************************
-
+/*
 function MutationBreakpointGroup()
 {
     this.breakpoints = [];
@@ -2148,7 +2167,7 @@ MutationBreakpointGroup.prototype = extend(new Firebug.Breakpoint.BreakpointGrou
         panelState.breakpoints = this.breakpoints;
     },
 });
-
+/**/
 
 
 
@@ -2157,7 +2176,8 @@ MutationBreakpointGroup.prototype = extend(new Firebug.Breakpoint.BreakpointGrou
 
 Firebug.registerPanel(Firebug.HTMLPanel);
 Firebug.registerModule(Firebug.HTMLModule);
-Firebug.registerRep(Firebug.HTMLModule.BreakpointRep);
+// TODO: xxxpedro html3
+//Firebug.registerRep(Firebug.HTMLModule.BreakpointRep);
 
 // ************************************************************************************************
 }});

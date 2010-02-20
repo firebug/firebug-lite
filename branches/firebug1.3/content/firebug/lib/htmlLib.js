@@ -2,8 +2,8 @@
 
 FBL.ns(function() { with (FBL) {
 
-const Ci = Components.interfaces;
-const SHOW_ALL = Ci.nsIDOMNodeFilter.SHOW_ALL;
+//const Ci = Components.interfaces;
+//const SHOW_ALL = Ci.nsIDOMNodeFilter.SHOW_ALL;
 
 /**
  * @class Static utility class. Contains utilities used for displaying and
@@ -602,6 +602,7 @@ Firebug.HTMLLib =
             return false;
 
         // https://developer.mozilla.org/en/XBL/XBL_1.0_Reference/DOM_Interfaces
+        /*
         if (element.ownerDocument instanceof Ci.nsIDOMDocumentXBL)
         {
             var anonChildren = element.ownerDocument.getAnonymousNodes(element);
@@ -614,6 +615,7 @@ Firebug.HTMLLib =
                 }
             }
         }
+        /**/
         if (FBTrace.DBG_HTML)
             FBTrace.sysout("hasNoElementChildren TRUE "+element.tagName, element);
         return true;
