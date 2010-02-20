@@ -8,8 +8,7 @@ Console
     - The Console Panel now uses the same rendering engine (domplate) and object
       representation (Reps) used in Firebug 
     - console.dir()
-    - console.count()
-    
+    - console.count()    
 
 -------------------------------------------------------------------------------
 XHR

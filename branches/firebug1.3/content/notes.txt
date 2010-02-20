@@ -51,6 +51,34 @@ Console
         the solution: create chrome iframe (or popup) at startup, but only append it
         to the document's body (and initialize), when the doc is ready
     
+---------------------------------------------------------------------------------------------------
+Offline messages
+---------------------------------------------------------------------------------------------------
+
+...................................................................................................
+    - Approach #1: currently being used
+        just lazy the console.log call
+        
+        pro: simple
+        cons: it won't represent the "snapshot" of the object at the point when it was called
+    
+...................................................................................................
+    - Approach #2:
+        append to div
+        adoptNode // won't work on IE
+    
+...................................................................................................
+    - Approach #3:
+        create OfflineRep class with 2 basic methods:
+            OfflineRep.render()
+            OfflineRep.append()
+            OfflineRep.args // console.log arguments
+
+...................................................................................................
+    - Approach #4:
+        This approach is not possible because when you move the iframe from the documentElement
+        to body, it will loose all children nodes.
+        
         algorithm: confirm: if you can do this on all browsers:
             - create an iframe at startup (before main doc load)
             - append it to the documentElement
@@ -60,6 +88,7 @@ Console
             - append it to fragment
             - later, when iframe doc is loaded, append all fragment elements to it
             - check if the event still attached to the element 
+...................................................................................................
         
 
 ---------------------------------------------------------------------------------------------------
@@ -73,6 +102,16 @@ Memory leaks
 ###################################################################################################
  Bugs
 ###################################################################################################
+
+
+---------------------------------------------------------------------------------------------------
+Console2 problems
+---------------------------------------------------------------------------------------------------
+ok  - doesn't listen offline log messages
+ok  - console.count
+    - console.profile / console.profileEnd
+    - lack of "clear" button
+
 
 ---------------------------------------------------------------------------------------------------
 BUGS
@@ -90,9 +129,9 @@ BUGS
     
     - cookies are not available in XML+XSL documents
     
-    - XHR request made before UI load will fail
+ok  - XHR request made before UI load will fail
     
-    - XHR requests and file:/// URLs
+ok  - XHR requests and file:/// URLs
     
     - Inspector stays visible after the mouse leave the panel content
 
@@ -130,14 +169,33 @@ OK  - bookmarlet problem with XML+XSL documents!
 
     - window.onerror is being turned off when UI is minimized (and should not)
 
----------------------------------------------------------------------------------------------------
-Console2 problems
----------------------------------------------------------------------------------------------------
-    - doesn't listen offline log messages
-    - console.count
-    - console.profile / console.profileEnd
-    - lack of "clear" button
 
+###################################################################################################
+Shared Code
+###################################################################################################
+
+    Complete
+        - lib
+        - domplate
+        - reps
+        - console
+        - consoleInjector
+        - dom
+        - css (required a few additions)
+        - editor (required a lot of changes)
+    
+    Partial
+        - spy
+        - net (only a few reps)
+    
+    Next modules to port:
+        - inspector
+        - infotip
+        - insideOutBox
+        - html
+        - TabContext (will require a lot of changes)
+        - TabWatcher (will require a lot of changes)
+        - FirebugChrome (will require a lot of changes)
 
 
 ###################################################################################################

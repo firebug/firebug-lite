@@ -21,6 +21,7 @@ window.FBDev =
     [ 
         // ****************************************************************************************
         // Application Core
+        
         "firebug/lib.js",
         
         "firebug/firebug.js",
@@ -32,18 +33,20 @@ window.FBDev =
         
         // ****************************************************************************************
         // Application Classes
-        "firebug/selector.js",
-        "firebug/inspector.js",
         
-        // ****************************************************************************************
-        // Experimental
+        "firebug/selector.js",
+        
         "firebug/domplate.js",
         //"firebug/domplate.optmized.loops.js", // not used yet
         "firebug/reps2.js",
+        "firebug/reps.js",
+        
+        "firebug/editor.js",
+        "firebug/inspector.js",
         
         // ****************************************************************************************
         // Console / CommandLine core
-        "firebug/reps.js",
+        
         //"firebug/console.js",
         "firebug/console2.js",
         "firebug/consoleInjector.js",
@@ -51,32 +54,37 @@ window.FBDev =
         "firebug/commandLine.js",
         
         // ****************************************************************************************
+        // XHR Watcher
+        
         "firebug/xhr.js",
         "firebug/net.js",
         "firebug/spy.js",
         
         // ****************************************************************************************
-        // Application Panels
-        "firebug/html.js",
+        // Application Modules/Panels
         
-        //"firebug/insideOutBox.js", // experimental
+        "firebug/html.js",
+        //"firebug/insideOutBox.js", // experimental        
+        //"firebug/lib/htmlLib.js", // experimental
+        //"firebug/html3.js", // experimental
         //"firebug/html2.js", // experimental
         
         //"firebug/css.js",
-        
         //"firebug/infotip.js", // experimental
-        "firebug/editor.js",
         "firebug/css2.js",
         
         "firebug/script.js",
         "firebug/dom.js",
         
         // ****************************************************************************************
-        // Trace Module and Panel
+        // Trace Module/Panel
         "firebug/trace.js",
         "firebug/tracePanel.js",
         
+        // ****************************************************************************************
+        // Test stuff
         //"firebug/plugin.js",
+        //"firebug/firequery.js",
         
         // ****************************************************************************************
         // Bootstrap
