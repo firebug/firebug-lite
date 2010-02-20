@@ -1,7 +1,7 @@
 (function(){
 /**************************************************************
  *
- *    Firebug Lite 1.3.0b1
+ *    Firebug Lite 1.3.0b2
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -783,6 +783,10 @@ this.isShiftClick=function(event){return(this.isIE&&event.type!="click"?event.bu
 };
 this.isControl=function(event){return(event.metaKey||event.ctrlKey)&&!event.shiftKey&&!event.altKey
 };
+this.isAlt=function(event){return event.altKey&&!event.ctrlKey&&!event.shiftKey&&!event.metaKey
+};
+this.isAltClick=function(event){return(this.isIE&&event.type!="click"?event.button==1:event.button==0)&&this.isAlt(event)
+};
 this.isControlShift=function(event){return(event.metaKey||event.ctrlKey)&&event.shiftKey&&!event.altKey
 };
 this.isShift=function(event){return event.shiftKey&&!event.metaKey&&!event.ctrlKey&&!event.altKey
@@ -1246,7 +1250,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b1",revision:"$Revision: 6011 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b2",revision:"$Revision: 6150 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -2121,7 +2125,7 @@ menu.show(box.left+offsetLeft-offset.left,box.top+box.height-5-offset.top)
 };
 var iconButton=new IconButton({type:"toggle",element:$("fbFirebugButton"),onClick:testMenuClick});
 iconButton.initialize()
-},initialize:function(){if(Firebug.Console&&!Firebug.Console2){Firebug.Console.flush()
+},initialize:function(){if(Firebug.Console){Firebug.Console.flush()
 }if(Firebug.Trace){FBTrace.flush(Firebug.Trace)
 }if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.chrome.initialize","initializing chrome application")
 }Controller.initialize.call(this);
@@ -2899,220 +2903,6 @@ i++){Sizzle(selector,root[i],tmpSet)
 }return Sizzle.filter(later,tmpSet)
 };
 Firebug.Selector=Sizzle
-}});
-FBL.ns(function(){with(FBL){var inspectorTS,inspectorTimer,isInspecting;
-Firebug.Inspector={create:function(){offlineFragment=Env.browser.document.createDocumentFragment();
-createBoxModelInspector();
-createOutlineInspector()
-},destroy:function(){destroyBoxModelInspector();
-destroyOutlineInspector();
-offlineFragment=null
-},toggleInspect:function(){if(isInspecting){this.stopInspecting()
-}else{Firebug.chrome.inspectButton.changeState("pressed");
-this.startInspecting()
-}},startInspecting:function(){isInspecting=true;
-Firebug.chrome.selectPanel("HTML");
-createInspectorFrame();
-var size=Firebug.browser.getWindowScrollSize();
-fbInspectFrame.style.width=size.width+"px";
-fbInspectFrame.style.height=size.height+"px";
-addEvent(fbInspectFrame,"mousemove",Firebug.Inspector.onInspecting);
-addEvent(fbInspectFrame,"mousedown",Firebug.Inspector.onInspectingClick)
-},stopInspecting:function(){isInspecting=false;
-if(outlineVisible){this.hideOutline()
-}removeEvent(fbInspectFrame,"mousemove",Firebug.Inspector.onInspecting);
-removeEvent(fbInspectFrame,"mousedown",Firebug.Inspector.onInspectingClick);
-destroyInspectorFrame();
-Firebug.chrome.inspectButton.restore();
-if(Firebug.chrome.type=="popup"){Firebug.chrome.node.focus()
-}},onInspectingClick:function(e){fbInspectFrame.style.display="none";
-var targ=Firebug.browser.getElementFromPoint(e.clientX,e.clientY);
-fbInspectFrame.style.display="block";
-var id=targ.id;
-if(id&&/^fbOutline\w$/.test(id)){return
-}if(id=="FirebugUI"){return
-}while(targ.nodeType!=1){targ=targ.parentNode
-}Firebug.Inspector.stopInspecting()
-},onInspecting:function(e){if(new Date().getTime()-lastInspecting>30){fbInspectFrame.style.display="none";
-var targ=Firebug.browser.getElementFromPoint(e.clientX,e.clientY);
-fbInspectFrame.style.display="block";
-var id=targ.id;
-if(id&&/^fbOutline\w$/.test(id)){return
-}if(id=="FirebugUI"){return
-}while(targ.nodeType!=1){targ=targ.parentNode
-}if(targ.nodeName.toLowerCase()=="body"){return
-}Firebug.Inspector.drawOutline(targ);
-if(targ[cacheID]){var target=""+targ[cacheID];
-var lazySelect=function(){inspectorTS=new Date().getTime();
-Firebug.HTML.selectTreeNode(""+targ[cacheID])
-};
-if(inspectorTimer){clearTimeout(inspectorTimer);
-inspectorTimer=null
-}if(new Date().getTime()-inspectorTS>200){setTimeout(lazySelect,0)
-}else{inspectorTimer=setTimeout(lazySelect,300)
-}}lastInspecting=new Date().getTime()
-}},onInspectingBody:function(e){if(new Date().getTime()-lastInspecting>30){var targ=e.target;
-var id=targ.id;
-if(id&&/^fbOutline\w$/.test(id)){return
-}if(id=="FirebugUI"){return
-}while(targ.nodeType!=1){targ=targ.parentNode
-}if(targ.nodeName.toLowerCase()=="body"){return
-}Firebug.Inspector.drawOutline(targ);
-if(targ[cacheID]){FBL.Firebug.HTML.selectTreeNode(""+targ[cacheID])
-}lastInspecting=new Date().getTime()
-}},drawOutline:function(el){var border=2;
-var scrollbarSize=17;
-var windowSize=Firebug.browser.getWindowSize();
-var scrollSize=Firebug.browser.getWindowScrollSize();
-var scrollPosition=Firebug.browser.getWindowScrollPosition();
-var box=Firebug.browser.getElementBox(el);
-var top=box.top;
-var left=box.left;
-var height=box.height;
-var width=box.width;
-var freeHorizontalSpace=scrollPosition.left+windowSize.width-left-width-(!isIE&&scrollSize.height>windowSize.height?scrollbarSize:0);
-var freeVerticalSpace=scrollPosition.top+windowSize.height-top-height-(!isIE&&scrollSize.width>windowSize.width?scrollbarSize:0);
-var numVerticalBorders=freeVerticalSpace>0?2:1;
-var o=outlineElements;
-var style;
-style=o.fbOutlineT.style;
-style.top=top-border+"px";
-style.left=left+"px";
-style.height=border+"px";
-style.width=width+"px";
-style=o.fbOutlineL.style;
-style.top=top-border+"px";
-style.left=left-border+"px";
-style.height=height+numVerticalBorders*border+"px";
-style.width=border+"px";
-style=o.fbOutlineB.style;
-if(freeVerticalSpace>0){style.top=top+height+"px";
-style.left=left+"px";
-style.width=width+"px"
-}else{style.top=-2*border+"px";
-style.left=-2*border+"px";
-style.width=border+"px"
-}style=o.fbOutlineR.style;
-if(freeHorizontalSpace>0){style.top=top-border+"px";
-style.left=left+width+"px";
-style.height=height+numVerticalBorders*border+"px";
-style.width=(freeHorizontalSpace<border?freeHorizontalSpace:border)+"px"
-}else{style.top=-2*border+"px";
-style.left=-2*border+"px";
-style.height=border+"px";
-style.width=border+"px"
-}if(!outlineVisible){this.showOutline()
-}},hideOutline:function(){if(!outlineVisible){return
-}for(var name in outline){offlineFragment.appendChild(outlineElements[name])
-}outlineVisible=false
-},showOutline:function(){if(outlineVisible){return
-}if(boxModelVisible){this.hideBoxModel()
-}for(var name in outline){Firebug.browser.document.getElementsByTagName("body")[0].appendChild(outlineElements[name])
-}outlineVisible=true
-},drawBoxModel:function(el){var box=Firebug.browser.getElementBox(el);
-var windowSize=Firebug.browser.getWindowSize();
-var scrollPosition=Firebug.browser.getWindowScrollPosition();
-var offsetHeight=Firebug.chrome.type=="frame"?FirebugChrome.height:0;
-if(box.top>scrollPosition.top+windowSize.height-offsetHeight||box.left>scrollPosition.left+windowSize.width||scrollPosition.top>box.top+box.height||scrollPosition.left>box.left+box.width){return
-}var top=box.top;
-var left=box.left;
-var height=box.height;
-var width=box.width;
-var margin=Firebug.browser.getMeasurementBox(el,"margin");
-var padding=Firebug.browser.getMeasurementBox(el,"padding");
-var border=Firebug.browser.getMeasurementBox(el,"border");
-boxModelStyle.top=top-margin.top+"px";
-boxModelStyle.left=left-margin.left+"px";
-boxModelStyle.height=height+margin.top+margin.bottom+"px";
-boxModelStyle.width=width+margin.left+margin.right+"px";
-boxBorderStyle.top=margin.top+"px";
-boxBorderStyle.left=margin.left+"px";
-boxBorderStyle.height=height+"px";
-boxBorderStyle.width=width+"px";
-boxPaddingStyle.top=margin.top+border.top+"px";
-boxPaddingStyle.left=margin.left+border.left+"px";
-boxPaddingStyle.height=height-border.top-border.bottom+"px";
-boxPaddingStyle.width=width-border.left-border.right+"px";
-boxContentStyle.top=margin.top+border.top+padding.top+"px";
-boxContentStyle.left=margin.left+border.left+padding.left+"px";
-boxContentStyle.height=height-border.top-padding.top-padding.bottom-border.bottom+"px";
-boxContentStyle.width=width-border.left-padding.left-padding.right-border.right+"px";
-if(!boxModelVisible){this.showBoxModel()
-}},hideBoxModel:function(){if(!boxModelVisible){return
-}offlineFragment.appendChild(boxModel);
-boxModelVisible=false
-},showBoxModel:function(){if(boxModelVisible){return
-}if(outlineVisible){this.hideOutline()
-}Firebug.browser.document.getElementsByTagName("body")[0].appendChild(boxModel);
-boxModelVisible=true
-}};
-var offlineFragment=null;
-var boxModelVisible=false;
-var boxModel,boxModelStyle,boxMargin,boxMarginStyle,boxBorder,boxBorderStyle,boxPadding,boxPaddingStyle,boxContent,boxContentStyle;
-var resetStyle="margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
-var offscreenStyle=resetStyle+"top:-1234px; left:-1234px;";
-var inspectStyle=resetStyle+"z-index: 2147483500;";
-var inspectFrameStyle=resetStyle+"z-index: 2147483550; top:0; left:0; background:url("+Env.Location.skinDir+"pixel_transparent.gif);";
-var inspectModelOpacity=isIE?"filter:alpha(opacity=80);":"opacity:0.8;";
-var inspectModelStyle=inspectStyle+inspectModelOpacity;
-var inspectMarginStyle=inspectStyle+"background: #EDFF64; height:100%; width:100%;";
-var inspectBorderStyle=inspectStyle+"background: #666;";
-var inspectPaddingStyle=inspectStyle+"background: SlateBlue;";
-var inspectContentStyle=inspectStyle+"background: SkyBlue;";
-var outlineStyle={fbHorizontalLine:"background: #3875D7;height: 2px;",fbVerticalLine:"background: #3875D7;width: 2px;"};
-var lastInspecting=0;
-var fbInspectFrame=null;
-var outlineVisible=false;
-var outlineElements={};
-var outline={fbOutlineT:"fbHorizontalLine",fbOutlineL:"fbVerticalLine",fbOutlineB:"fbHorizontalLine",fbOutlineR:"fbVerticalLine"};
-var getInspectingTarget=function(){};
-var createInspectorFrame=function createInspectorFrame(){fbInspectFrame=createGlobalElement("div");
-fbInspectFrame.id="fbInspectFrame";
-fbInspectFrame.firebugIgnore=true;
-fbInspectFrame.style.cssText=inspectFrameStyle;
-Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectFrame)
-};
-var destroyInspectorFrame=function destroyInspectorFrame(){if(fbInspectFrame){Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
-fbInspectFrame=null
-}};
-var createOutlineInspector=function createOutlineInspector(){for(var name in outline){var el=outlineElements[name]=createGlobalElement("div");
-el.id=name;
-el.firebugIgnore=true;
-el.style.cssText=inspectStyle+outlineStyle[outline[name]];
-offlineFragment.appendChild(el)
-}};
-var destroyOutlineInspector=function destroyOutlineInspector(){for(var name in outline){var el=outlineElements[name];
-el.parentNode.removeChild(el)
-}};
-var createBoxModelInspector=function createBoxModelInspector(){boxModel=createGlobalElement("div");
-boxModel.id="fbBoxModel";
-boxModel.firebugIgnore=true;
-boxModelStyle=boxModel.style;
-boxModelStyle.cssText=inspectModelStyle;
-boxMargin=createGlobalElement("div");
-boxMargin.id="fbBoxMargin";
-boxMarginStyle=boxMargin.style;
-boxMarginStyle.cssText=inspectMarginStyle;
-boxModel.appendChild(boxMargin);
-boxBorder=createGlobalElement("div");
-boxBorder.id="fbBoxBorder";
-boxBorderStyle=boxBorder.style;
-boxBorderStyle.cssText=inspectBorderStyle;
-boxModel.appendChild(boxBorder);
-boxPadding=createGlobalElement("div");
-boxPadding.id="fbBoxPadding";
-boxPaddingStyle=boxPadding.style;
-boxPaddingStyle.cssText=inspectPaddingStyle;
-boxModel.appendChild(boxPadding);
-boxContent=createGlobalElement("div");
-boxContent.id="fbBoxContent";
-boxContentStyle=boxContent.style;
-boxContentStyle.cssText=inspectContentStyle;
-boxModel.appendChild(boxContent);
-offlineFragment.appendChild(boxModel)
-};
-var destroyBoxModelInspector=function destroyBoxModelInspector(){boxModel.parentNode.removeChild(boxModel)
-}
 }});
 function DomplateTag(tagName){this.tagName=tagName
 }function DomplateEmbed(){}function DomplateLoop(){}(function(){var womb=null;
@@ -3967,991 +3757,6 @@ if(i<l-1){html.push(", ")
 }}html.push(" <b>]</b></span>")
 }}
 }});
-FBL.ns(function(){with(FBL){var ConsoleAPI={firebuglite:Firebug.version,xxx:function(o){var rep=Firebug.getRep(o);
-var className="";
-var panel=Firebug.DOM.getPanel();
-var toggles={};
-var row=Firebug.Console.getPanel().panelNode.ownerDocument.createElement("div");
-var target=row;
-var object=o;
-row.className="logRow"+(className?" logRow-"+className:"");
-rep.tag.replace({domPanel:panel,toggles:toggles,object:object},target);
-Firebug.Console.appendRow(row)
-},log:function(){return Firebug.Console.logFormatted(arguments,"")
-},debug:function(){return Firebug.Console.logFormatted(arguments,"debug")
-},info:function(){return Firebug.Console.logFormatted(arguments,"info")
-},warn:function(){return Firebug.Console.logFormatted(arguments,"warning")
-},error:function(){return Firebug.Console.logFormatted(arguments,"error")
-},assert:function(truth,message){if(!truth){var args=[];
-for(var i=1;
-i<arguments.length;
-++i){args.push(arguments[i])
-}Firebug.Console.logFormatted(args.length?args:["Assertion Failure"],"error");
-throw message?message:"Assertion Failure"
-}return Firebug.Console.LOG_COMMAND
-},dir:function(object){var html=[];
-var pairs=[];
-for(var name in object){try{pairs.push([name,object[name]])
-}catch(exc){}}pairs.sort(function(a,b){return a[0]<b[0]?-1:1
-});
-html.push('<div class="log-object">');
-for(var i=0;
-i<pairs.length;
-++i){var name=pairs[i][0],value=pairs[i][1];
-html.push('<div class="property">','<div class="propertyValueCell"><span class="propertyValue">');
-Firebug.Reps.appendObject(value,html);
-html.push('</span></div><div class="propertyNameCell"><span class="propertyName">',escapeHTML(name),"</span></div>");
-html.push("</div>")
-}html.push("</div>");
-return Firebug.Console.logRow(html,"dir")
-},dirxml:function(node){var html=[];
-Firebug.Reps.appendNode(node,html);
-return Firebug.Console.logRow(html,"dirxml")
-},group:function(){return Firebug.Console.logRow(arguments,"group",Firebug.Console.pushGroup)
-},groupEnd:function(){return Firebug.Console.logRow(arguments,"",Firebug.Console.popGroup)
-},time:function(name){Firebug.Console.timeMap[name]=new Date().getTime();
-return Firebug.Console.LOG_COMMAND
-},timeEnd:function(name){var timeMap=Firebug.Console.timeMap;
-if(name in timeMap){var delta=new Date().getTime()-timeMap[name];
-Firebug.Console.logFormatted([name+":",delta+"ms"]);
-delete timeMap[name]
-}return Firebug.Console.LOG_COMMAND
-},count:function(){return this.warn(["count() not supported."])
-},trace:function(){var getFuncName=function getFuncName(f){if(f.getName instanceof Function){return f.getName()
-}if(f.name){return f.name
-}var name=f.toString().match(/function\s*([_$\w\d]*)/)[1];
-return name||"anonymous"
-};
-var wasVisited=function(fn){for(var i=0,l=stack.length;
-i<l;
-i++){if(stack[i]==fn){return true
-}}return false
-};
-var stack=[];
-var traceLabel="Stack Trace";
-this.group(traceLabel);
-for(var fn=arguments.callee.caller;
-fn;
-fn=fn.caller){if(wasVisited(fn)){break
-}stack.push(fn);
-var html=["<div class='objectBox-function'>",getFuncName(fn),"("];
-for(var i=0,l=fn.arguments.length;
-i<l;
-++i){if(i){html.push(", ")
-}Firebug.Reps.appendObject(fn.arguments[i],html)
-}html.push(")</div>");
-Firebug.Console.logRow(html,"stackTrace")
-}this.groupEnd(traceLabel);
-return Firebug.Console.LOG_COMMAND
-},profile:function(){return this.warn(["profile() not supported."])
-},profileEnd:function(){return this.warn(["profileEnd() not supported."])
-},clear:function(){Firebug.Console.getPanel().panelNode.innerHTML="";
-return Firebug.Console.LOG_COMMAND
-},open:function(){toggleConsole(true);
-return Firebug.Console.LOG_COMMAND
-},close:function(){if(frameVisible){toggleConsole()
-}return Firebug.Console.LOG_COMMAND
-}};
-var ConsoleModule=extend(Firebug.Module,ConsoleAPI);
-Firebug.Console=extend(ConsoleModule,{LOG_COMMAND:{},groupStack:[],timeMap:{},getPanel:function(){return Firebug.chrome?Firebug.chrome.getPanel("Console"):null
-},flush:function(){var queue=FirebugChrome.consoleMessageQueue;
-FirebugChrome.consoleMessageQueue=[];
-for(var i=0;
-i<queue.length;
-++i){this.writeMessage(queue[i][0],queue[i][1],queue[i][2])
-}},logFormatted:function(objects,className){var html=[];
-var format=objects[0];
-var objIndex=0;
-if(typeof(format)!="string"){format="";
-objIndex=-1
-}var parts=this.parseFormat(format);
-for(var i=0;
-i<parts.length;
-++i){var part=parts[i];
-if(part&&typeof(part)=="object"){var object=objects[++objIndex];
-part.appender(object,html)
-}else{Firebug.Reps.appendText(part,html)
-}}for(var i=objIndex+1;
-i<objects.length;
-++i){Firebug.Reps.appendText(" ",html);
-var object=objects[i];
-if(typeof(object)=="string"){Firebug.Reps.appendText(object,html)
-}else{Firebug.Reps.appendObject(object,html)
-}}return this.logRow(html,className)
-},parseFormat:function(format){var parts=[];
-var reg=/((^%|[^\\]%)(\d+)?(\.)([a-zA-Z]))|((^%|[^\\]%)([a-zA-Z]))/;
-var Reps=Firebug.Reps;
-var appenderMap={s:Reps.appendText,d:Reps.appendInteger,i:Reps.appendInteger,f:Reps.appendFloat};
-for(var m=reg.exec(format);
-m;
-m=reg.exec(format)){var type=m[8]?m[8]:m[5];
-var appender=type in appenderMap?appenderMap[type]:Reps.appendObject;
-var precision=m[3]?parseInt(m[3]):(m[4]=="."?-1:0);
-parts.push(format.substr(0,m[0][0]=="%"?m.index:m.index+1));
-parts.push({appender:appender,precision:precision});
-format=format.substr(m.index+m[0].length)
-}parts.push(format);
-return parts
-},logRow:function(message,className,handler){var panel=this.getPanel();
-if(panel&&panel.panelNode){this.writeMessage(message,className,handler)
-}else{FirebugChrome.consoleMessageQueue.push([message,className,handler])
-}return this.LOG_COMMAND
-},writeMessage:function(message,className,handler){var container=this.getPanel().containerNode;
-var isScrolledToBottom=container.scrollTop+container.offsetHeight>=container.scrollHeight;
-if(!handler){handler=this.writeRow
-}handler.call(this,message,className);
-if(isScrolledToBottom){container.scrollTop=container.scrollHeight-container.offsetHeight
-}},appendRow:function(row){if(this.groupStack.length>0){var container=this.groupStack[this.groupStack.length-1]
-}else{var container=this.getPanel().panelNode
-}container.appendChild(row)
-},writeRow:function(message,className){var row=this.getPanel().panelNode.ownerDocument.createElement("div");
-row.className="logRow"+(className?" logRow-"+className:"");
-row.innerHTML=message.join("");
-this.appendRow(row)
-},pushGroup:function(message,className){this.logFormatted(message,className);
-var groupRow=this.getPanel().panelNode.ownerDocument.createElement("div");
-groupRow.className="logGroup";
-var groupRowBox=this.getPanel().panelNode.ownerDocument.createElement("div");
-groupRowBox.className="logGroupBox";
-groupRow.appendChild(groupRowBox);
-this.appendRow(groupRowBox);
-this.groupStack.push(groupRowBox)
-},popGroup:function(){this.groupStack.pop()
-}});
-Firebug.registerModule(Firebug.Console);
-function ConsolePanel(){}ConsolePanel.prototype=extend(Firebug.Panel,{name:"Console",title:"Console",options:{hasCommandLine:true,hasToolButtons:true,isPreRendered:true,innerHTMLSync:true},create:function(){Firebug.Panel.create.apply(this,arguments);
-this.clearButton=new Button({element:$("fbConsole_btClear"),owner:Firebug.Console,onClick:Firebug.Console.clear})
-},initialize:function(){Firebug.Panel.initialize.apply(this,arguments);
-this.clearButton.initialize();
-if(Firebug.HTML){addEvent($("fbPanel1"),"mousemove",Firebug.HTML.onListMouseMove);
-addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
-addEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
-}},shutdown:function(){if(Firebug.HTML){removeEvent($("fbPanel1"),"mousemove",Firebug.HTML.onListMouseMove);
-removeEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
-removeEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
-}this.clearButton.shutdown();
-Firebug.Panel.shutdown.apply(this,arguments)
-}});
-Firebug.registerPanel(ConsolePanel);
-FBL.onError=function(msg,href,lineNo){var html=[];
-var lastSlash=href.lastIndexOf("/");
-var fileName=lastSlash==-1?href:href.substr(lastSlash+1);
-html.push('<span class="errorMessage">',msg,"</span>",'<div class="objectBox-sourceLink">',fileName," (line ",lineNo,")</div>");
-Firebug.Console.logRow(html,"error")
-};
-FBL.registerConsole=function(){if(Env.Options.overrideConsole){var win=Env.browser.window;
-if(!isFirefox||isFirefox&&!("console" in win)){win.console=ConsoleAPI
-}else{win.firebug=ConsoleAPI
-}}};
-registerConsole()
-}});
-FBL.ns(function(){with(FBL){var commandPrefix=">>>";
-var reOpenBracket=/[\[\(\{]/;
-var reCloseBracket=/[\]\)\}]/;
-var commandHistory=[];
-var commandPointer=-1;
-var isAutoCompleting=null;
-var autoCompletePrefix=null;
-var autoCompleteExpr=null;
-var autoCompleteBuffer=null;
-var autoCompletePosition=null;
-var fbCommandLine=null;
-var fbLargeCommandLine=null;
-var fbLargeCommandButtons=null;
-var _completion={window:["console"],document:["getElementById","getElementsByTagName"]};
-var _stack=function(command){commandHistory.push(command);
-commandPointer=commandHistory.length
-};
-Firebug.CommandLine=extend(Firebug.Module,{element:null,isMultiLine:false,isActive:false,initialize:function(doc){this.clear=bind(this.clear,this);
-this.enter=bind(this.enter,this);
-this.onError=bind(this.onError,this);
-this.onKeyDown=bind(this.onKeyDown,this);
-this.onMultiLineKeyDown=bind(this.onMultiLineKeyDown,this);
-addEvent(Firebug.browser.window,"error",this.onError);
-addEvent(Firebug.chrome.window,"error",this.onError)
-},shutdown:function(doc){this.deactivate();
-removeEvent(Firebug.browser.window,"error",this.onError);
-removeEvent(Firebug.chrome.window,"error",this.onError)
-},activate:function(multiLine,hideToggleIcon,onRun){defineCommandLineAPI();
-if(this.isActive){if(this.isMultiLine==multiLine){return
-}this.deactivate()
-}fbCommandLine=$("fbCommandLine");
-fbLargeCommandLine=$("fbLargeCommandLine");
-fbLargeCommandButtons=$("fbLargeCommandButtons");
-if(multiLine){onRun=onRun||this.enter;
-this.isMultiLine=true;
-this.element=fbLargeCommandLine;
-addEvent(this.element,"keydown",this.onMultiLineKeyDown);
-addEvent($("fbSmallCommandLineIcon"),"click",Firebug.chrome.hideLargeCommandLine);
-this.runButton=new Button({element:$("fbCommand_btRun"),owner:Firebug.CommandLine,onClick:onRun});
-this.runButton.initialize();
-this.clearButton=new Button({element:$("fbCommand_btClear"),owner:Firebug.CommandLine,onClick:this.clear});
-this.clearButton.initialize()
-}else{this.isMultiLine=false;
-this.element=fbCommandLine;
-if(!fbCommandLine){return
-}addEvent(this.element,"keydown",this.onKeyDown)
-}if(isOpera){fixOperaTabKey(this.element)
-}if(this.lastValue){this.element.value=this.lastValue
-}this.isActive=true
-},deactivate:function(){if(!this.isActive){return
-}this.isActive=false;
-this.lastValue=this.element.value;
-if(this.isMultiLine){removeEvent(this.element,"keydown",this.onMultiLineKeyDown);
-removeEvent($("fbSmallCommandLineIcon"),"click",Firebug.chrome.hideLargeCommandLine);
-this.runButton.destroy();
-this.clearButton.destroy()
-}else{removeEvent(this.element,"keydown",this.onKeyDown)
-}this.element=null;
-delete this.element;
-fbCommandLine=null;
-fbLargeCommandLine=null;
-fbLargeCommandButtons=null
-},focus:function(){this.element.focus()
-},blur:function(){this.element.blur()
-},clear:function(){this.element.value=""
-},evaluate:function(expr){var api="Firebug.CommandLine.API";
-var result=Firebug.context.evaluate(expr,"window",api,Firebug.Console.error);
-return result
-},enter:function(){var command=this.element.value;
-if(!command){return
-}_stack(command);
-if(Firebug.Console2){Firebug.Console.log(commandPrefix+" "+stripNewLines(command),Firebug.browser,"command",FirebugReps.Text)
-}else{Firebug.Console.writeMessage(["<span>&gt;&gt;&gt;</span> ",escapeHTML(command)],"command")
-}var result=this.evaluate(command);
-if(result!=Firebug.Console.LOG_COMMAND){if(Firebug.Console2){Firebug.Console.log(result)
-}else{var html=[];
-Firebug.Reps.appendObject(result,html);
-Firebug.Console.writeMessage(html,"command")
-}}},prevCommand:function(){if(commandPointer>0&&commandHistory.length>0){this.element.value=commandHistory[--commandPointer]
-}},nextCommand:function(){var element=this.element;
-var limit=commandHistory.length-1;
-var i=commandPointer;
-if(i<limit){element.value=commandHistory[++commandPointer]
-}else{if(i==limit){++commandPointer;
-element.value=""
-}}},autocomplete:function(reverse){var element=this.element;
-var command=element.value;
-var offset=getExpressionOffset(command);
-var valBegin=offset?command.substr(0,offset):"";
-var val=command.substr(offset);
-var buffer,obj,objName,commandBegin,result,prefix;
-if(!isAutoCompleting){var reObj=/(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
-var r=reObj.exec(val);
-if(r[1]||r[2]||r[3]){commandBegin=r[1]||"";
-objName=r[2]||"";
-prefix=r[3]||""
-}else{if(val==""){commandBegin=objName=prefix=""
-}else{return
-}}isAutoCompleting=true;
-if(objName==""){obj=window
-}else{objName=objName.replace(/\.$/,"");
-var n=objName.split(".");
-var target=window,o;
-for(var i=0,ni;
-ni=n[i];
-i++){if(o=target[ni]){target=o
-}else{target=null;
-break
-}}obj=target
-}if(obj){autoCompletePrefix=prefix;
-autoCompleteExpr=valBegin+commandBegin+(objName?objName+".":"");
-autoCompletePosition=-1;
-buffer=autoCompleteBuffer=isIE?_completion[objName||"window"]||[]:[];
-for(var p in obj){buffer.push(p)
-}}}else{buffer=autoCompleteBuffer
-}if(buffer){prefix=autoCompletePrefix;
-var diff=reverse?-1:1;
-for(var i=autoCompletePosition+diff,l=buffer.length,bi;
-i>=0&&i<l;
-i+=diff){bi=buffer[i];
-if(bi.indexOf(prefix)==0){autoCompletePosition=i;
-result=bi;
-break
-}}}if(result){element.value=autoCompleteExpr+result
-}},setMultiLine:function(multiLine){if(multiLine==this.isMultiLine){return
-}this.activate(multiLine)
-},onError:function(msg,href,lineNo){var html=[];
-var lastSlash=href.lastIndexOf("/");
-var fileName=lastSlash==-1?href:href.substr(lastSlash+1);
-html.push('<span class="errorMessage">',msg,"</span>",'<div class="objectBox-sourceLink">',fileName," (line ",lineNo,")</div>");
-Firebug.Console.writeRow(html,"error")
-},onKeyDown:function(e){e=e||event;
-var code=e.keyCode;
-if(code!=9&&code!=16&&code!=17&&code!=18){isAutoCompleting=false
-}if(code==13){this.enter();
-this.clear()
-}else{if(code==27){setTimeout(this.clear,0)
-}else{if(code==38){this.prevCommand()
-}else{if(code==40){this.nextCommand()
-}else{if(code==9){this.autocomplete(e.shiftKey)
-}else{return
-}}}}}cancelEvent(e,true);
-return false
-},onMultiLineKeyDown:function(e){e=e||event;
-var code=e.keyCode;
-if(code==13&&e.ctrlKey){this.enter()
-}}});
-Firebug.registerModule(Firebug.CommandLine);
-function getExpressionOffset(command){var bracketCount=0;
-var start=command.length-1;
-for(;
-start>=0;
---start){var c=command[start];
-if((c==","||c==";"||c==" ")&&!bracketCount){break
-}if(reOpenBracket.test(c)){if(bracketCount){--bracketCount
-}else{break
-}}else{if(reCloseBracket.test(c)){++bracketCount
-}}}return start+1
-}var CommandLineAPI={$:function(id){return Firebug.browser.document.getElementById(id)
-},$$:function(selector,context){context=context||Firebug.browser.document;
-return Firebug.Selector?Firebug.Selector(selector,context):Firebug.Console.error("Firebug.Selector module not loaded.")
-},$0:null,$1:null,dir:Firebug.Console.dir,dirxml:Firebug.Console.dirxml};
-var defineCommandLineAPI=function defineCommandLineAPI(){Firebug.CommandLine.API={};
-for(var m in CommandLineAPI){if(!Env.browser.window[m]){Firebug.CommandLine.API[m]=CommandLineAPI[m]
-}}var stack=FirebugChrome.htmlSelectionStack;
-if(stack){Firebug.CommandLine.API.$0=stack[0];
-Firebug.CommandLine.API.$1=stack[1]
-}}
-}});
-(function(){with(FBL){var XHRSpy=function(){this.requestHeaders=[];
-this.responseHeaders=[]
-};
-XHRSpy.prototype={method:null,url:null,async:null,xhrRequest:null,href:null,loaded:false,logRow:null,responseText:null,requestHeaders:null,responseHeaders:null,sourceLink:null,getURL:function(){return this.href
-}};
-var XMLHttpRequestWrapper=function(activeXObject){var xhrRequest=typeof activeXObject!="undefined"?activeXObject:new _XMLHttpRequest(),spy=new XHRSpy(),self=this,reqType,reqUrl,reqStartTS;
-var logXHR=function(){var panel=Firebug.chrome.getPanel("Console");
-var container=panel.panelNode;
-var row=Firebug.chrome.document.createElement("div");
-row.className="logRow logRow-spy loading";
-spy.logRow=row;
-Firebug.Spy.XHR.tag.append({object:spy},row);
-setTimeout(function(){container.appendChild(row)
-},0)
-};
-var handleStateChange=function(){self.readyState=xhrRequest.readyState;
-if(xhrRequest.readyState==4){var duration=new Date().getTime()-reqStartTS;
-var success=xhrRequest.status==200;
-var responseHeadersText=xhrRequest.getAllResponseHeaders();
-var responses=responseHeadersText.split(/[\n\r]/);
-var reHeader=/^(\S+):\s*(.*)/;
-for(var i=0,l=responses.length;
-i<l;
-i++){var text=responses[i];
-var match=text.match(reHeader);
-if(match){spy.responseHeaders.push({name:[match[1]],value:[match[2]]})
-}}with({row:spy.logRow,status:xhrRequest.status+" "+xhrRequest.statusText,time:duration,success:success}){setTimeout(function(){FBL.removeClass(row,"loading");
-if(!success){FBL.setClass(row,"error")
-}var item=FBL.$$(".spyStatus",row)[0];
-item.innerHTML=status;
-var item=FBL.$$(".spyTime",row)[0];
-item.innerHTML=time+"ms"
-},200)
-}spy.loaded=true;
-spy.responseText=xhrRequest.responseText;
-self.status=xhrRequest.status;
-self.statusText=xhrRequest.statusText;
-self.responseText=xhrRequest.responseText;
-self.responseXML=xhrRequest.responseXML;
-xhrRequest.onreadystatechange=function(){}
-}self.onreadystatechange()
-};
-this.readyState=0;
-this.onreadystatechange=function(){};
-this.open=function(method,url,async){if(spy.loaded){spy=new XHRSpy()
-}spy.method=method;
-spy.url=url;
-spy.async=async;
-spy.href=url;
-spy.xhrRequest=xhrRequest;
-if(!FBL.isIE&&async){xhrRequest.onreadystatechange=handleStateChange
-}xhrRequest.open(method,url,async);
-if(FBL.isIE&&async){xhrRequest.onreadystatechange=handleStateChange
-}if(!async){Firebug.Console.log("handle sync")
-}};
-this.send=function(data){logXHR();
-reqStartTS=new Date().getTime();
-xhrRequest.send(data)
-};
-this.setRequestHeader=function(header,value){spy.requestHeaders.push({name:[header],value:[value]});
-xhrRequest.setRequestHeader(header,value)
-};
-this.getResponseHeader=function(header){return xhrRequest.getResponseHeader(header)
-};
-this.getAllResponseHeaders=function(){return xhrRequest.getAllResponseHeaders()
-};
-this.abort=function(){return xhrRequest.abort()
-};
-return this
-};
-var _ActiveXObject;
-var isIE6=/msie 6/i.test(navigator.appVersion);
-if(isIE6){window._ActiveXObject=window.ActiveXObject;
-var xhrObjects=" MSXML2.XMLHTTP.5.0 MSXML2.XMLHTTP.4.0 MSXML2.XMLHTTP.3.0 MSXML2.XMLHTTP Microsoft.XMLHTTP ";
-window.ActiveXObject=function(name){var error=null;
-try{var activeXObject=new window._ActiveXObject(name)
-}catch(e){error=e
-}finally{if(!error){if(xhrObjects.indexOf(" "+name+" ")!=-1){return new XMLHttpRequestWrapper(activeXObject)
-}else{return activeXObject
-}}else{throw error.message
-}}}
-}if(!isIE6){var _XMLHttpRequest=XMLHttpRequest;
-window.XMLHttpRequest=function(){return new XMLHttpRequestWrapper()
-}
-}}})();
-FBL.ns(function(){with(FBL){var oSTR={NoMembersWarning:"There are no properties to show for this object."};
-FBL.$STR=function(name){return oSTR.hasOwnProperty(name)?oSTR[name]:name
-};
-var reIgnore=/about:|javascript:|resource:|chrome:|jar:/;
-var layoutInterval=300;
-var indentWidth=18;
-var cacheSession=null;
-var contexts=new Array();
-var panelName="net";
-var maxQueueRequests=500;
-var activeRequests=[];
-var mimeExtensionMap={txt:"text/plain",html:"text/html",htm:"text/html",xhtml:"text/html",xml:"text/xml",css:"text/css",js:"application/x-javascript",jss:"application/x-javascript",jpg:"image/jpg",jpeg:"image/jpeg",gif:"image/gif",png:"image/png",bmp:"image/bmp",swf:"application/x-shockwave-flash",flv:"video/x-flv"};
-var fileCategories={"undefined":1,html:1,css:1,js:1,xhr:1,image:1,flash:1,txt:1,bin:1};
-var textFileCategories={txt:1,html:1,xhr:1,css:1,js:1};
-var binaryFileCategories={bin:1,flash:1};
-var mimeCategoryMap={"text/plain":"txt","application/octet-stream":"bin","text/html":"html","text/xml":"html","text/css":"css","application/x-javascript":"js","text/javascript":"js","application/javascript":"js","image/jpeg":"image","image/jpg":"image","image/gif":"image","image/png":"image","image/bmp":"image","application/x-shockwave-flash":"flash","video/x-flv":"flash"};
-var binaryCategoryMap={image:1,flash:1};
-Firebug.NetMonitor=extend(Firebug.ActivableModule,{dispatchName:"netMonitor",clear:function(context){var panel=context.getPanel(panelName,true);
-if(panel){panel.clear()
-}},initialize:function(){return;
-this.panelName=panelName;
-Firebug.ActivableModule.initialize.apply(this,arguments);
-if(Firebug.TraceModule){Firebug.TraceModule.addListener(this.TraceListener)
-}NetHttpObserver.registerObserver();
-NetHttpActivityObserver.registerObserver();
-Firebug.Debugger.addListener(this.DebuggerListener)
-},shutdown:function(){return;
-prefs.removeObserver(Firebug.prefDomain,this,false);
-if(Firebug.TraceModule){Firebug.TraceModule.removeListener(this.TraceListener)
-}NetHttpObserver.unregisterObserver();
-NetHttpActivityObserver.unregisterObserver();
-Firebug.Debugger.removeListener(this.DebuggerListener)
-}});
-Firebug.NetMonitor.NetInfoBody=domplate(Firebug.Rep,{tag:DIV({"class":"netInfoBody",_repObject:"$file"},TAG("$infoTabs",{file:"$file"}),TAG("$infoBodies",{file:"$file"})),infoTabs:DIV({"class":"netInfoTabs focusRow subFocusRow",role:"tablist"},A({"class":"netInfoParamsTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Params",$collapsed:"$file|hideParams"},$STR("URLParameters")),A({"class":"netInfoHeadersTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Headers"},$STR("Headers")),A({"class":"netInfoPostTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Post",$collapsed:"$file|hidePost"},$STR("Post")),A({"class":"netInfoPutTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Put",$collapsed:"$file|hidePut"},$STR("Put")),A({"class":"netInfoResponseTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Response",$collapsed:"$file|hideResponse"},$STR("Response")),A({"class":"netInfoCacheTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Cache",$collapsed:"$file|hideCache"},$STR("Cache")),A({"class":"netInfoHtmlTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Html",$collapsed:"$file|hideHtml"},$STR("HTML"))),infoBodies:DIV({"class":"netInfoBodies outerFocusRow"},TABLE({"class":"netInfoParamsText netInfoText netInfoParamsTable",role:"tabpanel",cellpadding:0,cellspacing:0},TBODY()),DIV({"class":"netInfoHeadersText netInfoText",role:"tabpanel"}),DIV({"class":"netInfoPostText netInfoText",role:"tabpanel"}),DIV({"class":"netInfoPutText netInfoText",role:"tabpanel"}),PRE({"class":"netInfoResponseText netInfoText",role:"tabpanel"}),DIV({"class":"netInfoCacheText netInfoText",role:"tabpanel"},TABLE({"class":"netInfoCacheTable",cellpadding:0,cellspacing:0,role:"presentation"},TBODY({role:"list","aria-label":$STR("Cache")}))),DIV({"class":"netInfoHtmlText netInfoText",role:"tabpanel"},IFRAME({"class":"netInfoHtmlPreview",role:"document"}))),headerDataTag:FOR("param","$headers",TR({role:"listitem"},TD({"class":"netInfoParamName",role:"presentation"},TAG("$param|getNameTag",{param:"$param"})),TD({"class":"netInfoParamValue",role:"list","aria-label":"$param.name"},FOR("line","$param|getParamValueIterator",CODE({"class":"focusRow subFocusRow",role:"listitem"},"$line"))))),customTab:A({"class":"netInfo$tabId\\Tab netInfoTab",onclick:"$onClickTab",view:"$tabId",role:"tab"},"$tabTitle"),customBody:DIV({"class":"netInfo$tabId\\Text netInfoText",role:"tabpanel"}),nameTag:SPAN("$param|getParamName"),nameWithTooltipTag:SPAN({title:"$param.name"},"$param|getParamName"),getNameTag:function(param){return(this.getParamName(param)==param.name)?this.nameTag:this.nameWithTooltipTag
-},getParamName:function(param){var limit=25;
-var name=param.name;
-if(name.length>limit){name=name.substr(0,limit)+"..."
-}return name
-},getParamTitle:function(param){var limit=25;
-var name=param.name;
-if(name.length>limit){return name
-}return""
-},hideParams:function(file){return !file.urlParams||!file.urlParams.length
-},hidePost:function(file){return file.method.toUpperCase()!="POST"
-},hidePut:function(file){return file.method.toUpperCase()!="PUT"
-},hideResponse:function(file){return false
-},hideCache:function(file){return true;
-return !file.cacheEntry
-},hideHtml:function(file){return true;
-return(file.mimeType!="text/html")&&(file.mimeType!="application/xhtml+xml")
-},onClickTab:function(event){this.selectTab(event.currentTarget||event.srcElement)
-},getParamValueIterator:function(param){return param.value;
-return wrapText(param.value,true)
-},appendTab:function(netInfoBox,tabId,tabTitle){var args={tabId:tabId,tabTitle:tabTitle};
-this.customTab.append(args,netInfoBox.getElementsByClassName("netInfoTabs").item(0));
-this.customBody.append(args,netInfoBox.getElementsByClassName("netInfoBodies").item(0))
-},selectTabByName:function(netInfoBox,tabName){var tab=getChildByClass(netInfoBox,"netInfoTabs","netInfo"+tabName+"Tab");
-if(tab){this.selectTab(tab)
-}},selectTab:function(tab){var view=tab.getAttribute("view");
-var netInfoBox=getAncestorByClass(tab,"netInfoBody");
-var selectedTab=netInfoBox.selectedTab;
-if(selectedTab){removeClass(netInfoBox.selectedText,"netInfoTextSelected");
-removeClass(selectedTab,"netInfoTabSelected");
-selectedTab.setAttribute("aria-selected","false")
-}var textBodyName="netInfo"+view+"Text";
-selectedTab=netInfoBox.selectedTab=tab;
-netInfoBox.selectedText=$$("."+textBodyName,netInfoBox)[0];
-setClass(netInfoBox.selectedText,"netInfoTextSelected");
-setClass(selectedTab,"netInfoTabSelected");
-selectedTab.setAttribute("selected","true");
-selectedTab.setAttribute("aria-selected","true");
-var file=Firebug.getRepObject(netInfoBox);
-var context=Firebug.chrome;
-this.updateInfo(netInfoBox,file,context)
-},updateInfo:function(netInfoBox,file,context){if(FBTrace.DBG_NET){FBTrace.sysout("net.updateInfo; file",file)
-}if(!netInfoBox){if(FBTrace.DBG_NET||FBTrace.DBG_ERRORS){FBTrace.sysout("net.updateInfo; ERROR netInfo == null "+file.href,file)
-}return
-}var tab=netInfoBox.selectedTab;
-if(hasClass(tab,"netInfoParamsTab")){if(file.urlParams&&!netInfoBox.urlParamsPresented){netInfoBox.urlParamsPresented=true;
-this.insertHeaderRows(netInfoBox,file.urlParams,"Params")
-}}else{if(hasClass(tab,"netInfoHeadersTab")){var headersText=$$(".netInfoHeadersText",netInfoBox)[0];
-if(file.responseHeaders&&!netInfoBox.responseHeadersPresented){netInfoBox.responseHeadersPresented=true;
-NetInfoHeaders.renderHeaders(headersText,file.responseHeaders,"ResponseHeaders")
-}if(file.requestHeaders&&!netInfoBox.requestHeadersPresented){netInfoBox.requestHeadersPresented=true;
-NetInfoHeaders.renderHeaders(headersText,file.requestHeaders,"RequestHeaders")
-}}else{if(hasClass(tab,"netInfoPostTab")){if(!netInfoBox.postPresented){netInfoBox.postPresented=true;
-var postText=netInfoBox.getElementsByClassName("netInfoPostText").item(0);
-NetInfoPostData.render(context,postText,file)
-}}else{if(hasClass(tab,"netInfoPutTab")){if(!netInfoBox.putPresented){netInfoBox.putPresented=true;
-var putText=netInfoBox.getElementsByClassName("netInfoPutText").item(0);
-NetInfoPostData.render(context,putText,file)
-}}else{if(hasClass(tab,"netInfoResponseTab")&&file.loaded&&!netInfoBox.responsePresented){var responseTextBox=$$(".netInfoResponseText",netInfoBox)[0];
-if(file.category=="image"){netInfoBox.responsePresented=true;
-var responseImage=netInfoBox.ownerDocument.createElement("img");
-responseImage.src=file.href;
-clearNode(responseTextBox);
-responseTextBox.appendChild(responseImage,responseTextBox)
-}else{this.setResponseText(file,netInfoBox,responseTextBox,context)
-}}else{if(hasClass(tab,"netInfoCacheTab")&&file.loaded&&!netInfoBox.cachePresented){var responseTextBox=netInfoBox.getElementsByClassName("netInfoCacheText").item(0);
-if(file.cacheEntry){netInfoBox.cachePresented=true;
-this.insertHeaderRows(netInfoBox,file.cacheEntry,"Cache")
-}}else{if(hasClass(tab,"netInfoHtmlTab")&&file.loaded&&!netInfoBox.htmlPresented){netInfoBox.htmlPresented=true;
-var text=Utils.getResponseText(file,context);
-var iframe=netInfoBox.getElementsByClassName("netInfoHtmlPreview").item(0);
-iframe.contentWindow.document.body.innerHTML=text
-}}}}}}}},setResponseText:function(file,netInfoBox,responseTextBox,context){netInfoBox.responsePresented=true;
-if(isIE){responseTextBox.style.whiteSpace="nowrap"
-}responseTextBox[typeof responseTextBox.textContent!="undefined"?"textContent":"innerText"]=file.responseText;
-return;
-var text=Utils.getResponseText(file,context);
-var limit=Firebug.netDisplayedResponseLimit+15;
-var limitReached=text?(text.length>limit):false;
-if(limitReached){text=text.substr(0,limit)+"..."
-}if(text){insertWrappedText(text,responseTextBox)
-}else{insertWrappedText("",responseTextBox)
-}if(limitReached){var object={text:$STR("net.responseSizeLimitMessage"),onClickLink:function(){var panel=context.getPanel("net",true);
-panel.openResponseInTab(file)
-}};
-Firebug.NetMonitor.ResponseSizeLimit.append(object,responseTextBox)
-}netInfoBox.responsePresented=true;
-if(FBTrace.DBG_NET){FBTrace.sysout("net.setResponseText; response text updated")
-}},insertHeaderRows:function(netInfoBox,headers,tableName,rowName){if(!headers.length){return
-}var headersTable=netInfoBox.getElementsByClassName("netInfo"+tableName+"Table").item(0);
-var tbody=getChildByClass(headersTable,"netInfo"+rowName+"Body");
-if(!tbody){tbody=headersTable.firstChild
-}var titleRow=getChildByClass(tbody,"netInfo"+rowName+"Title");
-this.headerDataTag.insertRows({headers:headers},titleRow?titleRow:tbody);
-removeClass(titleRow,"collapsed")
-}});
-var NetInfoBody=Firebug.NetMonitor.NetInfoBody;
-Firebug.NetMonitor.NetInfoHeaders=domplate(Firebug.Rep,{tag:DIV({"class":"netInfoHeadersTable",role:"tabpanel"},DIV({"class":"netInfoHeadersGroup netInfoResponseHeadersTitle"},SPAN($STR("ResponseHeaders")),SPAN({"class":"netHeadersViewSource response collapsed",onclick:"$onViewSource",_sourceDisplayed:false,_rowName:"ResponseHeaders"},$STR("net.headers.view source"))),TABLE({cellpadding:0,cellspacing:0},TBODY({"class":"netInfoResponseHeadersBody",role:"list","aria-label":$STR("ResponseHeaders")})),DIV({"class":"netInfoHeadersGroup netInfoRequestHeadersTitle"},SPAN($STR("RequestHeaders")),SPAN({"class":"netHeadersViewSource request collapsed",onclick:"$onViewSource",_sourceDisplayed:false,_rowName:"RequestHeaders"},$STR("net.headers.view source"))),TABLE({cellpadding:0,cellspacing:0},TBODY({"class":"netInfoRequestHeadersBody",role:"list","aria-label":$STR("RequestHeaders")}))),sourceTag:TR({role:"presentation"},TD({colspan:2,role:"presentation"},PRE({"class":"source"}))),onViewSource:function(event){var target=event.target;
-var requestHeaders=(target.rowName=="RequestHeaders");
-var netInfoBox=getAncestorByClass(target,"netInfoBody");
-var file=netInfoBox.repObject;
-if(target.sourceDisplayed){var headers=requestHeaders?file.requestHeaders:file.responseHeaders;
-this.insertHeaderRows(netInfoBox,headers,target.rowName);
-target.innerHTML=$STR("net.headers.view source")
-}else{var source=requestHeaders?file.requestHeadersText:file.responseHeadersText;
-this.insertSource(netInfoBox,source,target.rowName);
-target.innerHTML=$STR("net.headers.pretty print")
-}target.sourceDisplayed=!target.sourceDisplayed;
-cancelEvent(event)
-},insertSource:function(netInfoBox,source,rowName){var tbody=netInfoBox.getElementsByClassName("netInfo"+rowName+"Body").item(0);
-var node=this.sourceTag.replace({},tbody);
-var sourceNode=node.getElementsByClassName("source").item(0);
-sourceNode.innerHTML=source
-},insertHeaderRows:function(netInfoBox,headers,rowName){var headersTable=$$(".netInfoHeadersTable",netInfoBox)[0];
-var tbody=$$(".netInfo"+rowName+"Body",headersTable)[0];
-clearNode(tbody);
-if(!headers.length){return
-}NetInfoBody.headerDataTag.insertRows({headers:headers},tbody);
-var titleRow=getChildByClass(headersTable,"netInfo"+rowName+"Title");
-removeClass(titleRow,"collapsed")
-},init:function(parent){var rootNode=this.tag.append({},parent);
-var netInfoBox=getAncestorByClass(parent,"netInfoBody");
-var file=netInfoBox.repObject;
-var viewSource;
-viewSource=$$(".request",rootNode)[0];
-if(file.requestHeadersText){removeClass(viewSource,"collapsed")
-}viewSource=$$(".response",rootNode)[0];
-if(file.responseHeadersText){removeClass(viewSource,"collapsed")
-}},renderHeaders:function(parent,headers,rowName){if(!parent.firstChild){this.init(parent)
-}this.insertHeaderRows(parent,headers,rowName)
-}});
-var NetInfoHeaders=Firebug.NetMonitor.NetInfoHeaders;
-var $STRP=function(a){return a
-};
-Firebug.NetMonitor.NetLimit=domplate(Firebug.Rep,{collapsed:true,tableTag:DIV(TABLE({width:"100%",cellpadding:0,cellspacing:0},TBODY())),limitTag:TR({"class":"netRow netLimitRow",$collapsed:"$isCollapsed"},TD({"class":"netCol netLimitCol",colspan:6},TABLE({cellpadding:0,cellspacing:0},TBODY(TR(TD(SPAN({"class":"netLimitLabel"},$STRP("plural.Limit_Exceeded",[0]))),TD({style:"width:100%"}),TD(BUTTON({"class":"netLimitButton",title:"$limitPrefsTitle",onclick:"$onPreferences"},$STR("LimitPrefs"))),TD("&nbsp;")))))),isCollapsed:function(){return this.collapsed
-},onPreferences:function(event){openNewTab("about:config")
-},updateCounter:function(row){removeClass(row,"collapsed");
-var limitLabel=row.getElementsByClassName("netLimitLabel").item(0);
-limitLabel.firstChild.nodeValue=$STRP("plural.Limit_Exceeded",[row.limitInfo.totalCount])
-},createTable:function(parent,limitInfo){var table=this.tableTag.replace({},parent);
-var row=this.createRow(table.firstChild.firstChild,limitInfo);
-return[table,row]
-},createRow:function(parent,limitInfo){var row=this.limitTag.insertRows(limitInfo,parent,this)[0];
-row.limitInfo=limitInfo;
-return row
-},observe:function(subject,topic,data){if(topic!="nsPref:changed"){return
-}if(data.indexOf("net.logLimit")!=-1){this.updateMaxLimit()
-}},updateMaxLimit:function(){var value=Firebug.getPref(Firebug.prefDomain,"net.logLimit");
-maxQueueRequests=value?value:maxQueueRequests
-}});
-var NetLimit=Firebug.NetMonitor.NetLimit;
-Firebug.NetMonitor.ResponseSizeLimit=domplate(Firebug.Rep,{tag:DIV({"class":"netInfoResponseSizeLimit"},SPAN("$object.beforeLink"),A({"class":"objectLink",onclick:"$onClickLink"},"$object.linkText"),SPAN("$object.afterLink")),reLink:/^(.*)<a>(.*)<\/a>(.*$)/,append:function(obj,parent){var m=obj.text.match(this.reLink);
-return this.tag.append({onClickLink:obj.onClickLink,object:{beforeLink:m[1],linkText:m[2],afterLink:m[3]}},parent,this)
-}});
-Firebug.NetMonitor.Utils={findHeader:function(headers,name){if(!headers){return null
-}name=name.toLowerCase();
-for(var i=0;
-i<headers.length;
-++i){var headerName=headers[i].name.toLowerCase();
-if(headerName==name){return headers[i].value
-}}},formatPostText:function(text){if(text instanceof XMLDocument){return getElementXML(text.documentElement)
-}else{return text
-}},getPostText:function(file,context,noLimit){if(!file.postText){file.postText=readPostTextFromRequest(file.request,context);
-if(!file.postText&&context){file.postText=readPostTextFromPage(file.href,context)
-}}if(!file.postText){return file.postText
-}var limit=Firebug.netDisplayedPostBodyLimit;
-if(file.postText.length>limit&&!noLimit){return cropString(file.postText,limit,"\n\n... "+$STR("net.postDataSizeLimitMessage")+" ...\n\n")
-}return file.postText
-},getResponseText:function(file,context){return(typeof(file.responseText)!="undefined")?file.responseText:context.sourceCache.loadText(file.href,file.method,file)
-},isURLEncodedRequest:function(file,context){var text=Utils.getPostText(file,context);
-if(text&&text.toLowerCase().indexOf("content-type: application/x-www-form-urlencoded")==0){return true
-}var headerValue=Utils.findHeader(file.requestHeaders,"content-type");
-if(headerValue&&headerValue.indexOf("application/x-www-form-urlencoded")==0){return true
-}return false
-},isMultiPartRequest:function(file,context){var text=Utils.getPostText(file,context);
-if(text&&text.toLowerCase().indexOf("content-type: multipart/form-data")==0){return true
-}return false
-},getMimeType:function(mimeType,uri){if(!mimeType||!(mimeCategoryMap.hasOwnProperty(mimeType))){var ext=getFileExtension(uri);
-if(!ext){return mimeType
-}else{var extMimeType=mimeExtensionMap[ext.toLowerCase()];
-return extMimeType?extMimeType:mimeType
-}}else{return mimeType
-}},getDateFromSeconds:function(s){var d=new Date();
-d.setTime(s*1000);
-return d
-},getHttpHeaders:function(request,file){try{var http=QI(request,Ci.nsIHttpChannel);
-file.status=request.responseStatus;
-file.method=http.requestMethod;
-file.urlParams=parseURLParams(file.href);
-file.mimeType=Utils.getMimeType(request.contentType,request.name);
-if(!file.responseHeaders&&Firebug.collectHttpHeaders){var requestHeaders=[],responseHeaders=[];
-http.visitRequestHeaders({visitHeader:function(name,value){requestHeaders.push({name:name,value:value})
-}});
-http.visitResponseHeaders({visitHeader:function(name,value){responseHeaders.push({name:name,value:value})
-}});
-file.requestHeaders=requestHeaders;
-file.responseHeaders=responseHeaders
-}}catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.sysout("net.getHttpHeaders FAILS "+file.href,exc)
-}}},isXHR:function(request){try{var callbacks=request.notificationCallbacks;
-var xhrRequest=callbacks?callbacks.getInterface(Ci.nsIXMLHttpRequest):null;
-if(FBTrace.DBG_NET){FBTrace.sysout("net.isXHR; "+(xhrRequest!=null)+", "+safeGetName(request))
-}return(xhrRequest!=null)
-}catch(exc){}return false
-},getFileCategory:function(file){if(file.category){if(FBTrace.DBG_NET){FBTrace.sysout("net.getFileCategory; current: "+file.category+" for: "+file.href,file)
-}return file.category
-}if(file.isXHR){if(FBTrace.DBG_NET){FBTrace.sysout("net.getFileCategory; XHR for: "+file.href,file)
-}return file.category="xhr"
-}if(!file.mimeType){var ext=getFileExtension(file.href);
-if(ext){file.mimeType=mimeExtensionMap[ext.toLowerCase()]
-}}if(!file.mimeType){return""
-}var mimeType=file.mimeType;
-if(mimeType){mimeType=mimeType.split(";")[0]
-}return(file.category=mimeCategoryMap[mimeType])
-}};
-var Utils=Firebug.NetMonitor.Utils;
-Firebug.registerModule(Firebug.NetMonitor)
-}});
-FBL.ns(function(){with(FBL){var contexts=[];
-Firebug.Spy=extend(Firebug.Module,{dispatchName:"spy",initialize:function(){if(Firebug.TraceModule){Firebug.TraceModule.addListener(this.TraceListener)
-}Firebug.Module.initialize.apply(this,arguments)
-},shutdown:function(){Firebug.Module.shutdown.apply(this,arguments);
-if(Firebug.TraceModule){Firebug.TraceModule.removeListener(this.TraceListener)
-}},initContext:function(context){context.spies=[];
-if(Firebug.showXMLHttpRequests&&Firebug.Console.isAlwaysEnabled()){this.attachObserver(context,context.window)
-}if(FBTrace.DBG_SPY){FBTrace.sysout("spy.initContext "+contexts.length+" ",context.getName())
-}},destroyContext:function(context){this.detachObserver(context,null);
-if(FBTrace.DBG_SPY&&context.spies.length){FBTrace.sysout("spy.destroyContext; ERROR There are leaking Spies ("+context.spies.length+") "+context.getName())
-}delete context.spies;
-if(FBTrace.DBG_SPY){FBTrace.sysout("spy.destroyContext "+contexts.length+" ",context.getName())
-}},watchWindow:function(context,win){if(Firebug.showXMLHttpRequests&&Firebug.Console.isAlwaysEnabled()){this.attachObserver(context,win)
-}},unwatchWindow:function(context,win){try{this.detachObserver(context,win)
-}catch(ex){ERROR(ex)
-}},updateOption:function(name,value){if(name=="showXMLHttpRequests"){var tach=value?this.attachObserver:this.detachObserver;
-for(var i=0;
-i<TabWatcher.contexts.length;
-++i){var context=TabWatcher.contexts[i];
-iterateWindows(context.window,function(win){tach.apply(this,[context,win])
-})
-}}},skipSpy:function(win){if(!win){return true
-}var uri=safeGetWindowLocation(win);
-if(uri&&(uri.indexOf("about:")==0||uri.indexOf("chrome:")==0)){return true
-}},attachObserver:function(context,win){if(Firebug.Spy.skipSpy(win)){return
-}for(var i=0;
-i<contexts.length;
-++i){if((contexts[i].context==context)&&(contexts[i].win==win)){return
-}}if(contexts.length==0){httpObserver.addObserver(SpyHttpObserver,"firebug-http-event",false);
-SpyHttpActivityObserver.registerObserver()
-}contexts.push({context:context,win:win});
-if(FBTrace.DBG_SPY){FBTrace.sysout("spy.attachObserver (HTTP) "+contexts.length+" ",context.getName())
-}},detachObserver:function(context,win){for(var i=0;
-i<contexts.length;
-++i){if(contexts[i].context==context){if(win&&(contexts[i].win!=win)){continue
-}contexts.splice(i,1);
-if(contexts.length==0){httpObserver.removeObserver(SpyHttpObserver,"firebug-http-event");
-SpyHttpActivityObserver.unregisterObserver()
-}if(FBTrace.DBG_SPY){FBTrace.sysout("spy.detachObserver (HTTP) "+contexts.length+" ",context.getName())
-}return
-}}},getXHR:function(request){if(!(request instanceof Ci.nsIHttpChannel)){return null
-}try{var callbacks=request.notificationCallbacks;
-return(callbacks?callbacks.getInterface(Ci.nsIXMLHttpRequest):null)
-}catch(exc){if(exc.name=="NS_NOINTERFACE"){if(FBTrace.DBG_SPY){FBTrace.sysout("spy.getXHR; Request is not nsIXMLHttpRequest: "+safeGetRequestName(request))
-}}}return null
-}});
-Firebug.Spy.XHR=domplate(Firebug.Rep,{tag:DIV({"class":"spyHead",_repObject:"$object"},TABLE({"class":"spyHeadTable focusRow outerFocusRow",cellpadding:0,cellspacing:0,role:"listitem","aria-expanded":"false"},TBODY({role:"presentation"},TR({"class":"spyRow"},TD({"class":"spyTitleCol spyCol",onclick:"$onToggleBody"},DIV({"class":"spyTitle"},"$object|getCaption"),DIV({"class":"spyFullTitle spyTitle"},"$object|getFullUri")),TD({"class":"spyCol"},DIV({"class":"spyStatus"},"$object|getStatus")),TD({"class":"spyCol"},SPAN({"class":"spyIcon"})),TD({"class":"spyCol"},SPAN({"class":"spyTime"})),TD({"class":"spyCol"},TAG(FirebugReps.SourceLink.tag,{object:"$object.sourceLink"})))))),getCaption:function(spy){return spy.method.toUpperCase()+" "+cropString(spy.getURL(),100)
-},getFullUri:function(spy){return spy.method.toUpperCase()+" "+spy.getURL()
-},getStatus:function(spy){var text="";
-if(spy.statusCode){text+=spy.statusCode+" "
-}if(spy.statusText){return text+=spy.statusText
-}return text
-},onToggleBody:function(event){var target=event.currentTarget||event.srcElement;
-var logRow=getAncestorByClass(target,"logRow-spy");
-if(isLeftClick(event)){toggleClass(logRow,"opened");
-var spy=getChildByClass(logRow,"spyHead").repObject;
-var spyHeadTable=getAncestorByClass(target,"spyHeadTable");
-if(hasClass(logRow,"opened")){updateHttpSpyInfo(spy);
-if(spyHeadTable){spyHeadTable.setAttribute("aria-expanded","true")
-}}else{}}},copyURL:function(spy){copyToClipboard(spy.getURL())
-},copyParams:function(spy){var text=spy.postText;
-if(!text){return
-}var url=reEncodeURL(spy,text,true);
-copyToClipboard(url)
-},copyResponse:function(spy){copyToClipboard(spy.responseText)
-},openInTab:function(spy){openNewTab(spy.getURL(),spy.postText)
-},supportsObject:function(object){return false;
-return object instanceof Firebug.Spy.XMLHttpRequestSpy
-},browseObject:function(spy,context){var url=spy.getURL();
-openNewTab(url);
-return true
-},getRealObject:function(spy,context){return spy.xhrRequest
-},getContextMenuItems:function(spy){var items=[{label:"CopyLocation",command:bindFixed(this.copyURL,this,spy)}];
-if(spy.postText){items.push({label:"CopyLocationParameters",command:bindFixed(this.copyParams,this,spy)})
-}items.push({label:"CopyResponse",command:bindFixed(this.copyResponse,this,spy)},"-",{label:"OpenInTab",command:bindFixed(this.openInTab,this,spy)});
-return items
-}});
-function updateTime(spy){var timeBox=spy.logRow.getElementsByClassName("spyTime").item(0);
-if(spy.responseTime){timeBox.textContent=" "+formatTime(spy.responseTime)
-}}function updateLogRow(spy){updateTime(spy);
-var statusBox=spy.logRow.getElementsByClassName("spyStatus").item(0);
-statusBox.textContent=Firebug.Spy.XHR.getStatus(spy);
-removeClass(spy.logRow,"loading");
-setClass(spy.logRow,"loaded");
-try{var errorRange=Math.floor(spy.xhrRequest.status/100);
-if(errorRange==4||errorRange==5){setClass(spy.logRow,"error")
-}}catch(exc){}}var updateHttpSpyInfo=function updateHttpSpyInfo(spy){if(!spy.logRow||!hasClass(spy.logRow,"opened")){return
-}if(!spy.params){spy.params=parseURLParams(spy.href+"")
-}if(!spy.requestHeaders){spy.requestHeaders=getRequestHeaders(spy)
-}if(!spy.responseHeaders&&spy.loaded){spy.responseHeaders=getResponseHeaders(spy)
-}var template=Firebug.NetMonitor.NetInfoBody;
-var netInfoBox=getChildByClass(spy.logRow,"spyHead","netInfoBody");
-if(!netInfoBox){var head=getChildByClass(spy.logRow,"spyHead");
-netInfoBox=template.tag.append({file:spy},head);
-template.selectTabByName(netInfoBox,"Response")
-}else{template.updateInfo(netInfoBox,spy,spy.context)
-}};
-function getRequestHeaders(spy){var headers=[];
-var channel=spy.xhrRequest.channel;
-if(channel instanceof Ci.nsIHttpChannel){channel.visitRequestHeaders({visitHeader:function(name,value){headers.push({name:name,value:value})
-}})
-}return headers
-}function getResponseHeaders(spy){var headers=[];
-try{var channel=spy.xhrRequest.channel;
-if(channel instanceof Ci.nsIHttpChannel){channel.visitResponseHeaders({visitHeader:function(name,value){headers.push({name:name,value:value})
-}})
-}}catch(exc){if(FBTrace.DBG_SPY||FBTrace.DBG_ERRORS){FBTrace.sysout("spy.getResponseHeaders; EXCEPTION "+safeGetRequestName(spy.request),exc)
-}}return headers
-}Firebug.registerModule(Firebug.Spy)
-}});
-FBL.ns(function(){with(FBL){var ignoreHTMLProps={sizcache:1,sizset:1};
-ignoreHTMLProps[cacheID]=1;
-ignoreHTMLProps[cacheID+"b"]=1;
-Firebug.HTML=extend(Firebug.Module,{appendTreeNode:function(nodeArray,html){var reTrim=/^\s+|\s+$/g;
-if(!nodeArray.length){nodeArray=[nodeArray]
-}for(var n=0,node;
-node=nodeArray[n];
-n++){if(node.nodeType==1){if(Firebug.ignoreFirebugElements&&node.firebugIgnore){continue
-}var uid=node[cacheID];
-var child=node.childNodes;
-var childLength=child.length;
-var nodeName=node.nodeName.toLowerCase();
-var nodeVisible=isVisible(node);
-var hasSingleTextChild=childLength==1&&node.firstChild.nodeType==3&&nodeName!="script"&&nodeName!="style";
-var nodeControl=!hasSingleTextChild&&childLength>0?('<div class="nodeControl"></div>'):"";
-var isIE=false;
-if(isIE&&nodeControl){html.push(nodeControl)
-}if(typeof uid!="undefined"){html.push('<div class="objectBox-element" ','id="',uid,'">',!isIE&&nodeControl?nodeControl:"","<span ",cacheID,'="',uid,'"  class="nodeBox',nodeVisible?"":" nodeHidden",'">&lt;<span class="nodeTag">',nodeName,"</span>")
-}else{html.push('<div class="objectBox-element"><span class="nodeBox',nodeVisible?"":" nodeHidden",'">&lt;<span class="nodeTag">',nodeName,"</span>")
-}for(var i=0;
-i<node.attributes.length;
-++i){var attr=node.attributes[i];
-if(!attr.specified||Firebug.ignoreFirebugElements&&ignoreHTMLProps.hasOwnProperty(attr.nodeName)){continue
-}var name=attr.nodeName.toLowerCase();
-var value=name=="style"?formatStyles(node.style.cssText):attr.nodeValue;
-html.push('&nbsp;<span class="nodeName">',name,'</span>=&quot;<span class="nodeValue">',escapeHTML(value),"</span>&quot;")
-}if(hasSingleTextChild){var value=child[0].nodeValue.replace(reTrim,"");
-if(value){html.push('&gt;<span class="nodeText">',escapeHTML(value),'</span>&lt;/<span class="nodeTag">',nodeName,"</span>&gt;</span></div>")
-}else{html.push("/&gt;</span></div>")
-}}else{if(childLength>0){html.push("&gt;</span></div>")
-}else{html.push("/&gt;</span></div>")
-}}}else{if(node.nodeType==3){if(node.parentNode&&(node.parentNode.nodeName.toLowerCase()=="script"||node.parentNode.nodeName.toLowerCase()=="style")){var value=node.nodeValue.replace(reTrim,"");
-if(isIE){var src=value+"\n"
-}else{var src="\n"+value+"\n"
-}var match=src.match(/\n/g);
-var num=match?match.length:0;
-var s=[],sl=0;
-for(var c=1;
-c<num;
-c++){s[sl++]='<div line="'+c+'">'+c+"</div>"
-}html.push('<div class="nodeGroup"><div class="nodeChildren"><div class="lineNo">',s.join(""),'</div><pre class="nodeCode">',escapeHTML(src),"</pre>","</div></div>")
-}else{var value=node.nodeValue.replace(reTrim,"");
-if(value){html.push('<div class="nodeText">',escapeHTML(value),"</div>")
-}}}}}},appendTreeChildren:function(treeNode){var doc=Firebug.chrome.document;
-var uid=treeNode.id;
-var parentNode=documentCache[uid];
-if(parentNode.childNodes.length==0){return
-}var treeNext=treeNode.nextSibling;
-var treeParent=treeNode.parentNode;
-var isIE=false;
-var control=isIE?treeNode.previousSibling:treeNode.firstChild;
-control.className="nodeControl nodeMaximized";
-var html=[];
-var children=doc.createElement("div");
-children.className="nodeChildren";
-this.appendTreeNode(parentNode.childNodes,html);
-children.innerHTML=html.join("");
-treeParent.insertBefore(children,treeNext);
-var closeElement=doc.createElement("div");
-closeElement.className="objectBox-element";
-closeElement.innerHTML='&lt;/<span class="nodeTag">'+parentNode.nodeName.toLowerCase()+"&gt;</span>";
-treeParent.insertBefore(closeElement,treeNext)
-},removeTreeChildren:function(treeNode){var children=treeNode.nextSibling;
-var closeTag=children.nextSibling;
-var isIE=false;
-var control=isIE?treeNode.previousSibling:treeNode.firstChild;
-control.className="nodeControl";
-children.parentNode.removeChild(children);
-closeTag.parentNode.removeChild(closeTag)
-},isTreeNodeVisible:function(id){return $(id)
-},select:function(el){var id=el&&el[cacheID];
-if(id){this.selectTreeNode(id)
-}},selectTreeNode:function(id){id=""+id;
-var node,stack=[];
-while(id&&!this.isTreeNodeVisible(id)){stack.push(id);
-var node=documentCache[id].parentNode;
-if(node&&typeof node[cacheID]!="undefined"){id=""+node[cacheID]
-}else{break
-}}stack.push(id);
-while(stack.length>0){id=stack.pop();
-node=$(id);
-if(stack.length>0&&documentCache[id].childNodes.length>0){this.appendTreeChildren(node)
-}}selectElement(node);
-fbPanel1.scrollTop=Math.round(node.offsetTop-fbPanel1.clientHeight/2)
-}});
-Firebug.registerModule(Firebug.HTML);
-function HTMLPanel(){}HTMLPanel.prototype=extend(Firebug.Panel,{name:"HTML",title:"HTML",options:{hasSidePanel:true,isPreRendered:true,innerHTMLSync:true},create:function(){Firebug.Panel.create.apply(this,arguments);
-this.panelNode.style.padding="4px 3px 1px 15px";
-this.contentNode.style.minWidth="500px";
-if(Env.Options.enablePersistent||Firebug.chrome.type!="popup"){this.createUI()
-}if(!this.sidePanelBar.selectedPanel){this.sidePanelBar.selectPanel("css")
-}},destroy:function(){selectedElement=null;
-fbPanel1=null;
-selectedSidePanelTS=null;
-selectedSidePanelTimer=null;
-Firebug.Panel.destroy.apply(this,arguments)
-},createUI:function(){var rootNode=Firebug.browser.document.documentElement;
-var html=[];
-Firebug.HTML.appendTreeNode(rootNode,html);
-var d=this.contentNode;
-d.innerHTML=html.join("");
-this.panelNode.appendChild(d)
-},initialize:function(){Firebug.Panel.initialize.apply(this,arguments);
-addEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
-fbPanel1=$("fbPanel1");
-if(!selectedElement){Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID])
-}addEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
-addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
-addEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
-},shutdown:function(){removeEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
-removeEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
-removeEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove);
-removeEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
-fbPanel1=null;
-Firebug.Panel.shutdown.apply(this,arguments)
-},reattach:function(){if(FirebugChrome.selectedHTMLElementId){Firebug.HTML.selectTreeNode(FirebugChrome.selectedHTMLElementId)
-}}});
-Firebug.registerPanel(HTMLPanel);
-var formatStyles=function(styles){return isIE?styles.replace(/([^\s]+)\s*:/g,function(m,g){return g.toLowerCase()+":"
-}):styles
-};
-var selectedElement=null;
-var fbPanel1=null;
-var selectedSidePanelTS,selectedSidePanelTimer;
-var selectElement=function selectElement(e){if(e!=selectedElement){if(selectedElement){selectedElement.className="objectBox-element"
-}e.className=e.className+" selectedElement";
-if(FBL.isFirefox){e.style.MozBorderRadius="2px"
-}else{if(FBL.isSafari){e.style.WebkitBorderRadius="2px"
-}}selectedElement=e;
-FirebugChrome.selectedHTMLElementId=e.id;
-var target=documentCache[e.id];
-var selectedSidePanel=Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
-var stack=FirebugChrome.htmlSelectionStack;
-stack.unshift(target);
-if(stack.length>2){stack.pop()
-}var lazySelect=function(){selectedSidePanelTS=new Date().getTime();
-selectedSidePanel.select(target,true)
-};
-if(selectedSidePanelTimer){clearTimeout(selectedSidePanelTimer);
-selectedSidePanelTimer=null
-}if(new Date().getTime()-selectedSidePanelTS>100){setTimeout(lazySelect,0)
-}else{selectedSidePanelTimer=setTimeout(lazySelect,150)
-}}};
-Firebug.HTML.onTreeClick=function(e){e=e||event;
-var targ;
-if(e.target){targ=e.target
-}else{if(e.srcElement){targ=e.srcElement
-}}if(targ.nodeType==3){targ=targ.parentNode
-}if(targ.className.indexOf("nodeControl")!=-1||targ.className=="nodeTag"){var isIE=false;
-if(targ.className=="nodeTag"){var control=isIE?(targ.parentNode.previousSibling||targ):(targ.parentNode.previousSibling||targ);
-selectElement(targ.parentNode.parentNode);
-if(control.className.indexOf("nodeControl")==-1){return
-}}else{control=targ
-}FBL.cancelEvent(e);
-var treeNode=isIE?control.nextSibling:control.parentNode;
-if(control.className.indexOf(" nodeMaximized")!=-1){FBL.Firebug.HTML.removeTreeChildren(treeNode)
-}else{FBL.Firebug.HTML.appendTreeChildren(treeNode)
-}}else{if(targ.className=="nodeValue"||targ.className=="nodeName"){}}};
-function onListMouseOut(e){e=e||event||window;
-var targ;
-if(e.target){targ=e.target
-}else{if(e.srcElement){targ=e.srcElement
-}}if(targ.nodeType==3){targ=targ.parentNode
-}if(hasClass(targ,"fbPanel")){FBL.Firebug.Inspector.hideBoxModel();
-hoverElement=null
-}}var hoverElement=null;
-var hoverElementTS=0;
-Firebug.HTML.onListMouseMove=function onListMouseMove(e){try{e=e||event||window;
-var targ;
-if(e.target){targ=e.target
-}else{if(e.srcElement){targ=e.srcElement
-}}if(targ.nodeType==3){targ=targ.parentNode
-}var found=false;
-while(targ&&!found){if(!/\snodeBox\s|\sobjectBox-selector\s/.test(" "+targ.className+" ")){targ=targ.parentNode
-}else{found=true
-}}if(!targ){FBL.Firebug.Inspector.hideBoxModel();
-hoverElement=null;
-return
-}if(typeof targ.attributes[FBL.cacheID]=="undefined"){return
-}var uid=targ.attributes[FBL.cacheID];
-if(!uid){return
-}var el=FBL.documentCache[uid.value];
-var nodeName=el.nodeName.toLowerCase();
-if(FBL.isIE&&" meta title script link ".indexOf(" "+nodeName+" ")!=-1){return
-}if(!/\snodeBox\s|\sobjectBox-selector\s/.test(" "+targ.className+" ")){return
-}if(el.id=="FirebugUI"||" html head body br script link iframe ".indexOf(" "+nodeName+" ")!=-1){FBL.Firebug.Inspector.hideBoxModel();
-hoverElement=null;
-return
-}if((new Date().getTime()-hoverElementTS>40)&&hoverElement!=el){hoverElementTS=new Date().getTime();
-hoverElement=el;
-FBL.Firebug.Inspector.drawBoxModel(el)
-}}catch(E){}}
-}});
 FBL.ns(function(){with(FBL){var saveTimeout=400;
 var pageAmount=10;
 var currentTarget=null;
@@ -5369,6 +4174,1572 @@ if(s.display!="inline"){return lastInline
 var insertTab=function insertTab(){insertTextIntoElement(currentEditor.input,Firebug.Editor.tabCharacter)
 };
 Firebug.registerModule(Firebug.Editor)
+}});
+FBL.ns(function(){with(FBL){var inspectorTS,inspectorTimer,isInspecting;
+Firebug.Inspector={create:function(){offlineFragment=Env.browser.document.createDocumentFragment();
+createBoxModelInspector();
+createOutlineInspector()
+},destroy:function(){destroyBoxModelInspector();
+destroyOutlineInspector();
+offlineFragment=null
+},toggleInspect:function(){if(isInspecting){this.stopInspecting()
+}else{Firebug.chrome.inspectButton.changeState("pressed");
+this.startInspecting()
+}},startInspecting:function(){isInspecting=true;
+Firebug.chrome.selectPanel("HTML");
+createInspectorFrame();
+var size=Firebug.browser.getWindowScrollSize();
+fbInspectFrame.style.width=size.width+"px";
+fbInspectFrame.style.height=size.height+"px";
+addEvent(fbInspectFrame,"mousemove",Firebug.Inspector.onInspecting);
+addEvent(fbInspectFrame,"mousedown",Firebug.Inspector.onInspectingClick)
+},stopInspecting:function(){isInspecting=false;
+if(outlineVisible){this.hideOutline()
+}removeEvent(fbInspectFrame,"mousemove",Firebug.Inspector.onInspecting);
+removeEvent(fbInspectFrame,"mousedown",Firebug.Inspector.onInspectingClick);
+destroyInspectorFrame();
+Firebug.chrome.inspectButton.restore();
+if(Firebug.chrome.type=="popup"){Firebug.chrome.node.focus()
+}},onInspectingClick:function(e){fbInspectFrame.style.display="none";
+var targ=Firebug.browser.getElementFromPoint(e.clientX,e.clientY);
+fbInspectFrame.style.display="block";
+var id=targ.id;
+if(id&&/^fbOutline\w$/.test(id)){return
+}if(id=="FirebugUI"){return
+}while(targ.nodeType!=1){targ=targ.parentNode
+}Firebug.Inspector.stopInspecting()
+},onInspecting:function(e){if(new Date().getTime()-lastInspecting>30){fbInspectFrame.style.display="none";
+var targ=Firebug.browser.getElementFromPoint(e.clientX,e.clientY);
+fbInspectFrame.style.display="block";
+var id=targ.id;
+if(id&&/^fbOutline\w$/.test(id)){return
+}if(id=="FirebugUI"){return
+}while(targ.nodeType!=1){targ=targ.parentNode
+}if(targ.nodeName.toLowerCase()=="body"){return
+}Firebug.Inspector.drawOutline(targ);
+if(targ[cacheID]){var target=""+targ[cacheID];
+var lazySelect=function(){inspectorTS=new Date().getTime();
+Firebug.HTML.selectTreeNode(""+targ[cacheID])
+};
+if(inspectorTimer){clearTimeout(inspectorTimer);
+inspectorTimer=null
+}if(new Date().getTime()-inspectorTS>200){setTimeout(lazySelect,0)
+}else{inspectorTimer=setTimeout(lazySelect,300)
+}}lastInspecting=new Date().getTime()
+}},onInspectingBody:function(e){if(new Date().getTime()-lastInspecting>30){var targ=e.target;
+var id=targ.id;
+if(id&&/^fbOutline\w$/.test(id)){return
+}if(id=="FirebugUI"){return
+}while(targ.nodeType!=1){targ=targ.parentNode
+}if(targ.nodeName.toLowerCase()=="body"){return
+}Firebug.Inspector.drawOutline(targ);
+if(targ[cacheID]){FBL.Firebug.HTML.selectTreeNode(""+targ[cacheID])
+}lastInspecting=new Date().getTime()
+}},drawOutline:function(el){var border=2;
+var scrollbarSize=17;
+var windowSize=Firebug.browser.getWindowSize();
+var scrollSize=Firebug.browser.getWindowScrollSize();
+var scrollPosition=Firebug.browser.getWindowScrollPosition();
+var box=Firebug.browser.getElementBox(el);
+var top=box.top;
+var left=box.left;
+var height=box.height;
+var width=box.width;
+var freeHorizontalSpace=scrollPosition.left+windowSize.width-left-width-(!isIE&&scrollSize.height>windowSize.height?scrollbarSize:0);
+var freeVerticalSpace=scrollPosition.top+windowSize.height-top-height-(!isIE&&scrollSize.width>windowSize.width?scrollbarSize:0);
+var numVerticalBorders=freeVerticalSpace>0?2:1;
+var o=outlineElements;
+var style;
+style=o.fbOutlineT.style;
+style.top=top-border+"px";
+style.left=left+"px";
+style.height=border+"px";
+style.width=width+"px";
+style=o.fbOutlineL.style;
+style.top=top-border+"px";
+style.left=left-border+"px";
+style.height=height+numVerticalBorders*border+"px";
+style.width=border+"px";
+style=o.fbOutlineB.style;
+if(freeVerticalSpace>0){style.top=top+height+"px";
+style.left=left+"px";
+style.width=width+"px"
+}else{style.top=-2*border+"px";
+style.left=-2*border+"px";
+style.width=border+"px"
+}style=o.fbOutlineR.style;
+if(freeHorizontalSpace>0){style.top=top-border+"px";
+style.left=left+width+"px";
+style.height=height+numVerticalBorders*border+"px";
+style.width=(freeHorizontalSpace<border?freeHorizontalSpace:border)+"px"
+}else{style.top=-2*border+"px";
+style.left=-2*border+"px";
+style.height=border+"px";
+style.width=border+"px"
+}if(!outlineVisible){this.showOutline()
+}},hideOutline:function(){if(!outlineVisible){return
+}for(var name in outline){offlineFragment.appendChild(outlineElements[name])
+}outlineVisible=false
+},showOutline:function(){if(outlineVisible){return
+}if(boxModelVisible){this.hideBoxModel()
+}for(var name in outline){Firebug.browser.document.getElementsByTagName("body")[0].appendChild(outlineElements[name])
+}outlineVisible=true
+},drawBoxModel:function(el){var box=Firebug.browser.getElementBox(el);
+var windowSize=Firebug.browser.getWindowSize();
+var scrollPosition=Firebug.browser.getWindowScrollPosition();
+var offsetHeight=Firebug.chrome.type=="frame"?FirebugChrome.height:0;
+if(box.top>scrollPosition.top+windowSize.height-offsetHeight||box.left>scrollPosition.left+windowSize.width||scrollPosition.top>box.top+box.height||scrollPosition.left>box.left+box.width){return
+}var top=box.top;
+var left=box.left;
+var height=box.height;
+var width=box.width;
+var margin=Firebug.browser.getMeasurementBox(el,"margin");
+var padding=Firebug.browser.getMeasurementBox(el,"padding");
+var border=Firebug.browser.getMeasurementBox(el,"border");
+boxModelStyle.top=top-margin.top+"px";
+boxModelStyle.left=left-margin.left+"px";
+boxModelStyle.height=height+margin.top+margin.bottom+"px";
+boxModelStyle.width=width+margin.left+margin.right+"px";
+boxBorderStyle.top=margin.top+"px";
+boxBorderStyle.left=margin.left+"px";
+boxBorderStyle.height=height+"px";
+boxBorderStyle.width=width+"px";
+boxPaddingStyle.top=margin.top+border.top+"px";
+boxPaddingStyle.left=margin.left+border.left+"px";
+boxPaddingStyle.height=height-border.top-border.bottom+"px";
+boxPaddingStyle.width=width-border.left-border.right+"px";
+boxContentStyle.top=margin.top+border.top+padding.top+"px";
+boxContentStyle.left=margin.left+border.left+padding.left+"px";
+boxContentStyle.height=height-border.top-padding.top-padding.bottom-border.bottom+"px";
+boxContentStyle.width=width-border.left-padding.left-padding.right-border.right+"px";
+if(!boxModelVisible){this.showBoxModel()
+}},hideBoxModel:function(){if(!boxModelVisible){return
+}offlineFragment.appendChild(boxModel);
+boxModelVisible=false
+},showBoxModel:function(){if(boxModelVisible){return
+}if(outlineVisible){this.hideOutline()
+}Firebug.browser.document.getElementsByTagName("body")[0].appendChild(boxModel);
+boxModelVisible=true
+}};
+var offlineFragment=null;
+var boxModelVisible=false;
+var boxModel,boxModelStyle,boxMargin,boxMarginStyle,boxBorder,boxBorderStyle,boxPadding,boxPaddingStyle,boxContent,boxContentStyle;
+var resetStyle="margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
+var offscreenStyle=resetStyle+"top:-1234px; left:-1234px;";
+var inspectStyle=resetStyle+"z-index: 2147483500;";
+var inspectFrameStyle=resetStyle+"z-index: 2147483550; top:0; left:0; background:url("+Env.Location.skinDir+"pixel_transparent.gif);";
+var inspectModelOpacity=isIE?"filter:alpha(opacity=80);":"opacity:0.8;";
+var inspectModelStyle=inspectStyle+inspectModelOpacity;
+var inspectMarginStyle=inspectStyle+"background: #EDFF64; height:100%; width:100%;";
+var inspectBorderStyle=inspectStyle+"background: #666;";
+var inspectPaddingStyle=inspectStyle+"background: SlateBlue;";
+var inspectContentStyle=inspectStyle+"background: SkyBlue;";
+var outlineStyle={fbHorizontalLine:"background: #3875D7;height: 2px;",fbVerticalLine:"background: #3875D7;width: 2px;"};
+var lastInspecting=0;
+var fbInspectFrame=null;
+var outlineVisible=false;
+var outlineElements={};
+var outline={fbOutlineT:"fbHorizontalLine",fbOutlineL:"fbVerticalLine",fbOutlineB:"fbHorizontalLine",fbOutlineR:"fbVerticalLine"};
+var getInspectingTarget=function(){};
+var createInspectorFrame=function createInspectorFrame(){fbInspectFrame=createGlobalElement("div");
+fbInspectFrame.id="fbInspectFrame";
+fbInspectFrame.firebugIgnore=true;
+fbInspectFrame.style.cssText=inspectFrameStyle;
+Firebug.browser.document.getElementsByTagName("body")[0].appendChild(fbInspectFrame)
+};
+var destroyInspectorFrame=function destroyInspectorFrame(){if(fbInspectFrame){Firebug.browser.document.getElementsByTagName("body")[0].removeChild(fbInspectFrame);
+fbInspectFrame=null
+}};
+var createOutlineInspector=function createOutlineInspector(){for(var name in outline){var el=outlineElements[name]=createGlobalElement("div");
+el.id=name;
+el.firebugIgnore=true;
+el.style.cssText=inspectStyle+outlineStyle[outline[name]];
+offlineFragment.appendChild(el)
+}};
+var destroyOutlineInspector=function destroyOutlineInspector(){for(var name in outline){var el=outlineElements[name];
+el.parentNode.removeChild(el)
+}};
+var createBoxModelInspector=function createBoxModelInspector(){boxModel=createGlobalElement("div");
+boxModel.id="fbBoxModel";
+boxModel.firebugIgnore=true;
+boxModelStyle=boxModel.style;
+boxModelStyle.cssText=inspectModelStyle;
+boxMargin=createGlobalElement("div");
+boxMargin.id="fbBoxMargin";
+boxMarginStyle=boxMargin.style;
+boxMarginStyle.cssText=inspectMarginStyle;
+boxModel.appendChild(boxMargin);
+boxBorder=createGlobalElement("div");
+boxBorder.id="fbBoxBorder";
+boxBorderStyle=boxBorder.style;
+boxBorderStyle.cssText=inspectBorderStyle;
+boxModel.appendChild(boxBorder);
+boxPadding=createGlobalElement("div");
+boxPadding.id="fbBoxPadding";
+boxPaddingStyle=boxPadding.style;
+boxPaddingStyle.cssText=inspectPaddingStyle;
+boxModel.appendChild(boxPadding);
+boxContent=createGlobalElement("div");
+boxContent.id="fbBoxContent";
+boxContentStyle=boxContent.style;
+boxContentStyle.cssText=inspectContentStyle;
+boxModel.appendChild(boxContent);
+offlineFragment.appendChild(boxModel)
+};
+var destroyBoxModelInspector=function destroyBoxModelInspector(){boxModel.parentNode.removeChild(boxModel)
+}
+}});
+FBL.ns(function(){with(FBL){consoleQueue=[];
+var FirebugContext=Env.browser;
+var $STRF=function(){return"$STRF not supported yet"
+};
+var maxQueueRequests=500;
+Firebug.ConsoleBase={log:function(object,context,className,rep,noThrottle,sourceLink){return this.logRow(appendObject,object,context,className,rep,sourceLink,noThrottle)
+},logFormatted:function(objects,context,className,noThrottle,sourceLink){return this.logRow(appendFormatted,objects,context,className,null,sourceLink,noThrottle)
+},openGroup:function(objects,context,className,rep,noThrottle,sourceLink,noPush){return this.logRow(appendOpenGroup,objects,context,className,rep,sourceLink,noThrottle)
+},closeGroup:function(context,noThrottle){return this.logRow(appendCloseGroup,null,context,null,null,null,noThrottle,true)
+},logRow:function(appender,objects,context,className,rep,sourceLink,noThrottle,noRow){noThrottle=true;
+if(!context){context=FirebugContext
+}if(FBTrace.DBG_ERRORS&&!context){FBTrace.sysout("Console.logRow has no context, skipping objects",objects)
+}if(!context){return
+}if(noThrottle||!context){var panel=this.getPanel(context);
+if(panel){var row=panel.append(appender,objects,className,rep,sourceLink,noRow);
+var container=panel.panelNode;
+return row
+}else{consoleQueue.push([appender,objects,context,className,rep,sourceLink,noThrottle,noRow])
+}}else{if(!context.throttle){return
+}var args=[appender,objects,context,className,rep,sourceLink,true,noRow];
+context.throttle(this.logRow,this,args)
+}},appendFormatted:function(args,row,context){if(!context){context=FirebugContext
+}var panel=this.getPanel(context);
+panel.appendFormatted(args,row)
+},clear:function(context){if(!context){context=FirebugContext
+}if(context){Firebug.Errors.clear(context)
+}var panel=this.getPanel(context,true);
+if(panel){panel.clear()
+}},getPanel:function(context,noCreate){return Firebug.chrome?Firebug.chrome.getPanel("Console"):null
+}};
+var ActivableConsole=extend(Firebug.ConsoleBase,{isAlwaysEnabled:function(){return true
+}});
+Firebug.Console=Firebug.Console2=extend(ActivableConsole,{dispatchName:"console",error:function(){Firebug.Console.logFormatted(arguments,Firebug.browser,"error")
+},flush:function(){for(var i=0,length=consoleQueue.length;
+i<length;
+i++){var args=consoleQueue[i];
+this.logRow.apply(this,args)
+}},showPanel:function(browser,panel){},getFirebugConsoleElement:function(context,win){var element=win.document.getElementById("_firebugConsole");
+if(!element){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("getFirebugConsoleElement forcing element")
+}var elementForcer="(function(){var r=null; try { r = window._getFirebugConsoleElement();}catch(exc){r=exc;} return r;})();";
+if(context.stopped){Firebug.Console2.injector.evaluateConsoleScript(context)
+}else{var r=Firebug.CommandLine.evaluateInWebPage(elementForcer,context,win)
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("getFirebugConsoleElement forcing element result "+r,r)
+}var element=win.document.getElementById("_firebugConsole");
+if(!element){if(FBTrace.DBG_ERRORS){FBTrace.sysout("console.getFirebugConsoleElement: no _firebugConsole in win:",win)
+}Firebug.Console2.logFormatted(["Firebug cannot find _firebugConsole element",r,win],context,"error",true)
+}}return element
+},isReadyElsePreparing:function(context,win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.isReadyElsePreparing, win is "+(win?"an argument: ":"null, context.window: ")+(win?win.location:context.window.location),(win?win:context.window))
+}if(win){return this.injector.attachIfNeeded(context,win)
+}else{var attached=true;
+for(var i=0;
+i<context.windows.length;
+i++){attached=attached&&this.injector.attachIfNeeded(context,context.windows[i])
+}if(context.windows.indexOf(context.window)==-1){FBTrace.sysout("isReadyElsePreparing ***************** context.window not in context.windows")
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.isReadyElsePreparing attached to "+context.windows.length+" and returns "+attached)
+}return attached
+}},initialize:function(){this.panelName="console"
+},enable:function(){if(Firebug.Console2.isAlwaysEnabled()){this.watchForErrors()
+}},disable:function(){if(Firebug.Console2.isAlwaysEnabled()){this.unwatchForErrors()
+}},initContext:function(context,persistedState){Firebug.ActivableModule.initContext.apply(this,arguments);
+context.consoleReloadWarning=true
+},loadedContext:function(context){for(var url in context.sourceFileMap){return
+}this.clearReloadWarning(context)
+},clearReloadWarning:function(context){if(context.consoleReloadWarning){var panel=context.getPanel(this.panelName);
+panel.clearReloadWarning();
+delete context.consoleReloadWarning
+}},togglePersist:function(context){var panel=context.getPanel(this.panelName);
+panel.persistContent=panel.persistContent?false:true;
+Firebug.chrome.setGlobalAttribute("cmd_togglePersistConsole","checked",panel.persistContent)
+},showContext:function(browser,context){Firebug.chrome.setGlobalAttribute("cmd_clearConsole","disabled",!context);
+Firebug.ActivableModule.showContext.apply(this,arguments)
+},destroyContext:function(context,persistedState){Firebug.Console2.injector.detachConsole(context,context.window)
+},onPanelEnable:function(panelName){if(panelName!=this.panelName){return
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onPanelEnable**************")
+}this.watchForErrors();
+Firebug.Debugger.addDependentModule(this)
+},onPanelDisable:function(panelName){if(panelName!=this.panelName){return
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onPanelDisable**************")
+}Firebug.Debugger.removeDependentModule(this);
+this.unwatchForErrors();
+this.clear()
+},onSuspendFirebug:function(){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onSuspendFirebug\n")
+}if(Firebug.Console2.isAlwaysEnabled()){this.unwatchForErrors()
+}},onResumeFirebug:function(){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onResumeFirebug\n")
+}if(Firebug.Console2.isAlwaysEnabled()){this.watchForErrors()
+}},watchForErrors:function(){Firebug.Errors.checkEnabled();
+$("fbStatusIcon").setAttribute("console","on")
+},unwatchForErrors:function(){Firebug.Errors.checkEnabled();
+$("fbStatusIcon").removeAttribute("console")
+},onMonitorScript:function(context,frame){Firebug.Console2.log(frame,context)
+},onFunctionCall:function(context,frame,depth,calling){if(calling){Firebug.Console2.openGroup([frame,"depth:"+depth],context)
+}else{Firebug.Console2.closeGroup(context)
+}},logRow:function(appender,objects,context,className,rep,sourceLink,noThrottle,noRow){if(!context){context=FirebugContext
+}if(FBTrace.DBG_WINDOWS&&!context){FBTrace.sysout("Console.logRow: no context \n")
+}if(this.isAlwaysEnabled()){return Firebug.ConsoleBase.logRow.apply(this,arguments)
+}}});
+Firebug.ConsoleListener={log:function(context,object,className,sourceLink){},logFormatted:function(context,objects,className,sourceLink){}};
+Firebug.ConsolePanel=function(){};
+Firebug.ConsolePanel.prototype=extend(Firebug.Panel,{wasScrolledToBottom:false,messageCount:0,lastLogTime:0,groups:null,limit:null,append:function(appender,objects,className,rep,sourceLink,noRow){var container=this.getTopContainer();
+if(noRow){appender.apply(this,[objects])
+}else{var row=this.createRow("logRow",className);
+appender.apply(this,[objects,row,rep]);
+if(sourceLink){FirebugReps.SourceLink.tag.append({object:sourceLink},row)
+}container.appendChild(row);
+this.filterLogRow(row,this.wasScrolledToBottom);
+if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
+}return row
+}},clear:function(){if(this.panelNode){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("ConsolePanel.clear")
+}clearNode(this.panelNode);
+this.insertLogLimit(this.context)
+}},insertLogLimit:function(){var row=this.createRow("limitRow");
+var limitInfo={totalCount:0,limitPrefsTitle:$STRF("LimitPrefsTitle",[Firebug.prefDomain+".console.logLimit"])};
+return;
+var netLimitRep=Firebug.NetMonitor.NetLimit;
+var nodes=netLimitRep.createTable(row,limitInfo);
+this.limit=nodes[1];
+var container=this.panelNode;
+container.insertBefore(nodes[0],container.firstChild)
+},insertReloadWarning:function(){this.warningRow=this.append(appendObject,$STR("message.Reload to activate window console"),"info")
+},clearReloadWarning:function(){if(this.warningRow){this.warningRow.parentNode.removeChild(this.warningRow);
+delete this.warningRow
+}},appendObject:function(object,row,rep){if(!rep){rep=Firebug.getRep(object)
+}return rep.tag.append({object:object},row)
+},appendFormatted:function(objects,row,rep){if(!objects||!objects.length){return
+}function logText(text,row){var node=row.ownerDocument.createTextNode(text);
+row.appendChild(node)
+}var format=objects[0];
+var objIndex=0;
+if(typeof(format)!="string"){format="";
+objIndex=-1
+}else{if(objects.length===1){if(format.length<1){logText("(an empty string)",row);
+return
+}}}var parts=parseFormat(format);
+var trialIndex=objIndex;
+for(var i=0;
+i<parts.length;
+i++){var part=parts[i];
+if(part&&typeof(part)=="object"){if(++trialIndex>objects.length){format="";
+objIndex=-1;
+parts.length=0;
+break
+}}}for(var i=0;
+i<parts.length;
+++i){var part=parts[i];
+if(part&&typeof(part)=="object"){var object=objects[++objIndex];
+if(typeof(object)!="undefined"){this.appendObject(object,row,part.rep)
+}else{this.appendObject(part.type,row,FirebugReps.Text)
+}}else{FirebugReps.Text.tag.append({object:part},row)
+}}for(var i=objIndex+1;
+i<objects.length;
+++i){logText(" ",row);
+var object=objects[i];
+if(typeof(object)=="string"){FirebugReps.Text.tag.append({object:object},row)
+}else{this.appendObject(object,row)
+}}},appendOpenGroup:function(objects,row,rep){if(!this.groups){this.groups=[]
+}setClass(row,"logGroup");
+setClass(row,"opened");
+var innerRow=this.createRow("logRow");
+setClass(innerRow,"logGroupLabel");
+if(rep){rep.tag.replace({objects:objects},innerRow)
+}else{this.appendFormatted(objects,innerRow,rep)
+}row.appendChild(innerRow);
+var groupBody=this.createRow("logGroupBody");
+row.appendChild(groupBody);
+groupBody.setAttribute("role","group");
+this.groups.push(groupBody);
+addEvent(innerRow,"mousedown",function(event){if(isLeftClick(event)){var target=event.target||event.srcElement;
+target=getAncestorByClass(target,"logGroupLabel");
+var groupRow=target.parentNode;
+if(hasClass(groupRow,"opened")){removeClass(groupRow,"opened");
+target.setAttribute("aria-expanded","false")
+}else{setClass(groupRow,"opened");
+target.setAttribute("aria-expanded","true")
+}}})
+},appendCloseGroup:function(object,row,rep){if(this.groups){this.groups.pop()
+}},name:"Console",title:"Console",searchable:true,breakable:true,editable:false,options:{isPreRendered:true,hasCommandLine:true},create:function(){Firebug.Panel.create.apply(this,arguments);
+this.context=Firebug.browser.window;
+this.document=Firebug.chrome.document
+},initialize:function(){Firebug.Panel.initialize.apply(this,arguments);
+if(!this.persistedContent&&Firebug.Console2.isAlwaysEnabled()){this.insertLogLimit(this.context);
+this.updateMaxLimit();
+if(this.context.consoleReloadWarning){this.insertReloadWarning()
+}}Firebug.Console.injector.install(Firebug.browser.window)
+},initializeNode:function(){if(FBTrace.DBG_CONSOLE){this.onScroller=bind(this.onScroll,this);
+addEvent(this.panelNode,"scroll",this.onScroller)
+}this.onResizer=bind(this.onResize,this);
+this.resizeEventTarget=Firebug.chrome.$("fbContentBox");
+addEvent(this.resizeEventTarget,"resize",this.onResizer)
+},destroyNode:function(){if(this.onScroller){removeEvent(this.panelNode,"scroll",this.onScroller)
+}removeEvent(this.resizeEventTarget,"resize",this.onResizer)
+},shutdown:function(){this.destroyNode();
+Firebug.Panel.shutdown.apply(this,arguments)
+},ishow:function(state){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.panel show; "+this.context.getName(),state)
+}var enabled=Firebug.Console2.isAlwaysEnabled();
+if(enabled){Firebug.Console2.disabledPanelPage.hide(this);
+this.showCommandLine(true);
+this.showToolbarButtons("fbConsoleButtons",true);
+Firebug.chrome.setGlobalAttribute("cmd_togglePersistConsole","checked",this.persistContent);
+if(state&&state.wasScrolledToBottom){this.wasScrolledToBottom=state.wasScrolledToBottom;
+delete state.wasScrolledToBottom
+}if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.show ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
+}}else{this.hide(state);
+Firebug.Console2.disabledPanelPage.show(this)
+}},ihide:function(state){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.panel hide; "+this.context.getName(),state)
+}this.showToolbarButtons("fbConsoleButtons",false);
+this.showCommandLine(false);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.hide ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
+}},destroy:function(state){if(this.panelNode.offsetHeight){this.wasScrolledToBottom=isScrolledToBottom(this.panelNode)
+}if(state){state.wasScrolledToBottom=this.wasScrolledToBottom
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.destroy ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
+}},shouldBreakOnNext:function(){return Firebug.getPref(Firebug.servicePrefDomain,"breakOnErrors")
+},getBreakOnNextTooltip:function(enabled){return(enabled?$STR("console.Disable Break On All Errors"):$STR("console.Break On All Errors"))
+},enablePanel:function(module){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.ConsolePanel.enablePanel; "+this.context.getName())
+}Firebug.ActivablePanel.enablePanel.apply(this,arguments);
+this.showCommandLine(true);
+if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
+}},disablePanel:function(module){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.ConsolePanel.disablePanel; "+this.context.getName())
+}Firebug.ActivablePanel.disablePanel.apply(this,arguments);
+this.showCommandLine(false)
+},getOptionsMenuItems:function(){return[optionMenu("ShowJavaScriptErrors","showJSErrors"),optionMenu("ShowJavaScriptWarnings","showJSWarnings"),optionMenu("ShowCSSErrors","showCSSErrors"),optionMenu("ShowXMLErrors","showXMLErrors"),optionMenu("ShowXMLHttpRequests","showXMLHttpRequests"),optionMenu("ShowChromeErrors","showChromeErrors"),optionMenu("ShowChromeMessages","showChromeMessages"),optionMenu("ShowExternalErrors","showExternalErrors"),optionMenu("ShowNetworkErrors","showNetworkErrors"),this.getShowStackTraceMenuItem(),this.getStrictOptionMenuItem(),"-",optionMenu("LargeCommandLine","largeCommandLine")]
+},getShowStackTraceMenuItem:function(){var menuItem=serviceOptionMenu("ShowStackTrace","showStackTrace");
+if(FirebugContext&&!Firebug.Debugger.isAlwaysEnabled()){menuItem.disabled=true
+}return menuItem
+},getStrictOptionMenuItem:function(){var strictDomain="javascript.options";
+var strictName="strict";
+var strictValue=prefs.getBoolPref(strictDomain+"."+strictName);
+return{label:"JavascriptOptionsStrict",type:"checkbox",checked:strictValue,command:bindFixed(Firebug.setPref,Firebug,strictDomain,strictName,!strictValue)}
+},getBreakOnMenuItems:function(){return[]
+},search:function(text){if(!text){return
+}if(this.matchSet){for(var i in this.matchSet){removeClass(this.matchSet[i],"matched")
+}}this.matchSet=[];
+function findRow(node){return getAncestorByClass(node,"logRow")
+}var search=new TextSearch(this.panelNode,findRow);
+var logRow=search.find(text);
+if(!logRow){dispatch([Firebug.A11yModel],"onConsoleSearchMatchFound",[this,text,[]]);
+return false
+}for(;
+logRow;
+logRow=search.findNext()){setClass(logRow,"matched");
+this.matchSet.push(logRow)
+}dispatch([Firebug.A11yModel],"onConsoleSearchMatchFound",[this,text,this.matchSet]);
+return true
+},breakOnNext:function(breaking){Firebug.setPref(Firebug.servicePrefDomain,"breakOnErrors",breaking)
+},createRow:function(rowName,className){var elt=this.document.createElement("div");
+elt.className=rowName+(className?" "+rowName+"-"+className:"");
+return elt
+},getTopContainer:function(){if(this.groups&&this.groups.length){return this.groups[this.groups.length-1]
+}else{return this.panelNode
+}},filterLogRow:function(logRow,scrolledToBottom){if(this.searchText){setClass(logRow,"matching");
+setClass(logRow,"matched");
+setTimeout(bindFixed(function(){if(this.searchFilter(this.searchText,logRow)){this.matchSet.push(logRow)
+}else{removeClass(logRow,"matched")
+}removeClass(logRow,"matching");
+if(scrolledToBottom){scrollToBottom(this.panelNode)
+}},this),100)
+}},searchFilter:function(text,logRow){var count=this.panelNode.childNodes.length;
+var searchRange=this.document.createRange();
+searchRange.setStart(this.panelNode,0);
+searchRange.setEnd(this.panelNode,count);
+var startPt=this.document.createRange();
+startPt.setStartBefore(logRow);
+var endPt=this.document.createRange();
+endPt.setStartAfter(logRow);
+return finder.Find(text,searchRange,startPt,endPt)!=null
+},observe:function(subject,topic,data){if(topic!="nsPref:changed"){return
+}var prefDomain="Firebug.extension.";
+var prefName=data.substr(prefDomain.length);
+if(prefName=="console.logLimit"){this.updateMaxLimit()
+}},updateMaxLimit:function(){var value=1000;
+maxQueueRequests=value?value:maxQueueRequests
+},showCommandLine:function(shouldShow){return;
+if(shouldShow){collapse(Firebug.chrome.$("fbCommandBox"),false);
+Firebug.CommandLine.setMultiLine(Firebug.largeCommandLine,Firebug.chrome)
+}else{Firebug.CommandLine.setMultiLine(false,Firebug.chrome,Firebug.largeCommandLine);
+collapse(Firebug.chrome.$("fbCommandBox"),true)
+}},onScroll:function(event){this.wasScrolledToBottom=FBL.isScrolledToBottom(this.panelNode);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onScroll ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", wasScrolledToBottom: "+this.context.getName(),event)
+}},onResize:function(event){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onResize ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", offsetHeight: "+this.panelNode.offsetHeight+", scrollTop: "+this.panelNode.scrollTop+", scrollHeight: "+this.panelNode.scrollHeight+", "+this.context.getName(),event)
+}if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
+}}});
+function parseFormat(format){var parts=[];
+if(format.length<=0){return parts
+}var reg=/((^%|.%)(\d+)?(\.)([a-zA-Z]))|((^%|.%)([a-zA-Z]))/;
+for(var m=reg.exec(format);
+m;
+m=reg.exec(format)){if(m[0].substr(0,2)=="%%"){parts.push(format.substr(0,m.index));
+parts.push(m[0].substr(1))
+}else{var type=m[8]?m[8]:m[5];
+var precision=m[3]?parseInt(m[3]):(m[4]=="."?-1:0);
+var rep=null;
+switch(type){case"s":rep=FirebugReps.Text;
+break;
+case"f":case"i":case"d":rep=FirebugReps.Number;
+break;
+case"o":rep=null;
+break
+}parts.push(format.substr(0,m[0][0]=="%"?m.index:m.index+1));
+parts.push({rep:rep,precision:precision,type:("%"+type)})
+}format=format.substr(m.index+m[0].length)
+}parts.push(format);
+return parts
+}var appendObject=Firebug.ConsolePanel.prototype.appendObject;
+var appendFormatted=Firebug.ConsolePanel.prototype.appendFormatted;
+var appendOpenGroup=Firebug.ConsolePanel.prototype.appendOpenGroup;
+var appendCloseGroup=Firebug.ConsolePanel.prototype.appendCloseGroup;
+Firebug.registerModule(Firebug.Console2);
+Firebug.registerPanel(Firebug.ConsolePanel)
+}});
+FBL.ns(function(){with(FBL){Firebug.Console2.injector={install:function(context){var win=context.window;
+var consoleHandler=new FirebugConsoleHandler(context,win);
+var properties=["log","debug","info","warn","error","assert","dir","dirxml","group","groupEnd","time","timeEnd","count","trace","profile","profileEnd","clear","open","close"];
+var Handler=function(name){var c=consoleHandler;
+var f=consoleHandler[name];
+return function(){return f.apply(c,arguments)
+}
+};
+var installer=function(c){for(var i=0,l=properties.length;
+i<l;
+i++){var name=properties[i];
+c[name]=new Handler(name)
+}};
+var sandbox=new win.Function("arguments.callee.install(window.consolex={})");
+sandbox.install=installer;
+sandbox()
+},isAttached:function(context,win){if(win.wrappedJSObject){var attached=(win.wrappedJSObject._getFirebugConsoleElement?true:false);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.isAttached:"+attached+" to win.wrappedJSObject "+safeGetWindowLocation(win.wrappedJSObject))
+}return attached
+}else{if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.isAttached? to win "+win.location+" fnc:"+win._getFirebugConsoleElement)
+}return(win._getFirebugConsoleElement?true:false)
+}},attachIfNeeded:function(context,win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.attachIfNeeded has win "+(win?((win.wrappedJSObject?"YES":"NO")+" wrappedJSObject"):"null"))
+}if(this.isAttached(context,win)){return true
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.attachIfNeeded found isAttached false ")
+}this.attachConsoleInjector(context,win);
+this.addConsoleListener(context,win);
+Firebug.Console2.clearReloadWarning(context);
+var attached=this.isAttached(context,win);
+if(attached){dispatch(Firebug.Console2.fbListeners,"onConsoleInjected",[context,win])
+}return attached
+},attachConsoleInjector:function(context,win){var consoleInjection=this.getConsoleInjectionScript();
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("attachConsoleInjector evaluating in "+win.location,consoleInjection)
+}Firebug.CommandLine.evaluateInWebPage(consoleInjection,context,win);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("attachConsoleInjector evaluation completed for "+win.location)
+}},getConsoleInjectionScript:function(){if(!this.consoleInjectionScript){var script="";
+script+="window.__defineGetter__('console', function() {\n";
+script+=" return (window._firebug ? window._firebug : window.loadFirebugConsole()); })\n\n";
+script+="window.loadFirebugConsole = function() {\n";
+script+="window._firebug =  new _FirebugConsole();";
+if(FBTrace.DBG_CONSOLE){script+=" window.dump('loadFirebugConsole '+window.location+'\\n');\n"
+}script+=" return window._firebug };\n";
+var theFirebugConsoleScript=getResource("chrome://firebug/content/consoleInjected.js");
+script+=theFirebugConsoleScript;
+this.consoleInjectionScript=script
+}return this.consoleInjectionScript
+},forceConsoleCompilationInPage:function(context,win){if(!win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("no win in forceConsoleCompilationInPage!")
+}return
+}var consoleForcer="window.loadFirebugConsole();";
+if(context.stopped){Firebug.Console2.injector.evaluateConsoleScript(context)
+}else{Firebug.CommandLine.evaluateInWebPage(consoleForcer,context,win)
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("forceConsoleCompilationInPage "+win.location,consoleForcer)
+}},evaluateConsoleScript:function(context){var scriptSource=this.getConsoleInjectionScript();
+Firebug.Debugger.evaluate(scriptSource,context)
+},addConsoleListener:function(context,win){if(!context.activeConsoleHandlers){context.activeConsoleHandlers=[]
+}else{for(var i=0;
+i<context.activeConsoleHandlers.length;
+i++){if(context.activeConsoleHandlers[i].window==win){context.activeConsoleHandlers[i].detach();
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector addConsoleListener removed handler("+context.activeConsoleHandlers[i].handler_name+") from _firebugConsole in : "+win.location+"\n")
+}context.activeConsoleHandlers.splice(i,1)
+}}}var element=Firebug.Console2.getFirebugConsoleElement(context,win);
+if(element){element.setAttribute("FirebugVersion",Firebug.version)
+}else{return false
+}var handler=new FirebugConsoleHandler(context,win);
+handler.attachTo(element);
+context.activeConsoleHandlers.push(handler);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector addConsoleListener attached handler("+handler.handler_name+") to _firebugConsole in : "+win.location+"\n")
+}return true
+},detachConsole:function(context,win){if(win&&win.document){var element=win.document.getElementById("_firebugConsole");
+if(element){element.parentNode.removeChild(element)
+}}}};
+var total_handlers=0;
+var FirebugConsoleHandler=function FirebugConsoleHandler(context,win){this.window=win;
+this.attachTo=function(element){this.element=element;
+this.boundHandler=bind(this.handleEvent,this);
+this.element.addEventListener("firebugAppendConsole",this.boundHandler,true)
+};
+this.detach=function(){this.element.removeEventListener("firebugAppendConsole",this.boundHandler,true)
+};
+this.handler_name=++total_handlers;
+this.handleEvent=function(event){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("FirebugConsoleHandler("+this.handler_name+") "+event.target.getAttribute("methodName")+", event",event)
+}if(!Firebug.CommandLine.CommandHandler.handle(event,this,win)){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("FirebugConsoleHandler",this)
+}var methodName=event.target.getAttribute("methodName");
+Firebug.Console2.log($STRF("console.MethodNotSupported",[methodName]))
+}};
+this.firebug=Firebug.version;
+this.init=function(){var consoleElement=win.document.getElementById("_firebugConsole");
+consoleElement.setAttribute("FirebugVersion",Firebug.version)
+};
+this.log=function(){logFormatted(arguments,"log")
+};
+this.debug=function(){logFormatted(arguments,"debug",true)
+};
+this.info=function(){logFormatted(arguments,"info",true)
+};
+this.warn=function(){logFormatted(arguments,"warn",true)
+};
+this.error=function(){if(arguments.length==1){logAssert("error",arguments)
+}else{Firebug.Errors.increaseCount(context);
+logFormatted(arguments,"error",true)
+}};
+this.exception=function(){logAssert("error",arguments)
+};
+this.assert=function(x){if(!x){var rest=[];
+for(var i=1;
+i<arguments.length;
+i++){rest.push(arguments[i])
+}logAssert("assert",rest)
+}};
+this.dir=function(o){Firebug.Console2.log(o,context,"dir",Firebug.DOMPanel.DirTable)
+};
+this.dirxml=function(o){if(o instanceof Window){o=o.document.documentElement
+}else{if(o instanceof Document){o=o.documentElement
+}}Firebug.Console2.log(o,context,"dirxml",Firebug.HTMLPanel.SoloElement)
+};
+this.group=function(){var sourceLink=null;
+Firebug.Console2.openGroup(arguments,null,"group",null,false,sourceLink)
+};
+this.groupEnd=function(){Firebug.Console2.closeGroup(context)
+};
+this.groupCollapsed=function(){var sourceLink=getStackLink();
+var row=Firebug.Console2.openGroup(arguments,null,"group",null,true,sourceLink);
+removeClass(row,"opened")
+};
+this.profile=function(title){Firebug.Profiler.startProfiling(context,title)
+};
+this.profileEnd=function(){Firebug.Profiler.stopProfiling(context)
+};
+this.count=function(key){var frameId="0";
+if(frameId){if(!context.frameCounters){context.frameCounters={}
+}if(key!=undefined){frameId+=key
+}var frameCounter=context.frameCounters[frameId];
+if(!frameCounter){var logRow=logFormatted(["0"],null,true,true);
+frameCounter={logRow:logRow,count:1};
+context.frameCounters[frameId]=frameCounter
+}else{++frameCounter.count
+}var label=key==undefined?frameCounter.count:key+" "+frameCounter.count;
+frameCounter.logRow.firstChild.firstChild.nodeValue=label
+}};
+this.trace=function(){var getFuncName=function getFuncName(f){if(f.getName instanceof Function){return f.getName()
+}if(f.name){return f.name
+}var name=f.toString().match(/function\s*([_$\w\d]*)/)[1];
+return name||"anonymous"
+};
+var wasVisited=function(fn){for(var i=0,l=stack.length;
+i<l;
+i++){if(stack[i]==fn){return true
+}}return false
+};
+var stack=[];
+var traceLabel="Stack Trace";
+this.group(traceLabel);
+for(var fn=arguments.callee.caller;
+fn;
+fn=fn.caller){if(wasVisited(fn)){break
+}stack.push(fn);
+var html=[getFuncName(fn),"("];
+for(var i=0,l=fn.arguments.length;
+i<l;
+++i){if(i){html.push(", ")
+}Firebug.Reps.appendObject(fn.arguments[i],html)
+}html.push(")");
+Firebug.Console.log(html,Firebug.browser,"stackTrace")
+}this.groupEnd(traceLabel);
+return Firebug.Console.LOG_COMMAND
+};
+this.clear=function(){Firebug.Console2.clear(context)
+};
+this.time=function(name,reset){if(!name){return
+}var time=new Date().getTime();
+if(!this.timeCounters){this.timeCounters={}
+}var key="KEY"+name.toString();
+if(!reset&&this.timeCounters[key]){return
+}this.timeCounters[key]=time
+};
+this.timeEnd=function(name){var time=new Date().getTime();
+if(!this.timeCounters){return
+}var key="KEY"+name.toString();
+var timeCounter=this.timeCounters[key];
+if(timeCounter){var diff=time-timeCounter;
+var label=name+": "+diff+"ms";
+this.info(label);
+delete this.timeCounters[key]
+}return diff
+};
+this.evaluated=function(result,context){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.FirebugConsoleHandler evalutated default called",result)
+}Firebug.Console2.log(result,context)
+};
+this.evaluateError=function(result,context){Firebug.Console2.log(result,context,"errorMessage")
+};
+function logFormatted(args,className,linkToSource,noThrottle){var sourceLink=linkToSource?getStackLink():null;
+return Firebug.Console2.logFormatted(args,context,className,noThrottle,sourceLink)
+}function logAssert(category,args){Firebug.Errors.increaseCount(context);
+if(!args||!args.length||args.length==0){var msg=[FBL.$STR("Assertion")]
+}else{var msg=args[0]
+}if(Firebug.errorStackTrace){var trace=Firebug.errorStackTrace;
+delete Firebug.errorStackTrace;
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from errorStackTrace",trace)
+}}else{if(msg.stack){var trace=parseToStackTrace(msg.stack);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from msg.stack",trace)
+}}else{var trace=getJSDUserStack();
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from getJSDUserStack",trace)
+}}}var errorObject=new FBL.ErrorMessage(msg,(msg.fileName?msg.fileName:win.location),(msg.lineNumber?msg.lineNumber:0),"",category,context,trace);
+if(trace&&trace.frames&&trace.frames[0]){errorObject.correctWithStackTrace(trace)
+}errorObject.resetSource();
+var objects=errorObject;
+if(args.length>1){objects=[errorObject];
+for(var i=1;
+i<args.length;
+i++){objects.push(args[i])
+}}var row=Firebug.Console2.log(objects,context,"errorMessage",null,true);
+row.scrollIntoView()
+}function getComponentsStackDump(){var frame=Components.stack;
+var userURL=win.location.href.toString();
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.getComponentsStackDump initial stack for userURL "+userURL,frame)
+}while(frame&&FBL.isSystemURL(frame.filename)){frame=frame.caller
+}if(frame){frame=frame.caller
+}if(frame){frame=frame.caller
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.getComponentsStackDump final stack for userURL "+userURL,frame)
+}return frame
+}function getStackLink(){return
+}function getJSDUserStack(){var trace=FBL.getCurrentStackTrace(context);
+var frames=trace?trace.frames:null;
+if(frames&&(frames.length>0)){var oldest=frames.length-1;
+for(var i=0;
+i<frames.length;
+i++){if(frames[oldest-i].href.indexOf("chrome:")==0){break
+}var fn=frames[oldest-i].fn+"";
+if(fn&&(fn.indexOf("_firebugEvalEvent")!=-1)){break
+}}FBTrace.sysout("consoleInjector getJSDUserStack: "+frames.length+" oldest: "+oldest+" i: "+i+" i - oldest + 2: "+(i-oldest+2),trace);
+trace.frames=trace.frames.slice(2-i);
+return trace
+}else{return"Firebug failed to get stack trace with any frames"
+}}}
+}});
+FBL.ns(function(){with(FBL){var commandPrefix=">>>";
+var reOpenBracket=/[\[\(\{]/;
+var reCloseBracket=/[\]\)\}]/;
+var commandHistory=[];
+var commandPointer=-1;
+var isAutoCompleting=null;
+var autoCompletePrefix=null;
+var autoCompleteExpr=null;
+var autoCompleteBuffer=null;
+var autoCompletePosition=null;
+var fbCommandLine=null;
+var fbLargeCommandLine=null;
+var fbLargeCommandButtons=null;
+var _completion={window:["console"],document:["getElementById","getElementsByTagName"]};
+var _stack=function(command){commandHistory.push(command);
+commandPointer=commandHistory.length
+};
+Firebug.CommandLine=extend(Firebug.Module,{element:null,isMultiLine:false,isActive:false,initialize:function(doc){this.clear=bind(this.clear,this);
+this.enter=bind(this.enter,this);
+this.onError=bind(this.onError,this);
+this.onKeyDown=bind(this.onKeyDown,this);
+this.onMultiLineKeyDown=bind(this.onMultiLineKeyDown,this);
+addEvent(Firebug.browser.window,"error",this.onError);
+addEvent(Firebug.chrome.window,"error",this.onError)
+},shutdown:function(doc){this.deactivate();
+removeEvent(Firebug.browser.window,"error",this.onError);
+removeEvent(Firebug.chrome.window,"error",this.onError)
+},activate:function(multiLine,hideToggleIcon,onRun){defineCommandLineAPI();
+if(this.isActive){if(this.isMultiLine==multiLine){return
+}this.deactivate()
+}fbCommandLine=$("fbCommandLine");
+fbLargeCommandLine=$("fbLargeCommandLine");
+fbLargeCommandButtons=$("fbLargeCommandButtons");
+if(multiLine){onRun=onRun||this.enter;
+this.isMultiLine=true;
+this.element=fbLargeCommandLine;
+addEvent(this.element,"keydown",this.onMultiLineKeyDown);
+addEvent($("fbSmallCommandLineIcon"),"click",Firebug.chrome.hideLargeCommandLine);
+this.runButton=new Button({element:$("fbCommand_btRun"),owner:Firebug.CommandLine,onClick:onRun});
+this.runButton.initialize();
+this.clearButton=new Button({element:$("fbCommand_btClear"),owner:Firebug.CommandLine,onClick:this.clear});
+this.clearButton.initialize()
+}else{this.isMultiLine=false;
+this.element=fbCommandLine;
+if(!fbCommandLine){return
+}addEvent(this.element,"keydown",this.onKeyDown)
+}if(isOpera){fixOperaTabKey(this.element)
+}if(this.lastValue){this.element.value=this.lastValue
+}this.isActive=true
+},deactivate:function(){if(!this.isActive){return
+}this.isActive=false;
+this.lastValue=this.element.value;
+if(this.isMultiLine){removeEvent(this.element,"keydown",this.onMultiLineKeyDown);
+removeEvent($("fbSmallCommandLineIcon"),"click",Firebug.chrome.hideLargeCommandLine);
+this.runButton.destroy();
+this.clearButton.destroy()
+}else{removeEvent(this.element,"keydown",this.onKeyDown)
+}this.element=null;
+delete this.element;
+fbCommandLine=null;
+fbLargeCommandLine=null;
+fbLargeCommandButtons=null
+},focus:function(){this.element.focus()
+},blur:function(){this.element.blur()
+},clear:function(){this.element.value=""
+},evaluate:function(expr){var api="Firebug.CommandLine.API";
+var result=Firebug.context.evaluate(expr,"window",api,Firebug.Console.error);
+return result
+},enter:function(){var command=this.element.value;
+if(!command){return
+}_stack(command);
+if(Firebug.Console2){Firebug.Console.log(commandPrefix+" "+stripNewLines(command),Firebug.browser,"command",FirebugReps.Text)
+}else{Firebug.Console.writeMessage(["<span>&gt;&gt;&gt;</span> ",escapeHTML(command)],"command")
+}var result=this.evaluate(command);
+if(result!=Firebug.Console.LOG_COMMAND){if(Firebug.Console2){Firebug.Console.log(result)
+}else{var html=[];
+Firebug.Reps.appendObject(result,html);
+Firebug.Console.writeMessage(html,"command")
+}}},prevCommand:function(){if(commandPointer>0&&commandHistory.length>0){this.element.value=commandHistory[--commandPointer]
+}},nextCommand:function(){var element=this.element;
+var limit=commandHistory.length-1;
+var i=commandPointer;
+if(i<limit){element.value=commandHistory[++commandPointer]
+}else{if(i==limit){++commandPointer;
+element.value=""
+}}},autocomplete:function(reverse){var element=this.element;
+var command=element.value;
+var offset=getExpressionOffset(command);
+var valBegin=offset?command.substr(0,offset):"";
+var val=command.substr(offset);
+var buffer,obj,objName,commandBegin,result,prefix;
+if(!isAutoCompleting){var reObj=/(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
+var r=reObj.exec(val);
+if(r[1]||r[2]||r[3]){commandBegin=r[1]||"";
+objName=r[2]||"";
+prefix=r[3]||""
+}else{if(val==""){commandBegin=objName=prefix=""
+}else{return
+}}isAutoCompleting=true;
+if(objName==""){obj=window
+}else{objName=objName.replace(/\.$/,"");
+var n=objName.split(".");
+var target=window,o;
+for(var i=0,ni;
+ni=n[i];
+i++){if(o=target[ni]){target=o
+}else{target=null;
+break
+}}obj=target
+}if(obj){autoCompletePrefix=prefix;
+autoCompleteExpr=valBegin+commandBegin+(objName?objName+".":"");
+autoCompletePosition=-1;
+buffer=autoCompleteBuffer=isIE?_completion[objName||"window"]||[]:[];
+for(var p in obj){buffer.push(p)
+}}}else{buffer=autoCompleteBuffer
+}if(buffer){prefix=autoCompletePrefix;
+var diff=reverse?-1:1;
+for(var i=autoCompletePosition+diff,l=buffer.length,bi;
+i>=0&&i<l;
+i+=diff){bi=buffer[i];
+if(bi.indexOf(prefix)==0){autoCompletePosition=i;
+result=bi;
+break
+}}}if(result){element.value=autoCompleteExpr+result
+}},setMultiLine:function(multiLine){if(multiLine==this.isMultiLine){return
+}this.activate(multiLine)
+},onError:function(msg,href,lineNo){var html=[];
+var lastSlash=href.lastIndexOf("/");
+var fileName=lastSlash==-1?href:href.substr(lastSlash+1);
+html.push('<span class="errorMessage">',msg,"</span>",'<div class="objectBox-sourceLink">',fileName," (line ",lineNo,")</div>");
+Firebug.Console.writeRow(html,"error")
+},onKeyDown:function(e){e=e||event;
+var code=e.keyCode;
+if(code!=9&&code!=16&&code!=17&&code!=18){isAutoCompleting=false
+}if(code==13){this.enter();
+this.clear()
+}else{if(code==27){setTimeout(this.clear,0)
+}else{if(code==38){this.prevCommand()
+}else{if(code==40){this.nextCommand()
+}else{if(code==9){this.autocomplete(e.shiftKey)
+}else{return
+}}}}}cancelEvent(e,true);
+return false
+},onMultiLineKeyDown:function(e){e=e||event;
+var code=e.keyCode;
+if(code==13&&e.ctrlKey){this.enter()
+}}});
+Firebug.registerModule(Firebug.CommandLine);
+function getExpressionOffset(command){var bracketCount=0;
+var start=command.length-1;
+for(;
+start>=0;
+--start){var c=command[start];
+if((c==","||c==";"||c==" ")&&!bracketCount){break
+}if(reOpenBracket.test(c)){if(bracketCount){--bracketCount
+}else{break
+}}else{if(reCloseBracket.test(c)){++bracketCount
+}}}return start+1
+}var CommandLineAPI={$:function(id){return Firebug.browser.document.getElementById(id)
+},$$:function(selector,context){context=context||Firebug.browser.document;
+return Firebug.Selector?Firebug.Selector(selector,context):Firebug.Console.error("Firebug.Selector module not loaded.")
+},$0:null,$1:null,dir:Firebug.Console.dir,dirxml:Firebug.Console.dirxml};
+var defineCommandLineAPI=function defineCommandLineAPI(){Firebug.CommandLine.API={};
+for(var m in CommandLineAPI){if(!Env.browser.window[m]){Firebug.CommandLine.API[m]=CommandLineAPI[m]
+}}var stack=FirebugChrome.htmlSelectionStack;
+if(stack){Firebug.CommandLine.API.$0=stack[0];
+Firebug.CommandLine.API.$1=stack[1]
+}}
+}});
+(function(){with(FBL){var XHRSpy=function(){this.requestHeaders=[];
+this.responseHeaders=[]
+};
+XHRSpy.prototype={method:null,url:null,async:null,xhrRequest:null,href:null,loaded:false,logRow:null,responseText:null,requestHeaders:null,responseHeaders:null,sourceLink:null,getURL:function(){return this.href
+}};
+var XMLHttpRequestWrapper=function(activeXObject){var xhrRequest=typeof activeXObject!="undefined"?activeXObject:new _XMLHttpRequest(),spy=new XHRSpy(),self=this,reqType,reqUrl,reqStartTS;
+var logXHR=function(){var row=Firebug.Console.log(spy,null,"spy",Firebug.Spy.XHR);
+if(row){setClass(row,"loading");
+spy.logRow=row
+}};
+var finishXHR=function(){var duration=new Date().getTime()-reqStartTS;
+var success=xhrRequest.status==200;
+var responseHeadersText=xhrRequest.getAllResponseHeaders();
+var responses=responseHeadersText.split(/[\n\r]/);
+var reHeader=/^(\S+):\s*(.*)/;
+for(var i=0,l=responses.length;
+i<l;
+i++){var text=responses[i];
+var match=text.match(reHeader);
+if(match){spy.responseHeaders.push({name:[match[1]],value:[match[2]]})
+}}with({row:spy.logRow,status:xhrRequest.status+" "+xhrRequest.statusText,time:duration,success:success}){setTimeout(function(){if(!row){return
+}FBL.removeClass(row,"loading");
+if(!success){FBL.setClass(row,"error")
+}var item=FBL.$$(".spyStatus",row)[0];
+item.innerHTML=status;
+var item=FBL.$$(".spyTime",row)[0];
+item.innerHTML=time+"ms"
+},200)
+}spy.loaded=true;
+spy.responseText=xhrRequest.responseText;
+self.status=xhrRequest.status;
+self.statusText=xhrRequest.statusText;
+self.responseText=xhrRequest.responseText;
+self.responseXML=xhrRequest.responseXML
+};
+var handleStateChange=function(){self.readyState=xhrRequest.readyState;
+if(xhrRequest.readyState==4){finishXHR();
+xhrRequest.onreadystatechange=function(){}
+}self.onreadystatechange()
+};
+this.readyState=0;
+this.onreadystatechange=function(){};
+this.open=function(method,url,async){if(spy.loaded){spy=new XHRSpy()
+}spy.method=method;
+spy.url=url;
+spy.async=async;
+spy.href=url;
+spy.xhrRequest=xhrRequest;
+if(!FBL.isIE&&async){xhrRequest.onreadystatechange=handleStateChange
+}if(xhrRequest.open.apply){xhrRequest.open.apply(xhrRequest,arguments)
+}else{xhrRequest.open(method,url,async)
+}if(FBL.isIE&&async){xhrRequest.onreadystatechange=handleStateChange
+}};
+this.send=function(data){reqStartTS=new Date().getTime();
+try{xhrRequest.send(data)
+}catch(e){throw e
+}logXHR();
+if(!spy.async){self.readyState=xhrRequest.readyState;
+finishXHR()
+}};
+this.setRequestHeader=function(header,value){spy.requestHeaders.push({name:[header],value:[value]});
+xhrRequest.setRequestHeader(header,value)
+};
+this.getResponseHeader=function(header){return xhrRequest.getResponseHeader(header)
+};
+this.getAllResponseHeaders=function(){return xhrRequest.getAllResponseHeaders()
+};
+this.abort=function(){return xhrRequest.abort()
+};
+return this
+};
+var _ActiveXObject;
+var isIE6=/msie 6/i.test(navigator.appVersion);
+if(isIE6){window._ActiveXObject=window.ActiveXObject;
+var xhrObjects=" MSXML2.XMLHTTP.5.0 MSXML2.XMLHTTP.4.0 MSXML2.XMLHTTP.3.0 MSXML2.XMLHTTP Microsoft.XMLHTTP ";
+window.ActiveXObject=function(name){var error=null;
+try{var activeXObject=new window._ActiveXObject(name)
+}catch(e){error=e
+}finally{if(!error){if(xhrObjects.indexOf(" "+name+" ")!=-1){return new XMLHttpRequestWrapper(activeXObject)
+}else{return activeXObject
+}}else{throw error.message
+}}}
+}if(!isIE6){var _XMLHttpRequest=XMLHttpRequest;
+window.XMLHttpRequest=function(){return new XMLHttpRequestWrapper()
+}
+}}})();
+FBL.ns(function(){with(FBL){var oSTR={NoMembersWarning:"There are no properties to show for this object."};
+FBL.$STR=function(name){return oSTR.hasOwnProperty(name)?oSTR[name]:name
+};
+var reIgnore=/about:|javascript:|resource:|chrome:|jar:/;
+var layoutInterval=300;
+var indentWidth=18;
+var cacheSession=null;
+var contexts=new Array();
+var panelName="net";
+var maxQueueRequests=500;
+var activeRequests=[];
+var mimeExtensionMap={txt:"text/plain",html:"text/html",htm:"text/html",xhtml:"text/html",xml:"text/xml",css:"text/css",js:"application/x-javascript",jss:"application/x-javascript",jpg:"image/jpg",jpeg:"image/jpeg",gif:"image/gif",png:"image/png",bmp:"image/bmp",swf:"application/x-shockwave-flash",flv:"video/x-flv"};
+var fileCategories={"undefined":1,html:1,css:1,js:1,xhr:1,image:1,flash:1,txt:1,bin:1};
+var textFileCategories={txt:1,html:1,xhr:1,css:1,js:1};
+var binaryFileCategories={bin:1,flash:1};
+var mimeCategoryMap={"text/plain":"txt","application/octet-stream":"bin","text/html":"html","text/xml":"html","text/css":"css","application/x-javascript":"js","text/javascript":"js","application/javascript":"js","image/jpeg":"image","image/jpg":"image","image/gif":"image","image/png":"image","image/bmp":"image","application/x-shockwave-flash":"flash","video/x-flv":"flash"};
+var binaryCategoryMap={image:1,flash:1};
+Firebug.NetMonitor=extend(Firebug.ActivableModule,{dispatchName:"netMonitor",clear:function(context){var panel=context.getPanel(panelName,true);
+if(panel){panel.clear()
+}},initialize:function(){return;
+this.panelName=panelName;
+Firebug.ActivableModule.initialize.apply(this,arguments);
+if(Firebug.TraceModule){Firebug.TraceModule.addListener(this.TraceListener)
+}NetHttpObserver.registerObserver();
+NetHttpActivityObserver.registerObserver();
+Firebug.Debugger.addListener(this.DebuggerListener)
+},shutdown:function(){return;
+prefs.removeObserver(Firebug.prefDomain,this,false);
+if(Firebug.TraceModule){Firebug.TraceModule.removeListener(this.TraceListener)
+}NetHttpObserver.unregisterObserver();
+NetHttpActivityObserver.unregisterObserver();
+Firebug.Debugger.removeListener(this.DebuggerListener)
+}});
+Firebug.NetMonitor.NetInfoBody=domplate(Firebug.Rep,{tag:DIV({"class":"netInfoBody",_repObject:"$file"},TAG("$infoTabs",{file:"$file"}),TAG("$infoBodies",{file:"$file"})),infoTabs:DIV({"class":"netInfoTabs focusRow subFocusRow",role:"tablist"},A({"class":"netInfoParamsTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Params",$collapsed:"$file|hideParams"},$STR("URLParameters")),A({"class":"netInfoHeadersTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Headers"},$STR("Headers")),A({"class":"netInfoPostTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Post",$collapsed:"$file|hidePost"},$STR("Post")),A({"class":"netInfoPutTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Put",$collapsed:"$file|hidePut"},$STR("Put")),A({"class":"netInfoResponseTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Response",$collapsed:"$file|hideResponse"},$STR("Response")),A({"class":"netInfoCacheTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Cache",$collapsed:"$file|hideCache"},$STR("Cache")),A({"class":"netInfoHtmlTab netInfoTab a11yFocus",onclick:"$onClickTab",role:"tab",view:"Html",$collapsed:"$file|hideHtml"},$STR("HTML"))),infoBodies:DIV({"class":"netInfoBodies outerFocusRow"},TABLE({"class":"netInfoParamsText netInfoText netInfoParamsTable",role:"tabpanel",cellpadding:0,cellspacing:0},TBODY()),DIV({"class":"netInfoHeadersText netInfoText",role:"tabpanel"}),DIV({"class":"netInfoPostText netInfoText",role:"tabpanel"}),DIV({"class":"netInfoPutText netInfoText",role:"tabpanel"}),PRE({"class":"netInfoResponseText netInfoText",role:"tabpanel"}),DIV({"class":"netInfoCacheText netInfoText",role:"tabpanel"},TABLE({"class":"netInfoCacheTable",cellpadding:0,cellspacing:0,role:"presentation"},TBODY({role:"list","aria-label":$STR("Cache")}))),DIV({"class":"netInfoHtmlText netInfoText",role:"tabpanel"},IFRAME({"class":"netInfoHtmlPreview",role:"document"}))),headerDataTag:FOR("param","$headers",TR({role:"listitem"},TD({"class":"netInfoParamName",role:"presentation"},TAG("$param|getNameTag",{param:"$param"})),TD({"class":"netInfoParamValue",role:"list","aria-label":"$param.name"},FOR("line","$param|getParamValueIterator",CODE({"class":"focusRow subFocusRow",role:"listitem"},"$line"))))),customTab:A({"class":"netInfo$tabId\\Tab netInfoTab",onclick:"$onClickTab",view:"$tabId",role:"tab"},"$tabTitle"),customBody:DIV({"class":"netInfo$tabId\\Text netInfoText",role:"tabpanel"}),nameTag:SPAN("$param|getParamName"),nameWithTooltipTag:SPAN({title:"$param.name"},"$param|getParamName"),getNameTag:function(param){return(this.getParamName(param)==param.name)?this.nameTag:this.nameWithTooltipTag
+},getParamName:function(param){var limit=25;
+var name=param.name;
+if(name.length>limit){name=name.substr(0,limit)+"..."
+}return name
+},getParamTitle:function(param){var limit=25;
+var name=param.name;
+if(name.length>limit){return name
+}return""
+},hideParams:function(file){return !file.urlParams||!file.urlParams.length
+},hidePost:function(file){return file.method.toUpperCase()!="POST"
+},hidePut:function(file){return file.method.toUpperCase()!="PUT"
+},hideResponse:function(file){return false
+},hideCache:function(file){return true;
+return !file.cacheEntry
+},hideHtml:function(file){return true;
+return(file.mimeType!="text/html")&&(file.mimeType!="application/xhtml+xml")
+},onClickTab:function(event){this.selectTab(event.currentTarget||event.srcElement)
+},getParamValueIterator:function(param){return param.value;
+return wrapText(param.value,true)
+},appendTab:function(netInfoBox,tabId,tabTitle){var args={tabId:tabId,tabTitle:tabTitle};
+this.customTab.append(args,netInfoBox.getElementsByClassName("netInfoTabs").item(0));
+this.customBody.append(args,netInfoBox.getElementsByClassName("netInfoBodies").item(0))
+},selectTabByName:function(netInfoBox,tabName){var tab=getChildByClass(netInfoBox,"netInfoTabs","netInfo"+tabName+"Tab");
+if(tab){this.selectTab(tab)
+}},selectTab:function(tab){var view=tab.getAttribute("view");
+var netInfoBox=getAncestorByClass(tab,"netInfoBody");
+var selectedTab=netInfoBox.selectedTab;
+if(selectedTab){removeClass(netInfoBox.selectedText,"netInfoTextSelected");
+removeClass(selectedTab,"netInfoTabSelected");
+selectedTab.setAttribute("aria-selected","false")
+}var textBodyName="netInfo"+view+"Text";
+selectedTab=netInfoBox.selectedTab=tab;
+netInfoBox.selectedText=$$("."+textBodyName,netInfoBox)[0];
+setClass(netInfoBox.selectedText,"netInfoTextSelected");
+setClass(selectedTab,"netInfoTabSelected");
+selectedTab.setAttribute("selected","true");
+selectedTab.setAttribute("aria-selected","true");
+var file=Firebug.getRepObject(netInfoBox);
+var context=Firebug.chrome;
+this.updateInfo(netInfoBox,file,context)
+},updateInfo:function(netInfoBox,file,context){if(FBTrace.DBG_NET){FBTrace.sysout("net.updateInfo; file",file)
+}if(!netInfoBox){if(FBTrace.DBG_NET||FBTrace.DBG_ERRORS){FBTrace.sysout("net.updateInfo; ERROR netInfo == null "+file.href,file)
+}return
+}var tab=netInfoBox.selectedTab;
+if(hasClass(tab,"netInfoParamsTab")){if(file.urlParams&&!netInfoBox.urlParamsPresented){netInfoBox.urlParamsPresented=true;
+this.insertHeaderRows(netInfoBox,file.urlParams,"Params")
+}}else{if(hasClass(tab,"netInfoHeadersTab")){var headersText=$$(".netInfoHeadersText",netInfoBox)[0];
+if(file.responseHeaders&&!netInfoBox.responseHeadersPresented){netInfoBox.responseHeadersPresented=true;
+NetInfoHeaders.renderHeaders(headersText,file.responseHeaders,"ResponseHeaders")
+}if(file.requestHeaders&&!netInfoBox.requestHeadersPresented){netInfoBox.requestHeadersPresented=true;
+NetInfoHeaders.renderHeaders(headersText,file.requestHeaders,"RequestHeaders")
+}}else{if(hasClass(tab,"netInfoPostTab")){if(!netInfoBox.postPresented){netInfoBox.postPresented=true;
+var postText=netInfoBox.getElementsByClassName("netInfoPostText").item(0);
+NetInfoPostData.render(context,postText,file)
+}}else{if(hasClass(tab,"netInfoPutTab")){if(!netInfoBox.putPresented){netInfoBox.putPresented=true;
+var putText=netInfoBox.getElementsByClassName("netInfoPutText").item(0);
+NetInfoPostData.render(context,putText,file)
+}}else{if(hasClass(tab,"netInfoResponseTab")&&file.loaded&&!netInfoBox.responsePresented){var responseTextBox=$$(".netInfoResponseText",netInfoBox)[0];
+if(file.category=="image"){netInfoBox.responsePresented=true;
+var responseImage=netInfoBox.ownerDocument.createElement("img");
+responseImage.src=file.href;
+clearNode(responseTextBox);
+responseTextBox.appendChild(responseImage,responseTextBox)
+}else{this.setResponseText(file,netInfoBox,responseTextBox,context)
+}}else{if(hasClass(tab,"netInfoCacheTab")&&file.loaded&&!netInfoBox.cachePresented){var responseTextBox=netInfoBox.getElementsByClassName("netInfoCacheText").item(0);
+if(file.cacheEntry){netInfoBox.cachePresented=true;
+this.insertHeaderRows(netInfoBox,file.cacheEntry,"Cache")
+}}else{if(hasClass(tab,"netInfoHtmlTab")&&file.loaded&&!netInfoBox.htmlPresented){netInfoBox.htmlPresented=true;
+var text=Utils.getResponseText(file,context);
+var iframe=netInfoBox.getElementsByClassName("netInfoHtmlPreview").item(0);
+iframe.contentWindow.document.body.innerHTML=text
+}}}}}}}},setResponseText:function(file,netInfoBox,responseTextBox,context){netInfoBox.responsePresented=true;
+if(isIE){responseTextBox.style.whiteSpace="nowrap"
+}responseTextBox[typeof responseTextBox.textContent!="undefined"?"textContent":"innerText"]=file.responseText;
+return;
+var text=Utils.getResponseText(file,context);
+var limit=Firebug.netDisplayedResponseLimit+15;
+var limitReached=text?(text.length>limit):false;
+if(limitReached){text=text.substr(0,limit)+"..."
+}if(text){insertWrappedText(text,responseTextBox)
+}else{insertWrappedText("",responseTextBox)
+}if(limitReached){var object={text:$STR("net.responseSizeLimitMessage"),onClickLink:function(){var panel=context.getPanel("net",true);
+panel.openResponseInTab(file)
+}};
+Firebug.NetMonitor.ResponseSizeLimit.append(object,responseTextBox)
+}netInfoBox.responsePresented=true;
+if(FBTrace.DBG_NET){FBTrace.sysout("net.setResponseText; response text updated")
+}},insertHeaderRows:function(netInfoBox,headers,tableName,rowName){if(!headers.length){return
+}var headersTable=netInfoBox.getElementsByClassName("netInfo"+tableName+"Table").item(0);
+var tbody=getChildByClass(headersTable,"netInfo"+rowName+"Body");
+if(!tbody){tbody=headersTable.firstChild
+}var titleRow=getChildByClass(tbody,"netInfo"+rowName+"Title");
+this.headerDataTag.insertRows({headers:headers},titleRow?titleRow:tbody);
+removeClass(titleRow,"collapsed")
+}});
+var NetInfoBody=Firebug.NetMonitor.NetInfoBody;
+Firebug.NetMonitor.NetInfoHeaders=domplate(Firebug.Rep,{tag:DIV({"class":"netInfoHeadersTable",role:"tabpanel"},DIV({"class":"netInfoHeadersGroup netInfoResponseHeadersTitle"},SPAN($STR("ResponseHeaders")),SPAN({"class":"netHeadersViewSource response collapsed",onclick:"$onViewSource",_sourceDisplayed:false,_rowName:"ResponseHeaders"},$STR("net.headers.view source"))),TABLE({cellpadding:0,cellspacing:0},TBODY({"class":"netInfoResponseHeadersBody",role:"list","aria-label":$STR("ResponseHeaders")})),DIV({"class":"netInfoHeadersGroup netInfoRequestHeadersTitle"},SPAN($STR("RequestHeaders")),SPAN({"class":"netHeadersViewSource request collapsed",onclick:"$onViewSource",_sourceDisplayed:false,_rowName:"RequestHeaders"},$STR("net.headers.view source"))),TABLE({cellpadding:0,cellspacing:0},TBODY({"class":"netInfoRequestHeadersBody",role:"list","aria-label":$STR("RequestHeaders")}))),sourceTag:TR({role:"presentation"},TD({colspan:2,role:"presentation"},PRE({"class":"source"}))),onViewSource:function(event){var target=event.target;
+var requestHeaders=(target.rowName=="RequestHeaders");
+var netInfoBox=getAncestorByClass(target,"netInfoBody");
+var file=netInfoBox.repObject;
+if(target.sourceDisplayed){var headers=requestHeaders?file.requestHeaders:file.responseHeaders;
+this.insertHeaderRows(netInfoBox,headers,target.rowName);
+target.innerHTML=$STR("net.headers.view source")
+}else{var source=requestHeaders?file.requestHeadersText:file.responseHeadersText;
+this.insertSource(netInfoBox,source,target.rowName);
+target.innerHTML=$STR("net.headers.pretty print")
+}target.sourceDisplayed=!target.sourceDisplayed;
+cancelEvent(event)
+},insertSource:function(netInfoBox,source,rowName){var tbody=netInfoBox.getElementsByClassName("netInfo"+rowName+"Body").item(0);
+var node=this.sourceTag.replace({},tbody);
+var sourceNode=node.getElementsByClassName("source").item(0);
+sourceNode.innerHTML=source
+},insertHeaderRows:function(netInfoBox,headers,rowName){var headersTable=$$(".netInfoHeadersTable",netInfoBox)[0];
+var tbody=$$(".netInfo"+rowName+"Body",headersTable)[0];
+clearNode(tbody);
+if(!headers.length){return
+}NetInfoBody.headerDataTag.insertRows({headers:headers},tbody);
+var titleRow=getChildByClass(headersTable,"netInfo"+rowName+"Title");
+removeClass(titleRow,"collapsed")
+},init:function(parent){var rootNode=this.tag.append({},parent);
+var netInfoBox=getAncestorByClass(parent,"netInfoBody");
+var file=netInfoBox.repObject;
+var viewSource;
+viewSource=$$(".request",rootNode)[0];
+if(file.requestHeadersText){removeClass(viewSource,"collapsed")
+}viewSource=$$(".response",rootNode)[0];
+if(file.responseHeadersText){removeClass(viewSource,"collapsed")
+}},renderHeaders:function(parent,headers,rowName){if(!parent.firstChild){this.init(parent)
+}this.insertHeaderRows(parent,headers,rowName)
+}});
+var NetInfoHeaders=Firebug.NetMonitor.NetInfoHeaders;
+var $STRP=function(a){return a
+};
+Firebug.NetMonitor.NetLimit=domplate(Firebug.Rep,{collapsed:true,tableTag:DIV(TABLE({width:"100%",cellpadding:0,cellspacing:0},TBODY())),limitTag:TR({"class":"netRow netLimitRow",$collapsed:"$isCollapsed"},TD({"class":"netCol netLimitCol",colspan:6},TABLE({cellpadding:0,cellspacing:0},TBODY(TR(TD(SPAN({"class":"netLimitLabel"},$STRP("plural.Limit_Exceeded",[0]))),TD({style:"width:100%"}),TD(BUTTON({"class":"netLimitButton",title:"$limitPrefsTitle",onclick:"$onPreferences"},$STR("LimitPrefs"))),TD("&nbsp;")))))),isCollapsed:function(){return this.collapsed
+},onPreferences:function(event){openNewTab("about:config")
+},updateCounter:function(row){removeClass(row,"collapsed");
+var limitLabel=row.getElementsByClassName("netLimitLabel").item(0);
+limitLabel.firstChild.nodeValue=$STRP("plural.Limit_Exceeded",[row.limitInfo.totalCount])
+},createTable:function(parent,limitInfo){var table=this.tableTag.replace({},parent);
+var row=this.createRow(table.firstChild.firstChild,limitInfo);
+return[table,row]
+},createRow:function(parent,limitInfo){var row=this.limitTag.insertRows(limitInfo,parent,this)[0];
+row.limitInfo=limitInfo;
+return row
+},observe:function(subject,topic,data){if(topic!="nsPref:changed"){return
+}if(data.indexOf("net.logLimit")!=-1){this.updateMaxLimit()
+}},updateMaxLimit:function(){var value=Firebug.getPref(Firebug.prefDomain,"net.logLimit");
+maxQueueRequests=value?value:maxQueueRequests
+}});
+var NetLimit=Firebug.NetMonitor.NetLimit;
+Firebug.NetMonitor.ResponseSizeLimit=domplate(Firebug.Rep,{tag:DIV({"class":"netInfoResponseSizeLimit"},SPAN("$object.beforeLink"),A({"class":"objectLink",onclick:"$onClickLink"},"$object.linkText"),SPAN("$object.afterLink")),reLink:/^(.*)<a>(.*)<\/a>(.*$)/,append:function(obj,parent){var m=obj.text.match(this.reLink);
+return this.tag.append({onClickLink:obj.onClickLink,object:{beforeLink:m[1],linkText:m[2],afterLink:m[3]}},parent,this)
+}});
+Firebug.NetMonitor.Utils={findHeader:function(headers,name){if(!headers){return null
+}name=name.toLowerCase();
+for(var i=0;
+i<headers.length;
+++i){var headerName=headers[i].name.toLowerCase();
+if(headerName==name){return headers[i].value
+}}},formatPostText:function(text){if(text instanceof XMLDocument){return getElementXML(text.documentElement)
+}else{return text
+}},getPostText:function(file,context,noLimit){if(!file.postText){file.postText=readPostTextFromRequest(file.request,context);
+if(!file.postText&&context){file.postText=readPostTextFromPage(file.href,context)
+}}if(!file.postText){return file.postText
+}var limit=Firebug.netDisplayedPostBodyLimit;
+if(file.postText.length>limit&&!noLimit){return cropString(file.postText,limit,"\n\n... "+$STR("net.postDataSizeLimitMessage")+" ...\n\n")
+}return file.postText
+},getResponseText:function(file,context){return(typeof(file.responseText)!="undefined")?file.responseText:context.sourceCache.loadText(file.href,file.method,file)
+},isURLEncodedRequest:function(file,context){var text=Utils.getPostText(file,context);
+if(text&&text.toLowerCase().indexOf("content-type: application/x-www-form-urlencoded")==0){return true
+}var headerValue=Utils.findHeader(file.requestHeaders,"content-type");
+if(headerValue&&headerValue.indexOf("application/x-www-form-urlencoded")==0){return true
+}return false
+},isMultiPartRequest:function(file,context){var text=Utils.getPostText(file,context);
+if(text&&text.toLowerCase().indexOf("content-type: multipart/form-data")==0){return true
+}return false
+},getMimeType:function(mimeType,uri){if(!mimeType||!(mimeCategoryMap.hasOwnProperty(mimeType))){var ext=getFileExtension(uri);
+if(!ext){return mimeType
+}else{var extMimeType=mimeExtensionMap[ext.toLowerCase()];
+return extMimeType?extMimeType:mimeType
+}}else{return mimeType
+}},getDateFromSeconds:function(s){var d=new Date();
+d.setTime(s*1000);
+return d
+},getHttpHeaders:function(request,file){try{var http=QI(request,Ci.nsIHttpChannel);
+file.status=request.responseStatus;
+file.method=http.requestMethod;
+file.urlParams=parseURLParams(file.href);
+file.mimeType=Utils.getMimeType(request.contentType,request.name);
+if(!file.responseHeaders&&Firebug.collectHttpHeaders){var requestHeaders=[],responseHeaders=[];
+http.visitRequestHeaders({visitHeader:function(name,value){requestHeaders.push({name:name,value:value})
+}});
+http.visitResponseHeaders({visitHeader:function(name,value){responseHeaders.push({name:name,value:value})
+}});
+file.requestHeaders=requestHeaders;
+file.responseHeaders=responseHeaders
+}}catch(exc){if(FBTrace.DBG_ERRORS){FBTrace.sysout("net.getHttpHeaders FAILS "+file.href,exc)
+}}},isXHR:function(request){try{var callbacks=request.notificationCallbacks;
+var xhrRequest=callbacks?callbacks.getInterface(Ci.nsIXMLHttpRequest):null;
+if(FBTrace.DBG_NET){FBTrace.sysout("net.isXHR; "+(xhrRequest!=null)+", "+safeGetName(request))
+}return(xhrRequest!=null)
+}catch(exc){}return false
+},getFileCategory:function(file){if(file.category){if(FBTrace.DBG_NET){FBTrace.sysout("net.getFileCategory; current: "+file.category+" for: "+file.href,file)
+}return file.category
+}if(file.isXHR){if(FBTrace.DBG_NET){FBTrace.sysout("net.getFileCategory; XHR for: "+file.href,file)
+}return file.category="xhr"
+}if(!file.mimeType){var ext=getFileExtension(file.href);
+if(ext){file.mimeType=mimeExtensionMap[ext.toLowerCase()]
+}}if(!file.mimeType){return""
+}var mimeType=file.mimeType;
+if(mimeType){mimeType=mimeType.split(";")[0]
+}return(file.category=mimeCategoryMap[mimeType])
+}};
+var Utils=Firebug.NetMonitor.Utils;
+Firebug.registerModule(Firebug.NetMonitor)
+}});
+FBL.ns(function(){with(FBL){var contexts=[];
+Firebug.Spy=extend(Firebug.Module,{dispatchName:"spy",initialize:function(){if(Firebug.TraceModule){Firebug.TraceModule.addListener(this.TraceListener)
+}Firebug.Module.initialize.apply(this,arguments)
+},shutdown:function(){Firebug.Module.shutdown.apply(this,arguments);
+if(Firebug.TraceModule){Firebug.TraceModule.removeListener(this.TraceListener)
+}},initContext:function(context){context.spies=[];
+if(Firebug.showXMLHttpRequests&&Firebug.Console.isAlwaysEnabled()){this.attachObserver(context,context.window)
+}if(FBTrace.DBG_SPY){FBTrace.sysout("spy.initContext "+contexts.length+" ",context.getName())
+}},destroyContext:function(context){this.detachObserver(context,null);
+if(FBTrace.DBG_SPY&&context.spies.length){FBTrace.sysout("spy.destroyContext; ERROR There are leaking Spies ("+context.spies.length+") "+context.getName())
+}delete context.spies;
+if(FBTrace.DBG_SPY){FBTrace.sysout("spy.destroyContext "+contexts.length+" ",context.getName())
+}},watchWindow:function(context,win){if(Firebug.showXMLHttpRequests&&Firebug.Console.isAlwaysEnabled()){this.attachObserver(context,win)
+}},unwatchWindow:function(context,win){try{this.detachObserver(context,win)
+}catch(ex){ERROR(ex)
+}},updateOption:function(name,value){if(name=="showXMLHttpRequests"){var tach=value?this.attachObserver:this.detachObserver;
+for(var i=0;
+i<TabWatcher.contexts.length;
+++i){var context=TabWatcher.contexts[i];
+iterateWindows(context.window,function(win){tach.apply(this,[context,win])
+})
+}}},skipSpy:function(win){if(!win){return true
+}var uri=safeGetWindowLocation(win);
+if(uri&&(uri.indexOf("about:")==0||uri.indexOf("chrome:")==0)){return true
+}},attachObserver:function(context,win){if(Firebug.Spy.skipSpy(win)){return
+}for(var i=0;
+i<contexts.length;
+++i){if((contexts[i].context==context)&&(contexts[i].win==win)){return
+}}if(contexts.length==0){httpObserver.addObserver(SpyHttpObserver,"firebug-http-event",false);
+SpyHttpActivityObserver.registerObserver()
+}contexts.push({context:context,win:win});
+if(FBTrace.DBG_SPY){FBTrace.sysout("spy.attachObserver (HTTP) "+contexts.length+" ",context.getName())
+}},detachObserver:function(context,win){for(var i=0;
+i<contexts.length;
+++i){if(contexts[i].context==context){if(win&&(contexts[i].win!=win)){continue
+}contexts.splice(i,1);
+if(contexts.length==0){httpObserver.removeObserver(SpyHttpObserver,"firebug-http-event");
+SpyHttpActivityObserver.unregisterObserver()
+}if(FBTrace.DBG_SPY){FBTrace.sysout("spy.detachObserver (HTTP) "+contexts.length+" ",context.getName())
+}return
+}}},getXHR:function(request){if(!(request instanceof Ci.nsIHttpChannel)){return null
+}try{var callbacks=request.notificationCallbacks;
+return(callbacks?callbacks.getInterface(Ci.nsIXMLHttpRequest):null)
+}catch(exc){if(exc.name=="NS_NOINTERFACE"){if(FBTrace.DBG_SPY){FBTrace.sysout("spy.getXHR; Request is not nsIXMLHttpRequest: "+safeGetRequestName(request))
+}}}return null
+}});
+Firebug.Spy.XHR=domplate(Firebug.Rep,{tag:DIV({"class":"spyHead",_repObject:"$object"},TABLE({"class":"spyHeadTable focusRow outerFocusRow",cellpadding:0,cellspacing:0,role:"listitem","aria-expanded":"false"},TBODY({role:"presentation"},TR({"class":"spyRow"},TD({"class":"spyTitleCol spyCol",onclick:"$onToggleBody"},DIV({"class":"spyTitle"},"$object|getCaption"),DIV({"class":"spyFullTitle spyTitle"},"$object|getFullUri")),TD({"class":"spyCol"},DIV({"class":"spyStatus"},"$object|getStatus")),TD({"class":"spyCol"},SPAN({"class":"spyIcon"})),TD({"class":"spyCol"},SPAN({"class":"spyTime"})),TD({"class":"spyCol"},TAG(FirebugReps.SourceLink.tag,{object:"$object.sourceLink"})))))),getCaption:function(spy){return spy.method.toUpperCase()+" "+cropString(spy.getURL(),100)
+},getFullUri:function(spy){return spy.method.toUpperCase()+" "+spy.getURL()
+},getStatus:function(spy){var text="";
+if(spy.statusCode){text+=spy.statusCode+" "
+}if(spy.statusText){return text+=spy.statusText
+}return text
+},onToggleBody:function(event){var target=event.currentTarget||event.srcElement;
+var logRow=getAncestorByClass(target,"logRow-spy");
+if(isLeftClick(event)){toggleClass(logRow,"opened");
+var spy=getChildByClass(logRow,"spyHead").repObject;
+var spyHeadTable=getAncestorByClass(target,"spyHeadTable");
+if(hasClass(logRow,"opened")){updateHttpSpyInfo(spy,logRow);
+if(spyHeadTable){spyHeadTable.setAttribute("aria-expanded","true")
+}}else{}}},copyURL:function(spy){copyToClipboard(spy.getURL())
+},copyParams:function(spy){var text=spy.postText;
+if(!text){return
+}var url=reEncodeURL(spy,text,true);
+copyToClipboard(url)
+},copyResponse:function(spy){copyToClipboard(spy.responseText)
+},openInTab:function(spy){openNewTab(spy.getURL(),spy.postText)
+},supportsObject:function(object){return false;
+return object instanceof Firebug.Spy.XMLHttpRequestSpy
+},browseObject:function(spy,context){var url=spy.getURL();
+openNewTab(url);
+return true
+},getRealObject:function(spy,context){return spy.xhrRequest
+},getContextMenuItems:function(spy){var items=[{label:"CopyLocation",command:bindFixed(this.copyURL,this,spy)}];
+if(spy.postText){items.push({label:"CopyLocationParameters",command:bindFixed(this.copyParams,this,spy)})
+}items.push({label:"CopyResponse",command:bindFixed(this.copyResponse,this,spy)},"-",{label:"OpenInTab",command:bindFixed(this.openInTab,this,spy)});
+return items
+}});
+function updateTime(spy){var timeBox=spy.logRow.getElementsByClassName("spyTime").item(0);
+if(spy.responseTime){timeBox.textContent=" "+formatTime(spy.responseTime)
+}}function updateLogRow(spy){updateTime(spy);
+var statusBox=spy.logRow.getElementsByClassName("spyStatus").item(0);
+statusBox.textContent=Firebug.Spy.XHR.getStatus(spy);
+removeClass(spy.logRow,"loading");
+setClass(spy.logRow,"loaded");
+try{var errorRange=Math.floor(spy.xhrRequest.status/100);
+if(errorRange==4||errorRange==5){setClass(spy.logRow,"error")
+}}catch(exc){}}var updateHttpSpyInfo=function updateHttpSpyInfo(spy,logRow){if(!spy.logRow&&logRow){spy.logRow=logRow
+}if(!spy.logRow||!hasClass(spy.logRow,"opened")){return
+}if(!spy.params){spy.params=parseURLParams(spy.href+"")
+}if(!spy.requestHeaders){spy.requestHeaders=getRequestHeaders(spy)
+}if(!spy.responseHeaders&&spy.loaded){spy.responseHeaders=getResponseHeaders(spy)
+}var template=Firebug.NetMonitor.NetInfoBody;
+var netInfoBox=getChildByClass(spy.logRow,"spyHead","netInfoBody");
+if(!netInfoBox){var head=getChildByClass(spy.logRow,"spyHead");
+netInfoBox=template.tag.append({file:spy},head);
+template.selectTabByName(netInfoBox,"Response")
+}else{template.updateInfo(netInfoBox,spy,spy.context)
+}};
+function getRequestHeaders(spy){var headers=[];
+var channel=spy.xhrRequest.channel;
+if(channel instanceof Ci.nsIHttpChannel){channel.visitRequestHeaders({visitHeader:function(name,value){headers.push({name:name,value:value})
+}})
+}return headers
+}function getResponseHeaders(spy){var headers=[];
+try{var channel=spy.xhrRequest.channel;
+if(channel instanceof Ci.nsIHttpChannel){channel.visitResponseHeaders({visitHeader:function(name,value){headers.push({name:name,value:value})
+}})
+}}catch(exc){if(FBTrace.DBG_SPY||FBTrace.DBG_ERRORS){FBTrace.sysout("spy.getResponseHeaders; EXCEPTION "+safeGetRequestName(spy.request),exc)
+}}return headers
+}Firebug.registerModule(Firebug.Spy)
+}});
+FBL.ns(function(){with(FBL){var ignoreHTMLProps={sizcache:1,sizset:1};
+ignoreHTMLProps[cacheID]=1;
+ignoreHTMLProps[cacheID+"b"]=1;
+Firebug.HTML=extend(Firebug.Module,{appendTreeNode:function(nodeArray,html){var reTrim=/^\s+|\s+$/g;
+if(!nodeArray.length){nodeArray=[nodeArray]
+}for(var n=0,node;
+node=nodeArray[n];
+n++){if(node.nodeType==1){if(Firebug.ignoreFirebugElements&&node.firebugIgnore){continue
+}var uid=node[cacheID];
+var child=node.childNodes;
+var childLength=child.length;
+var nodeName=node.nodeName.toLowerCase();
+var nodeVisible=isVisible(node);
+var hasSingleTextChild=childLength==1&&node.firstChild.nodeType==3&&nodeName!="script"&&nodeName!="style";
+var nodeControl=!hasSingleTextChild&&childLength>0?('<div class="nodeControl"></div>'):"";
+var isIE=false;
+if(isIE&&nodeControl){html.push(nodeControl)
+}if(typeof uid!="undefined"){html.push('<div class="objectBox-element" ','id="',uid,'">',!isIE&&nodeControl?nodeControl:"","<span ",cacheID,'="',uid,'"  class="nodeBox',nodeVisible?"":" nodeHidden",'">&lt;<span class="nodeTag">',nodeName,"</span>")
+}else{html.push('<div class="objectBox-element"><span class="nodeBox',nodeVisible?"":" nodeHidden",'">&lt;<span class="nodeTag">',nodeName,"</span>")
+}for(var i=0;
+i<node.attributes.length;
+++i){var attr=node.attributes[i];
+if(!attr.specified||Firebug.ignoreFirebugElements&&ignoreHTMLProps.hasOwnProperty(attr.nodeName)){continue
+}var name=attr.nodeName.toLowerCase();
+var value=name=="style"?formatStyles(node.style.cssText):attr.nodeValue;
+html.push('&nbsp;<span class="nodeName">',name,'</span>=&quot;<span class="nodeValue">',escapeHTML(value),"</span>&quot;")
+}if(hasSingleTextChild){var value=child[0].nodeValue.replace(reTrim,"");
+if(value){html.push('&gt;<span class="nodeText">',escapeHTML(value),'</span>&lt;/<span class="nodeTag">',nodeName,"</span>&gt;</span></div>")
+}else{html.push("/&gt;</span></div>")
+}}else{if(childLength>0){html.push("&gt;</span></div>")
+}else{html.push("/&gt;</span></div>")
+}}}else{if(node.nodeType==3){if(node.parentNode&&(node.parentNode.nodeName.toLowerCase()=="script"||node.parentNode.nodeName.toLowerCase()=="style")){var value=node.nodeValue.replace(reTrim,"");
+if(isIE){var src=value+"\n"
+}else{var src="\n"+value+"\n"
+}var match=src.match(/\n/g);
+var num=match?match.length:0;
+var s=[],sl=0;
+for(var c=1;
+c<num;
+c++){s[sl++]='<div line="'+c+'">'+c+"</div>"
+}html.push('<div class="nodeGroup"><div class="nodeChildren"><div class="lineNo">',s.join(""),'</div><pre class="nodeCode">',escapeHTML(src),"</pre>","</div></div>")
+}else{var value=node.nodeValue.replace(reTrim,"");
+if(value){html.push('<div class="nodeText">',escapeHTML(value),"</div>")
+}}}}}},appendTreeChildren:function(treeNode){var doc=Firebug.chrome.document;
+var uid=treeNode.id;
+var parentNode=documentCache[uid];
+if(parentNode.childNodes.length==0){return
+}var treeNext=treeNode.nextSibling;
+var treeParent=treeNode.parentNode;
+var isIE=false;
+var control=isIE?treeNode.previousSibling:treeNode.firstChild;
+control.className="nodeControl nodeMaximized";
+var html=[];
+var children=doc.createElement("div");
+children.className="nodeChildren";
+this.appendTreeNode(parentNode.childNodes,html);
+children.innerHTML=html.join("");
+treeParent.insertBefore(children,treeNext);
+var closeElement=doc.createElement("div");
+closeElement.className="objectBox-element";
+closeElement.innerHTML='&lt;/<span class="nodeTag">'+parentNode.nodeName.toLowerCase()+"&gt;</span>";
+treeParent.insertBefore(closeElement,treeNext)
+},removeTreeChildren:function(treeNode){var children=treeNode.nextSibling;
+var closeTag=children.nextSibling;
+var isIE=false;
+var control=isIE?treeNode.previousSibling:treeNode.firstChild;
+control.className="nodeControl";
+children.parentNode.removeChild(children);
+closeTag.parentNode.removeChild(closeTag)
+},isTreeNodeVisible:function(id){return $(id)
+},select:function(el){var id=el&&el[cacheID];
+if(id){this.selectTreeNode(id)
+}},selectTreeNode:function(id){id=""+id;
+var node,stack=[];
+while(id&&!this.isTreeNodeVisible(id)){stack.push(id);
+var node=documentCache[id].parentNode;
+if(node&&typeof node[cacheID]!="undefined"){id=""+node[cacheID]
+}else{break
+}}stack.push(id);
+while(stack.length>0){id=stack.pop();
+node=$(id);
+if(stack.length>0&&documentCache[id].childNodes.length>0){this.appendTreeChildren(node)
+}}selectElement(node);
+fbPanel1.scrollTop=Math.round(node.offsetTop-fbPanel1.clientHeight/2)
+}});
+Firebug.registerModule(Firebug.HTML);
+function HTMLPanel(){}HTMLPanel.prototype=extend(Firebug.Panel,{name:"HTML",title:"HTML",options:{hasSidePanel:true,isPreRendered:true,innerHTMLSync:true},create:function(){Firebug.Panel.create.apply(this,arguments);
+this.panelNode.style.padding="4px 3px 1px 15px";
+this.contentNode.style.minWidth="500px";
+if(Env.Options.enablePersistent||Firebug.chrome.type!="popup"){this.createUI()
+}if(!this.sidePanelBar.selectedPanel){this.sidePanelBar.selectPanel("css")
+}},destroy:function(){selectedElement=null;
+fbPanel1=null;
+selectedSidePanelTS=null;
+selectedSidePanelTimer=null;
+Firebug.Panel.destroy.apply(this,arguments)
+},createUI:function(){var rootNode=Firebug.browser.document.documentElement;
+var html=[];
+Firebug.HTML.appendTreeNode(rootNode,html);
+var d=this.contentNode;
+d.innerHTML=html.join("");
+this.panelNode.appendChild(d)
+},initialize:function(){Firebug.Panel.initialize.apply(this,arguments);
+addEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
+fbPanel1=$("fbPanel1");
+if(!selectedElement){Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID])
+}addEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
+addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
+addEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
+},shutdown:function(){removeEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
+removeEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
+removeEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove);
+removeEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
+fbPanel1=null;
+Firebug.Panel.shutdown.apply(this,arguments)
+},reattach:function(){if(FirebugChrome.selectedHTMLElementId){Firebug.HTML.selectTreeNode(FirebugChrome.selectedHTMLElementId)
+}}});
+Firebug.registerPanel(HTMLPanel);
+var formatStyles=function(styles){return isIE?styles.replace(/([^\s]+)\s*:/g,function(m,g){return g.toLowerCase()+":"
+}):styles
+};
+var selectedElement=null;
+var fbPanel1=null;
+var selectedSidePanelTS,selectedSidePanelTimer;
+var selectElement=function selectElement(e){if(e!=selectedElement){if(selectedElement){selectedElement.className="objectBox-element"
+}e.className=e.className+" selectedElement";
+if(FBL.isFirefox){e.style.MozBorderRadius="2px"
+}else{if(FBL.isSafari){e.style.WebkitBorderRadius="2px"
+}}selectedElement=e;
+FirebugChrome.selectedHTMLElementId=e.id;
+var target=documentCache[e.id];
+var selectedSidePanel=Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
+var stack=FirebugChrome.htmlSelectionStack;
+stack.unshift(target);
+if(stack.length>2){stack.pop()
+}var lazySelect=function(){selectedSidePanelTS=new Date().getTime();
+selectedSidePanel.select(target,true)
+};
+if(selectedSidePanelTimer){clearTimeout(selectedSidePanelTimer);
+selectedSidePanelTimer=null
+}if(new Date().getTime()-selectedSidePanelTS>100){setTimeout(lazySelect,0)
+}else{selectedSidePanelTimer=setTimeout(lazySelect,150)
+}}};
+Firebug.HTML.onTreeClick=function(e){e=e||event;
+var targ;
+if(e.target){targ=e.target
+}else{if(e.srcElement){targ=e.srcElement
+}}if(targ.nodeType==3){targ=targ.parentNode
+}if(targ.className.indexOf("nodeControl")!=-1||targ.className=="nodeTag"){var isIE=false;
+if(targ.className=="nodeTag"){var control=isIE?(targ.parentNode.previousSibling||targ):(targ.parentNode.previousSibling||targ);
+selectElement(targ.parentNode.parentNode);
+if(control.className.indexOf("nodeControl")==-1){return
+}}else{control=targ
+}FBL.cancelEvent(e);
+var treeNode=isIE?control.nextSibling:control.parentNode;
+if(control.className.indexOf(" nodeMaximized")!=-1){FBL.Firebug.HTML.removeTreeChildren(treeNode)
+}else{FBL.Firebug.HTML.appendTreeChildren(treeNode)
+}}else{if(targ.className=="nodeValue"||targ.className=="nodeName"){}}};
+function onListMouseOut(e){e=e||event||window;
+var targ;
+if(e.target){targ=e.target
+}else{if(e.srcElement){targ=e.srcElement
+}}if(targ.nodeType==3){targ=targ.parentNode
+}if(hasClass(targ,"fbPanel")){FBL.Firebug.Inspector.hideBoxModel();
+hoverElement=null
+}}var hoverElement=null;
+var hoverElementTS=0;
+Firebug.HTML.onListMouseMove=function onListMouseMove(e){try{e=e||event||window;
+var targ;
+if(e.target){targ=e.target
+}else{if(e.srcElement){targ=e.srcElement
+}}if(targ.nodeType==3){targ=targ.parentNode
+}var found=false;
+while(targ&&!found){if(!/\snodeBox\s|\sobjectBox-selector\s/.test(" "+targ.className+" ")){targ=targ.parentNode
+}else{found=true
+}}if(!targ){FBL.Firebug.Inspector.hideBoxModel();
+hoverElement=null;
+return
+}if(typeof targ.attributes[FBL.cacheID]=="undefined"){return
+}var uid=targ.attributes[FBL.cacheID];
+if(!uid){return
+}var el=FBL.documentCache[uid.value];
+var nodeName=el.nodeName.toLowerCase();
+if(FBL.isIE&&" meta title script link ".indexOf(" "+nodeName+" ")!=-1){return
+}if(!/\snodeBox\s|\sobjectBox-selector\s/.test(" "+targ.className+" ")){return
+}if(el.id=="FirebugUI"||" html head body br script link iframe ".indexOf(" "+nodeName+" ")!=-1){FBL.Firebug.Inspector.hideBoxModel();
+hoverElement=null;
+return
+}if((new Date().getTime()-hoverElementTS>40)&&hoverElement!=el){hoverElementTS=new Date().getTime();
+hoverElement=el;
+FBL.Firebug.Inspector.drawBoxModel(el)
+}}catch(E){}}
 }});
 (function(){this.getElementXPath=function(element){if(element&&element.id){return'//*[@id="'+element.id+'"]'
 }else{return this.getElementTreeXPath(element)

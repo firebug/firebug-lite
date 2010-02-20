@@ -868,6 +868,7 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         
         // TODO: xxxpedro html3
+        this.panelNode.style.padding = "4px 0";
         this.context = Firebug.browser;
         this.document = Firebug.chrome.document;
         this.initializeNode();

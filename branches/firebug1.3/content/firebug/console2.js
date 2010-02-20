@@ -688,7 +688,8 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         }
 
         Firebug.Console.injector.install(Firebug.browser.window);
-        consolex.trace();
+        
+        //consolex.trace();
         //TODO: xxxpedro remove this 
         /*
         Firebug.Console2.openGroup(["asd"], null, "group", null, false);
