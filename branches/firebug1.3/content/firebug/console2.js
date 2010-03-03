@@ -40,6 +40,7 @@ r.tag.tag.renderDOM.apply(self ? self : r.tag.subject, domArgs);
 
  */
 consoleQueue = [];
+var lastHighlightedObject;
 var FirebugContext = Env.browser;
 var $STRF = function(){
     return "$STRF not supported yet";
@@ -649,6 +650,33 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // TODO: xxxpedro console2
+    onMouseMove: function(event)
+    {
+        var target = event.srcElement || event.target;
+        
+        var object = getAncestorByClass(target, "objectLink-element");
+        object = object ? object.repObject : null;
+        
+        if(object && instanceOf(object, "Element") && object.nodeType == 1)
+        {
+            if(object != lastHighlightedObject)
+            {
+                Firebug.Inspector.drawBoxModel(object);
+                object = lastHighlightedObject;
+            }
+        }
+        else
+            Firebug.Inspector.hideBoxModel();
+        
+    },
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
     name: "Console",
@@ -669,6 +697,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         
         this.context = Firebug.browser.window;
         this.document = Firebug.chrome.document;
+        this.onMouseMove = bind(this.onMouseMove, this);
     },
 
     initialize: function()
@@ -688,6 +717,8 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         }
 
         Firebug.Console.injector.install(Firebug.browser.window);
+        
+        addEvent(this.panelNode, "mouseover", this.onMouseMove);
         
         //consolex.trace();
         //TODO: xxxpedro remove this 
@@ -728,6 +759,8 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     shutdown: function()
     {
         //TODO: xxxpedro console console2
+        removeEvent(this.panelNode, "mousemove", this.onMouseMove);
+        
         this.destroyNode();
 
         Firebug.Panel.shutdown.apply(this, arguments);
