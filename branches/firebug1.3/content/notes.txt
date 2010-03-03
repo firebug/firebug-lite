@@ -174,7 +174,7 @@ OK  - bookmarlet problem with XML+XSL documents!
 Shared Code
 ###################################################################################################
 
-    Complete
+    Successfully ported modules:
         - lib
         - domplate
         - reps
@@ -184,15 +184,17 @@ Shared Code
         - css (required a few additions)
         - editor (required a lot of changes)
     
-    Partial
+    Partially ported modules:
         - spy
         - net (only a few reps)
     
-    Next modules to port:
-        - inspector
-        - infotip
-        - insideOutBox
+    Next modules to port scheduled to 1.3.x version:
+        - insideOutBox 
         - html
+        - infotip
+    
+    Next modules to port scheduled to 1.4 version:
+        - inspector
         - TabContext (will require a lot of changes)
         - TabWatcher (will require a lot of changes)
         - FirebugChrome (will require a lot of changes)

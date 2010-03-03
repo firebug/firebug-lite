@@ -76,6 +76,8 @@ window.FBDev =
         "firebug/script.js",
         "firebug/dom.js",
         
+        //"firebug/helloWorld.js",
+        
         // ****************************************************************************************
         // Trace Module/Panel
         "firebug/trace.js",
