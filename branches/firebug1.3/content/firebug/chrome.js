@@ -187,7 +187,11 @@ var createChromeWindow = function(options)
                 
         formatNode = function(node)
         {
-            node.firebugIgnore = true;
+            if (!Env.isDevelopmentMode)
+            {
+                node.firebugIgnore = true;
+            }
+            
             node.style.border = "0";
             node.style.visibility = "hidden";
             node.style.zIndex = "2147483647"; // MAX z-index = 2147483647

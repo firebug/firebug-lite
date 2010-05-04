@@ -14,6 +14,13 @@ var refreshDelay = 300;
 // issue was fixed in the 532 version
 var shouldFixElementFromPoint = isOpera || isSafari && browserVersion < "532";
 
+var evalError = "___firebug_evaluation_error___";
+var pixelsPerInch;
+
+var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
+var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
+
+
 // ************************************************************************************************
 // Context
   
@@ -651,15 +658,6 @@ FBL.Context.prototype =
     }
 
 };
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// Internal variables
-
-var evalError = "___firebug_evaluation_error___";
-var pixelsPerInch;
-
-var resetStyle = "margin:0; padding:0; border:0; position:absolute; overflow:hidden; display:block;";
-var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 
 
 // ************************************************************************************************
