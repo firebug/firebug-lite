@@ -405,8 +405,7 @@ function findLocation()
 
                     path += rel[2];
                 }
-                
-                if(src.indexOf("/") != -1)
+                else if(src.indexOf("/") != -1)
                 {
                     // "./some/path"
                     if(/^\.\/./.test(src))
