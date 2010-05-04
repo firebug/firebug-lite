@@ -369,7 +369,7 @@ var findLocation =  function findLocation()
                 path += backDir[2];
             }
             
-            if(src.indexOf("/") != -1)
+            else if(src.indexOf("/") != -1)
             {
                 // "./some/path"
                 if(/^\.\/./.test(src))
@@ -2672,7 +2672,66 @@ this.parseURLEncodedText = function(text)
     return params;
 };
 
-this.reEncodeURL= function(file, text)
+// TODO: xxxpedro lib. why loops in domplate are requiring array in parameters
+// as in response/request headers and get/post parameters in Net module?
+this.parseURLParamsArray = function(url)
+{
+    var q = url ? url.indexOf("?") : -1;
+    if (q == -1)
+        return [];
+
+    var search = url.substr(q+1);
+    var h = search.lastIndexOf("#");
+    if (h != -1)
+        search = search.substr(0, h);
+
+    if (!search)
+        return [];
+
+    return this.parseURLEncodedTextArray(search);
+};
+
+this.parseURLEncodedTextArray = function(text)
+{
+    var maxValueLength = 25000;
+
+    var params = [];
+
+    // Unescape '+' characters that are used to encode a space.
+    // See section 2.2.in RFC 3986: http://www.ietf.org/rfc/rfc3986.txt
+    text = text.replace(/\+/g, " ");
+
+    var args = text.split("&");
+    for (var i = 0; i < args.length; ++i)
+    {
+        try {
+            var parts = args[i].split("=");
+            if (parts.length == 2)
+            {
+                if (parts[1].length > maxValueLength)
+                    parts[1] = this.$STR("LargeData");
+
+                params.push({name: decodeURIComponent(parts[0]), value: [decodeURIComponent(parts[1])]});
+            }
+            else
+                params.push({name: decodeURIComponent(parts[0]), value: [""]});
+        }
+        catch (e)
+        {
+            if (FBTrace.DBG_ERRORS)
+            {
+                FBTrace.sysout("parseURLEncodedText EXCEPTION ", e);
+                FBTrace.sysout("parseURLEncodedText EXCEPTION URI", args[i]);
+            }
+        }
+    }
+
+    params.sort(function(a, b) { return a.name <= b.name ? -1 : 1; });
+
+    return params;
+};
+
+this.reEncodeURL = function(file, text)
 {
     var lines = text.split("\n");
     var params = this.parseURLEncodedText(lines[lines.length-1]);
