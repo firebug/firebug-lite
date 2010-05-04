@@ -55,7 +55,8 @@ Firebug.Console2.injector =
             }
         };
         
-        var sandbox = new win.Function("arguments.callee.install(window.consolex={})");
+        var consoleNS = (!isFirefox || isFirefox && !("console" in win)) ? "console" : "firebug";
+        var sandbox = new win.Function("arguments.callee.install(window." + consoleNS + "={})");
         sandbox.install = installer;
         sandbox();
     },

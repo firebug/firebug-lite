@@ -672,6 +672,44 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
             Firebug.Inspector.hideBoxModel();
         
     },
+    
+    onMouseDown: function(event)
+    {
+        var target = event.srcElement || event.target;
+        
+        var object = getAncestorByClass(target, "objectLink");
+        var repObject = object ? object.repObject : null;
+        
+        if (!repObject)
+        {
+            return;
+        }
+        
+        if (hasClass(object, "objectLink-object"))
+        {
+            Firebug.chrome.selectPanel("DOM");
+            Firebug.chrome.getPanel("DOM").select(repObject, true);
+        }
+        else if (hasClass(object, "objectLink-element"))
+        {
+            Firebug.chrome.selectPanel("HTML");
+            Firebug.chrome.getPanel("HTML").select(repObject, true);
+        }
+        
+        /*
+        if(object && instanceOf(object, "Element") && object.nodeType == 1)
+        {
+            if(object != lastHighlightedObject)
+            {
+                Firebug.Inspector.drawBoxModel(object);
+                object = lastHighlightedObject;
+            }
+        }
+        else
+            Firebug.Inspector.hideBoxModel();
+        /**/
+        
+    },
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -698,6 +736,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         this.context = Firebug.browser.window;
         this.document = Firebug.chrome.document;
         this.onMouseMove = bind(this.onMouseMove, this);
+        this.onMouseDown = bind(this.onMouseDown, this);
     },
 
     initialize: function()
@@ -719,6 +758,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         Firebug.Console.injector.install(Firebug.browser.window);
         
         addEvent(this.panelNode, "mouseover", this.onMouseMove);
+        addEvent(this.panelNode, "mousedown", this.onMouseDown);
         
         //consolex.trace();
         //TODO: xxxpedro remove this 
@@ -760,6 +800,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     {
         //TODO: xxxpedro console console2
         removeEvent(this.panelNode, "mousemove", this.onMouseMove);
+        removeEvent(this.panelNode, "mousedown", this.onMouseDown);
         
         this.destroyNode();
 

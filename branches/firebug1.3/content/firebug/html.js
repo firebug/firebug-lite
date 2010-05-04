@@ -377,6 +377,16 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         // TODO: panel reattach
         if(FirebugChrome.selectedHTMLElementId)
             Firebug.HTML.selectTreeNode(FirebugChrome.selectedHTMLElementId);
+    },
+    
+    updateSelection: function(object)
+    {
+        var id = object[cacheID];
+        
+        if (id)
+        {
+            Firebug.HTML.selectTreeNode(id);
+        }
     }
 });
 
