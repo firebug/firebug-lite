@@ -174,12 +174,11 @@ Firebug.HTML = extend(Firebug.Module,
                         s[sl++] = '<div line="'+c+'">' + c + '</div>';
                     }
                     
-                    html.push('<div class="nodeGroup"><div class="nodeChildren"><div class="lineNo">',
+                    html.push('<div class="lineNo">',
                             s.join(''),
-                            '</div><pre class="nodeCode">',
+                            '</div><pre class="sourceCode">',
                             escapeHTML(src),
-                            '</pre>',
-                            '</div></div>'
+                            '</pre>'
                         );
                       
                 }

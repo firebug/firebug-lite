@@ -233,8 +233,9 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
     }
 };
 
-StyleSheetCache = createCache();
-var ElementCache = createCache();
+// TODO: xxxpedro : check if we need really this on FBL scope
+var StyleSheetCache = FBL.StyleSheetCache = createCache();
+var ElementCache = FBL.ElementCache = createCache();
 
 var CSSRuleMap = {}
 var ElementCSSRulesMap = {}
@@ -1239,9 +1240,14 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         
         if (this.name == "stylesheet")
         {
-            addEvent(this.selectNode, "change", this.onChangeSelect);
+            var styleSheets = Firebug.browser.document.styleSheets;
             
-            this.updateLocation(Firebug.browser.document.styleSheets[0]);
+            if (styleSheets.length > 0)
+            {
+                addEvent(this.selectNode, "change", this.onChangeSelect);
+                
+                this.updateLocation(styleSheets[0]);
+            }
         }
         
         //Firebug.SourceBoxPanel.initialize.apply(this, arguments);

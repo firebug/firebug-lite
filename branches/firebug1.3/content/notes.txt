@@ -1,6 +1,7 @@
 ###################################################################################################
  Versions
 ###################################################################################################
+    Firebug 1.3.0b2 - 2009-xx-xx - Revision: xxxx
     Firebug 1.3.0b1 - 2009-02-05 - Revision: 6012
     Firebug 1.3.0a5 - 2009-01-16 - Revision: 5719
     Firebug 1.3.0a4 - 2009-12-31 - Revision: 5505 
@@ -13,13 +14,19 @@
 ###################################################################################################
  Important TODOs
 ###################################################################################################
-    
+
+---------------------------------------------------------------------------------------------------
+Cache
+---------------------------------------------------------------------------------------------------
+    - Data Sharing / Cache
+    - remove old cache and the use of element[cacheID] property
+    - refactoring use of cache and inspector highlight detection in the HTML panel
+
 ---------------------------------------------------------------------------------------------------
 Core
 ---------------------------------------------------------------------------------------------------
     - Panel Interfaces - initialize / initializeNode / show / hide
     - Contexts - TabWatcher and TabContext - what exactly are they?
-    - Data Sharing / Cache
     - Panel as Controller?
 
 ---------------------------------------------------------------------------------------------------
@@ -39,22 +46,14 @@ Editor
 ---------------------------------------------------------------------------------------------------
 Console
 ---------------------------------------------------------------------------------------------------
-    - clickable object links
-    - more robust ability to listen offline messages
-    - ability to listen offline XHR messages
-    
-    
-    - the offline handler should be compatible with the next generation console
-        the problem: we cannot create a DocumentFragment, because there's no chrome.document
-        when executing script in the HEAD
-        
-        the solution: create chrome iframe (or popup) at startup, but only append it
-        to the document's body (and initialize), when the doc is ready
+ ok - clickable object links
+ ok - more robust ability to listen offline messages
+ ok - ability to listen offline XHR messages
+ ok - the offline handler should be compatible with the next generation console
     
 ---------------------------------------------------------------------------------------------------
 Offline messages
 ---------------------------------------------------------------------------------------------------
-
 ...................................................................................................
     - Approach #1: currently being used
         just lazy the console.log call
@@ -107,10 +106,10 @@ Memory leaks
 ---------------------------------------------------------------------------------------------------
 Console2 problems
 ---------------------------------------------------------------------------------------------------
+    - console.profile / console.profileEnd
 ok  - doesn't listen offline log messages
 ok  - console.count
-    - console.profile / console.profileEnd
-    - lack of "clear" button
+ok  - lack of "clear" button
 
 
 ---------------------------------------------------------------------------------------------------
@@ -124,10 +123,10 @@ BUGS
         - it should return the biggest specificity of the rule that matches the element
         - rules that does not match the element should be ignored
     
-    - CSS problem with source code inside HTML tree (script tag).
+ok  - CSS problem with source code inside HTML tree (script tag).
       The line numbers are positioned at the top of the panel.
     
-    - cookies are not available in XML+XSL documents
+ok  - cookies are not available in XML+XSL documents
     
 ok  - XHR request made before UI load will fail
     

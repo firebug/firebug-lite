@@ -8,19 +8,49 @@ Console
     - The Console Panel now uses the same rendering engine (domplate) and object
       representation (Reps) used in Firebug 
     - console.dir()
-    - console.count()    
+    - console.count()
+    - console.group()
+    - console.groupCollapsed()
+    - console clickable links
+    - new offline log messages handler .... able to support clickable links
 
 -------------------------------------------------------------------------------
 XHR
 -------------------------------------------------------------------------------
+    - Fixed Issue 2977: XHR POST and URL parameters in the console
     - Fixed Issue 2840: Firebug Lite 1.3b doesn't handle synchronous XHR requests
     - Fixed Issue 2846: Firebug Lite 1.3b doesn't show XHR request made before the main 
       document is loaded
+    - Fixed issue with the spinning XHR gif that wasn't being hidden sometimes in IE
+
+-------------------------------------------------------------------------------
+Net
+-------------------------------------------------------------------------------
+    - ported
+
+-------------------------------------------------------------------------------
+Lib
+-------------------------------------------------------------------------------
+    - findLocation
+    - added issues directory to the repository
+    - basic extension system support
+    - basic support for the next generation HTML panel (fully editable, cross-frames)
 
 -------------------------------------------------------------------------------
 Chrome extension
 -------------------------------------------------------------------------------
     - fixed problem with UI images not loading in Mac and Linux
+
+
+-------------------------------------------------------------------------------
+TO ORGANIZE
+-------------------------------------------------------------------------------
+    - more robust ability to listen offline messages
+    - ability to listen offline XHR messages
+    - CSS problem with source code inside HTML tree (script tag).
+      The line numbers are positioned at the top of the panel.
+    - cookies are not available in XML+XSL documents
+    
 
 
 ###################################################################################################
