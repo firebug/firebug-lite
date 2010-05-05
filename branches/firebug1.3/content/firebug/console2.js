@@ -39,7 +39,7 @@ r.tag.tag.renderDOM.apply(self ? self : r.tag.subject, domArgs);
 
 
  */
-consoleQueue = [];
+var consoleQueue = [];
 var lastHighlightedObject;
 var FirebugContext = Env.browser;
 var $STRF = function(){
@@ -142,14 +142,19 @@ Firebug.ConsoleBase =
     clear: function(context)
     {
         if (!context)
-            context = FirebugContext;
+            //context = FirebugContext;
+            context = Firebug.context;
 
+        /*
         if (context)
             Firebug.Errors.clear(context);
-
+        /**/
+        
         var panel = this.getPanel(context, true);
         if (panel)
+        {
             panel.clear();
+        }
     },
 
     // Override to direct output to your panel
@@ -719,14 +724,15 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
 
     name: "Console",
     title: "Console",
-    searchable: true,
-    breakable: true,
-    editable: false,
+    //searchable: true,
+    //breakable: true,
+    //editable: false,
     
     options:
     {
-        isPreRendered: true,
-        hasCommandLine: true
+        hasCommandLine: true,
+        hasToolButtons: true,
+        isPreRendered: true
     },
     
     create: function()
@@ -737,6 +743,12 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         this.document = Firebug.chrome.document;
         this.onMouseMove = bind(this.onMouseMove, this);
         this.onMouseDown = bind(this.onMouseDown, this);
+        
+        this.clearButton = new Button({
+            element: $("fbConsole_btClear"),
+            owner: Firebug.Console,
+            onClick: Firebug.Console.clear
+        });
     },
 
     initialize: function()
@@ -755,10 +767,12 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
                 this.insertReloadWarning();
         }
 
-        Firebug.Console.injector.install(Firebug.browser.window);
+        //Firebug.Console.injector.install(Firebug.browser.window);
         
         addEvent(this.panelNode, "mouseover", this.onMouseMove);
         addEvent(this.panelNode, "mousedown", this.onMouseDown);
+        
+        this.clearButton.initialize();
         
         //consolex.trace();
         //TODO: xxxpedro remove this 
@@ -799,6 +813,8 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     shutdown: function()
     {
         //TODO: xxxpedro console console2
+        this.clearButton.shutdown();
+        
         removeEvent(this.panelNode, "mousemove", this.onMouseMove);
         removeEvent(this.panelNode, "mousedown", this.onMouseDown);
         

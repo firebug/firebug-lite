@@ -27,6 +27,7 @@ Firebug.Console2.injector =
             "dir",
             "dirxml",
             "group",
+            "groupCollapsed",
             "groupEnd",
             "time",
             "timeEnd",
@@ -274,15 +275,16 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
     this.error = function()
     {
-        if (arguments.length == 1)
-        {
-            logAssert("error", arguments);  // add more info based on stack trace
-        }
-        else
-        {
-            Firebug.Errors.increaseCount(context);
+        //TODO: xxxpedro console error
+        //if (arguments.length == 1)
+        //{
+        //    logAssert("error", arguments);  // add more info based on stack trace
+        //}
+        //else
+        //{
+            //Firebug.Errors.increaseCount(context);
             logFormatted(arguments, "error", true);  // user already added info
-        }
+        //}
     };
 
     this.exception = function()
@@ -605,5 +607,18 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             return "Firebug failed to get stack trace with any frames";
     }
 }
+
+// ************************************************************************************************
+// Register console namespace
+
+FBL.registerConsole = function()
+{
+    //TODO: xxxpedro console options override
+    //if (Env.Options.overrideConsole)
+    var win = Env.browser.window;
+    Firebug.Console.injector.install(win);
+};
+
+registerConsole();
 
 }});
