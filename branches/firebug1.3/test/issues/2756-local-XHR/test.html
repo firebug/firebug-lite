@@ -5,14 +5,37 @@
         
         <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js"></script>
         <script type="text/javascript">
-        $.ajax({
-            url: "test.txt",
-            complete: function(req, status) {
-                if (status == "success") {
-                    console.log("hi there!");
-                }
-            }
-        });
+        window.onload = function()
+        {
+            setTimeout(function(){
+            
+                xhr = new XMLHttpRequest();
+                xhr.open("GET", "test.txt", true);
+                xhr.send();
+                /**/
+                
+                /*
+                $.ajax({
+                    url: "test.txt",
+                    success: function(text) {
+                        console.log(text);
+                    }
+                });
+                /**/
+                
+                /*
+                $.ajax({
+                    url: "test.txt",
+                    complete: function(req, status) {
+                        if (status == "success") {
+                            console.log(req.responseText);
+                        }
+                    }
+                });
+                /**/
+                
+            },1000);
+        }
         </script>
     </head>
     <body>
