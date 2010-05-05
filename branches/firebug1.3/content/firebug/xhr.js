@@ -79,7 +79,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
         var success = xhrRequest.status == 200;
         
         var responseHeadersText = xhrRequest.getAllResponseHeaders();
-        var responses = responseHeadersText.split(/[\n\r]/);
+        var responses = responseHeadersText ? responseHeadersText.split(/[\n\r]/) : [];
         var reHeader = /^(\S+):\s*(.*)/;
         
         for (var i=0, l=responses.length; i<l; i++)
@@ -104,7 +104,10 @@ var XMLHttpRequestWrapper = function(activeXObject)
         })
         {
             setTimeout(function(){
-            
+                
+                // update row information to avoid "ethernal spinning gif" bug in IE 
+                row = row || spy.logRow;
+                
                 // if chrome document is not loaded, there will be no row yet, so just ignore
                 if (!row) return;
                 
@@ -170,6 +173,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
         spy.async = async;
         spy.href = url;
         spy.xhrRequest = xhrRequest;
+        spy.urlParams = parseURLParamsArray(url);
         
         if (!FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
@@ -192,6 +196,8 @@ var XMLHttpRequestWrapper = function(activeXObject)
     {
         //Firebug.Console.log("xhrRequest send");
         
+        spy.data = data;
+        
         reqStartTS = new Date().getTime();
         
         try
@@ -202,14 +208,16 @@ var XMLHttpRequestWrapper = function(activeXObject)
         {
             throw e;
         }
-        
-        logXHR();
-        
-        if (!spy.async)
+        finally
         {
-            self.readyState = xhrRequest.readyState;
+            logXHR();
             
-            finishXHR();
+            if (!spy.async)
+            {
+                self.readyState = xhrRequest.readyState;
+                
+                finishXHR();
+            }
         }
     };
     

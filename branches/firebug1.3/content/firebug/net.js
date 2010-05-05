@@ -8,7 +8,10 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 var oSTR =
 {
-    NoMembersWarning: "There are no properties to show for this object."    
+    NoMembersWarning: "There are no properties to show for this object.",
+    "net.label.Parameters": "Parameters",
+    "net.label.Source": "Source",
+    "URLParameters": "Params"
 }
 
 FBL.$STR = function(name)
@@ -444,7 +447,8 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
             if (!netInfoBox.postPresented)
             {
                 netInfoBox.postPresented  = true;
-                var postText = netInfoBox.getElementsByClassName("netInfoPostText").item(0);
+                //var postText = netInfoBox.getElementsByClassName("netInfoPostText").item(0);
+                var postText = $$(".netInfoPostText", netInfoBox)[0];
                 NetInfoPostData.render(context, postText, file);
             }
         }
@@ -454,7 +458,8 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
             if (!netInfoBox.putPresented)
             {
                 netInfoBox.putPresented  = true;
-                var putText = netInfoBox.getElementsByClassName("netInfoPutText").item(0);
+                //var putText = netInfoBox.getElementsByClassName("netInfoPutText").item(0);
+                var putText = $$(".netInfoPutText", netInfoBox)[0];
                 NetInfoPostData.render(context, putText, file);
             }
         }
@@ -561,7 +566,8 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
         if (!headers.length)
             return;
 
-        var headersTable = netInfoBox.getElementsByClassName("netInfo"+tableName+"Table").item(0);
+        var headersTable = $$(".netInfo"+tableName+"Table", netInfoBox)[0];
+        //var headersTable = netInfoBox.getElementsByClassName("netInfo"+tableName+"Table").item(0);
         var tbody = getChildByClass(headersTable, "netInfo" + rowName + "Body");
         if (!tbody)
             tbody = headersTable.firstChild;
@@ -704,6 +710,269 @@ Firebug.NetMonitor.NetInfoHeaders = domplate(Firebug.Rep, //new Firebug.Listener
 var NetInfoHeaders = Firebug.NetMonitor.NetInfoHeaders;
 
 // ************************************************************************************************
+
+/**
+ * @domplate Represents posted data within request info (the info, which is visible when
+ * a request entry is expanded. This template renders content of the Post tab.
+ */
+Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listener(),*/
+{
+    // application/x-www-form-urlencoded
+    paramsTable:
+        TABLE({"class": "netInfoPostParamsTable", cellpadding: 0, cellspacing: 0, "role": "presentation"},
+            TBODY({"role": "list", "aria-label": $STR("net.label.Parameters")},
+                TR({"class": "netInfoPostParamsTitle", "role": "presentation"},
+                    TD({colspan: 3, "role": "presentation"},
+                        DIV({"class": "netInfoPostParams"},
+                            $STR("net.label.Parameters"),
+                            SPAN({"class": "netInfoPostContentType"},
+                                "application/x-www-form-urlencoded"
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+
+    // multipart/form-data
+    partsTable:
+        TABLE({"class": "netInfoPostPartsTable", cellpadding: 0, cellspacing: 0, "role": "presentation"},
+            TBODY({"role": "list", "aria-label": $STR("net.label.Parts")},
+                TR({"class": "netInfoPostPartsTitle", "role": "presentation"},
+                    TD({colspan: 2, "role":"presentation" },
+                        DIV({"class": "netInfoPostParams"},
+                            $STR("net.label.Parts"),
+                            SPAN({"class": "netInfoPostContentType"},
+                                "multipart/form-data"
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+
+    // application/json
+    jsonTable:
+        TABLE({"class": "netInfoPostJSONTable", cellpadding: 0, cellspacing: 0, "role": "presentation"},
+            TBODY({"role": "list", "aria-label": $STR("jsonviewer.tab.JSON")},
+                TR({"class": "netInfoPostJSONTitle", "role": "presentation"},
+                    TD({"role": "presentation" },
+                        DIV({"class": "netInfoPostParams"},
+                            $STR("jsonviewer.tab.JSON")
+                        )
+                    )
+                ),
+                TR(
+                    TD({"class": "netInfoPostJSONBody"})
+                )
+            )
+        ),
+
+    // application/xml
+    xmlTable:
+        TABLE({"class": "netInfoPostXMLTable", cellpadding: 0, cellspacing: 0, "role": "presentation"},
+            TBODY({"role": "list", "aria-label": $STR("xmlviewer.tab.XML")},
+                TR({"class": "netInfoPostXMLTitle", "role": "presentation"},
+                    TD({"role": "presentation" },
+                        DIV({"class": "netInfoPostParams"},
+                            $STR("xmlviewer.tab.XML")
+                        )
+                    )
+                ),
+                TR(
+                    TD({"class": "netInfoPostXMLBody"})
+                )
+            )
+        ),
+
+    sourceTable:
+        TABLE({"class": "netInfoPostSourceTable", cellpadding: 0, cellspacing: 0, "role": "presentation"},
+            TBODY({"role": "list", "aria-label": $STR("net.label.Source")},
+                TR({"class": "netInfoPostSourceTitle", "role": "presentation"},
+                    TD({colspan: 2, "role": "presentation"},
+                        DIV({"class": "netInfoPostSource"},
+                            $STR("net.label.Source")
+                        )
+                    )
+                )
+            )
+        ),
+
+    sourceBodyTag:
+        TR({"role": "presentation"},
+            TD({colspan: 2, "role": "presentation"},
+                FOR("line", "$param|getParamValueIterator",
+                    CODE({"class":"focusRow subFocusRow" , "role": "listitem"},"$line")
+                )
+            )
+        ),
+
+    getParamValueIterator: function(param)
+    {
+        return NetInfoBody.getParamValueIterator(param);
+    },
+
+    render: function(context, parentNode, file)
+    {
+        //------------------------------------------------------------------
+        //------------------------------------------------------------------
+        //TODO: xxxpedro net
+        var spy = getAncestorByClass(parentNode, "spyHead");
+        var spyObject = spy.repObject;
+        var data = spyObject.data;
+        
+        var params = parseURLEncodedTextArray(data);
+        if (params)
+            this.insertParameters(parentNode, params);
+        
+        var postText = data;
+        //postText = Utils.formatPostText(postText);
+        if (postText)
+            this.insertSource(parentNode, postText);
+        
+        return;
+        //------------------------------------------------------------------
+        //------------------------------------------------------------------
+        
+        var text = Utils.getPostText(file, context, true);
+        if (text == undefined)
+            return;
+
+        if (Utils.isURLEncodedRequest(file, context))
+        {
+            var lines = text.split("\n");
+            var params = parseURLEncodedText(lines[lines.length-1]);
+            if (params)
+                this.insertParameters(parentNode, params);
+        }
+
+        if (Utils.isMultiPartRequest(file, context))
+        {
+            var data = this.parseMultiPartText(file, context);
+            if (data)
+                this.insertParts(parentNode, data);
+        }
+
+        var contentType = Utils.findHeader(file.requestHeaders, "content-type");
+
+        if (Firebug.JSONViewerModel.isJSON(contentType))
+            this.insertJSON(parentNode, file, context);
+
+        if (Firebug.XMLViewerModel.isXML(contentType))
+            this.insertXML(parentNode, file, context);
+
+        var postText = Utils.getPostText(file, context);
+        postText = Utils.formatPostText(postText);
+        if (postText)
+            this.insertSource(parentNode, postText);
+    },
+
+    insertParameters: function(parentNode, params)
+    {
+        if (!params || !params.length)
+            return;
+
+        var paramTable = this.paramsTable.append({object:{}}, parentNode);
+        var row = $$(".netInfoPostParamsTitle", paramTable)[0];
+        //var paramTable = this.paramsTable.append(null, parentNode);
+        //var row = paramTable.getElementsByClassName("netInfoPostParamsTitle").item(0);
+        
+        var tbody = paramTable.getElementsByTagName("tbody")[0];
+        
+        NetInfoBody.headerDataTag.insertRows({headers: params}, row);
+    },
+
+    insertParts: function(parentNode, data)
+    {
+        if (!data.params || !data.params.length)
+            return;
+
+        var partsTable = this.partsTable.append({object:{}}, parentNode);
+        var row = $$(".netInfoPostPartsTitle", paramTable)[0];
+        //var partsTable = this.partsTable.append(null, parentNode);
+        //var row = partsTable.getElementsByClassName("netInfoPostPartsTitle").item(0);
+
+        NetInfoBody.headerDataTag.insertRows({headers: data.params}, row);
+    },
+
+    insertJSON: function(parentNode, file, context)
+    {
+        var text = Utils.getPostText(file, context);
+        var data = parseJSONString(text, "http://" + file.request.originalURI.host);
+        if (!data)
+            return;
+
+        var jsonTable = this.jsonTable.append(null, parentNode);
+        var jsonBody = jsonTable.getElementsByClassName("netInfoPostJSONBody").item(0);
+
+        if (!this.toggles)
+            this.toggles = {};
+
+        Firebug.DOMPanel.DirTable.tag.replace(
+            {object: data, toggles: this.toggles}, jsonBody);
+    },
+
+    insertXML: function(parentNode, file, context)
+    {
+        var text = Utils.getPostText(file, context);
+
+        var jsonTable = this.xmlTable.append(null, parentNode);
+        var jsonBody = jsonTable.getElementsByClassName("netInfoPostXMLBody").item(0);
+
+        Firebug.XMLViewerModel.insertXML(jsonBody, text);
+    },
+
+    insertSource: function(parentNode, text)
+    {
+        var sourceTable = this.sourceTable.append({object:{}}, parentNode);
+        var row = $$(".netInfoPostSourceTitle", sourceTable)[0];
+        //var sourceTable = this.sourceTable.append(null, parentNode);
+        //var row = sourceTable.getElementsByClassName("netInfoPostSourceTitle").item(0);
+
+        var param = {value: [text]};
+        this.sourceBodyTag.insertRows({param: param}, row);
+    },
+
+    parseMultiPartText: function(file, context)
+    {
+        var text = Utils.getPostText(file, context);
+        if (text == undefined)
+            return null;
+
+        FBTrace.sysout("net.parseMultiPartText; boundary: ", text);
+
+        var boundary = text.match(/\s*boundary=\s*(.*)/)[1];
+
+        var divider = "\r\n\r\n";
+        var bodyStart = text.indexOf(divider);
+        var body = text.substr(bodyStart + divider.length);
+
+        var postData = {};
+        postData.mimeType = "multipart/form-data";
+        postData.params = [];
+
+        var parts = body.split("--" + boundary);
+        for (var i=0; i<parts.length; i++)
+        {
+            var part = parts[i].split(divider);
+            if (part.length != 2)
+                continue;
+
+            var m = part[0].match(/\s*name=\"(.*)\"(;|$)/);
+            postData.params.push({
+                name: (m && m.length > 1) ? m[1] : "",
+                value: trim(part[1])
+            })
+        }
+
+        return postData;
+    }
+});
+
+var NetInfoPostData = Firebug.NetMonitor.NetInfoPostData;
+
+// ************************************************************************************************
+
 
 // TODO: xxxpedro net i18n
 var $STRP = function(a){return a};
