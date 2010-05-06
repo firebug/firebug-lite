@@ -13,8 +13,12 @@ var active = false;
 
 function handleIconClick(tab)
 {
-    if (tab.url.indexOf("https://chrome.google.com/extensions") == 0)
+    if (tab.url.indexOf("https://chrome.google.com/extensions") == 0 ||
+        tab.url.indexOf("chrome://") == 0)
     {
+        alert("For security reasons extensions cannot run at this page.");
+        
+        /*
         chrome.tabs.update(tab.id, {url: bookmarlet});
         
         if (!active)
@@ -23,6 +27,7 @@ function handleIconClick(tab)
             chrome.browserAction.setIcon({path:"firebug24.png"});
             active = true;
         }
+        /**/
         
         return;
     }
@@ -50,13 +55,28 @@ chrome.browserAction.onClicked.addListener(handleIconClick);
 
 function handleTabChange(tabId, selectInfo)
 {
-    disableIcon();
-    active = false;
+    /*
+    chrome.tabs.get(tabId, function(tab){
+    
+    alert(tab.title);
+    
+        if (tab.url.indexOf("https://chrome.google.com/extensions") == 0 ||
+            tab.url.indexOf("chrome://") == 0)
+        {
+            disableIcon();
+            active = false;
+        }
+    });
+    /**/
+    
+    var isUpdated = false;
     
     chrome.tabs.sendRequest(tabId, {name: "FB_isActive"}, 
     
         function(response)
         {
+            isUpdated = true;
+            
             if (response.value == "true")
             {
                 enableIcon();
@@ -64,9 +84,26 @@ function handleTabChange(tabId, selectInfo)
             }
             else
             {
+                disableIcon();
+                active = false;
             }
         }
     );
+    
+    setTimeout(function(){
+    
+        chrome.tabs.get(tabId, function(tab){
+        
+            if (!isUpdated && !tab.title.indexOf("Firebug Lite") == 0)
+            {
+                disableIcon();
+                active = false;
+            }
+            
+        });
+           
+    },100);
+    
 };
 
 // *************************************************************************************************
@@ -75,15 +112,15 @@ chrome.tabs.onSelectionChanged.addListener(handleTabChange);
 
 // *************************************************************************************************
 
-chrome.tabs.onUpdated.addListener
-( 
-    function(tabId, updateInfo, tab)
-    {
-        if (updateInfo.status == "complete") return;
-        
-        handleTabChange(tabId, updateInfo);
-    }
-);
+function handleUpdateTab(tabId, updateInfo, tab)
+{
+    if (updateInfo.status == "complete") return;
+    
+    handleTabChange(tabId, updateInfo);
+}
+
+// memory leaking here
+//chrome.tabs.onUpdated.addListener(handleUpdateTab);
 
 // *************************************************************************************************
 
