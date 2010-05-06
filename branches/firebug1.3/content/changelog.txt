@@ -1,5 +1,5 @@
 ###################################################################################################
- 1.3.0b2 - 2009-05-06 - Revision: 6690
+ 1.3.0b2 - 2009-05-06 - Revision: 6695
 ###################################################################################################
 
 -------------------------------------------------------------------------------
@@ -51,6 +51,9 @@ Chrome extension
       before Firebug extension itself being enabled. Now it shows an alert box
       asking the user to reload the page to complete the activation
     
+    - Fixed problem in Google Chrome 5 which was caused by not using the proper
+      encoding (UTF-8) at the content script file
+      
     - Fixed problem with popup. when the popup was opened, the bug icon was
       becoming gray, falsely indicating that it was deactivated
 
