@@ -92,7 +92,8 @@ function handleTabChange(tabId, selectInfo)
     
         chrome.tabs.get(tabId, function(tab){
         
-            if (!isUpdated && !tab.title.indexOf("Firebug Lite") == 0)
+            var title = tab.title || "";
+            if (!isUpdated && !title.indexOf("Firebug Lite") == 0)
             {
                 disableIcon();
                 active = false;
