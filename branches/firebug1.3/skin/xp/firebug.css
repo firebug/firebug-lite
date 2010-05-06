@@ -1489,6 +1489,7 @@ h1.groupHeader {
 
 .logRow-stackTrace {
     padding-top: 0;
+    background: #f8f8f8;
 }
 
 .logRow-stackTrace > .objectBox-stackFrame {
@@ -2922,6 +2923,7 @@ position. if so, override it at chrome.js initialization when creating the div *
 /*
 //TODO: remove this when console2 is finished
 */
+/*
 .logRow-group {
     background: #EEEEEE;
     border-bottom: none;
