@@ -5426,7 +5426,7 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.0b2",
+    version:  "Firebug Lite 1.3.0b2",
     revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -26623,7 +26623,7 @@ var loadFirebug = function()
     if (isOpen)
         document.documentElement.setAttribute("debug", "true");
     
-    script.text = ("("+firebug+")()").replace("url(https://getfirebug.com/releases/lite/beta/skin/xp/", "url("+extensionURL);
+    script.text = ("("+firebug+")()").replace(/url\(https\:\/\/getfirebug\.com\/releases\/lite\/beta\//g, "url("+extensionURL);
     script.setAttribute("id", "FirebugLite");
     script.setAttribute("firebugIgnore", "true");
     script.setAttribute("extension", "Chrome");
