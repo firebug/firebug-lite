@@ -16,6 +16,36 @@
 ###################################################################################################
 
 ---------------------------------------------------------------------------------------------------
+Migration
+---------------------------------------------------------------------------------------------------
+    - link at getfirebug.com/firebuglite
+    - bookmarlet update system
+    - "new beta version available" message in 1.2
+    - detect new version?
+
+---------------------------------------------------------------------------------------------------
+Organization
+---------------------------------------------------------------------------------------------------
+    - move reps code to html module
+    
+    - stop using old cache system at reps+html
+    - remove old cache system from lib
+    - move cache system (currently in css2) to lib
+    
+    - remove obsolete modules from repository
+            - console
+            - chrome.injected
+            - css
+            - maybe reps
+            - maybe html2
+
+---------------------------------------------------------------------------------------------------
+New issues
+---------------------------------------------------------------------------------------------------
+    - click and onmousemove inspect at Style panel
+    - console panel scrollToBottom if was scrolledToBottom
+
+---------------------------------------------------------------------------------------------------
 Cache
 ---------------------------------------------------------------------------------------------------
     - Data Sharing / Cache

@@ -6,14 +6,27 @@
 Console
 -------------------------------------------------------------------------------
     - The Console Panel now uses the same rendering engine (domplate) and object
-      representation (Reps) used in Firebug 
-    - console.dir()
-    - console.count()
-    - console.group()
-    - console.groupCollapsed()
-    - console clickable links
-    - new offline log messages handler .... able to support clickable links
+      representation (Reps) used in Firebug
+      
+    - Console now has clickable objects links, which will lead you to the related 
+      panel, HTML if is an element, or the DOM panel if is an object
+      
+    - console.dir() now uses the same rich representation as in the DOM panel, with
+      items which can be collapsed, and links which can be clicked.
+      
+    - console.trace() now uses rich representation, with clickable links, and will
+      show the file name and line number for some browsers when found at the stacktrace 
+    
+    - console.count() now works as in Firebug
+    - console.group() now can be collapsed, using the same representation as in Firebug 
+    - console.groupCollapsed() added to the console object
 
+    - new offline log messages handler (messages called before Firebug Lite UI finish 
+      rendering), able to support clickable links and advanced representations 
+      like the XHR watcher
+      
+    - ability to listen offline XHR messages
+    
 -------------------------------------------------------------------------------
 XHR
 -------------------------------------------------------------------------------
@@ -21,36 +34,71 @@ XHR
     - Fixed Issue 2840: Firebug Lite 1.3b doesn't handle synchronous XHR requests
     - Fixed Issue 2846: Firebug Lite 1.3b doesn't show XHR request made before the main 
       document is loaded
+      
     - Fixed issue with the spinning XHR gif that wasn't being hidden sometimes in IE
-
--------------------------------------------------------------------------------
-Net
--------------------------------------------------------------------------------
-    - ported
-
--------------------------------------------------------------------------------
-Lib
--------------------------------------------------------------------------------
-    - findLocation
-    - added issues directory to the repository
-    - basic extension system support
-    - basic support for the next generation HTML panel (fully editable, cross-frames)
+    - Fixed bug when there is no responseHeaders in IE
+    - Properly handling error when something goes wrong (like access restriction error)
 
 -------------------------------------------------------------------------------
 Chrome extension
 -------------------------------------------------------------------------------
-    - fixed problem with UI images not loading in Mac and Linux
-
-
--------------------------------------------------------------------------------
-TO ORGANIZE
--------------------------------------------------------------------------------
-    - more robust ability to listen offline messages
-    - ability to listen offline XHR messages
-    - CSS problem with source code inside HTML tree (script tag).
-      The line numbers are positioned at the top of the panel.
-    - cookies are not available in XML+XSL documents
+    - Fixed problem with restricted pages. the method used to load the bookmarlet
+      when no content script is available no longer works in recent versions of
+      Google Chrome, so now a alert box appears indicating that the extension
+      can't work on that page
     
+    - Fixed problem with popup. when the popup was opened, the bug icon was
+      becoming gray, falsely indicating that it was deactivated
+
+    - Fixed problem with synchronization between Firebug Lite state and the 
+      browser icon state
+      
+    - Fixed problem with UI images not loading in Mac and Linux (was related
+      to a bug in a third-party compression tool called Izarc)
+  
+    - Ignoring the FirebugChannel element in the HTML panel visualization
+    
+    - The core of the extension now uses the exact the same source as found
+      at getfirebug.com, and no longer needs to be built with a different
+      URL location for the images 
+
+-------------------------------------------------------------------------------
+Lib
+-------------------------------------------------------------------------------
+    - Fixed problem with cookies not available in XML+XSL documents
+    - Fixed bug at lib.findLocation() in IE, when using deep relative paths 
+    - Basic extension system support
+    - Basic support for the next generation HTML panel (fully editable, cross-frame)
+
+-------------------------------------------------------------------------------
+Net
+-------------------------------------------------------------------------------
+    - Ported Firebug.NetMonitor.NetInfoPostData representation
+    - Fixed problem with the styling of XHR post tab in Google Chrome
+    - Fixed problem with the styling of XHR params tab in IE
+
+-------------------------------------------------------------------------------
+ConsoleInjector
+-------------------------------------------------------------------------------
+    - ported the consoleInjector module from Firebug
+
+-------------------------------------------------------------------------------
+Reps
+-------------------------------------------------------------------------------
+    - Fixed problem with the Element's representation and attribute names
+    - Adjusted the StackFrame representation to be used with the new console.trace()
+
+-------------------------------------------------------------------------------
+HTML
+-------------------------------------------------------------------------------
+    - Fixed styling problem with source code inside HTML tree (script tag). 
+      The line numbers were positioned at the top of the panel.
+
+-------------------------------------------------------------------------------
+Repository
+-------------------------------------------------------------------------------
+    - Added issues test cases directory to the repository
+
 
 
 ###################################################################################################

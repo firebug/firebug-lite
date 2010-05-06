@@ -1143,23 +1143,30 @@ this.StackFrame = domplate(Firebug.Rep,  // XXXjjb Since the repObject is fn the
 {
     tag:
         OBJECTBLOCK(
-            A({"class": "objectLink focusRow a11yFocus", _repObject: "$object"}, "$object|getCallName"),
-            "(",
+            A({"class": "objectLink objectLink-function focusRow a11yFocus", _repObject: "$object.fn"}, "$object|getCallName"),
+            " ( ",
             FOR("arg", "$object|argIterator",
                 TAG("$arg.tag", {object: "$arg.value"}),
                 SPAN({"class": "arrayComma"}, "$arg.delim")
             ),
-            ")",
+            " )",
             SPAN({"class": "objectLink-sourceLink objectLink"}, "$object|getSourceLinkTitle")
         ),
 
     getCallName: function(frame)
     {
-        return getFunctionName(frame.script, frame.context);
+        //TODO: xxxpedro reps StackFrame
+        return frame.name || "anonymous";
+        
+        //return getFunctionName(frame.script, frame.context);
     },
 
     getSourceLinkTitle: function(frame)
     {
+        //TODO: xxxpedro reps StackFrame
+        var fileName = cropString(getFileName(frame.href), 20);
+        return fileName + (frame.lineNo ? " (line " + frame.lineNo + ")" : "");
+        
         var fileName = cropString(getFileName(frame.href), 17);
         return $STRF("Line", [fileName, frame.lineNo]);
     },

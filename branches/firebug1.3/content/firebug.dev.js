@@ -596,6 +596,63 @@ loadModules();
 // ************************************************************************************************
 var FTrace = function()
 {
+    var getFuncName = function getFuncName (f)
+    {
+        if (f.getName instanceof Function)
+            return f.getName();
+        if (f.name) // in FireFox, Function objects have a name property...
+            return f.name;
+        
+        var name = f.toString().match(/function\s*([_$\w\d]*)/)[1];
+        return name || "anonymous";
+    };
+    
+    var wasVisited = function(fn)
+    {
+        for (var i=0, l=stack.length; i<l; i++)
+        {
+            if (stack[i] == fn)
+                return true;
+        }
+        
+        return false;
+    };
+
+    var stack = [];
+    
+    var traceLabel = "Stack Trace";
+    
+    console.group(traceLabel);
+    
+    var xcount = 0;
+    
+    for (var fn = arguments.callee.caller; fn; fn = fn.caller)
+    {
+        if (wasVisited(fn)) break;
+        
+        stack.push(fn);
+        
+        var html = [ ""+ ++xcount +getFuncName(fn), "(" ];
+
+        for (var i = 0, l = fn.arguments.length; i < l; ++i)
+        {
+            if (i)
+                html.push(", ");
+            
+            Firebug.Reps.appendObject(fn.arguments[i], html);
+        }
+
+        html.push(")");
+        //Firebug.Console.logRow(html, "stackTrace");
+        Firebug.Console.log(html, Firebug.browser, "stackTrace");
+    }
+    
+    console.groupEnd(traceLabel);
+    
+    //return Firebug.Console.LOG_COMMAND;
+    
+    //############################################################################################
+    
     try
     {
         (0)();
@@ -630,15 +687,21 @@ var FTrace = function()
         if (FBL.isSafari)
         {
             //var reChromeStackItem = /^\s+at\s+([^\(]+)\s\((.*)\)$/;
+            //var reChromeStackItem = /^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
             var reChromeStackItem = /^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
             
             var reChromeStackItemName = /\s*\($/;
             var reChromeStackItemValue = /^(.+)\:(\d+\:\d+)\)?$/;
             
-            for (var i=0, length=items.length; i<length; i++)
+            var xcount = 0;
+            for (var i=3, length=items.length; i<length; i++)
             {
                 var item = items[i];
                 var match = item.match(reChromeStackItem);
+                
+                Firebug.Console.log("["+ ++xcount +"]--------------------------");
+                Firebug.Console.log(item);
+                Firebug.Console.log("................");
                 
                 if (match)
                 {
@@ -646,19 +709,18 @@ var FTrace = function()
                     if (name)
                         name = name.replace(reChromeStackItemName, "");
                     
-                    Firebug.Console.log(name);
+                    Firebug.Console.log("name: "+name);
                     
                     var value = match[2].match(reChromeStackItemValue);
                     
                     if (value)
                     {
-                        Firebug.Console.log(value[1]);
-                        Firebug.Console.log(value[2]);
+                        Firebug.Console.log("url: "+value[1]);
+                        Firebug.Console.log("line: "+value[2]);
                     }
                     else
                         Firebug.Console.log(match[2]);
                     
-                    Firebug.Console.log("--------------------------");
                 }                
             }
         }
@@ -735,3 +797,34 @@ var FTrace = function()
 
 // ************************************************************************************************
 })();
+
+/*
+setTimeout(function timeOut(){
+    
+    var namespace = 
+    {
+        fn: function fn()
+        {
+            namespace.callTrace();
+        },
+        
+        callTrace: function callTrace()
+        {
+            var extraCall = function extraCall(a,b) {
+                console.trace();
+            };
+            extraCall(1,3);
+        }
+    }
+    
+    var onClick = function onClick(){
+        namespace.fn();
+    };
+    
+    var obj = {};
+    onClick = FBL.bind(onClick, obj);
+    
+    FBL.addEvent(document.getElementById("build"), "click", onClick);
+    
+}, 2000)
+/**/
