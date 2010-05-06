@@ -1,12 +1,12 @@
 {
   "name": "Firebug Lite 1.3.0 beta for Google Chrome",
-  "version": "1.3.0.6012",
+  "version": "1.3.0.6150",
   "description": "Firebug Lite 1.3.0 beta for Google Chrome, supported by the Firebug Working Group.",
   "background_page": "background.html",
   "browser_action":
   {
     "default_icon": "firebug24_disabled.png",
-    "default_title": "Firebug Lite 1.3.0b1"
+    "default_title": "Firebug Lite 1.3.0b2"
   },
   "icons":
   {
