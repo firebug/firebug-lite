@@ -1,5 +1,5 @@
 ###################################################################################################
- 1.3.0b2 - 2009-xx-xx - Revision: xxxx
+ 1.3.0b2 - 2009-05-06 - Revision: 6681
 ###################################################################################################
 
 -------------------------------------------------------------------------------
@@ -44,8 +44,12 @@ Chrome extension
 -------------------------------------------------------------------------------
     - Fixed problem with restricted pages. the method used to load the bookmarlet
       when no content script is available no longer works in recent versions of
-      Google Chrome, so now a alert box appears indicating that the extension
+      Google Chrome, so now an alert box appears indicating that the extension
       can't work on that page
+    
+    - Fixed problem when trying to activate Firebug Lite in a page which was open
+      before Firebug extension itself being enabled. Now it shows an alert box
+      asking the user to reload the page to complete the activation
     
     - Fixed problem with popup. when the popup was opened, the bug icon was
       becoming gray, falsely indicating that it was deactivated
@@ -55,7 +59,7 @@ Chrome extension
       
     - Fixed problem with UI images not loading in Mac and Linux (was related
       to a bug in a third-party compression tool called Izarc)
-  
+    
     - Ignoring the FirebugChannel element in the HTML panel visualization
     
     - The core of the extension now uses the exact the same source as found

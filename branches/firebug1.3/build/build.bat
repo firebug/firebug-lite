@@ -5,7 +5,7 @@ svn export "../" "./firebug"
 
 md pub
 xcopy ".\firebug\skin\." ".\pub\skin" /s /i
-copy "..\test\alpha.html" ".\pub\index.html"
+copy "..\docs\beta\index.html" ".\pub\index.html"
 copy "..\content\changelog.txt" ".\pub"
 copy ".\firebug\build\*.*" ".\pub"
 del ".\pub\*.bat"
