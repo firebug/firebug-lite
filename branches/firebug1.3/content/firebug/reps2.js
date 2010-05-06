@@ -546,9 +546,9 @@ this.Element = domplate(Firebug.Rep,
     tag:
         OBJECTLINK(
             "&lt;",
-            SPAN({"class": "nodeTag"}, "$object.tagName|toLowerCase"),
+            SPAN({"class": "nodeTag"}, "$object.nodeName|toLowerCase"),
             FOR("attr", "$object|attrIterator",
-                "&nbsp;$attr.tagName=&quot;", SPAN({"class": "nodeValue"}, "$attr.nodeValue"), "&quot;"
+                "&nbsp;$attr.nodeName=&quot;", SPAN({"class": "nodeValue"}, "$attr.nodeValue"), "&quot;"
             ),
             "&gt;"
          ),
@@ -570,7 +570,7 @@ this.Element = domplate(Firebug.Rep,
 
      getSelectorTag: function(elt)
      {
-         return elt.tagName.toLowerCase();
+         return elt.nodeName.toLowerCase();
      },
 
      getSelectorId: function(elt)
@@ -611,11 +611,11 @@ this.Element = domplate(Firebug.Rep,
              for (var i = 0; i < elt.attributes.length; ++i)
              {
                  var attr = elt.attributes[i];
-                 if (attr.tagName && attr.tagName.indexOf("firebug-") != -1)
+                 if (attr.nodeName && attr.nodeName.indexOf("firebug-") != -1)
                     continue;
-                 else if (attr.tagName == "id")
+                 else if (attr.nodeName == "id")
                      idAttr = attr;
-                else if (attr.tagName == "class")
+                else if (attr.nodeName == "class")
                     classAttr = attr;
                  else
                      attrs.push(attr);
@@ -637,7 +637,7 @@ this.Element = domplate(Firebug.Rep,
              for (var i = 0; i < elt.attributes.length; ++i)
              {
                  var attr = elt.attributes[i];
-                 if (attr.tagName == "id" || attr.tagName == "class")
+                 if (attr.nodeName == "id" || attr.nodeName == "class")
                      attrs.push(attr);
              }
          }
@@ -704,7 +704,7 @@ this.Element = domplate(Firebug.Rep,
 
     browseObject: function(elt, context)
     {
-        var tag = elt.tagName.toLowerCase();
+        var tag = elt.nodeName.toLowerCase();
         if (tag == "script")
             openNewTab(elt.src);
         else if (tag == "link")
