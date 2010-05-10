@@ -42,8 +42,21 @@ Organization
 ---------------------------------------------------------------------------------------------------
 New issues
 ---------------------------------------------------------------------------------------------------
-    - click and onmousemove inspect at Style panel
+    - missing firebuglite property in the console object
+    
     - console panel scrollToBottom if was scrolledToBottom
+    
+    - click and onmousemove inspect at Style panel. it isn't highlighting
+      the box model of the element (as shown in the "inherited from" section)
+      
+    - nested groups. when you expand a group, all subgroups will be expanded
+      too, due to a bug in the CSS. IE6 does not support the CSS child 
+      operator, and the code relies on it. It was changed to descendants
+      operator, and that's the cause of the current bug.
+      
+    - ID conflicts. If you click in the console in a Firebug UI element,
+      it will lead you to a different element in a HTML panel, using the
+      same ID. The ID must be unique across all frames.
 
 ---------------------------------------------------------------------------------------------------
 Cache

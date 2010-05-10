@@ -8,7 +8,7 @@
  
 <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"> 
 
-<script src="../../build/firebug.js">
+<script src="https://getfirebug.com/releases/lite/beta/firebug.jgz">
 {
     startOpened: true,
     
@@ -47,32 +47,36 @@
             }
             finally
             {
+                console.count("Counting the XHR calls with console.count(): ");
                 return xhrObj;
             }
         };
 
-        var console = Firebug.Console;
+        var console = window.firebug || window.console;
         
         console.info("Hello World, I'm " + Firebug.version + "!");
         /*
         console.warn('This is the "' + firebugSkin + 
             '" skin, press Ctrl+F5 to reload with a random skin.');/**/
         
-        var els = document.getElementsByTagName("div");
-        console.log("Move your mouse over here: ", els);
+        var els = $("div").toArray();
+        els = els.slice(0, 12);
+        console.log("Move your mouse over or click the following elements: ", els);
         
-        console.info("Don't forget to check the XHR requests:");
+        console.info("Don't forget to check the XHR requests, now supporting HTTP parameters:");
         
         var xhr = getXHRObject();
-        xhr.open("get", "changelog.txt", true);
-        xhr.send();
+        xhr.open("POST", "changelog.txt", true);
+        xhr.send("param1=post&param2=data");
         
         var xhr2 = getXHRObject();
-        xhr2.open("get", "error.txt", true);
+        xhr2.open("GET", "error.txt?param1=hello&param2=world", true);
         xhr2.send();
         
+        console.dir(Firebug);
+        
         var random = function(i){return Math.floor(Math.random()*i)};
-        var randomPanel = ["Console", "HTML", "CSS", "Script", "DOM"][random(5)];
+        var randomPanel = ["Console", "HTML", "DOM"][random(3)];
         
         Firebug.chrome.selectPanel(randomPanel);
         
@@ -150,7 +154,7 @@ $(document).ready(function()
 });
 </script>
 
-<link rel="stylesheet" type="text/css" media="screen,projection" href="http://getfirebug.com/styles/screen.css">
+<link rel="stylesheet" type="text/css" media="screen,projection" href="/styles/screen.css">
 <style>
 
 #install p {
