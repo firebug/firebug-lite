@@ -213,7 +213,7 @@ var createChromeWindow = function(options)
             var node = chrome.node = createGlobalElement("div"),
                 style = createGlobalElement("style"),
                 
-                css = FirebugChrome.injected.CSS
+                css = FirebugChrome.Skin.CSS
                         /*
                         .replace(/;/g, " !important;")
                         .replace(/!important\s!important/g, "!important")
@@ -463,12 +463,12 @@ var onChromeLoad = function onChromeLoad(chrome)
 
 var getChromeDivTemplate = function()
 {
-    return FirebugChrome.injected.HTML;
+    return FirebugChrome.Skin.HTML;
 };
 
 var getChromeTemplate = function(isPopup)
 {
-    var tpl = FirebugChrome.injected; 
+    var tpl = FirebugChrome.Skin; 
     var r = [], i = -1;
     
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';

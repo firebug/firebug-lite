@@ -29,7 +29,7 @@ window.FBDev =
         "firebug/gui.js",        
         "firebug/context.js",
         "firebug/chrome.js",
-        "firebug/chrome.injected2.js",
+        //"firebug/chrome.injected.js",
         
         // ****************************************************************************************
         // Application Classes
@@ -45,7 +45,7 @@ window.FBDev =
         // ****************************************************************************************
         // Console / CommandLine core
         
-        "firebug/console2.js",
+        "firebug/console.js",
         "firebug/consoleInjector.js",
         
         "firebug/commandLine.js",
@@ -68,7 +68,8 @@ window.FBDev =
         //"firebug/html2.js", // HTML experimental
         
         //"firebug/infotip.js", // experimental
-        "firebug/css2.js",
+        
+        "firebug/css.js",
         
         "firebug/script.js",
         "firebug/dom.js",
@@ -171,7 +172,7 @@ window.FBDev =
                 injected = 
                     "\n\nFBL.ns(function() { with (FBL) {\n" +
                     "// ************************************************************************************************\n\n" +
-                    "FirebugChrome.injected = \n" +
+                    "FirebugChrome.Skin = \n" +
                     "{\n" +
                     "    CSS: '" + css + "',\n" +
                     "    HTML: '" + html + "'\n" +
@@ -270,7 +271,7 @@ window.FBDev =
                     "/* See license.txt for terms of usage */\n\n" +
                     "FBL.ns(function() { with (FBL) {\n" +
                     "// ************************************************************************************************\n\n" +
-                    "FirebugChrome.injected = \n" +
+                    "FirebugChrome.Skin = \n" +
                     "{\n" +
                     "    HTML: '" + html + "',\n" +
                     "    CSS: '" + css + "'\n" +
