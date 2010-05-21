@@ -2510,7 +2510,7 @@ h1.groupHeader {
 
 #fbLargeCommandButtons {
     display: none;
-    background: #ECE9D8;
+    background: #EEEEEE;
     bottom: 0;
     right: 0;
     width: 294px;
@@ -2689,7 +2689,7 @@ a.fbTab:hover .fbTabR {
 }
 
 .fbSelectedTab {
-    background: url(sprite.png) #e5e5e5 0 -50px !important;
+    background: url(sprite.png) #EEEEEE 0 -50px !important;
     color: #000;
 }
 
