@@ -1,0 +1,92 @@
+###################################################################################################
+ 1.3.0a6
+###################################################################################################
+CSS
+    Add Rules SidePanel
+    Add AJAX request (not necessary until 1.4)
+
+Chrome
+    Panel remember scroll position
+    Better detach and reattach methods
+
+Lib
+    general source name and path functions (FBL.getFileName, FBL.getFilePath)
+    general cache
+
+
+
+###################################################################################################
+ 1.3.0a7
+###################################################################################################
+Lib
+    general cache
+    
+CSS
+    Cache source code
+
+Script
+    Cache source code
+
+Console2
+  DOM view inside Console
+  click on DOM element --> goto DOM
+  click on HTML element --> goto HTML
+
+
+
+###################################################################################################
+ 1.3.0a8
+###################################################################################################
+Lib
+    Synchronize Chromes
+    Restore last state of Panels
+
+DOM
+    change DOM time skip frame technique
+        treshold should be duration time, not number of operations (freezes on slow computers/browsers)
+
+
+
+###################################################################################################
+ 1.4 - December 2010
+###################################################################################################
+Panels:
+    New Console Panel
+    New HTML Panel (with editing features)
+    Layout HTML SidePanel (BoxModel and Rulers)
+
+
+User Interface:
+    Panel options menu
+    Context menu
+    Tooltips (CSS color, images)
+    Internationalization
+
+
+Core:
+    Search feature
+    Unit tests
+    Bookmarlet Plugin system
+    Support pages with multiple iframes / frameset
+    TabWatcher port
+    TabContext port
+    New Chrome/Panel architecture (make easier to port Firebug code)
+        - Panels and SidePanels in different "windows"
+        - port of TabContext/TabWatcher
+        - better FirebugChrome module (more close to the Firebug module)  
+    Code Parser (JS and CSS)
+        - proxy/plugin (cross-domain issue)?    
+        - line number
+        - correct CSS rules
+
+
+###################################################################################################
+ 1.5 - July 2011
+###################################################################################################
+    Use the code directly from Firebug from the "shared layer" (non XPCOM dependent layer)    
+    live highlight dom changes?
+
+    ~~ - persistent popups
+    ~~ - inherited styles
+    ~~ - live edit
+    
