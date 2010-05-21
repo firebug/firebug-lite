@@ -37,7 +37,6 @@ window.FBDev =
         "firebug/selector.js",
         
         "firebug/domplate.js",
-        //"firebug/domplate.optmized.loops.js", // not used yet
         "firebug/reps2.js",
         "firebug/reps.js",
         
@@ -47,7 +46,6 @@ window.FBDev =
         // ****************************************************************************************
         // Console / CommandLine core
         
-        //"firebug/console.js",
         "firebug/console2.js",
         "firebug/consoleInjector.js",
         
@@ -64,12 +62,12 @@ window.FBDev =
         // Application Modules/Panels
         
         "firebug/html.js",
-        //"firebug/insideOutBox.js", // experimental        
-        //"firebug/lib/htmlLib.js", // experimental
-        //"firebug/html3.js", // experimental
-        //"firebug/html2.js", // experimental
         
-        //"firebug/css.js",
+        //"firebug/insideOutBox.js", // HTML experimental        
+        //"firebug/lib/htmlLib.js", // HTML experimental
+        //"firebug/html3.js", // HTML experimental
+        //"firebug/html2.js", // HTML experimental
+        
         //"firebug/infotip.js", // experimental
         "firebug/css2.js",
         
