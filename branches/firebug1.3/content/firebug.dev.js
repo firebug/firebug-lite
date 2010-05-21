@@ -29,7 +29,7 @@ window.FBDev =
         "firebug/gui.js",        
         "firebug/context.js",
         "firebug/chrome.js",
-        //"firebug/chrome.injected.js",
+        //"firebug/chromeSkin.js",
         
         // ****************************************************************************************
         // Application Classes
@@ -189,7 +189,7 @@ window.FBDev =
         {
             var moduleURL = sourceURL + module;
             
-            if (module.indexOf("chrome.injected") != -1) continue;
+            if (module.indexOf("chromeSkin") != -1) continue;
             
             FBL.Ajax.request({
                 url: moduleURL, 
