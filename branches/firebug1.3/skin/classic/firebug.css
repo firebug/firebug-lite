@@ -2430,7 +2430,7 @@ h1.groupHeader {
     width: 50px;
     padding: 8px 0 4px 5px;
     z-index: 6;
-    background: url(sprite.png) #eee 0 0;
+    background: url(sprite.png) #D4D0C8 0 0;
 }
 
 /* fbPanelBarBox
@@ -2510,7 +2510,7 @@ h1.groupHeader {
 
 #fbLargeCommandButtons {
     display: none;
-    background: #ECE9D8;
+    background: #D4D0C8;
     bottom: 0;
     right: 0;
     width: 294px;
