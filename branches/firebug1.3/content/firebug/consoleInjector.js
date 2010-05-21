@@ -8,7 +8,7 @@ FBL.ns(function() { with (FBL) {
 //const Cc = Components.classes;
 //const Ci = Components.interfaces;
 
-Firebug.Console2.injector =
+Firebug.Console.injector =
 {
     install: function(context)
     {
@@ -95,11 +95,11 @@ Firebug.Console2.injector =
         this.attachConsoleInjector(context, win);
         this.addConsoleListener(context, win);
 
-        Firebug.Console2.clearReloadWarning(context);
+        Firebug.Console.clearReloadWarning(context);
 
         var attached =  this.isAttached(context, win);
         if (attached)
-            dispatch(Firebug.Console2.fbListeners, "onConsoleInjected", [context, win]);
+            dispatch(Firebug.Console.fbListeners, "onConsoleInjected", [context, win]);
 
         return attached;
     },
@@ -153,7 +153,7 @@ Firebug.Console2.injector =
         var consoleForcer = "window.loadFirebugConsole();";
 
         if (context.stopped)
-            Firebug.Console2.injector.evaluateConsoleScript(context);  // todo evaluate consoleForcer on stack
+            Firebug.Console.injector.evaluateConsoleScript(context);  // todo evaluate consoleForcer on stack
         else
             Firebug.CommandLine.evaluateInWebPage(consoleForcer, context, win);
 
@@ -186,7 +186,7 @@ Firebug.Console2.injector =
         }
 
         // We need the element to attach our event listener.
-        var element = Firebug.Console2.getFirebugConsoleElement(context, win);
+        var element = Firebug.Console.getFirebugConsoleElement(context, win);
         if (element)
             element.setAttribute("FirebugVersion", Firebug.version); // Initialize Firebug version.
         else
@@ -242,7 +242,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
                 FBTrace.sysout("FirebugConsoleHandler", this);
 
             var methodName = event.target.getAttribute("methodName");
-            Firebug.Console2.log($STRF("console.MethodNotSupported", [methodName]));
+            Firebug.Console.log($STRF("console.MethodNotSupported", [methodName]));
         }
     };
 
@@ -306,7 +306,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
     this.dir = function(o)
     {
-        Firebug.Console2.log(o, context, "dir", Firebug.DOMPanel.DirTable);
+        Firebug.Console.log(o, context, "dir", Firebug.DOMPanel.DirTable);
     };
 
     this.dirxml = function(o)
@@ -316,7 +316,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         else if (o instanceof Document)
             o = o.documentElement;
 
-        Firebug.Console2.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
     };
 
     this.group = function()
@@ -324,19 +324,19 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         //TODO: xxxpedro;
         //var sourceLink = getStackLink();
         var sourceLink = null;
-        Firebug.Console2.openGroup(arguments, null, "group", null, false, sourceLink);
+        Firebug.Console.openGroup(arguments, null, "group", null, false, sourceLink);
     };
 
     this.groupEnd = function()
     {
-        Firebug.Console2.closeGroup(context);
+        Firebug.Console.closeGroup(context);
     };
 
     this.groupCollapsed = function()
     {
         var sourceLink = getStackLink();
         // noThrottle true is probably ok, openGroups will likely be short strings.
-        var row = Firebug.Console2.openGroup(arguments, null, "group", null, true, sourceLink);
+        var row = Firebug.Console.openGroup(arguments, null, "group", null, true, sourceLink);
         removeClass(row, "opened");
     };
 
@@ -573,7 +573,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
     
         //console.log(stack);
         //console.dir(frames);
-        Firebug.Console2.log({frames: frames}, context, "stackTrace", FirebugReps.StackTrace);
+        Firebug.Console.log({frames: frames}, context, "stackTrace", FirebugReps.StackTrace);
     };
     
     this.trace_ok = function()
@@ -616,12 +616,12 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             frames.push({fn: fn, name: getFuncName(fn), args: args});
         }
         
-        Firebug.Console2.log({frames: frames}, context, "stackTrace", FirebugReps.StackTrace);
+        Firebug.Console.log({frames: frames}, context, "stackTrace", FirebugReps.StackTrace);
     };
     
     this.clear = function()
     {
-        Firebug.Console2.clear(context);
+        Firebug.Console.clear(context);
     };
 
     this.time = function(name, reset)
@@ -670,11 +670,11 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         if (FBTrace.DBG_CONSOLE)
             FBTrace.sysout("consoleInjector.FirebugConsoleHandler evalutated default called", result);
 
-        Firebug.Console2.log(result, context);
+        Firebug.Console.log(result, context);
     };
     this.evaluateError = function(result, context)
     {
-        Firebug.Console2.log(result, context, "errorMessage");
+        Firebug.Console.log(result, context, "errorMessage");
     };
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -682,7 +682,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
     function logFormatted(args, className, linkToSource, noThrottle)
     {
         var sourceLink = linkToSource ? getStackLink() : null;
-        return Firebug.Console2.logFormatted(args, context, className, noThrottle, sourceLink);
+        return Firebug.Console.logFormatted(args, context, className, noThrottle, sourceLink);
     }
 
     function logAssert(category, args)
@@ -730,7 +730,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
                 objects.push(args[i]);
         }
 
-        var row = Firebug.Console2.log(objects, context, "errorMessage", null, true); // noThrottle
+        var row = Firebug.Console.log(objects, context, "errorMessage", null, true); // noThrottle
         row.scrollIntoView();
     }
 

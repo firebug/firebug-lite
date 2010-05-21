@@ -881,7 +881,6 @@ append(ChromeBase,
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // TODO: console2 - remove "&& !Firebug.Console2" when console2 is finished
         if (Firebug.Console)
             Firebug.Console.flush();
         

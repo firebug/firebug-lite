@@ -179,7 +179,7 @@ var ActivableConsole = extend(Firebug.ConsoleBase,
     }
 });
 
-Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
+Firebug.Console = Firebug.Console = extend(ActivableConsole,
 //Firebug.Console = extend(ActivableConsole,
 {
     dispatchName: "console",
@@ -215,7 +215,7 @@ Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
             var elementForcer = "(function(){var r=null; try { r = window._getFirebugConsoleElement();}catch(exc){r=exc;} return r;})();";  // we could just add the elements here
 
             if (context.stopped)
-                Firebug.Console2.injector.evaluateConsoleScript(context);  // todo evaluate consoleForcer on stack
+                Firebug.Console.injector.evaluateConsoleScript(context);  // todo evaluate consoleForcer on stack
             else
                 var r = Firebug.CommandLine.evaluateInWebPage(elementForcer, context, win);
 
@@ -226,7 +226,7 @@ Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
             if (!element) // elementForce fails
             {
                 if (FBTrace.DBG_ERRORS) FBTrace.sysout("console.getFirebugConsoleElement: no _firebugConsole in win:", win);
-                Firebug.Console2.logFormatted(["Firebug cannot find _firebugConsole element", r, win], context, "error", true);
+                Firebug.Console.logFormatted(["Firebug cannot find _firebugConsole element", r, win], context, "error", true);
             }
         }
 
@@ -270,13 +270,13 @@ Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
 
     enable: function()
     {
-        if (Firebug.Console2.isAlwaysEnabled())
+        if (Firebug.Console.isAlwaysEnabled())
             this.watchForErrors();
     },
 
     disable: function()
     {
-        if (Firebug.Console2.isAlwaysEnabled())
+        if (Firebug.Console.isAlwaysEnabled())
             this.unwatchForErrors();
     },
 
@@ -321,7 +321,7 @@ Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
 
     destroyContext: function(context, persistedState)
     {
-        Firebug.Console2.injector.detachConsole(context, context.window);  // TODO iterate windows?
+        Firebug.Console.injector.detachConsole(context, context.window);  // TODO iterate windows?
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -358,7 +358,7 @@ Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
     {
         if (FBTrace.DBG_CONSOLE)
             FBTrace.sysout("console.onSuspendFirebug\n");
-        if (Firebug.Console2.isAlwaysEnabled())
+        if (Firebug.Console.isAlwaysEnabled())
             this.unwatchForErrors();
     },
 
@@ -366,7 +366,7 @@ Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
     {
         if (FBTrace.DBG_CONSOLE)
             FBTrace.sysout("console.onResumeFirebug\n");
-        if (Firebug.Console2.isAlwaysEnabled())
+        if (Firebug.Console.isAlwaysEnabled())
             this.watchForErrors();
     },
 
@@ -387,15 +387,15 @@ Firebug.Console = Firebug.Console2 = extend(ActivableConsole,
 
     onMonitorScript: function(context, frame)
     {
-        Firebug.Console2.log(frame, context);
+        Firebug.Console.log(frame, context);
     },
 
     onFunctionCall: function(context, frame, depth, calling)
     {
         if (calling)
-            Firebug.Console2.openGroup([frame, "depth:"+depth], context);
+            Firebug.Console.openGroup([frame, "depth:"+depth], context);
         else
-            Firebug.Console2.closeGroup(context);
+            Firebug.Console.closeGroup(context);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -756,7 +756,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);  // loads persisted content
         //Firebug.ActivablePanel.initialize.apply(this, arguments);  // loads persisted content
 
-        if (!this.persistedContent && Firebug.Console2.isAlwaysEnabled())
+        if (!this.persistedContent && Firebug.Console.isAlwaysEnabled())
         {
             this.insertLogLimit(this.context);
 
@@ -777,10 +777,10 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         //consolex.trace();
         //TODO: xxxpedro remove this 
         /*
-        Firebug.Console2.openGroup(["asd"], null, "group", null, false);
-        Firebug.Console2.log("asd");
-        Firebug.Console2.log("asd");
-        Firebug.Console2.log("asd");
+        Firebug.Console.openGroup(["asd"], null, "group", null, false);
+        Firebug.Console.log("asd");
+        Firebug.Console.log("asd");
+        Firebug.Console.log("asd");
         /**/
         
         //TODO: xxxpedro preferences prefs
@@ -831,10 +831,10 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         if (FBTrace.DBG_CONSOLE)
             FBTrace.sysout("Console.panel show; " + this.context.getName(), state);
 
-        var enabled = Firebug.Console2.isAlwaysEnabled();
+        var enabled = Firebug.Console.isAlwaysEnabled();
         if (enabled)
         {
-             Firebug.Console2.disabledPanelPage.hide(this);
+             Firebug.Console.disabledPanelPage.hide(this);
              this.showCommandLine(true);
              this.showToolbarButtons("fbConsoleButtons", true);
              Firebug.chrome.setGlobalAttribute("cmd_togglePersistConsole", "checked", this.persistContent);
@@ -855,7 +855,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         else
         {
             this.hide(state);
-            Firebug.Console2.disabledPanelPage.show(this);
+            Firebug.Console.disabledPanelPage.show(this);
         }
     },
 
@@ -1185,7 +1185,7 @@ var appendCloseGroup = Firebug.ConsolePanel.prototype.appendCloseGroup;
 // ************************************************************************************************
 
 //Firebug.registerActivableModule(Firebug.Console);
-Firebug.registerModule(Firebug.Console2);
+Firebug.registerModule(Firebug.Console);
 Firebug.registerPanel(Firebug.ConsolePanel);
 
 // ************************************************************************************************

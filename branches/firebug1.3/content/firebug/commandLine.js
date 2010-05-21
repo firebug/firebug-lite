@@ -230,11 +230,7 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         _stack(command);
         
-        // TODO: console2 - remove this when console2 is finished
-        if (Firebug.Console2)
-            Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
-        else
-            Firebug.Console.writeMessage(['<span>&gt;&gt;&gt;</span> ', escapeHTML(command)], "command");
+        Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
         
         var result = this.evaluate(command);
         
@@ -242,15 +238,7 @@ Firebug.CommandLine = extend(Firebug.Module,
         // that is being executed in the command line
         if (result != Firebug.Console.LOG_COMMAND)
         {
-            // TODO: console2 - remove this when console2 is finished
-            if (Firebug.Console2)
-                Firebug.Console.log(result);
-            else
-            {
-                var html = [];
-                Firebug.Reps.appendObject(result, html)
-                Firebug.Console.writeMessage(html, "command");
-            }
+            Firebug.Console.log(result);
         }
     },
     

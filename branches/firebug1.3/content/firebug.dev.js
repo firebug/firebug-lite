@@ -37,7 +37,6 @@ window.FBDev =
         "firebug/selector.js",
         
         "firebug/domplate.js",
-        "firebug/reps2.js",
         "firebug/reps.js",
         
         "firebug/editor.js",
