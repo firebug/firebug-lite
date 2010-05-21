@@ -1,11 +1,11 @@
 (function(){
 /**************************************************************
  *
- *    Firebug Lite 1.3.0b2
+ *    Firebug Lite 1.3.0
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
- *      More information: http://getfirebug.com/lite.html
+ *      More information: http://getfirebug.com/firebuglite
  *  
  **************************************************************/
 /*
@@ -1275,7 +1275,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0b2",revision:"$Revision: 6695 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0",revision:"$Revision: 6803 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
