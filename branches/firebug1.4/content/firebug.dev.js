@@ -60,21 +60,19 @@ window.FBDev =
         // ****************************************************************************************
         // Application Modules/Panels
         
-        "firebug/html.js",
+        //"firebug/html.js",
         
-        //"firebug/insideOutBox.js", // HTML experimental        
-        //"firebug/lib/htmlLib.js", // HTML experimental
-        //"firebug/html3.js", // HTML experimental
+        "firebug/insideOutBox.js", // HTML experimental        
+        "firebug/lib/htmlLib.js", // HTML experimental
+        "firebug/html3.js", // HTML experimental
         //"firebug/html2.js", // HTML experimental
         
-        //"firebug/infotip.js", // experimental
+        "firebug/infotip.js", // experimental
         
         "firebug/css.js",
         
         "firebug/script.js",
         "firebug/dom.js",
-        
-        //"firebug/helloWorld.js",
         
         // ****************************************************************************************
         // Trace Module/Panel
@@ -82,13 +80,13 @@ window.FBDev =
         "firebug/tracePanel.js",
         
         // ****************************************************************************************
-        // Test stuff
-        //"firebug/plugin.js",
-        //"firebug/test/firequery.js",
+        // Plugins
+        "firebug/plugin.js", // must be the last module loaded
         
         // ****************************************************************************************
         // Bootstrap
         "firebug/boot.js"
+        
     ],
     // ********************************************************************************************
 
@@ -474,6 +472,22 @@ function loadModules() {
             
             document.getElementsByTagName("head")[0].appendChild(script);
             //document.getElementsByTagName("body")[0].appendChild(script);
+            /**/
+            
+            /*
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", moduleURL, false);
+            xhr.onreadystatechange = function()
+            {
+                if (xhr.readyStatus == 4 && xhr.status = 200)
+                {
+                    script = document.createElement("script");
+                    script.text = xhr.responseText;
+                    document.getElementsByTagName("head")[0].appendChild(script);
+                }
+            }
+            xhr.send();
+            /**/
         }
     }
     

@@ -876,7 +876,8 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
 
     destroy: function(state)
     {
-        persistObjects(this, state);
+        // TODO: xxxpedro html html3
+        //persistObjects(this, state);
 
         Firebug.Panel.destroy.apply(this, arguments);
     },

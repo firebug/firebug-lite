@@ -654,7 +654,8 @@ this.Element = domplate(Firebug.Rep,
      {
          return getElementTreeXPath(elt);
      },
-
+     
+     // TODO: xxxpedro remove this?
      getNodeText: function(element)
      {
          var text = element.textContent;
@@ -662,6 +663,40 @@ this.Element = domplate(Firebug.Rep,
             return text;
         else
             return cropString(text, 50);
+     },
+     /**/
+
+     getNodeTextGroups: function(element)
+     {
+         var text =  element.textContent;
+         if (!Firebug.showFullTextNodes)
+         {
+             text=cropString(text,50);
+         }
+
+         var escapeGroups=[];
+
+         if (Firebug.showTextNodesWithWhitespace)
+             escapeGroups.push({
+                'group': 'whitespace',
+                'class': 'nodeWhiteSpace',
+                'extra': {
+                    '\t': '_Tab',
+                    '\n': '_Para',
+                    ' ' : '_Space'
+                }
+             });
+         if (Firebug.showTextNodesWithEntities)
+             escapeGroups.push({
+                 'group':'text',
+                 'class':'nodeTextEntity',
+                 'extra':{}
+             });
+
+         if (escapeGroups.length)
+             return escapeGroupsForEntities(text, escapeGroups);
+         else
+             return [{str:text,'class':'',extra:''}];
      },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
