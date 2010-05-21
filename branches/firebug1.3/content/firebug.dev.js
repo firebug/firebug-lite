@@ -29,7 +29,7 @@ window.FBDev =
         "firebug/gui.js",        
         "firebug/context.js",
         "firebug/chrome.js",
-        //"firebug/chromeSkin.js",
+        "firebug/chromeSkin.js",
         
         // ****************************************************************************************
         // Application Classes
