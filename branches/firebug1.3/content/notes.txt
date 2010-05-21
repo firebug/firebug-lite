@@ -42,6 +42,17 @@ Organization
 ---------------------------------------------------------------------------------------------------
 New issues
 ---------------------------------------------------------------------------------------------------
+    - content of "Script" and "Dev" panel does not show in Opera 9 
+      (it does on Opera 10). This is a CSS issue. The following changes
+      in the CSS rules fixes the problem: 
+          - ".sourceBox" to position relative
+          - "div.lineNo" to position absolute
+          
+      Need to investigate if these changes break the layout in other browsers.  
+    
+    
+    - editor.updateLayout() in IE, when element has a "auto" margin
+    
     - missing firebuglite property in the console object
     
     - console panel scrollToBottom if was scrolledToBottom
