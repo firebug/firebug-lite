@@ -881,6 +881,13 @@ append(ChromeBase,
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        if (Env.bookmarletOutdated)
+            Firebug.Console.logFormatted([
+                  "A new bookmarlet version is available. " +
+                  "Please visit http://getfirebug.com/firebuglite and update it."
+                ], Firebug.browser, "warn");
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (Firebug.Console)
             Firebug.Console.flush();
         
