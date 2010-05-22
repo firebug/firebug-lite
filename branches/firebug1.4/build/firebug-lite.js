@@ -138,7 +138,7 @@ if(FBL.Env.isChromeExtension){path=productionDir;
 script={innerHTML:"{showIconWhenHidden:false}"}
 }var m=path&&path.match(/([^\/]+)\/$/)||null;
 if(path&&m){var Env=FBL.Env;
-if(fileName=="firebug.dev.js"){Env.isDevelopmentMode=true;
+if(fileName=="firebug-lite-dev.js"){Env.isDevelopmentMode=true;
 Env.useLocalSkin=true;
 Env.Options.disableWhenFirebugActive=false
 }if(fileOptions){var options=fileOptions.split(",");
