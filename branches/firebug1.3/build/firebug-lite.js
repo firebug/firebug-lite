@@ -104,7 +104,7 @@ this.Env={Options:{saveCookies:false,saveWindowPosition:false,saveCommandLineHis
 var destroyEnvironment=function destroyEnvironment(){setTimeout(function(){FBL=null
 },100)
 };
-var findLocation=function findLocation(){var reFirebugFile=/(firebug(?:\.\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+var findLocation=function findLocation(){var reFirebugFile=/(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
 var rePath=/^(.*\/)/;
 var reProtocol=/^\w+:\/\//;
 var path=null;
@@ -153,9 +153,12 @@ name=parts[0];
 value=eval(unescape(parts[1]))
 }else{name=option;
 value=true
-}if(name in Env.Options){Env.Options[name]=value
+}if(name=="debug"){Env.Options.startOpened=true;
+Env.Options.enableTrace=true;
+Env.Options.disableWhenFirebugActive=false
+}else{if(name in Env.Options){Env.Options[name]=value
 }else{Env[name]=value
-}}}if(Env.browser.document.documentElement.getAttribute("debug")=="true"){Env.Options.startOpened=true
+}}}}if(Env.browser.document.documentElement.getAttribute("debug")=="true"){Env.Options.startOpened=true
 }var innerOptions=FBL.trim(script.innerHTML);
 if(innerOptions){var innerOptionsObject=eval("("+innerOptions+")");
 for(var name in innerOptionsObject){var value=innerOptionsObject[name];

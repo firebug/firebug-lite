@@ -444,7 +444,13 @@ var findLocation =  function findLocation()
                     value = true;
                 }
                 
-                if (name in Env.Options)
+                if (name == "debug")
+                {
+                    Env.Options.startOpened = true;
+                    Env.Options.enableTrace = true;
+                    Env.Options.disableWhenFirebugActive = false;
+                }
+                else if (name in Env.Options)
                     Env.Options[name] = value;
                 else
                     Env[name] = value;

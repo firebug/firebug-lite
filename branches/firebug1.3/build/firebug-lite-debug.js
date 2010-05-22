@@ -314,7 +314,8 @@ var destroyEnvironment = function destroyEnvironment()
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    var reFirebugFile = /(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
@@ -445,7 +446,13 @@ var findLocation =  function findLocation()
                     value = true;
                 }
                 
-                if (name in Env.Options)
+                if (name == "debug")
+                {
+                    Env.Options.startOpened = true;
+                    Env.Options.enableTrace = true;
+                    Env.Options.disableWhenFirebugActive = false;
+                }
+                else if (name in Env.Options)
                     Env.Options[name] = value;
                 else
                     Env[name] = value;
