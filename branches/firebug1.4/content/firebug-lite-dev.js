@@ -359,7 +359,7 @@ window.FBDev =
 
 function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?\.js)(#.+)?$/;
+    var reFirebugFile = /(firebug-lite(?:-\w+)?\.js)(#.+)?$/;
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     
