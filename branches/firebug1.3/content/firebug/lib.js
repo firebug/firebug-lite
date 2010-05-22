@@ -312,7 +312,8 @@ var destroyEnvironment = function destroyEnvironment()
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    var reFirebugFile = /(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
