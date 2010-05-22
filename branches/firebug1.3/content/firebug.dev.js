@@ -73,9 +73,8 @@ window.FBDev =
         "firebug/tracePanel.js",
         
         // ****************************************************************************************
-        // Test stuff
-        //"firebug/plugin.js",
-        //"firebug/test/firequery.js",
+        // Plugin
+        "firebug/plugin.js", // must be the last module loaded
         
         // ****************************************************************************************
         // Bootstrap

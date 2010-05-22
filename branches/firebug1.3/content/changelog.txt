@@ -1,4 +1,15 @@
 ###################################################################################################
+ 1.3.0 - 2009-05-21 - Revision: 6803
+###################################################################################################
+
+    - Added console.firebuglite property back to the console object
+    - Refactored code
+    - Updated skins
+    - Removed from unused modules, and test modules which will be part of 1.4
+    - fixed problem when loading an extension before the UI finish loading
+
+
+###################################################################################################
  1.3.0b2 - 2009-05-06 - Revision: 6695
 ###################################################################################################
 

@@ -318,11 +318,21 @@ var findLocation =  function findLocation()
     var path = null;
     var doc = document;
     
-    var script = doc.getElementById("FirebugLite");
+    // Firebug Lite 1.3.0 bookmarlet identification
+    var script = doc.getElementById("FirebugLiteBookmarlet");
     
     if (script)
     {
         file = reFirebugFile.exec(script.src);
+        
+        var version = script.getAttribute("FirebugLiteBookmarlet");
+        var revision = version ? parseInt(version) : 0; 
+        
+        if (!version || !revision || revision < 3)
+        {
+            // TODO: xxxpedro bookmarlet
+            //FBL.Env.bookmarletOutdated = true;
+        }
     }
     else
     {

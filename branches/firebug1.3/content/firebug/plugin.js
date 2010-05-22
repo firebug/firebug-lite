@@ -21,8 +21,15 @@ append(Firebug,
 {
     extend: function(fn)
     {
-        var namespace = ns(fn);
-        fn.call(namespace, FBL); 
+        if (Firebug.chrome && Firebug.chrome.addPanel)
+        {
+            var namespace = ns(fn);
+            fn.call(namespace, FBL);
+        }
+        else
+        {
+            setTimeout(function(){Firebug.extend(fn);},100);
+        }
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
