@@ -7,7 +7,6 @@
     
 var bookmarletMode = true;
 
-//var bookmarletSkinURL = "chrome-extension://skin/xp/";
 //var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
 var bookmarletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/";
 
@@ -69,11 +68,13 @@ window.FBDev =
         
         // ****************************************************************************************
         // Trace Module/Panel
+        
         "firebug/trace.js",
         "firebug/tracePanel.js",
         
         // ****************************************************************************************
         // Plugin
+        
         "firebug/plugin.js", // must be the last module loaded
         
         // ****************************************************************************************

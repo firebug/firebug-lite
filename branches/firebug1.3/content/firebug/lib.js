@@ -415,7 +415,7 @@ var findLocation =  function findLocation()
     {
         var Env = FBL.Env;
         
-        if (fileName == "firebug.dev.js")
+        if (fileName == "firebug-lite-dev.js")
         {
             Env.isDevelopmentMode = true;
             Env.useLocalSkin = true;
