@@ -5,7 +5,7 @@
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
- *      More information: http://getfirebug.com/lite.html
+ *      More information: http://getfirebug.com/firebuglite
  *  
  **************************************************************/
 /*
@@ -104,14 +104,16 @@ this.Env={Options:{saveCookies:false,saveWindowPosition:false,saveCommandLineHis
 var destroyEnvironment=function destroyEnvironment(){setTimeout(function(){FBL=null
 },100)
 };
-var findLocation=function findLocation(){var reFirebugFile=/(firebug(?:\.\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+var findLocation=function findLocation(){var reFirebugFile=/(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
 var rePath=/^(.*\/)/;
 var reProtocol=/^\w+:\/\//;
 var path=null;
 var doc=document;
-var script=doc.getElementById("FirebugLite");
-if(script){file=reFirebugFile.exec(script.src)
-}else{for(var i=0,s=doc.getElementsByTagName("script"),si;
+var script=doc.getElementById("FirebugLiteBookmarlet");
+if(script){file=reFirebugFile.exec(script.src);
+var version=script.getAttribute("FirebugLiteBookmarlet");
+var revision=version?parseInt(version):0;
+if(!version||!revision||revision<3){}}else{for(var i=0,s=doc.getElementsByTagName("script"),si;
 si=s[i];
 i++){var file=null;
 if(si.nodeName.toLowerCase()=="script"&&(file=reFirebugFile.exec(si.src))){script=si;
@@ -151,9 +153,12 @@ name=parts[0];
 value=eval(unescape(parts[1]))
 }else{name=option;
 value=true
-}if(name in Env.Options){Env.Options[name]=value
+}if(name=="debug"){Env.Options.startOpened=true;
+Env.Options.enableTrace=true;
+Env.Options.disableWhenFirebugActive=false
+}else{if(name in Env.Options){Env.Options[name]=value
 }else{Env[name]=value
-}}}if(Env.browser.document.documentElement.getAttribute("debug")=="true"){Env.Options.startOpened=true
+}}}}if(Env.browser.document.documentElement.getAttribute("debug")=="true"){Env.Options.startOpened=true
 }var innerOptions=FBL.trim(script.innerHTML);
 if(innerOptions){var innerOptionsObject=eval("("+innerOptions+")");
 for(var name in innerOptionsObject){var value=innerOptionsObject[name];
@@ -1275,7 +1280,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.4.0a1",revision:"$Revision: 6818 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.4.0a1",revision:"$Revision: 6842 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -2150,7 +2155,8 @@ menu.show(box.left+offsetLeft-offset.left,box.top+box.height-5-offset.top)
 };
 var iconButton=new IconButton({type:"toggle",element:$("fbFirebugButton"),onClick:testMenuClick});
 iconButton.initialize()
-},initialize:function(){if(Firebug.Console){Firebug.Console.flush()
+},initialize:function(){if(Env.bookmarletOutdated){Firebug.Console.logFormatted(["A new bookmarlet version is available. Please visit http://getfirebug.com/firebuglite and update it."],Firebug.browser,"warn")
+}if(Firebug.Console){Firebug.Console.flush()
 }if(Firebug.Trace){FBTrace.flush(Firebug.Trace)
 }if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.chrome.initialize","initializing chrome application")
 }Controller.initialize.call(this);

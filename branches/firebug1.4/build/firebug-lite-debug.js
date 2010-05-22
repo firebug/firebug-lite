@@ -6,7 +6,7 @@
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
- *      More information: http://getfirebug.com/lite.html
+ *      More information: http://getfirebug.com/firebuglite
  *  
  **************************************************************/
 
@@ -314,17 +314,28 @@ var destroyEnvironment = function destroyEnvironment()
 
 var findLocation =  function findLocation() 
 {
-    var reFirebugFile = /(firebug(?:\.\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    var reFirebugFile = /(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
     var doc = document;
     
-    var script = doc.getElementById("FirebugLite");
+    // Firebug Lite 1.3.0 bookmarlet identification
+    var script = doc.getElementById("FirebugLiteBookmarlet");
     
     if (script)
     {
         file = reFirebugFile.exec(script.src);
+        
+        var version = script.getAttribute("FirebugLiteBookmarlet");
+        var revision = version ? parseInt(version) : 0; 
+        
+        if (!version || !revision || revision < 3)
+        {
+            // TODO: xxxpedro bookmarlet
+            //FBL.Env.bookmarletOutdated = true;
+        }
     }
     else
     {
@@ -435,7 +446,13 @@ var findLocation =  function findLocation()
                     value = true;
                 }
                 
-                if (name in Env.Options)
+                if (name == "debug")
+                {
+                    Env.Options.startOpened = true;
+                    Env.Options.enableTrace = true;
+                    Env.Options.disableWhenFirebugActive = false;
+                }
+                else if (name in Env.Options)
                     Env.Options[name] = value;
                 else
                     Env[name] = value;
@@ -5421,8 +5438,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.4.0a1",
-    revision: "$Revision: 6818 $",
+    version:  "Firebug Lite 1.4.0a1",
+    revision: "$Revision: 6842 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -8880,6 +8897,13 @@ append(ChromeBase,
     
     initialize: function()
     {
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        if (Env.bookmarletOutdated)
+            Firebug.Console.logFormatted([
+                  "A new bookmarlet version is available. " +
+                  "Please visit http://getfirebug.com/firebuglite and update it."
+                ], Firebug.browser, "warn");
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (Firebug.Console)
             Firebug.Console.flush();
