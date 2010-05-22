@@ -320,11 +320,21 @@ var findLocation =  function findLocation()
     var path = null;
     var doc = document;
     
-    var script = doc.getElementById("FirebugLite");
+    // Firebug Lite 1.3.0 bookmarlet identification
+    var script = doc.getElementById("FirebugLiteBookmarlet");
     
     if (script)
     {
         file = reFirebugFile.exec(script.src);
+        
+        var version = script.getAttribute("FirebugLiteBookmarlet");
+        var revision = version ? parseInt(version) : 0; 
+        
+        if (!version || !revision || revision < 3)
+        {
+            // TODO: xxxpedro bookmarlet
+            //FBL.Env.bookmarletOutdated = true;
+        }
     }
     else
     {
@@ -8880,6 +8890,13 @@ append(ChromeBase,
     
     initialize: function()
     {
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        if (Env.bookmarletOutdated)
+            Firebug.Console.logFormatted([
+                  "A new bookmarlet version is available. " +
+                  "Please visit http://getfirebug.com/firebuglite and update it."
+                ], Firebug.browser, "warn");
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (Firebug.Console)
             Firebug.Console.flush();
@@ -26286,6 +26303,101 @@ TracePanel.prototype = extend(Firebug.Panel,
 });
 
 Firebug.registerPanel(TracePanel);
+
+// ************************************************************************************************
+}});
+
+/* See license.txt for terms of usage */
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+// ************************************************************************************************
+// Globals
+
+var modules = [];
+var panelTypes = [];
+var panelTypeMap = {};
+
+var parentPanelMap = {};
+
+
+var registerModule = Firebug.registerModule;
+var registerPanel = Firebug.registerPanel;
+
+// ************************************************************************************************
+append(Firebug,
+{
+    extend: function(fn)
+    {
+        if (Firebug.chrome && Firebug.chrome.addPanel)
+        {
+            var namespace = ns(fn);
+            fn.call(namespace, FBL);
+        }
+        else
+        {
+            setTimeout(function(){Firebug.extend(fn);},100);
+        }
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Registration
+
+    registerModule: function()
+    {
+        registerModule.apply(Firebug, arguments);
+        
+        modules.push.apply(modules, arguments);
+        
+        dispatch(modules, "initialize", []);
+
+        if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.registerModule");
+    },
+
+    registerPanel: function()
+    {
+        registerPanel.apply(Firebug, arguments);
+        
+        panelTypes.push.apply(panelTypes, arguments);
+
+        for (var i = 0, panelType; panelType = arguments[i]; ++i)
+        {
+            if (panelType.prototype.name == "Dev") continue;
+            
+            panelTypeMap[panelType.prototype.name] = arguments[i];
+            
+            var parentPanelName = panelType.prototype.parentPanel;
+            if (parentPanelName)
+            {
+                parentPanelMap[parentPanelName] = 1;
+            }
+            else
+            {
+                var panelName = panelType.prototype.name;
+                var chrome = Firebug.chrome;
+                chrome.addPanel(panelName);
+                
+                // tab click handler
+                var onTabClick = function onTabClick()
+                { 
+                    chrome.selectPanel(panelName);
+                    return false;
+                };
+                
+                chrome.addController([chrome.panelMap[panelName].tabNode, "mousedown", onTabClick]);                
+            }
+        }
+        
+        if (FBTrace.DBG_INITIALIZE)
+            for (var i = 0; i < arguments.length; ++i)
+                FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
+    }
+
+});
+
+
+
 
 // ************************************************************************************************
 }});
