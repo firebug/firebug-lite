@@ -1,14 +1,13 @@
- 
-<!DOCTYPE html> 
-<html> 
-<head> 
+<!DOCTYPE html>
+<html>
+<head>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"> 
  
-<title>Firebug Lite 1.3.0</title> 
+<title>Firebug Lite</title> 
  
 <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"> 
 
-<script src="/releases/lite/latest/firebug-lite.jgz">
+<script src="/releases/lite/latest/firebug-lite.js">
 {
     startOpened: true,
     
@@ -49,24 +48,36 @@
             }
         };
 
+        var extensionCode = document.getElementById("extension-code");
+        var extensionLoaded = false;
+        document.getElementById("run-extension").onclick = function()
+        {
+            if (!extensionLoaded)
+            {
+                extensionLoaded = true;
+                eval(extensionCode.innerHTML);
+            }
+        };
+        
         var console = window.firebug || window.console;
         
         console.info("Hello World, I'm " + Firebug.version + "!");
         
         var els = $("div").toArray();
-        els = els.slice(0, 12);
+        els = els.slice(0, 11);
         console.log("Move your mouse over or click the following elements: ", els);
         
+        var xhr = getXHRObject();
         console.info("Don't forget to check the XHR requests, now supporting HTTP parameters:");
         
-        var xhr = getXHRObject();
-        xhr.open("POST", "changelog.txt", true);
+        xhr.open("POST", "/releases/lite/latest/changelog.txt", true);
         xhr.send("param1=post&param2=data");
         
         var xhr2 = getXHRObject();
         xhr2.open("GET", "error.txt?param1=hello&param2=world", true);
         xhr2.send();
         
+        console.log("Calling console.dir(Firebug)");
         console.dir(Firebug);
         
         var random = function(i){return Math.floor(Math.random()*i)};
@@ -103,7 +114,7 @@
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js"></script> 
 <script type="text/javascript" src="http://getfirebug.com/js/jquery.mousewheel-3.0.2.js"></script> 
 <script type="text/javascript" src="http://getfirebug.com/js/fancybox.js"></script> 
-<script type="text/javascript"> 
+<script type="text/javascript">
 $(document).ready(function()
 {
     $('a.view').fancybox({
@@ -175,12 +186,21 @@ $(document).ready(function()
 }
 
 .post h2 {
-    margin: 1em 0 0;
+    margin: 1.2em 0 0;
+}
+
+.post h2 a {
+    font-size: 1em;
 }
 
 .post h3 {
-    font-size: 1.25em;
+    font-size: 1.5em;
     margin: 1em 0 0;
+}
+
+.post h4 {
+    font-size: 1.25em;
+    margin: 0.5em 0 0;
 }
 
 
@@ -202,11 +222,20 @@ $(document).ready(function()
 }
 
 textarea {
-    border: none;
     width: 100%;
     overflow: hidden;
 }
 
+pre, textarea {
+    background: #fbfafa;
+    border: 1px solid #eee;
+}
+
+pre em, textarea em
+{
+    font-weight: bold;
+    font-style: normal;
+} 
 
 /************************************************************************************************/
 
@@ -235,9 +264,16 @@ textarea {
     display: none;
 }
 
-.navlist {
-    padding: 0 0 7px 20px;
+
+.navlist li {
+    padding-top: 7px;
+}
+.navlistsub {
+    padding-left: 20px;
     font-size: 88%;
+}
+.navlistsub li {
+    padding-top: 0;
 }
 
 </style>
@@ -267,7 +303,7 @@ textarea {
 </div> 
  
 <div id="install" class="group"> 
-<p><a href="#Install">Install Firebug Lite 1.3.0</a><span>100% free and open source</span></p> 
+<p><a href="#Install">Install Firebug Lite</a><span>100% free and open source</span></p> 
 </div> 
  
 </div> <!-- /END logo-install --> 
@@ -403,15 +439,11 @@ textarea {
             <b>Console</b>
         </p>
         <ul>
-            <li>console.group() and console.groupEnd()</li>
-            <li>
-                console.trace() (thanks 
-                <a href="http://code.google.com/p/fbug/issues/detail?id=394&q=label:lite&colspec=ID%20Type%20Status%20Owner%20Test%20Summary">dongryphon</a> 
-                for the contribution!)
-            </li>
-            <li>command line API functions $(), $$(), and dir()</li>
-            <li>command line shortcuts $0 and $1 for recent selected elements</li>
-            <li>autocomplete (tab, shift+tab)</li>
+            <li><code>console.group()</code>, console.groupCollapsed() and console.groupEnd()</li>
+            <li><code>console.trace()</code> (now with file name and line numbers for some browsers)</li>
+            <li>Command line API functions <code>$()</code>, <code>$$()</code>, and <code>dir()</code></li>
+            <li>Command line shortcuts <code>$0</code> and <code>$1</code> for recent selected elements</li>
+            <li>Autocomplete (tab, shift+tab)</li>
             <li>can capture console messages before DOM document creation 
             (when installed at the HTML header)</li>
         </ul>
@@ -419,7 +451,7 @@ textarea {
             <b>Core</b>
         </p>
         <ul>
-            <li>XHR watcher (works better when you load the script in the HEAD of your document)</li>
+            <li>XHR watcher (with Headers, Response, Post and Params tabs)</li>
             <li>Port most of the Firebug Library (aka Lib, FBL)</li>
             <li>Port the Firebug DOM Templates Engine (aka Domplate), the magic behind Reps</li>
             <li>Plugin system like Firebug</li>
@@ -461,11 +493,9 @@ textarea {
             <li>Highlight HTML changes</li>
         </ul>
         <p>
-            <i>*Recent <a href="http://groups.google.com/group/webdebugprotocol?hl=en">discussions about remote debugging</a>
+            <i>*<a href="http://groups.google.com/group/webdebugprotocol?hl=en">Discussions about remote debugging</a>
             indicates that should be possible to support JavaScript debugging in browsers 
-            like Google Chrome and Opera in a not so distant future, but the 
-            <a href="http://spreadsheets.google.com/ccc?key=tHjhsEJWVzXUR_Ix7wvTNBQ">differences in the protocols</a>
-            may slow down this process (hey browser developers, what about adopting a standard?).
+            like Google Chrome and Opera in the future.
             </i>
         </p>
     </div>
@@ -481,33 +511,64 @@ textarea {
         <p>
             Bookmark the following links:
         </p>
+        <p>
+            <b>Stable versions</b>
+        </p>
         <ul>
-            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite 1.3</a></li>
-            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.2','firebug-lite.jgz','skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite 1.3X</a> (with trace enabled**)</li>
+            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite</a></li>
+            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-debug.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#debug');">Firebug Lite debug</a> **</li>
         </ul>
         <p>
-            <i>**The trace enabled bookmarlet is intended to help identify error in Firebug Lite.
-            If you find a bug, run the trace enabled bookmarlet and look for something
-            strange in the logs.</i>
+            <b>Preview versions</b>
         </p>
+        <ul>
+            <li><a href="#">Firebug Lite beta</a> (almost stable)</li>
+            <li><a href="#">Firebug Lite alpha</a> (unstable)</li>
+        </ul>
+        <p>
+            <i>
+              ** The debug version helps identifying errors in Firebug Lite.      
+            </i>
+        </p>
+        
         <h3><a name="LiveLink" rel="bookmark"></a>b) Live link</h3>
         
         <p>
             You can also link directly to the hosted version at getfirebug.com. Copy the
             following code, and paste it in the TOP of the HEAD of your document:
         </p>
-<textarea rows="3">
-&lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite.jgz"&gt;&lt;/script&gt;
+        
+        <h4>Stable version</h3>
+        <p>
+        </p>
+<textarea rows="2">
+&lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite.js"&gt;&lt;/script&gt;
+</textarea>
+        <p>
+        </p>
+
+        <h4>Preview versions</h3>
+        <p>
+            Beta version (almost stable):
+        </p>
+<textarea rows="2">
+&lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite-beta.js"&gt;&lt;/script&gt;
+</textarea>
+        <p>
+            Alpha version (unstable):
+        </p>
+<textarea rows="2">
+&lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite-alpha.js"&gt;&lt;/script&gt;
 </textarea>
         <h3><a name="LocalLink" rel="bookmark"></a>c) Local link (offline)</h3>
         <p>
             If you need using Firebug Lite while offline, 
             <a href="/releases/lite/latest/firebug-lite.tar.tgz">download the code</a>, 
-            copy to a local destination, and link the <em>firebug-lite.jgz</em> in the TOP
+            copy to a local destination, and link the <em>firebug-lite.js</em> in the TOP
             of the HEAD of your document.
         </p>
 <textarea rows="2">
-&lt;script type="text/javascript" src="/local/path/to/firebug-lite.jgz"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="/local/path/to/firebug-lite.js"&gt;&lt;/script&gt;
 </textarea>
         <h3><a name="DevelopmentMode" rel="bookmark"></a>d) Development mode:</h3>
         <p>
@@ -575,7 +636,7 @@ textarea {
             options in your bookmarlet.
         </p>
 <pre>
-https://getfirebug.com/firebug-lite.jgz<em>#enableTrace</em>
+https://getfirebug.com/firebug-lite.js<em>#enableTrace</em>
 </pre>
         <p>
             Options are separated by commas (<code>,</code>), and values are informed using
@@ -583,13 +644,12 @@ https://getfirebug.com/firebug-lite.jgz<em>#enableTrace</em>
             assumed "<code>true</code>".
         </p>
 <pre>
-path/to/firebug-lite.jgz<em>#enableTrace,overrideConsole=false</em>
+path/to/firebug-lite.js<em>#enableTrace,overrideConsole=false</em>
 </pre>
         <p>is equivalent to:</p>
 <pre>
-path/to/firebug-lite.jgz<em>#enableTrace=true,overrideConsole=false</em>
+path/to/firebug-lite.js<em>#enableTrace=true,overrideConsole=false</em>
 </pre>
-<br/>
         <h3><a name="ScriptJSONOptions" rel="bookmark"></a>c) Script JSON options</h3>
         <p>
             It is possible to set options using a JSON object inside
@@ -597,7 +657,7 @@ path/to/firebug-lite.jgz<em>#enableTrace=true,overrideConsole=false</em>
         </p>
 <pre>
 &lt;script type="text/javascript" 
-src="https://getfirebug.com/firebug-lite.jgz"&gt;
+src="https://getfirebug.com/firebug-lite.js"&gt;
 <em>{
     overrideConsole: false,
     startInNewWindow: true,
@@ -617,6 +677,76 @@ src="https://getfirebug.com/firebug-lite.jgz"&gt;
 
 <!-- ========================================================================================== --> 
 <div class="post"> 
+    <h2><a name="Extensions" rel="bookmark">Extensions</a></h2> 
+    <div class="postDate"></div> 
+    <div class="entry">
+        <p>
+            If you are familiar with Firebug extension development, you will
+            see that developing an extension for Firebug Lite is very similar.
+            In a Firebug extension all code is encapsulated in a strange at 
+            first glance but very clever way: 
+        </p>
+<pre>
+FBL.ns(function() { with (FBL) {
+
+// extension code
+
+}});
+</pre>
+        <p>
+            In a Firebug Lite extension the code is encapsulated in a 
+            similar way but using <code>Firebug.extend</code> instead, once
+            the <code>FBL</code> module (Firebug internal's library) is not
+            exposed to the global namespace:
+        </p>
+<pre>
+<em>Firebug.extend(function(FBL)</em> { with (FBL) {
+
+// extension code
+
+}});
+</pre>
+        <p>
+            If you are not familiar with Firebug extension development,
+            I suggest looking at Honza's series of tutorials, including 
+            <a href="http://www.softwareishard.com/blog/firebug-tutorial/extending-firebug-hello-world-part-i/">Firebug Tutorial</a> 
+            and <a href="http://www.softwareishard.com/blog/planet-mozilla/domplate-examples-part-i/">Domplate Tutorial</a>.
+        </p>
+        <p>
+            Here's a sample of how to create a new panel in Firebug Lite:
+            <input id="run-extension" type="button" value="run de extension">
+        </p>
+<pre id="extension-code">
+Firebug.extend(function(FBL) { with (FBL) {
+// ***********************************************************************
+
+function PluginPanel(){};
+
+PluginPanel.prototype = extend(Firebug.Panel,
+{
+    name: "Plugin",
+    title: "Plugin",
+    
+    initialize: function(){
+        Firebug.Panel.initialize.apply(this, arguments);
+        
+        this.panelNode.innerHTML = "Hello World!";
+    }
+    
+});
+
+Firebug.registerPanel(PluginPanel);
+
+// ***********************************************************************
+}});
+</pre>
+
+    </div>
+</div>
+
+
+<!-- ========================================================================================== --> 
+<div class="post"> 
     <h2><a name="Contributing" rel="bookmark">Contributing</a></h2> 
     <div class="postDate"></div> 
     <div class="entry">
@@ -629,11 +759,6 @@ src="https://getfirebug.com/firebug-lite.jgz"&gt;
             <a href="http://code.google.com/p/fbug/issues/list">Patches are welcome</a>.
             Also, if you are willing to help more deeply with coding,
             <a href="http://groups.google.com/group/firebug-working-group">join our team</a>.
-        </p>
-        <p>
-            Last, but not least, you can also helping us by spreading the word, inviting
-            more people to test this new version. Feel free to post about it in your
-            blog, social network, or use the retweet button on the left. 
         </p>
     </div>
 </div>
@@ -648,34 +773,35 @@ src="https://getfirebug.com/firebug-lite.jgz"&gt;
 
 <!-- Delicious --> 
 <h2 class="delicious-banner sidebar-title">Release notes content</h2> 
-<ul> 
+<ul class="navlist">
     <li><a href="#Overview">1. Overview</a></li> 
     <li><a href="#WhatsNew">2. What's New?</a></li> 
-    <ul class="navlist"> 
+    <ul class="navlistsub"> 
         <li><a href="#WhatsNot">What's Not in Lite?</a></li> 
     </ul> 
     <li><a href="#Install">3. Install</a></li> 
-    <ul class="navlist"> 
+    <ul class="navlistsub"> 
         <li><a href="#Bookmarlet">a) Bookmarlet</a></li> 
         <li><a href="#LiveLink">b) Live Link</a></li> 
         <li><a href="#LocalLink">c) Local Link</a></li> 
         <li><a href="#DevelopmentMode">d) Development mode</a></li> 
     </ul> 
     <li><a href="#Options">4. Options</a></li> 
-    <ul class="navlist"> 
+    <ul class="navlistsub"> 
         <li><a href="#DebugTrue">a) debug="true"</a></li> 
         <li><a href="#ScriptURLOptions">b) Script URL options</a></li> 
         <li><a href="#ScriptJSONOptions">c) Script JSON options</a></li> 
         <li><a href="#Cookies">d) Cookies</a></li> 
     </ul> 
-    <li><a href="#Contributing">5. Contributing</a></li> 
+    <li><a href="#Extensions">5. Extensions</a></li> 
+    <li><a href="#Contributing">6. Contributing</a></li> 
 </ul> 
 
 <!-- Delicious --> 
 <h2 class="delicious-banner sidebar-title">Bookmarlets</h2> 
 <ul>
-    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite 1.3</a></li>
-    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-debug.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#debug');">Firebug Lite 1.3X</a> (with trace enabled**)</li>
+    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite</a></li>
+    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-debug.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#debug');">Firebug Lite debug</a></li>
 </ul>
 
 <!-- Delicious --> 
