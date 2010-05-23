@@ -507,9 +507,20 @@ var CommandLineAPI =
     
     $1: null,
     
-    dir: Firebug.Console.dir,
+    dir: function(o)
+    {
+        Firebug.Console.log(o, Firebug.context, "dir", Firebug.DOMPanel.DirTable);
+    },
 
-    dirxml: Firebug.Console.dirxml
+    dirxml: function(o)
+    {
+        if (o instanceof Window)
+            o = o.document.documentElement;
+        else if (o instanceof Document)
+            o = o.documentElement;
+
+        Firebug.Console.log(o, Firebug.context, "dirxml", Firebug.HTMLPanel.SoloElement);
+    }
 };
 
 // ************************************************************************************************

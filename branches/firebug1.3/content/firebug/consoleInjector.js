@@ -37,8 +37,7 @@ Firebug.Console.injector =
             "profileEnd",
             "clear",
             "open",
-            "close",
-            "firebuglite"
+            "close"
         ];
         
         var Handler = function(name)
@@ -54,6 +53,7 @@ Firebug.Console.injector =
             {
                 var name = properties[i];
                 c[name] = new Handler(name);
+                c.firebuglite = Firebug.version;
             }
         };
         

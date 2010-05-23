@@ -16,7 +16,7 @@ Firebug.Plugin = extend(Firebug.Module,
     clear: function()
     {
         alert("clear button clicked");
-        this.getPanel().contentNode.innerHTML = "";
+        this.getPanel().panelNode.innerHTML = "";
     }
 });
 
@@ -41,7 +41,7 @@ PluginPanel.prototype = extend(Firebug.Panel,
         
         this.clearButton = new Button({
             caption: "Clear",
-            title: "Clear FBTrace logs",            
+            title: "Clear Panel",            
             owner: Firebug.Plugin,
             onClick: Firebug.Plugin.clear
         });
@@ -52,7 +52,7 @@ PluginPanel.prototype = extend(Firebug.Panel,
         
         this.clearButton.initialize();
         
-        this.panelNode.innerHTML = "hello";
+        this.panelNode.innerHTML = "Hello World!";
     }
     
 });

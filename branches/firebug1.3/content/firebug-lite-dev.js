@@ -8,7 +8,7 @@
 var bookmarletMode = true;
 
 //var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
-var bookmarletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/";
+var bookmarletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/";
 
 // ************************************************************************************************
 
