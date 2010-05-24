@@ -18,6 +18,7 @@
  */
 var FBL={};
 (function(){var productionDir="http://getfirebug.com/releases/lite/";
+var bookmarletVersion=3;
 var reNotWhitespace=/[^\s]/;
 var reSplitFile=/:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
 var userAgent=navigator.userAgent.toLowerCase();
@@ -54,8 +55,9 @@ var prefs=eval("("+FBL.readCookie("FirebugLite")+")");
 if(prefs){FBL.Env.Options.startOpened=prefs.startOpened;
 FBL.Env.Options.enableTrace=prefs.enableTrace;
 FBL.Env.Options.enablePersistent=prefs.enablePersistent
-}if(FBL.isFirefox&&typeof console=="object"&&console.firebug&&FBL.Env.Options.disableWhenFirebugActive){return
-}}this.isQuiksMode=FBL.Env.browser.document.compatMode=="BackCompat";
+}if(FBL.isFirefox&&typeof FBL.Env.browser.console=="object"&&FBL.Env.browser.console.firebug&&FBL.Env.Options.disableWhenFirebugActive){return
+}}if(FBL.Env.isDebugMode){FBL.Env.browser.FBL=FBL
+}this.isQuiksMode=FBL.Env.browser.document.compatMode=="BackCompat";
 this.isIEQuiksMode=this.isIE&&this.isQuiksMode;
 this.isIEStantandMode=this.isIE&&!this.isQuiksMode;
 this.noFixedPosition=this.isIE6||this.isIEQuiksMode;
@@ -100,7 +102,7 @@ sharedEnv=null
 }}else{FBL.FirebugChrome.create()
 }};
 var sharedEnv;
-this.Env={Options:{saveCookies:false,saveWindowPosition:false,saveCommandLineHistory:false,startOpened:false,startInNewWindow:false,showIconWhenHidden:true,overrideConsole:true,ignoreFirebugElements:true,disableWhenFirebugActive:true,enableTrace:false,enablePersistent:false},Location:{sourceDir:null,baseDir:null,skinDir:null,skin:null,app:null},skin:"xp",useLocalSkin:false,isDevelopmentMode:false,isChromeContext:false,browser:null,chrome:null};
+this.Env={Options:{saveCookies:false,saveWindowPosition:false,saveCommandLineHistory:false,startOpened:false,startInNewWindow:false,showIconWhenHidden:true,overrideConsole:true,ignoreFirebugElements:true,disableWhenFirebugActive:true,enableTrace:false,enablePersistent:false},Location:{sourceDir:null,baseDir:null,skinDir:null,skin:null,app:null},skin:"xp",useLocalSkin:false,isDevelopmentMode:false,isDebugMode:false,isChromeContext:false,browser:null,chrome:null};
 var destroyEnvironment=function destroyEnvironment(){setTimeout(function(){FBL=null
 },100)
 };
@@ -109,11 +111,11 @@ var rePath=/^(.*\/)/;
 var reProtocol=/^\w+:\/\//;
 var path=null;
 var doc=document;
-var script=doc.getElementById("FirebugLiteBookmarlet");
+var script=doc.getElementById("FirebugLite");
 if(script){file=reFirebugFile.exec(script.src);
-var version=script.getAttribute("FirebugLiteBookmarlet");
-var revision=version?parseInt(version):0;
-if(!version||!revision||revision<3){}}else{for(var i=0,s=doc.getElementsByTagName("script"),si;
+var version=script.getAttribute("FirebugLite");
+var number=version?parseInt(version):0;
+if(!version||!number||number<bookmarletVersion){}}else{for(var i=0,s=doc.getElementsByTagName("script"),si;
 si=s[i];
 i++){var file=null;
 if(si.nodeName.toLowerCase()=="script"&&(file=reFirebugFile.exec(si.src))){script=si;
@@ -142,7 +144,9 @@ script={innerHTML:"{showIconWhenHidden:false}"}
 if(path&&m){var Env=FBL.Env;
 if(fileName=="firebug-lite-dev.js"){Env.isDevelopmentMode=true;
 Env.useLocalSkin=true;
-Env.Options.disableWhenFirebugActive=false
+Env.isDebugMode=true
+}else{if(fileName=="firebug-lite-debug.js"){Env.isDebugMode=true
+}}if(Env.browser.document.documentElement.getAttribute("debug")=="true"){Env.Options.startOpened=true
 }if(fileOptions){var options=fileOptions.split(",");
 for(var i=0,length=options.length;
 i<length;
@@ -153,18 +157,19 @@ name=parts[0];
 value=eval(unescape(parts[1]))
 }else{name=option;
 value=true
-}if(name=="debug"){Env.Options.startOpened=true;
-Env.Options.enableTrace=true;
-Env.Options.disableWhenFirebugActive=false
+}if(name=="debug"){Env.isDebugMode=!!value
 }else{if(name in Env.Options){Env.Options[name]=value
 }else{Env[name]=value
-}}}}if(Env.browser.document.documentElement.getAttribute("debug")=="true"){Env.Options.startOpened=true
-}var innerOptions=FBL.trim(script.innerHTML);
+}}}}var innerOptions=FBL.trim(script.innerHTML);
 if(innerOptions){var innerOptionsObject=eval("("+innerOptions+")");
 for(var name in innerOptionsObject){var value=innerOptionsObject[name];
-if(name in Env.Options){Env.Options[name]=value
+if(name=="debug"){Env.isDebugMode=!!value
+}else{if(name in Env.Options){Env.Options[name]=value
 }else{Env[name]=value
-}}}var loc=Env.Location;
+}}}}if(Env.isDebugMode){Env.Options.startOpened=true;
+Env.Options.enableTrace=true;
+Env.Options.disableWhenFirebugActive=false
+}var loc=Env.Location;
 var isProductionRelease=path.indexOf(productionDir)!=-1;
 loc.sourceDir=path;
 loc.baseDir=path.substr(0,path.length-m[1].length-1);
@@ -1280,7 +1285,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0",revision:"$Revision: 6854 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+window.Firebug=FBL.Firebug={version:"Firebug Lite 1.3.0",revision:"$Revision: 6856 $",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 cacheDocument();
@@ -1368,7 +1373,7 @@ createCookie("FirebugLite",json.join(""))
 },erasePrefs:function(){removeCookie("FirebugLite")
 }};
 Firebug.restorePrefs();
-if(!Env.Options.enablePersistent||Env.Options.enablePersistent&&Env.isChromeContext||Env.isDevelopmentMode){Env.browser.window.Firebug=FBL.Firebug
+if(!Env.Options.enablePersistent||Env.Options.enablePersistent&&Env.isChromeContext||Env.isDebugMode){Env.browser.window.Firebug=FBL.Firebug
 }FBL.cacheDocument=function cacheDocument(){var els=Firebug.browser.document.getElementsByTagName("*");
 for(var i=0,l=els.length,el;
 i<l;
@@ -1994,7 +1999,7 @@ if(frame){frame.close()
 if(FBChrome.hasOwnProperty(name)&&!isFunction(prop)){this[name]=prop
 }}}};
 var createChromeWindow=function(options){options=extend(WindowDefaultOptions,options||{});
-var chrome={},context=options.context||Env.browser,type=chrome.type=Env.Options.enablePersistent?"popup":options.type,isChromeFrame=type=="frame",useLocalSkin=Env.useLocalSkin,url=useLocalSkin?Env.Location.skin:"about:blank",body=context.document.getElementsByTagName("body")[0],formatNode=function(node){if(!Env.isDevelopmentMode){node.firebugIgnore=true
+var chrome={},context=options.context||Env.browser,type=chrome.type=Env.Options.enablePersistent?"popup":options.type,isChromeFrame=type=="frame",useLocalSkin=Env.useLocalSkin,url=useLocalSkin?Env.Location.skin:"about:blank",body=context.document.getElementsByTagName("body")[0],formatNode=function(node){if(!Env.isDebugMode){node.firebugIgnore=true
 }node.style.border="0";
 node.style.visibility="hidden";
 node.style.zIndex="2147483647";
@@ -4698,7 +4703,8 @@ var appendCloseGroup=Firebug.ConsolePanel.prototype.appendCloseGroup;
 Firebug.registerModule(Firebug.Console);
 Firebug.registerPanel(Firebug.ConsolePanel)
 }});
-FBL.ns(function(){with(FBL){Firebug.Console.injector={install:function(context){var win=context.window;
+FBL.ns(function(){with(FBL){var frameCounters={};
+Firebug.Console.injector={install:function(context){var win=context.window;
 var consoleHandler=new FirebugConsoleHandler(context,win);
 var properties=["log","debug","info","warn","error","assert","dir","dirxml","group","groupCollapsed","groupEnd","time","timeEnd","count","trace","profile","profileEnd","clear","open","close"];
 var Handler=function(name){var c=consoleHandler;
@@ -4826,12 +4832,12 @@ this.profile=function(title){logFormatted(["console.profile() not supported."],"
 this.profileEnd=function(){logFormatted(["console.profile() not supported."],"warn",true)
 };
 this.count=function(key){var frameId="0";
-if(frameId){if(!context.frameCounters){context.frameCounters={}
+if(frameId){if(!frameCounters){frameCounters={}
 }if(key!=undefined){frameId+=key
-}var frameCounter=context.frameCounters[frameId];
+}var frameCounter=frameCounters[frameId];
 if(!frameCounter){var logRow=logFormatted(["0"],null,true,true);
 frameCounter={logRow:logRow,count:1};
-context.frameCounters[frameId]=frameCounter
+frameCounters[frameId]=frameCounter
 }else{++frameCounter.count
 }var label=key==undefined?frameCounter.count:key+" "+frameCounter.count;
 frameCounter.logRow.firstChild.firstChild.nodeValue=label

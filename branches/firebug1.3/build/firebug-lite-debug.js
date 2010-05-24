@@ -28,6 +28,7 @@ var FBL = {};
 // Constants
     
 var productionDir = "http://getfirebug.com/releases/lite/";
+var bookmarletVersion = 3;
 
 // ************************************************************************************************
 
@@ -118,9 +119,17 @@ this.initialize = function()
             FBL.Env.Options.enablePersistent = prefs.enablePersistent;
         }
         
-        if (FBL.isFirefox && typeof console == "object" && console.firebug &&
+        if (FBL.isFirefox && 
+            typeof FBL.Env.browser.console == "object" && 
+            FBL.Env.browser.console.firebug &&
             FBL.Env.Options.disableWhenFirebugActive)
-            return;
+                return;
+    }
+    
+    // exposes the FBL to the global namespace when in debug mode
+    if (FBL.Env.isDebugMode)
+    {
+        FBL.Env.browser.FBL = FBL;
     }
     
     // check browser compatibilities
@@ -291,6 +300,7 @@ this.Env =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // Env states
     isDevelopmentMode: false,
+    isDebugMode: false,
     isChromeContext: false,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
@@ -322,16 +332,16 @@ var findLocation =  function findLocation()
     var doc = document;
     
     // Firebug Lite 1.3.0 bookmarlet identification
-    var script = doc.getElementById("FirebugLiteBookmarlet");
+    var script = doc.getElementById("FirebugLite");
     
     if (script)
     {
         file = reFirebugFile.exec(script.src);
         
-        var version = script.getAttribute("FirebugLiteBookmarlet");
-        var revision = version ? parseInt(version) : 0; 
+        var version = script.getAttribute("FirebugLite");
+        var number = version ? parseInt(version) : 0; 
         
-        if (!version || !revision || revision < 3)
+        if (!version || !number || number < bookmarletVersion)
         {
             // TODO: xxxpedro bookmarlet
             //FBL.Env.bookmarletOutdated = true;
@@ -418,13 +428,25 @@ var findLocation =  function findLocation()
     {
         var Env = FBL.Env;
         
+        // detecting development and debug modes via file name
         if (fileName == "firebug-lite-dev.js")
         {
             Env.isDevelopmentMode = true;
             Env.useLocalSkin = true;
-            Env.Options.disableWhenFirebugActive = false;
+            Env.isDebugMode = true;
+        }
+        else if (fileName == "firebug-lite-debug.js")
+        {
+            Env.isDebugMode = true;
         }
         
+        // process the <html debug="true">
+        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
+        {
+            Env.Options.startOpened = true;
+        }
+        
+        // process the Script URL Options
         if (fileOptions)
         {
             var options = fileOptions.split(",");
@@ -448,22 +470,21 @@ var findLocation =  function findLocation()
                 
                 if (name == "debug")
                 {
-                    Env.Options.startOpened = true;
-                    Env.Options.enableTrace = true;
-                    Env.Options.disableWhenFirebugActive = false;
+                    Env.isDebugMode = !!value;
                 }
                 else if (name in Env.Options)
+                {
                     Env.Options[name] = value;
+                }
                 else
+                {
                     Env[name] = value;
+                }
             }
         }
         
-        if (Env.browser.document.documentElement.getAttribute("debug") == "true")
-            Env.Options.startOpened = true;
-        
+        // process the Script JSON Options
         var innerOptions = FBL.trim(script.innerHTML);
-        
         if (innerOptions)
         {
             var innerOptionsObject = eval("(" + innerOptions + ")");
@@ -472,11 +493,27 @@ var findLocation =  function findLocation()
             {
                 var value = innerOptionsObject[name];
                 
-                if (name in Env.Options)
+                if (name == "debug")
+                {
+                    Env.isDebugMode = !!value;
+                }
+                else if (name in Env.Options)
+                {
                     Env.Options[name] = value;
+                }
                 else
+                {
                     Env[name] = value;
+                }
             }
+        }
+        
+        // process the Debug Mode
+        if (Env.isDebugMode)
+        {
+            Env.Options.startOpened = true;
+            Env.Options.enableTrace = true;
+            Env.Options.disableWhenFirebugActive = false;
         }
         
         var loc = Env.Location;
@@ -5438,8 +5475,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.3.0",
-    revision: "$Revision: 6854 $",
+    version: "Firebug Lite 1.3.0",
+    revision: "$Revision: 6856 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -5719,7 +5756,7 @@ Firebug.restorePrefs();
 
 if (!Env.Options.enablePersistent || 
      Env.Options.enablePersistent && Env.isChromeContext || 
-     Env.isDevelopmentMode )
+     Env.isDebugMode)
         Env.browser.window.Firebug = FBL.Firebug; 
 
 
@@ -8204,7 +8241,7 @@ var createChromeWindow = function(options)
                 
         formatNode = function(node)
         {
-            if (!Env.isDevelopmentMode)
+            if (!Env.isDebugMode)
             {
                 node.firebugIgnore = true;
             }
@@ -17053,6 +17090,8 @@ FBL.ns(function() { with (FBL) {
 
 //const Cc = Components.classes;
 //const Ci = Components.interfaces;
+    
+var frameCounters = {};
 
 Firebug.Console.injector =
 {
@@ -17407,19 +17446,19 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         //var frameId = FBL.getStackFrameId();
         if (frameId)
         {
-            if (!context.frameCounters)
-                context.frameCounters = {};
+            if (!frameCounters)
+                frameCounters = {};
 
             if (key != undefined)
                 frameId += key;
 
-            var frameCounter = context.frameCounters[frameId];
+            var frameCounter = frameCounters[frameId];
             if (!frameCounter)
             {
                 var logRow = logFormatted(["0"], null, true, true);
 
                 frameCounter = {logRow: logRow, count: 1};
-                context.frameCounters[frameId] = frameCounter;
+                frameCounters[frameId] = frameCounter;
             }
             else
                 ++frameCounter.count;
