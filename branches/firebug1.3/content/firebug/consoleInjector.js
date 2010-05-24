@@ -7,6 +7,8 @@ FBL.ns(function() { with (FBL) {
 
 //const Cc = Components.classes;
 //const Ci = Components.interfaces;
+    
+var frameCounters = {};
 
 Firebug.Console.injector =
 {
@@ -361,19 +363,19 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         //var frameId = FBL.getStackFrameId();
         if (frameId)
         {
-            if (!context.frameCounters)
-                context.frameCounters = {};
+            if (!frameCounters)
+                frameCounters = {};
 
             if (key != undefined)
                 frameId += key;
 
-            var frameCounter = context.frameCounters[frameId];
+            var frameCounter = frameCounters[frameId];
             if (!frameCounter)
             {
                 var logRow = logFormatted(["0"], null, true, true);
 
                 frameCounter = {logRow: logRow, count: 1};
-                context.frameCounters[frameId] = frameCounter;
+                frameCounters[frameId] = frameCounter;
             }
             else
                 ++frameCounter.count;

@@ -18,6 +18,11 @@
     
     - Updated "classic" and "light" skins
     
+    - Improvements in the debug mode (it exposes the FBL library, and forces
+      the UI element to be visible at HTML panel)
+    
+    - Fixed frameCounters variable leaking to global namespace
+    
     - Firebug.extend() method added to support Firebug Lite extensions
     
     - Fixed the missing command line API dir()

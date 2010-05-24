@@ -26,7 +26,7 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.3.0",
+    version: "Firebug Lite 1.3.0",
     revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -307,7 +307,7 @@ Firebug.restorePrefs();
 
 if (!Env.Options.enablePersistent || 
      Env.Options.enablePersistent && Env.isChromeContext || 
-     Env.isDevelopmentMode )
+     Env.isDebugMode)
         Env.browser.window.Firebug = FBL.Firebug; 
 
 

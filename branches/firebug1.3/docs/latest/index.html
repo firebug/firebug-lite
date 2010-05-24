@@ -170,6 +170,10 @@ $(document).ready(function()
     width: 250px;
 }
 
+#install ul {
+    margin: 4px 0 0 26px;
+}
+
 .moreinfo {
     width: 100%;
     font-size: 11px important!;
@@ -186,7 +190,7 @@ $(document).ready(function()
 }
 
 .post h2 {
-    margin: 1.2em 0 0;
+    margin: 2em 0 0;
 }
 
 .post h2 a {
@@ -195,12 +199,12 @@ $(document).ready(function()
 
 .post h3 {
     font-size: 1.5em;
-    margin: 1em 0 0;
+    margin: 1.5em 0 0;
 }
 
 .post h4 {
-    font-size: 1.25em;
-    margin: 0.5em 0 0;
+    font-size: 1.15em;
+    margin: 1.5em 0 0;
 }
 
 
@@ -270,6 +274,7 @@ pre em, textarea em
 }
 .navlistsub {
     padding-left: 20px;
+    padding-top: 2px;
     font-size: 88%;
 }
 .navlistsub li {
@@ -303,9 +308,16 @@ pre em, textarea em
 </div> 
  
 <div id="install" class="group"> 
-<p><a href="#Install">Install Firebug Lite</a><span>100% free and open source</span></p> 
-</div> 
- 
+<p>
+  <a href="#Install">Install Firebug Lite</a>
+  <span>100% free and open source</span>
+  <ul>
+    <li><a href="/releases/lite/">Other Versions</a></li>
+    <li><a href="/releases/lite/chrome/">Google Chrome Extension</a></li>
+  </ul>
+</p> 
+</div>
+
 </div> <!-- /END logo-install --> 
  
  
@@ -507,95 +519,76 @@ pre em, textarea em
     <h2><a name="Install" rel="bookmark">Install</a></h2> 
     <div class="postDate"></div> 
     <div class="entry">
-        <h3><a name="Bookmarlet" rel="bookmark"></a>a) Bookmarlet</h3>
+        <h3><a name="Bookmarlet" rel="bookmark"></a>Bookmarlet</h3>
         <p>
             Bookmark the following links:
         </p>
-        <p>
-            <b>Stable versions</b>
-        </p>
+        <h4>Stable versions</h3>
         <ul>
             <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite</a></li>
-            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-debug.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#debug');">Firebug Lite debug</a> **</li>
+            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-debug.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#debug');">Firebug Lite debug</a> <i>(with <a href="#DebugMode">debug mode</a> activated)</i></li>
         </ul>
-        <p>
-            <b>Preview versions</b>
-        </p>
+        <h4>Preview versions</h3>
         <ul>
-            <li><a href="#">Firebug Lite beta</a> (almost stable)</li>
-            <li><a href="#">Firebug Lite alpha</a> (unstable)</li>
+            <li><a href="#">Firebug Lite beta</a> <i>(almost stable)</i></li>
+            <li><a href="#">Firebug Lite alpha</a> <i>(unstable)</i></li>
         </ul>
-        <p>
-            <i>
-              ** The debug version helps identifying errors in Firebug Lite.      
-            </i>
-        </p>
         
-        <h3><a name="LiveLink" rel="bookmark"></a>b) Live link</h3>
+        <h3><a name="LiveLink" rel="bookmark"></a>Live link</h3>
         
         <p>
             You can also link directly to the hosted version at getfirebug.com. Copy the
             following code, and paste it in the TOP of the HEAD of your document:
         </p>
-        
-        <h4>Stable version</h3>
+        <h4>Stable versions</h3>
         <p>
-        </p>
+            Stable version:
 <textarea rows="2">
 &lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite.js"&gt;&lt;/script&gt;
 </textarea>
+        </p>
         <p>
+            Stable version <i>(with <a href="#DebugMode">debug mode</a> activated)</i>:
+<textarea rows="2">
+&lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite-debug.js"&gt;&lt;/script&gt;
+</textarea>
         </p>
 
         <h4>Preview versions</h3>
         <p>
-            Beta version (almost stable):
-        </p>
+            Beta version <i>(almost stable)</i>:
 <textarea rows="2">
 &lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite-beta.js"&gt;&lt;/script&gt;
 </textarea>
-        <p>
-            Alpha version (unstable):
         </p>
+        <p>
+            Alpha version <i>(unstable)</i>:
 <textarea rows="2">
 &lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite-alpha.js"&gt;&lt;/script&gt;
 </textarea>
-        <h3><a name="LocalLink" rel="bookmark"></a>c) Local link (offline)</h3>
+        </p>
+        <h3><a name="LocalLink" rel="bookmark"></a>Local link (offline)</h3>
         <p>
             If you need using Firebug Lite while offline, 
             <a href="/releases/lite/latest/firebug-lite.tar.tgz">download the code</a>, 
-            copy to a local destination, and link the <em>firebug-lite.js</em> in the TOP
-            of the HEAD of your document.
+            copy to a local destination, and link the <code>firebug-lite.js</code> in the TOP
+            of the HEAD of your document:
         </p>
+        <p>
 <textarea rows="2">
 &lt;script type="text/javascript" src="/local/path/to/firebug-lite.js"&gt;&lt;/script&gt;
 </textarea>
-        <h3><a name="DevelopmentMode" rel="bookmark"></a>d) Development mode:</h3>
-        <p>
-            If you want to debug Firebug Lite, fix a bug, or add a new feature, you will want
-            to run the Firebug Lite in development mode. To do so, first
-            <a href="http://fbug.googlecode.com/svn/lite/branches/firebug1.3/">checkout the latest version</a>
-            in our repository, and then insert a script at the TOP of the HEAD of your document.
         </p>
+        <p>
+            If you want to debug the local installation, use the  
+            <code>firebug-lite-debug.js</code> file instead:
+        </p>
+        <p>
 <textarea rows="2">
-&lt;script type="text/javascript" src="/local/path/to/firebug-lite-dev.js"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="/local/path/to/firebug-lite-debug.js"&gt;&lt;/script&gt;
 </textarea>
-        <p>
-            When in development mode, some things behave quite differently to make the
-            development process easier, such as:
         </p>
-        <ul>
-            <li>All script files are loaded separately, without compression.</li>
-            <li>The internal library that Firebug Lite uses (aka FBL) is exposed to the 
-            global namespace, allowing you to inspect its content. It is also exposed
-            the domplate and its classes, and the FBTrace object</li>
-            <li>The skin is loaded in a separated file, allowing you to rapidly change
-            the style and/or markup of the User Interface.</li>
-            <li>It will force to open Firebug Lite even when Firebug is active (which is
-            not the default behavior), so you can use Firebug to debug it.</li>
-            <li>A new panel "Dev" will be available with tools to compress the skin,
-            and the source code of the application in a single file.</li>
-        </ul>
+
     </div>
 </div>
 
@@ -620,17 +613,18 @@ pre em, textarea em
             <li><code>enablePersistent</code> - false</li>
         </ul>
         <p>
-            You can change the options using any of the following methods 
-            (in ascendant order of priority):
+            Here are the list of methods you can use to change the options,  
+            in ascendant order of priority, that is, a particular method
+            will override the options of preceding methods:
         </p>
-        <h3><a name="DebugTrue" rel="bookmark"></a>a) debug="true"</h3>
+        <h3><a name="DebugTrue" rel="bookmark"></a>&lt;html debug="true"&gt;</h3>
         <p>
             For backwards compatibility you can still use the debug="true" attribute
             in the &lt;html&gt; tag to make Firebug Lite starts opened, like:
         </p>
         <pre>&lt;html <em>debug="true"</em>&gt;</pre>
         
-        <h3><a name="ScriptURLOptions" rel="bookmark"></a>b) Script URL options</h3>
+        <h3><a name="ScriptURLOptions" rel="bookmark"></a>Script URL options</h3>
         <p>
             You can also set the options using URL fragment, specially handy to tweak 
             options in your bookmarlet.
@@ -650,7 +644,7 @@ path/to/firebug-lite.js<em>#enableTrace,overrideConsole=false</em>
 <pre>
 path/to/firebug-lite.js<em>#enableTrace=true,overrideConsole=false</em>
 </pre>
-        <h3><a name="ScriptJSONOptions" rel="bookmark"></a>c) Script JSON options</h3>
+        <h3><a name="ScriptJSONOptions" rel="bookmark"></a>Script JSON options</h3>
         <p>
             It is possible to set options using a JSON object inside
             the linked script:
@@ -666,10 +660,10 @@ src="https://getfirebug.com/firebug-lite.js"&gt;
 }</em>
 &lt;/script&gt;
 </pre>
-        <h3><a name="Cookies" rel="bookmark"></a>d) Cookies</h3>
+        <h3><a name="Cookies" rel="bookmark"></a>Cookies</h3>
         <p>
-            Finally, you can override the options using cookies, via User Interface,
-            by clicking in the Firebug icon in the upper-left corner.
+            Finally, you can override the options using cookies, via User 
+            Interface, by clicking in the Firebug icon in the upper-left corner.
         </p>
     </div>
 </div>
@@ -732,7 +726,6 @@ PluginPanel.prototype = extend(Firebug.Panel,
         
         this.panelNode.innerHTML = "Hello World!";
     }
-    
 });
 
 Firebug.registerPanel(PluginPanel);
@@ -744,6 +737,73 @@ Firebug.registerPanel(PluginPanel);
     </div>
 </div>
 
+
+<!-- ========================================================================================== --> 
+<div class="post"> 
+    <h2><a name="DebugMode" rel="bookmark">Debug mode</a></h2> 
+    <div class="postDate"></div> 
+    <div class="entry">
+        
+        <p>
+            There is a special option named <code>"debug"</code> which is used 
+            to help debugging Firebug Lite itself. If you set this option via 
+            <a href="#ScriptURLOptions">Script URL</a> or 
+            <a href="#ScriptJSONOptions">Script JSON</a> methods, it will 
+            automatically adjust some common options used to detect errors such 
+            as start the UI opened, force the application to run even when
+            Firebug is active (so we can use Firebug to debug it), and
+            enable the Trace panel (which will print internal log messages
+            in the Trace console).
+        </p>
+        <p>
+            Using the <code>"debug"</code> option has the same effect as 
+            manually setting the following options with the respective values:
+        </p>
+        <ul>
+            <li><code>startOpened</code> - true</li>
+            <li><code>disableWhenFirebugActive</code> - false</li>
+            <li><code>enableTrace</code> - true</li>
+        </ul>
+        
+    </div>
+</div>
+
+
+<!-- ========================================================================================== --> 
+<div class="post"> 
+    <h2><a name="DevelopmentMode" rel="bookmark">Development mode</a></h2> 
+    <div class="postDate"></div> 
+    <div class="entry">
+        
+        <p>
+            If you want to debug Firebug Lite, fix a bug, or add a new feature, you will want
+            to run the Firebug Lite in development mode. To do so, first
+            <a href="http://fbug.googlecode.com/svn/lite/branches/firebug1.3/">checkout the latest version</a>
+            in our repository, and then insert a script at the TOP of the HEAD of your document.
+        </p>
+<textarea rows="2">
+&lt;script type="text/javascript" src="/local/path/to/firebug-lite-dev.js"&gt;&lt;/script&gt;
+</textarea>
+        <p>
+            When in development mode, some things behave quite differently to make the
+            development process easier, such as:
+        </p>
+        <ul>
+            <li>All script files are loaded separately, without compression.</li>
+            <li>The internal library that Firebug Lite uses (aka FBL) is exposed to the 
+            global namespace, allowing you to inspect its content. It is also exposed
+            the domplate and its classes, and the FBTrace object</li>
+            <li>The skin is loaded in a separated file, allowing you to rapidly change
+            the style and/or markup of the User Interface.</li>
+            <li>It will force to open Firebug Lite even when Firebug is active (which is
+            not the default behavior), so you can use Firebug to debug it.</li>
+            <li>A new panel "Dev" will be available with tools to compress the skin,
+            and the source code of the application in a single file.</li>
+        </ul>
+
+        
+    </div>
+</div>
 
 <!-- ========================================================================================== --> 
 <div class="post"> 
@@ -781,20 +841,21 @@ Firebug.registerPanel(PluginPanel);
     </ul> 
     <li><a href="#Install">3. Install</a></li> 
     <ul class="navlistsub"> 
-        <li><a href="#Bookmarlet">a) Bookmarlet</a></li> 
-        <li><a href="#LiveLink">b) Live Link</a></li> 
-        <li><a href="#LocalLink">c) Local Link</a></li> 
-        <li><a href="#DevelopmentMode">d) Development mode</a></li> 
+        <li><a href="#Bookmarlet">Bookmarlet</a></li> 
+        <li><a href="#LiveLink">Live Link</a></li> 
+        <li><a href="#LocalLink">Local Link</a></li> 
     </ul> 
     <li><a href="#Options">4. Options</a></li> 
     <ul class="navlistsub"> 
-        <li><a href="#DebugTrue">a) debug="true"</a></li> 
-        <li><a href="#ScriptURLOptions">b) Script URL options</a></li> 
-        <li><a href="#ScriptJSONOptions">c) Script JSON options</a></li> 
-        <li><a href="#Cookies">d) Cookies</a></li> 
+        <li><a href="#DebugTrue">&lt;html debug="true"&gt;</a></li> 
+        <li><a href="#ScriptURLOptions">Script URL options</a></li> 
+        <li><a href="#ScriptJSONOptions">Script JSON options</a></li> 
+        <li><a href="#Cookies">Cookies</a></li> 
     </ul> 
     <li><a href="#Extensions">5. Extensions</a></li> 
-    <li><a href="#Contributing">6. Contributing</a></li> 
+    <li><a href="#DebugMode">6. Debug mode</a></li> 
+    <li><a href="#DevelopmentMode">7. Development mode</a></li> 
+    <li><a href="#Contributing">8. Contributing</a></li> 
 </ul> 
 
 <!-- Delicious --> 
