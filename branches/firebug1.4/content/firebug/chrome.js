@@ -187,7 +187,7 @@ var createChromeWindow = function(options)
                 
         formatNode = function(node)
         {
-            if (!Env.isDevelopmentMode)
+            if (!Env.isDebugMode)
             {
                 node.firebugIgnore = true;
             }

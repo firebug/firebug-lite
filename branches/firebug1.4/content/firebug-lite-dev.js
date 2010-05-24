@@ -7,7 +7,6 @@
     
 var bookmarletMode = true;
 
-//var bookmarletSkinURL = "chrome-extension://skin/xp/";
 //var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
 var bookmarletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/";
 
@@ -472,22 +471,6 @@ function loadModules() {
             
             document.getElementsByTagName("head")[0].appendChild(script);
             //document.getElementsByTagName("body")[0].appendChild(script);
-            /**/
-            
-            /*
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", moduleURL, false);
-            xhr.onreadystatechange = function()
-            {
-                if (xhr.readyStatus == 4 && xhr.status = 200)
-                {
-                    script = document.createElement("script");
-                    script.text = xhr.responseText;
-                    document.getElementsByTagName("head")[0].appendChild(script);
-                }
-            }
-            xhr.send();
-            /**/
         }
     }
     

@@ -1,4 +1,37 @@
 ###################################################################################################
+ 1.3.0 - 2009-05-24 - Revision: 6859
+###################################################################################################
+
+    - Refactored code
+        - Console e Css old modules deleted (not used anymore)
+        - Test modules deleted (moved to 1.4 branch)
+        - Comparison modules deleted (a copy of Domplate and DOM which was
+          used to compare the Firebug and Firebug Lite sources)
+          
+    - New distribution location and file name:
+        - https://getfirebug.com/firebug-lite.js (compressed)
+        - https://getfirebug.com/firebug-lite-debug.js (uncompressed, trace)
+        - https://getfirebug.com/firebug-lite-beta.js (beta channel)
+        - https://getfirebug.com/firebug-lite-alpha.js (alpha channel)
+    
+    - Added "debug" URL option
+    
+    - Updated "classic" and "light" skins
+    
+    - Improvements in the debug mode (it exposes the FBL library, and forces
+      the UI element to be visible at HTML panel)
+    
+    - Fixed frameCounters variable leaking to global namespace
+    
+    - Firebug.extend() method added to support Firebug Lite extensions
+    
+    - Fixed the missing command line API dir()
+    - Fixed the missing command line api dirxml()
+    - Fixed the missing console.firebuglite property in the console object
+    - Fixed problem when loading an extension before the UI finish loading
+
+
+###################################################################################################
  1.3.0b2 - 2009-05-06 - Revision: 6695
 ###################################################################################################
 

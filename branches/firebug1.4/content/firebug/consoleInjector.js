@@ -7,6 +7,8 @@ FBL.ns(function() { with (FBL) {
 
 //const Cc = Components.classes;
 //const Ci = Components.interfaces;
+    
+var frameCounters = {};
 
 Firebug.Console.injector =
 {
@@ -37,8 +39,7 @@ Firebug.Console.injector =
             "profileEnd",
             "clear",
             "open",
-            "close",
-            "firebuglite"
+            "close"
         ];
         
         var Handler = function(name)
@@ -54,6 +55,7 @@ Firebug.Console.injector =
             {
                 var name = properties[i];
                 c[name] = new Handler(name);
+                c.firebuglite = Firebug.version;
             }
         };
         
@@ -361,19 +363,19 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         //var frameId = FBL.getStackFrameId();
         if (frameId)
         {
-            if (!context.frameCounters)
-                context.frameCounters = {};
+            if (!frameCounters)
+                frameCounters = {};
 
             if (key != undefined)
                 frameId += key;
 
-            var frameCounter = context.frameCounters[frameId];
+            var frameCounter = frameCounters[frameId];
             if (!frameCounter)
             {
                 var logRow = logFormatted(["0"], null, true, true);
 
                 frameCounter = {logRow: logRow, count: 1};
-                context.frameCounters[frameId] = frameCounter;
+                frameCounters[frameId] = frameCounter;
             }
             else
                 ++frameCounter.count;
