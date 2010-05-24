@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"> 
  
-<title>Firebug Lite</title> 
+<title>Firebug Lite : Firebug</title> 
  
 <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"> 
 
@@ -523,15 +523,14 @@ pre em, textarea em
         <p>
             Bookmark the following links:
         </p>
-        <h4>Stable versions</h3>
+        <h4>Stable channel</h3>
         <ul>
             <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite</a></li>
-            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-debug.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#debug');">Firebug Lite debug</a> <i>(with <a href="#DebugMode">debug mode</a> activated)</i></li>
+            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-debug.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#debug');">Firebug Lite debug</a></li>
         </ul>
-        <h4>Preview versions</h3>
+        <h4>Beta channel</h3>
         <ul>
-            <li><a href="#">Firebug Lite beta</a> <i>(almost stable)</i></li>
-            <li><a href="#">Firebug Lite alpha</a> <i>(unstable)</i></li>
+            <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-beta.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite beta</a></li>
         </ul>
         
         <h3><a name="LiveLink" rel="bookmark"></a>Live link</h3>
@@ -540,33 +539,29 @@ pre em, textarea em
             You can also link directly to the hosted version at getfirebug.com. Copy the
             following code, and paste it in the TOP of the HEAD of your document:
         </p>
-        <h4>Stable versions</h3>
+        
+        <h4>Stable channel</h3>
         <p>
-            Stable version:
+            Firebug Lite:
 <textarea rows="2">
 &lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite.js"&gt;&lt;/script&gt;
 </textarea>
         </p>
         <p>
-            Stable version <i>(with <a href="#DebugMode">debug mode</a> activated)</i>:
+            Firebug Lite debug:
 <textarea rows="2">
 &lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite-debug.js"&gt;&lt;/script&gt;
 </textarea>
         </p>
 
-        <h4>Preview versions</h3>
+        <h4>Beta channel</h3>
         <p>
-            Beta version <i>(almost stable)</i>:
+            Firebug Lite beta:
 <textarea rows="2">
 &lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite-beta.js"&gt;&lt;/script&gt;
 </textarea>
         </p>
-        <p>
-            Alpha version <i>(unstable)</i>:
-<textarea rows="2">
-&lt;script type="text/javascript" src="https://getfirebug.com/firebug-lite-alpha.js"&gt;&lt;/script&gt;
-</textarea>
-        </p>
+        
         <h3><a name="LocalLink" rel="bookmark"></a>Local link (offline)</h3>
         <p>
             If you need using Firebug Lite while offline, 
@@ -745,25 +740,30 @@ Firebug.registerPanel(PluginPanel);
     <div class="entry">
         
         <p>
-            There is a special option named <code>"debug"</code> which is used 
-            to help debugging Firebug Lite itself. If you set this option via 
-            <a href="#ScriptURLOptions">Script URL</a> or 
-            <a href="#ScriptJSONOptions">Script JSON</a> methods, it will 
-            automatically adjust some common options used to detect errors such 
-            as start the UI opened, force the application to run even when
-            Firebug is active (so we can use Firebug to debug it), and
-            enable the Trace panel (which will print internal log messages
-            in the Trace console).
+            The debug mode helps detecting errors in Firebug Lite. When in 
+            debug mode, Firebug Lite will behave as explained below:
         </p>
-        <p>
-            Using the <code>"debug"</code> option has the same effect as 
-            manually setting the following options with the respective values:
-        </p>
+        
         <ul>
-            <li><code>startOpened</code> - true</li>
-            <li><code>disableWhenFirebugActive</code> - false</li>
-            <li><code>enableTrace</code> - true</li>
+            <li>Firebug Lite starts opened.</li>
+            <li>The internal library used by Firebug Lite (aka <code>FBL</code>) 
+            is exposed to the global namespace, allowing the inspection of its content.</li>
+            <li>Firebug Lite will be forced to open even when Firebug is active 
+            (which is not the default behavior), so you can use Firebug to debug it.</li>
+            <li>The "Trace" panel is enabled (in which internal log messages of 
+            Firebug Lite are printed).</li>
         </ul>
+        
+        <p>
+            The debug mode will be activated when you run the 
+            <a href="#Bookmarlet">Firebug Lite debug</a> bookmarlet, and
+            when you the load the <code>"firebug-lite-debug.js"</code> or 
+            <code>"firebug-lite-dev.js"</code> files. You can also activate 
+            it manually by setting a special option <code>"debug"</code> 
+            to <code>"true"</code>, using the 
+            <a href="#ScriptURLOptions">Script URL</a> or 
+            <a href="#ScriptJSONOptions">Script JSON</a> methods.
+        </p>
         
     </div>
 </div>
@@ -790,13 +790,15 @@ Firebug.registerPanel(PluginPanel);
         </p>
         <ul>
             <li>All script files are loaded separately, without compression.</li>
-            <li>The internal library that Firebug Lite uses (aka FBL) is exposed to the 
+            <li>The internal library used by Firebug Lite (aka <code>FBL</code>) is exposed to the 
             global namespace, allowing you to inspect its content. It is also exposed
-            the domplate and its classes, and the FBTrace object</li>
+            the <code>domplate</code> and its classes, and the <code>FBTrace</code> object</li>
             <li>The skin is loaded in a separated file, allowing you to rapidly change
             the style and/or markup of the User Interface.</li>
-            <li>It will force to open Firebug Lite even when Firebug is active (which is
-            not the default behavior), so you can use Firebug to debug it.</li>
+            <li>Firebug Lite will be forced to open even when Firebug is active 
+            (which is not the default behavior), so you can use Firebug to debug it.</li>
+            <li>The "Trace" panel is enabled (in which internal log messages of 
+            Firebug Lite are printed).</li>
             <li>A new panel "Dev" will be available with tools to compress the skin,
             and the source code of the application in a single file.</li>
         </ul>
@@ -863,7 +865,9 @@ Firebug.registerPanel(PluginPanel);
 <ul>
     <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite</a></li>
     <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-debug.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#debug');">Firebug Lite debug</a></li>
+    <li><a href="javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','1.3.0.3','firebug-lite-beta.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');">Firebug Lite beta</a></li>
 </ul>
+
 
 <!-- Delicious --> 
 <!--[!IE]>
