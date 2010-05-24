@@ -5475,7 +5475,7 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.0",
+    version:  "Firebug Lite 1.3.0",
     revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -5512,7 +5512,7 @@ window.Firebug = FBL.Firebug =
             var onLoad = Env.onLoad;
             delete Env.onLoad;
             
-            setTimeout(onLoad, 200);
+            setTimeout(onLoad, 201);
         }
     },
   

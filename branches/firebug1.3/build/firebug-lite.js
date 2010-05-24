@@ -1295,7 +1295,7 @@ if(Firebug.Inspector){Firebug.Inspector.create()
 dispatch(modules,"initialize",[]);
 if(Env.onLoad){var onLoad=Env.onLoad;
 delete Env.onLoad;
-setTimeout(onLoad,200)
+setTimeout(onLoad,201)
 }},shutdown:function(){if(Firebug.Inspector){Firebug.Inspector.destroy()
 }dispatch(modules,"shutdown",[]);
 var chromeMap=FirebugChrome.chromeMap;
