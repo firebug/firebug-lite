@@ -2229,7 +2229,7 @@ this.dispatch = function(listeners, name, args)
             for (var i = 0; i < listeners.length; ++i)
             {
                 var listener = listeners[i];
-                if ( listener.hasOwnProperty(name) )
+                if ( listener[name] )
                     listener[name].apply(listener, args);
             }
         }
@@ -2240,7 +2240,7 @@ this.dispatch = function(listeners, name, args)
             for (var prop in listeners)
             {
                 var listener = listeners[prop];
-                if ( listeners.hasOwnProperty(prop) && listener[name] )
+                if ( listener[name] )
                     listener[name].apply(listener, args);
             }
         }
