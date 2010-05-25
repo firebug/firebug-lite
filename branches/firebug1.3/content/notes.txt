@@ -228,6 +228,14 @@ OK  - bookmarlet problem with XML+XSL documents!
 Shared Code
 ###################################################################################################
 
+    Code needed to be rewritten:
+        - dev
+        - gui
+        - xhr
+        - trace
+        - chrome
+        - context
+
     Successfully ported modules:
         - lib
         - domplate
@@ -248,10 +256,10 @@ Shared Code
         - infotip
     
     Next modules to port scheduled to 1.4 version:
-        - inspector
+        - FirebugChrome (will require a lot of changes)
         - TabContext (will require a lot of changes)
         - TabWatcher (will require a lot of changes)
-        - FirebugChrome (will require a lot of changes)
+        - Inspector
 
 
 ###################################################################################################
