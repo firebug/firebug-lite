@@ -56,7 +56,7 @@ DiffMonitor.prototype = extend(Panel, {
         Firebug.DiffModule.addListener(this);
       }
       
-      this.addStyleSheet(this.document, "../../content/firediff/skin/classic/firediff.css", "fireDiffCss");
+      this.addStyleSheet(this.document, "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/content/firediff/skin/classic/firediff.css", "fireDiffCss");
       this.applyDisplayPrefs();
       
       if (Firebug.DiffModule.supportsFirebugEdits) {

@@ -2231,7 +2231,7 @@ this.dispatch = function(listeners, name, args)
             for (var i = 0; i < listeners.length; ++i)
             {
                 var listener = listeners[i];
-                if ( listener.hasOwnProperty(name) )
+                if ( listener[name] )
                     listener[name].apply(listener, args);
             }
         }
@@ -2242,7 +2242,7 @@ this.dispatch = function(listeners, name, args)
             for (var prop in listeners)
             {
                 var listener = listeners[prop];
-                if ( listeners.hasOwnProperty(prop) && listener[name] )
+                if ( listener[name] )
                     listener[name].apply(listener, args);
             }
         }
@@ -5475,7 +5475,7 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.3.0",
+    version: "Firebug Lite 1.3.1",
     revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -5512,7 +5512,7 @@ window.Firebug = FBL.Firebug =
             var onLoad = Env.onLoad;
             delete Env.onLoad;
             
-            setTimeout(onLoad, 201);
+            setTimeout(onLoad, 200);
         }
     },
   
@@ -5775,9 +5775,49 @@ FBL.cacheDocument = function cacheDocument()
 };
 
 // ************************************************************************************************
+
+/**
+ * Support for listeners registration. This object also extended by Firebug.Module so,
+ * all modules supports listening automatically. Notice that array of listeners
+ * is created for each intance of a module within initialize method. Thus all derived
+ * module classes must ensure that Firebug.Module.initialize method is called for the
+ * super class.
+ */
+Firebug.Listener = function()
+{
+    // The array is created when the first listeners is added.
+    // It can't be created here since derived objects would share
+    // the same array.
+    this.fbListeners = null;
+}
+Firebug.Listener.prototype =
+{
+    addListener: function(listener)
+    {
+        if (!this.fbListeners)
+            this.fbListeners = []; // delay the creation until the objects are created so 'this' causes new array for each module
+
+        this.fbListeners.push(listener);
+    },
+
+    removeListener: function(listener)
+    {
+        remove(this.fbListeners, listener);  // if this.fbListeners is null, remove is being called with no add
+    }
+};
+
+// ************************************************************************************************
+
+
+// ************************************************************************************************
 // Module
 
-Firebug.Module =
+/**
+ * @module Base class for all modules. Every derived module object must be registered using
+ * <code>Firebug.registerModule</code> method. There is always one instance of a module object
+ * per browser window.
+ */
+Firebug.Module = extend(new Firebug.Listener(),
 {
     /**
      * Called when the window is opened.
@@ -5848,7 +5888,7 @@ Firebug.Module =
     getObjectByURL: function(context, url)
     {
     }
-};
+});
 
 // ************************************************************************************************
 // Panel
@@ -22033,7 +22073,7 @@ Firebug.CSSModule = extend(Firebug.Module,
         if (FBTrace.DBG_CSS)
             FBTrace.sysout("css.saveEdit styleSheet.href:"+styleSheet.href+" got innerHTML:"+value+"\n");
 
-        dispatch(this.fbListener, "onCSSFreeEdit", [styleSheet, value]);
+        dispatch(this.fbListeners, "onCSSFreeEdit", [styleSheet, value]);
     },
 
     insertRule: function(styleSheet, cssText, ruleIndex)
@@ -22082,9 +22122,9 @@ Firebug.CSSModule = extend(Firebug.Module,
             style[toCamelCase(propName)] = propValue;
         }
 
-        //if (propName) {
-        //    dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
-        //}
+        if (propName) {
+            dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
+        }
     },
 
     removeProperty: function(rule, propName, parent)
@@ -26362,6 +26402,4695 @@ TracePanel.prototype = extend(Firebug.Panel,
 Firebug.registerPanel(TracePanel);
 
 // ************************************************************************************************
+}});
+
+/* See license.txt for terms of usage */
+var FireDiff  = FireDiff || {};
+
+FBL.ns(function() { with (FBL) {
+
+const HTMLLib = Firebug.HTMLLib || {};
+
+//From Firebug.HTMLLib, Firebug version 1.5
+function NodeSearch(text, root, panelNode, ioBox, walker)
+{
+    root = root.documentElement || root;
+    walker = walker || new DOMWalker(root);
+    var re = new ReversibleRegExp(text, "m");
+    var matchCount = 0;
+
+    /**
+     * Finds the first match within the document.
+     *
+     * @param {boolean} revert true to search backward, false to search forward
+     * @param {boolean} caseSensitive true to match exact case, false to ignore case
+     * @return true if no more matches were found, but matches were found previously.
+     */
+    this.find = function(reverse, caseSensitive)
+    {
+        var match = this.findNextMatch(reverse, caseSensitive);
+        if (match)
+        {
+            this.lastMatch = match;
+            ++matchCount;
+
+            var node = match.node;
+            var nodeBox = this.openToNode(node, match.isValue);
+
+            this.selectMatched(nodeBox, node, match, reverse);
+        }
+        else if (matchCount)
+            return true;
+        else
+        {
+            this.noMatch = true;
+            dispatch([Firebug.A11yModel], 'onHTMLSearchNoMatchFound', [panelNode.ownerPanel, text]);
+        }
+    };
+
+    /**
+     * Resets the search to the beginning of the document.
+     */
+    this.reset = function()
+    {
+        delete this.lastMatch;
+        delete this.lastRange;
+    };
+
+    /**
+     * Finds the next match in the document.
+     *
+     * The return value is an object with the fields
+     * - node: Node that contains the match
+     * - isValue: true if the match is a match due to the value of the node, false if it is due to the name
+     * - match: Regular expression result from the match
+     *
+     * @param {boolean} revert true to search backward, false to search forward
+     * @param {boolean} caseSensitive true to match exact case, false to ignore case
+     * @return Match object if found
+     */
+    this.findNextMatch = function(reverse, caseSensitive)
+    {
+        var innerMatch = this.findNextInnerMatch(reverse, caseSensitive);
+        if (innerMatch)
+            return innerMatch;
+        else
+            this.reset();
+
+        function walkNode() { return reverse ? walker.previousNode() : walker.nextNode(); }
+
+        var node;
+        while (node = walkNode())
+        {
+            if (node.nodeType == Node.TEXT_NODE)
+            {
+                if (isSourceElement(node.parentNode))
+                    continue;
+            }
+
+            var m = this.checkNode(node, reverse, caseSensitive);
+            if (m)
+                return m;
+        }
+    };
+
+    /**
+     * Helper util used to scan the current search result for more results
+     * in the same object.
+     *
+     * @private
+     */
+    this.findNextInnerMatch = function(reverse, caseSensitive)
+    {
+        if (this.lastRange)
+        {
+            var lastMatchNode = this.lastMatch.node;
+            var lastReMatch = this.lastMatch.match;
+            var m = re.exec(lastReMatch.input, reverse, lastReMatch.caseSensitive, lastReMatch);
+            if (m)
+            {
+                return {
+                    node: lastMatchNode,
+                    isValue: this.lastMatch.isValue,
+                    match: m
+                };
+            }
+
+            // May need to check the pair for attributes
+            if (lastMatchNode.nodeType == Node.ATTRIBUTE_NODE
+                    && this.lastMatch.isValue == !!reverse)
+            {
+                return this.checkNode(lastMatchNode, reverse, caseSensitive, 1);
+            }
+        }
+    };
+
+    /**
+     * Checks a given node for a search match.
+     *
+     * @private
+     */
+    this.checkNode = function(node, reverse, caseSensitive, firstStep)
+    {
+        var checkOrder;
+        if (node.nodeType != Node.TEXT_NODE)
+        {
+            var nameCheck = { name: "nodeName", isValue: false, caseSensitive: false };
+            var valueCheck = { name: "nodeValue", isValue: true, caseSensitive: caseSensitive };
+            checkOrder = reverse ? [ valueCheck, nameCheck ] : [ nameCheck, valueCheck ];
+        }
+        else
+        {
+            checkOrder = [{name: "nodeValue", isValue: false, caseSensitive: caseSensitive }];
+        }
+
+        for (var i = firstStep || 0; i < checkOrder.length; i++) {
+            var m = re.exec(node[checkOrder[i].name], reverse, checkOrder[i].caseSensitive);
+            if (m)
+                return {
+                    node: node,
+                    isValue: checkOrder[i].isValue,
+                    match: m
+                };
+        }
+    };
+
+    /**
+     * Opens the given node in the associated IO Box.
+     *
+     * @private
+     */
+    this.openToNode = function(node, isValue)
+    {
+        if (node.nodeType == Node.ELEMENT_NODE)
+        {
+            var nodeBox = ioBox.openToObject(node);
+            return nodeBox.getElementsByClassName("nodeTag")[0];
+        }
+        else if (node.nodeType == Node.ATTRIBUTE_NODE)
+        {
+            var nodeBox = ioBox.openToObject(node.ownerElement);
+            if (nodeBox)
+            {
+                var attrNodeBox = findNodeAttrBox(nodeBox, node.nodeName);
+                if (isValue)
+                    return getChildByClass(attrNodeBox, "nodeValue");
+                else
+                    return getChildByClass(attrNodeBox, "nodeName");
+            }
+        }
+        else if (node.nodeType == Node.TEXT_NODE)
+        {
+            var nodeBox = ioBox.openToObject(node);
+            if (nodeBox)
+                return nodeBox;
+            else
+            {
+                var nodeBox = ioBox.openToObject(node.parentNode);
+                if (hasClass(nodeBox, "textNodeBox"))
+                    nodeBox = getTextElementTextBox(nodeBox);
+                return nodeBox;
+            }
+        }
+    };
+
+    /**
+     * Selects the search results.
+     *
+     * @private
+     */
+    this.selectMatched = function(nodeBox, node, match, reverse)
+    {
+        if (FBTrace.DBG_SEARCH) { FBTrace.sysout("NodeSearch.selectMatched match " + match, nodeBox); }
+        setTimeout(bindFixed(function()
+        {
+            var reMatch = match.match;
+            this.selectNodeText(nodeBox, node, reMatch[0], reMatch.index, reverse, reMatch.caseSensitive);
+            dispatch([Firebug.A11yModel], 'onHTMLSearchMatchFound', [panelNode.ownerPanel, match]);
+        }, this));
+    };
+
+    /**
+     * Select text node search results.
+     *
+     * @private
+     */
+    this.selectNodeText = function(nodeBox, node, text, index, reverse, caseSensitive)
+    {
+        var row, range;
+        if (FBTrace.DBG_SEARCH) { FBTrace.sysout("NodeSearch.selectNodeText text: " + text + " index: " + index, nodeBox); }
+
+        // If we are still inside the same node as the last search, advance the range
+        // to the next substring within that node
+        if (nodeBox == this.lastNodeBox)
+        {
+            if (FBTrace.DBG_SEARCH) { FBTrace.sysout("NodeSearc.selectNodeText lastRange", this.lastRange); }
+
+            row = this.lastRow = this.textSearch.findNext(false, undefined, reverse, caseSensitive);
+
+        }
+
+        if (!row)
+        {
+            // Search for the first instance of the string inside the node
+            function findRow(node) { return node.nodeType == Node.ELEMENT_NODE ? node : node.parentNode; }
+            this.textSearch = new TextSearch(nodeBox, findRow);
+            row = this.lastRow = this.textSearch.find(text, reverse, caseSensitive);
+            this.lastNodeBox = nodeBox;
+        }
+
+        if (row)
+        {
+            range = this.lastRange = this.textSearch.range;
+
+            var sel = panelNode.ownerDocument.defaultView.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+
+            scrollIntoCenterView(row, panelNode);
+            return true;
+        }
+    };
+}
+
+//From Firebug.HTMLLib, Firebug version 1.5
+function findNodeAttrBox(objectNodeBox, attrName)
+{
+    var child = objectNodeBox.firstChild.lastChild.firstChild;
+    for (; child; child = child.nextSibling)
+    {
+        if (hasClass(child, "nodeAttr") && child.childNodes[1].firstChild
+            && child.childNodes[1].firstChild.nodeValue == attrName)
+        {
+            return child;
+        }
+    }
+}
+
+//From Firebug.HTMLLib, Firebug version 1.5
+function getTextElementTextBox(nodeBox)
+{
+    var nodeLabelBox = nodeBox.firstChild.lastChild;
+    return getChildByClass(nodeLabelBox, "nodeText");
+}
+
+//From Firebug.HTMLLib, Firebug version 1.5
+function isWhitespaceText(node) {
+    if (node instanceof HTMLAppletElement)
+        return false;
+    return node.nodeType == 3 && isWhitespace(node.nodeValue);
+}
+
+//From Firebug.HTMLLib, Firebug version 1.5
+function isSourceElement(element) {
+  var tag = element.localName.toLowerCase();
+  return tag == "script" || tag == "link" || tag == "style"
+      || (tag == "link" && element.getAttribute("rel") == "stylesheet");
+}
+
+/**
+ * Defines lib routes that are supported in one version of Firebug but not
+ * another. Methods defined in here should be pruned as the minimum Firebug
+ * version is updated.
+ */
+FireDiff.VersionCompat = {
+    /**
+     * @see Firebug.HTMLLib.NodeSearch
+     * @version Firebug 1.5
+     */
+    NodeSearch: HTMLLib.NodeSearch || NodeSearch,
+
+    /**
+     * @see Firebug.HTMLLib.isWhitespaceText
+     * @version Firebug 1.5
+     */
+    isWhitespaceText: HTMLLib.isWhitespaceText || isWhitespaceText,
+    
+    /**
+     * @see Firebug.HTMLLib.isSourceElement
+     * @version Firebug 1.5
+     */
+    isSourceElement: HTMLLib.isSourceElement || isSourceElement
+};
+
+}});
+
+/* See license.txt for terms of usage */
+
+/*
+ * Text diff implementation.
+ * 
+ * This library supports the following APIS:
+ * JsDiff.diffChars: Character by character diff
+ * JsDiff.diffWords: Word (as defined by \b regex) diff which ignores whitespace
+ * JsDiff.diffLines: Line based diff
+ * 
+ * JsDiff.diffCss: Diff targeted at CSS content
+ * 
+ * These methods are based on the implementation proposed in
+ * "An O(ND) Difference Algorithm and its Variations" (Myers, 1986).
+ * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.4.6927
+ */
+var JsDiff = (function() {
+  function clonePath(path) {
+    return { newPos: path.newPos, components: path.components.slice(0) };
+  }
+  function removeEmpty(array) {
+    var ret = [];
+    for (var i = 0; i < array.length; i++) {
+      if (array[i]) {
+        ret.push(array[i]);
+      }
+    }
+    return ret;
+  }
+  function escapeHTML(s) {
+    var n = s;
+    n = n.replace(/&/g, "&amp;");
+    n = n.replace(/</g, "&lt;");
+    n = n.replace(/>/g, "&gt;");
+    n = n.replace(/"/g, "&quot;");
+
+    return n;
+  }
+
+
+  var fbDiff = function(ignoreWhitespace) {
+    this.ignoreWhitespace = ignoreWhitespace;
+  };
+  fbDiff.prototype = {
+      diff: function(oldString, newString) {
+        // Handle the identity case (this is due to unrolling editLength == 0
+        if (newString == oldString) {
+          return [{ value: newString }];
+        }
+        if (!newString) {
+          return [{ value: oldString, removed: true }];
+        }
+        if (!oldString) {
+          return [{ value: newString, added: true }];
+        }
+
+        newString = this.tokenize(newString);
+        oldString = this.tokenize(oldString);
+
+        var newLen = newString.length, oldLen = oldString.length;
+        var maxEditLength = newLen + oldLen;
+        var bestPath = [{ newPos: -1, components: [] }];
+
+        // Seed editLength = 0
+        var oldPos = this.extractCommon(bestPath[0], newString, oldString, 0);
+        if (bestPath[0].newPos+1 >= newLen && oldPos+1 >= oldLen) {
+          return bestPath[0].components;
+        }
+
+        for (var editLength = 1; editLength <= maxEditLength; editLength++) {
+          for (var diagonalPath = -1*editLength; diagonalPath <= editLength; diagonalPath+=2) {
+            var basePath;
+            var addPath = bestPath[diagonalPath-1],
+                removePath = bestPath[diagonalPath+1];
+            oldPos = (removePath ? removePath.newPos : 0) - diagonalPath;
+            if (addPath) {
+              // No one else is going to attempt to use this value, clear it
+              bestPath[diagonalPath-1] = undefined;
+            }
+
+            var canAdd = addPath && addPath.newPos+1 < newLen;
+            var canRemove = removePath && 0 <= oldPos && oldPos < oldLen;
+            if (!canAdd && !canRemove) {
+              bestPath[diagonalPath] = undefined;
+              continue;
+            }
+
+            // Select the diagonal that we want to branch from. We select the prior
+            // path whose position in the new string is the farthest from the origin
+            // and does not pass the bounds of the diff graph
+            if (!canAdd || (canRemove && addPath.newPos < removePath.newPos)) {
+              basePath = clonePath(removePath);
+              this.pushComponent(basePath.components, oldString[oldPos], undefined, true);
+            } else {
+              basePath = clonePath(addPath);
+              basePath.newPos++;
+              this.pushComponent(basePath.components, newString[basePath.newPos], true, undefined);
+            }
+
+            var oldPos = this.extractCommon(basePath, newString, oldString, diagonalPath);
+
+            if (basePath.newPos+1 >= newLen && oldPos+1 >= oldLen) {
+              return basePath.components;
+            } else {
+              bestPath[diagonalPath] = basePath;
+            }
+          }
+        }
+      },
+
+      pushComponent: function(components, value, added, removed) {
+        var last = components[components.length-1];
+        if (last && last.added === added && last.removed === removed) {
+          // We need to clone here as the component clone operation is just
+          // as shallow array clone
+          components[components.length-1] =
+            {value: this.join(last.value, value), added: added, removed: removed };
+        } else {
+          components.push({value: value, added: added, removed: removed });
+        }
+      },
+      extractCommon: function(basePath, newString, oldString, diagonalPath) {
+        var newLen = newString.length,
+            oldLen = oldString.length,
+            newPos = basePath.newPos,
+            oldPos = newPos - diagonalPath;
+        while (newPos+1 < newLen && oldPos+1 < oldLen && this.equals(newString[newPos+1], oldString[oldPos+1])) {
+          newPos++;
+          oldPos++;
+          
+          this.pushComponent(basePath.components, newString[newPos], undefined, undefined);
+        }
+        basePath.newPos = newPos;
+        return oldPos;
+      },
+
+      equals: function(left, right) {
+        var reWhitespace = /\S/;
+        if (this.ignoreWhitespace && !reWhitespace.test(left) && !reWhitespace.test(right)) {
+          return true;
+        } else {
+          return left == right;
+        }
+      },
+      join: function(left, right) {
+        return left + right;
+      },
+      tokenize: function(value) {
+        return value;
+      }
+  };
+  
+  var CharDiff = new fbDiff();
+  
+  var WordDiff = new fbDiff(true);
+  WordDiff.tokenize = function(value) {
+    return removeEmpty(value.split(/(\s+|\b)/g));
+  };
+  
+  var CssDiff = new fbDiff(true);
+  CssDiff.tokenize = function(value) {
+    return removeEmpty(value.split(/([{}:;,]|\s+)/g));
+  };
+  
+  var LineDiff = new fbDiff();
+  LineDiff.tokenize = function(value) {
+    var values = value.split(/\n/g),
+        ret = [];
+    for (var i = 0; i < values.length-1; i++) {
+      ret.push(values[i] + "\n");
+    }
+    if (values.length) {
+      ret.push(values[values.length-1]);
+    }
+    return ret;
+  };
+  
+  return {
+    diffChars: function(oldStr, newStr) { return CharDiff.diff(oldStr, newStr); },
+    diffWords: function(oldStr, newStr) { return WordDiff.diff(oldStr, newStr); },
+    diffLines: function(oldStr, newStr) { return LineDiff.diff(oldStr, newStr); },
+
+    diffCss: function(oldStr, newStr) { return CssDiff.diff(oldStr, newStr); },
+
+    createPatch: function(fileName, oldStr, newStr, oldHeader, newHeader) {
+      var ret = [];
+      
+      ret.push("Index: " + fileName);
+      ret.push("===================================================================");
+      ret.push("--- " + fileName + "\t" + oldHeader);
+      ret.push("+++ " + fileName + "\t" + newHeader);
+      
+      var diff = LineDiff.diff(oldStr, newStr);
+      diff.push({value: "", lines: []});   // Append an empty value to make cleanup easier
+      
+      var oldRangeStart = 0, newRangeStart = 0, curRange = [],
+          oldLine = 1, newLine = 1;
+      for (var i = 0; i < diff.length; i++) {
+        var current = diff[i],
+            lines = current.lines || current.value.replace(/\n$/, "").split("\n");
+        current.lines = lines;
+        
+        if (current.added || current.removed) {
+          if (!oldRangeStart) {
+            var prev = diff[i-1];
+            oldRangeStart = oldLine;
+            newRangeStart = newLine;
+            
+            if (prev) {
+              curRange.push.apply(curRange, prev.lines.slice(-4).map(function(entry) { return " " + entry; }));
+              oldRangeStart -= 4;
+              newRangeStart -= 4;
+            }
+          }
+          curRange.push.apply(curRange, lines.map(function(entry) { return (current.added?"+":"-") + entry; }));
+          if (current.added) {
+            newLine += lines.length;
+          } else {
+            oldLine += lines.length;
+          }
+        } else {
+          if (oldRangeStart) {
+            if (lines.length <= 8 && i < diff.length-1) {
+              // Overlapping 
+              curRange.push.apply(curRange, lines.map(function(entry) { return " " + entry; }));
+            } else {
+              // end the range and output
+              var contextSize = Math.min(lines.length, 4);
+              ret.push(
+                  "@@ -" + oldRangeStart + "," + (oldLine-oldRangeStart+contextSize)
+                  + " +" + newRangeStart + "," + (newLine-newRangeStart+contextSize)
+                  + " @@");
+              ret.push.apply(ret, curRange);
+              ret.push.apply(ret, lines.slice(0, contextSize).map(function(entry) { return " " + entry; }));
+
+              oldRangeStart = 0;  newRangeStart = 0; curRange = [];
+            }
+          }
+          oldLine += lines.length;
+          newLine += lines.length;
+        }
+      }
+      if (diff.length > 1 && !/\n$/.test(diff[diff.length-2].value)) {
+        ret.push("\\ No newline at end of file\n");
+      }
+      
+      return ret.join("\n");
+    },
+
+    convertChangesToXML: function(changes){
+      var ret = [];
+      for ( var i = 0; i < changes.length; i++) {
+        var change = changes[i];
+        if (change.added) {
+          ret.push("<ins>");
+        } else if (change.removed) {
+          ret.push("<del>");
+        }
+
+        ret.push(escapeHTML(change.value));
+
+        if (change.added) {
+          ret.push("</ins>");
+        } else if (change.removed) {
+          ret.push("</del>");
+        }
+      }
+      return ret.join("");
+    }
+  };
+})();
+
+/* See license.txt for terms of usage */
+var FireDiff = FireDiff || {};
+
+FBL.ns(function() { with (FBL) {
+var Path = {};
+FireDiff.Path = Path;
+
+const PATH_COMPONENT = /\/?([^\/\[\]]*(?:\[(?:\d+|@.+?='.*?')\]))/g;
+
+function getSheetId(sheet) {
+  if (sheet.href) {
+    return "@href='" + sheet.href + "'";
+  }
+  if (sheet.ownerNode && sheet.ownerNode.id) {
+    return "@id='" + sheet.ownerNode.id + "'"
+  }
+  return getSheetIndex(sheet);
+}
+function getSheetIndex(sheet) {
+  if (!sheet || !sheet.ownerNode)     return;
+  var styleSheets = sheet.ownerNode.ownerDocument.styleSheets;
+  for (var i = 0; i < styleSheets.length; i++) {
+    if (styleSheets[i] == sheet) {
+      return i+1;
+    }
+  }
+}
+function getRuleIndex(style, parent) {
+  if (!style)     return;
+  for (var i = 0; i < parent.cssRules.length; i++) {
+    if (parent.cssRules[i] == style
+        || parent.cssRules[i].styleSheet == style) {
+      return i+1;
+    }
+  }
+}
+var styleLookups = {
+  "style()" : function(current, index) {
+    var fieldLookup = /@(.*?)='(.*?)'/;
+    var match = fieldLookup.exec(index);
+    if (match) {
+      function checkSheet(sheet) {
+        if (sheet[match[1]] == match[2]
+            || (sheet.ownerNode && sheet.ownerNode[match[1]] == match[2])) {
+          return sheet;
+        }
+        for (var i = 0; i < sheet.cssRules.length; i++) {
+          if (sheet.cssRules[i] instanceof CSSImportRule) {
+            var ret = checkSheet(sheet.cssRules[i].styleSheet);
+            if (ret) {
+              return ret;
+            }
+          }
+        }
+      }
+      for (var i = current.styleSheets.length; i > 0; i--) {
+        var ret = checkSheet(current.styleSheets[i-1]);
+        if (ret) {
+          return ret;
+        }
+      }
+    } else {
+      return current.styleSheets[index-1];
+    }
+  },
+  "rule()" : function(current, index) {
+    return current.cssRules[index-1];
+  }
+};
+
+function extractComponents(path) {
+  var ret = path.indexOf("/") === 0 ? [""] : [],
+      match;
+  while ((match = PATH_COMPONENT.exec(path))) {
+    ret.push(match[1]);
+  }
+  return ret;
+}
+
+function updateForMutate(pathUpdate, pathChanged, offset, destroyAncestor) {
+  var components = Path.getRelativeComponents(pathUpdate, pathChanged);
+  var changeParent = Path.getParentPath(pathChanged);
+  
+  if (destroyAncestor && components.common == pathChanged) {
+    // Path to update is the same or child of the one being removed
+    return undefined;
+  } else if (components.common == pathChanged) {
+    // Parent or identity case
+    return components.common.replace(
+            /([^\/]+?)\[(\d+)\]$/,
+            function(total, tag, index) {
+              return tag + "[" + (parseInt(index)+offset) + "]";
+            })
+        + (components.left ? "/" : "")
+        + components.left;
+  } else if (components.left && components.common == changeParent) {
+    // The removed path was the child of the common path element.
+    // If the modified element was of the same type as our ancestor
+    // at this level, then we will need to update our path
+    var pathExtract = /^([^\/]+?)\[(\d+|@.+?='.*?')\]/;
+    var ancestor = pathExtract.exec(components.left);
+    var changed = pathExtract.exec(components.right);
+
+    if (ancestor[1] == changed[1]
+        && parseInt(ancestor[2]) > parseInt(changed[2])) {
+      return components.common
+          + (components.common != "/" ? "/" : "")
+          + components.left.replace(
+              pathExtract,
+              function(total, tag, index) {
+                return tag + "[" + (parseInt(index)+offset) + "]";
+              })
+    }
+  }
+  
+  // No effect on the path
+  return pathUpdate;
+};
+
+/**
+ * Updates pathUpdate as if pathInserted was just inserted into the
+ * document.
+ */
+FireDiff.Path.updateForInsert = function(pathUpdate, pathInsert) {
+  return updateForMutate(pathUpdate, pathInsert, 1, false);
+};
+
+/**
+ * Updates pathUpdate as if pathRemoved was just removed from the
+ * document.
+ */
+FireDiff.Path.updateForRemove = function(pathUpdate, pathRemoved) {
+  return updateForMutate(pathUpdate, pathRemoved, -1, true);
+};
+
+/**
+ * Updates pathUpdate as if pathRemoved was just removed from the
+ * document due to a revert.
+ */
+FireDiff.Path.updateForRevertRemove = function(pathUpdate, pathRemoved) {
+  return updateForMutate(pathUpdate, pathRemoved, -1, false);
+};
+
+FireDiff.Path.getIdentifier = function(path) {
+  var match = path.match(/^.*\/([^/\[\]]+?)(?:\[(\d+|@.+?='.*?')\])?$/);
+  if (match) {
+    var index = parseInt(match[2]);
+    return { tag: match[1], index: isNaN(index) ? match[2] : index };
+  }
+};
+FireDiff.Path.getParentPath = function(path) {
+  return (path.match(/^(.+)\/([^\/\[\]]+?)(?:\[(\d+|@.+?='.*?')\])?$/) || ["", "/"])[1];
+};
+FireDiff.Path.getTopPath = function(path) {
+  return (path.match(/^\/?[^\/\[\]]*(?:\[(?:\d+|@.+?='.*?')\])?/) || ["", ""])[0];
+};
+FireDiff.Path.isNextSibling = function(first, second) {
+  var parent = Path.getParentPath(first);
+  var identifier = Path.getIdentifier(first);
+  
+  return (parent + "/" + identifier.tag + "[" + (parseInt(identifier.index)+1) + "]") == second;
+};
+
+FireDiff.Path.isChildOrSelf = function(parent, child) {
+  return parent == child || Path.isChild(parent, child);
+};
+FireDiff.Path.isChild = function(parent, child) {
+  return child.indexOf(parent + "/") === 0;
+};
+
+FireDiff.Path.getRelativeComponents = function(path1, path2) {
+  path1 = extractComponents(path1);
+  path2 = extractComponents(path2);
+  
+  var common = [];
+  for (var i = 0; i < path1.length && i < path2.length && path1[i] == path2[i]; i++) {
+    common.push(path1[i]);
+  }
+  
+  path1.splice(0, common.length);
+  path2.splice(0, common.length);
+  
+  return {
+    common: common.join("/") || (common.length == 1 ? "/" : ""),
+    left: path1.join("/"),
+    right: path2.join("/")
+  };
+};
+
+FireDiff.Path.compareXPaths = function(path1, path2) {
+  var components = Path.getRelativeComponents(path1, path2);
+  var leftTop = Path.getIdentifier("/" + Path.getTopPath(components.left));
+  var rightTop = Path.getIdentifier("/" + Path.getTopPath(components.right));
+  if (!leftTop) {
+    return rightTop ? -1 : 0;
+  }
+  if (!rightTop) {
+    return 1;
+  }
+  
+  var tagCompare = leftTop.tag.localeCompare(rightTop.tag);
+  if (tagCompare) {
+    return tagCompare;
+  }
+  
+  if (leftTop.index < rightTop.index) {
+    return -1;
+  } else if (leftTop.index == rightTop.index) {
+    return 0;
+  } else {
+    return 1;
+  }
+};
+
+FireDiff.Path.getElementPath = function(element, useTagNames, rootPath) {
+  var nameLookup = [];
+  nameLookup[Node.COMMENT_NODE] = "comment()";
+  nameLookup[Node.TEXT_NODE] = "text()";
+  nameLookup[Node.PROCESSING_INSTRUCTION_NODE] = "processing-instruction()";
+
+  var paths = [];
+  for (; element && element.nodeType != Node.DOCUMENT_NODE; element = element.parentNode) {
+    var tagName = element.localName || nameLookup[element.nodeType];
+    var index = 0;
+    for (var sibling = element.previousSibling; sibling; sibling = sibling.previousSibling) {
+      var siblingTagName = sibling.localName || nameLookup[sibling.nodeType];
+      if (!useTagNames || tagName == siblingTagName || !tagName) {
+        ++index;
+      }
+    }
+
+    var pathIndex = "[" + (index+1) + "]";
+    paths.splice(0, 0, (useTagNames && tagName ? tagName.toLowerCase() : "node()") + pathIndex);
+  }
+
+  var prefix = "/";
+  if (rootPath && paths.length) {
+    prefix = "";
+    paths[0] = rootPath;
+  }
+
+  return prefix + paths.join("/");
+};
+
+FireDiff.Path.getStylePath = function(style) {
+  var paths = [];
+  
+  // Style declarations are not part of the path
+  if (style instanceof CSSStyleDeclaration)     style = style.parentRule;
+  if (!style)     return undefined;
+  
+  var parent = style;
+  while ((parent = style.parentRule || style.parentStyleSheet)) {
+    if (style instanceof CSSStyleSheet)    break;
+    
+    var index = getRuleIndex(style, parent);
+    if (!index)    break;
+    
+    paths.splice(0, 0, "rule()[" + index + "]");
+    style = parent;
+  }
+  
+  // At this point we should be at the sheet object, if we aren't, the style
+  // isn't in the doc
+  var sheetId = getSheetId(style);
+  if (!sheetId)     return undefined;
+  
+  paths.splice(0, 0, "/style()[" + sheetId+ "]");
+  return paths.join("/");
+};
+
+FireDiff.Path.evaluateStylePath = function(path, document) {
+  var parser = /\/?(.*?)\[(.*?)\]/g;
+  var component, current;
+  
+  // The regex appears to maintain state (due to an optimizer?) meaning that
+  // any situation where the entire string is not processed, such as an error
+  // case, could cause future calls to fail.
+  parser.lastIndex = 0;
+  while (component = parser.exec(path)) {
+    var lookup = styleLookups[component[1]];
+    if (!lookup) {
+      return undefined;
+    }
+    
+    current = lookup(current || document, component[2]);
+    if (!current) {
+      return undefined;
+    }
+  }
+  
+  return current;
+};
+
+}});
+
+/* See license.txt for terms of usage */
+var FireDiff = FireDiff || {};
+
+/*
+ * Implements the logic necessary to deep clone as CSS object.
+ * 
+ * Note that this does not clone the CSS value types, so this could
+ * introduce some inconsistencies with the stored data model
+ */
+FireDiff.CSSModel = FBL.ns(function() { with (FBL) {
+  function elementEquals(left, right, i) {
+    if (left && left.equals) {
+      if (!left.equals(right)) {
+        if (FBTrace.DBG_FIREDIFF) {
+          FBTrace.sysout("Not Equal equals: " + i + " '" + left + "' '" + right + "'");
+          FBTrace.sysout("Not Equal", left);
+          FBTrace.sysout("Not Equal", right);
+        }
+        return false;
+      }
+    } else {
+      if (left != right) {
+        if (FBTrace.DBG_FIREBUG) {
+          FBTrace.sysout("Not Equal ==: " + i + " '" + left + "' '" + right + "'", left);
+          FBTrace.sysout("Not Equal", left);
+          FBTrace.sysout("Not Equal", right);
+        }
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  function CloneObject() {}
+  CloneObject.prototype = {
+    equals: function(test) {
+      if (!test)    return false;
+      
+      var tested = { cssText: true },
+          i;
+      for (i in this) {
+        if (this.hasOwnProperty(i) && !tested[i]) {
+          var left = this[i], right = test[i];
+          if (!elementEquals(this[i], test[i], i))    return false;
+          tested[i] = true;
+        }
+      }
+      for (i in test) {
+        if (test.hasOwnProperty(i) && !tested[i]) {
+          // We haven't seen it before, so it must not equal
+          return false;
+        }
+      }
+      return true;
+    },
+    isEqualNode: function(node) {
+      return this.equals(node);
+    },
+    clone: function() {
+      return cloneCSSObject(this);
+    },
+    cloneNode: function() {
+      return this.clone();
+    }
+  }
+  function ArrayCloneObject(array) {
+    this.length = 0;
+    for (var i = 0; i < array.length; i++) {
+      this.push(cloneCSSObject(array[i]));
+    }
+  }
+  ArrayCloneObject.prototype = {
+    // for in interation does not work on built in types, thus we have to
+    // selectively extend the array prototype
+    push: Array.prototype.push,
+    splice: Array.prototype.splice,
+    equals: function arrayEquals(right) {
+      if (!right || this.length != right.length)    return false;
+      for (var i = 0; i < this.length; i++) {
+        if (!elementEquals(this[i], right[i], i))    return false;
+      }
+      return true;
+    }
+  };
+  
+  function StyleDeclarationClone(style) {
+    this.cssText = style.cssText;
+    this.properties = {};
+    this.length = 0;
+
+    // Copied from CSS Panel's getRuleProperties implementation
+    // TODO : Attempt to unify these as a lib method?
+    var lines = this.cssText.match(/(?:[^;\(]*(?:\([^\)]*?\))?[^;\(]*)*;?/g);
+    var propRE = /\s*([^:\s]*)\s*:\s*(.*?)\s*(! important)?;?$/;
+    var line,i=0;
+    while(line=lines[i++]){
+      m = propRE.exec(line);
+      if(!m)    continue;
+      //var name = m[1], value = m[2], important = !!m[3];
+      if (m[2]) {
+        this.setProperty(m[1], m[2], m[3]);
+      }
+    }
+    
+    this.__defineGetter__("cssText", this.generateCSSText);
+  }
+  StyleDeclarationClone.prototype = extend(CloneObject.prototype, {
+    push: Array.prototype.push,
+    splice: Array.prototype.splice,
+    
+    getPropertyValue: function(propertyName) {
+      var prop = this.properties[propertyName];
+      return prop && prop.value;
+    },
+    getPropertyPriority: function(propertyName) {
+      var prop = this.properties[propertyName];
+      return prop && prop.priority;
+    },
+    setProperty: function(propertyName, value, priority) {
+      this.properties[propertyName] = {
+          value: value,
+          priority: priority || "",
+          
+          equals: function(right) {
+            return right && this.value == right.value && this.priority == right.priority;
+          }
+      };
+      if (this.getPropIndex(propertyName) < 0) {
+        this.push(propertyName);
+      }
+    },
+    removeProperty: function(propertyName) {
+      var propIndex = this.getPropIndex(propertyName);
+      if (propIndex >= 0) {
+        this.splice(propIndex, 1);
+        delete this.properties[propertyName];
+      }
+    },
+    equals: function(test) {
+      return CloneObject.prototype.equals.call(this.properties, test.properties);
+    },
+    
+    generateCSSText: function() {
+      var out = [];
+      for (var i = 0; i < this.length; i++) {
+        out.push(this[i]);
+        out.push(": ");
+        out.push(this.getPropertyValue(this[i]));
+        
+        var priority = this.getPropertyPriority(this[i]);
+        if (priority) {
+          out.push(" ");
+          out.push(priority);
+        }
+        out.push("; ");
+      }
+      return out.join("");
+    },
+    getPropIndex: function(propName) {
+      for (var i = 0; i < this.length; i++) {
+        if (this[i] == propName) {
+          return i;
+        }
+      }
+      return -1;
+    }
+  });
+
+  function MediaListClone(media) {
+    ArrayCloneObject.call(this, []);
+    
+    // To comment on my own confusion, even though my expected is not really spec:
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=492925
+    for (var i = 0; i < media.length; i++) {
+      this.push(media.item(i));
+    }
+    this.mediaText = media.mediaText;
+  }
+  MediaListClone.prototype = ArrayCloneObject.prototype;
+  
+  var RulesClone = ArrayCloneObject;
+  
+  function StyleSheetClone(sheet) {
+    this.type = sheet.type;
+    this.disabled = sheet.disabled;
+    this.href = sheet.href;
+    this.title = sheet.title;
+    this.media = new MediaListClone(sheet.media);
+    
+    this.cssRules = new RulesClone(sheet.cssRules);
+  }
+  StyleSheetClone.prototype = extend(CloneObject.prototype, {
+    insertRule: function(rule, index) {
+      // Note: This does not match the CSS object API. Parsing of this will
+      //    be overly complicated, so this function differs from the CSS spec
+      //    in that it will only accept a pre-parsed CSS clone object
+      if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("StyleSheetClone.insertRule: " + index + " " + rule, this.cssRules);
+      this.cssRules.splice(index, 0, rule);
+    },
+    deleteRule: function(index) {
+      this.cssRules.splice(index, 1);
+    }
+  });
+  
+  function CSSRuleClone(rule) {
+    this.type = rule.type;
+    this.cssText = rule.cssText;
+  }
+  CSSRuleClone.prototype = CloneObject.prototype;
+  
+  function CSSStyleRuleClone(rule) {
+    CSSRuleClone.call(this, rule);
+    this.selectorText = rule.selectorText;
+    this.style = new StyleDeclarationClone(rule.style);
+
+    this.__defineGetter__("cssText", function() { return this.selectorText + " { " + this.style.cssText + "}" });
+  }
+  CSSStyleRuleClone.prototype = extend(CSSRuleClone.prototype, {});
+  
+  function CSSMediaRuleClone(rule) {
+    CSSRuleClone.call(this, rule);
+    this.cssRules = new RulesClone(rule.cssRules);
+    this.media = new MediaListClone(rule.media);
+  }
+  CSSMediaRuleClone.prototype = extend(CSSRuleClone.prototype, {
+    insertRule: StyleSheetClone.prototype.insertRule,
+    deleteRule: StyleSheetClone.prototype.deleteRule
+  });
+  function CSSFontFaceRuleClone(rule) {
+    CSSStyleRuleClone.call(this, rule);
+    this.selectorText = "@font-face";
+  }
+  CSSFontFaceRuleClone.prototype = extend(CSSRuleClone.prototype, {});
+  
+  function CSSImportRuleClone(rule) {
+    CSSRuleClone.call(this, rule);
+    
+    this.href = rule.href;
+    this.media = new MediaListClone(rule.media);
+    this.styleSheet = new StyleSheetClone(rule.styleSheet);
+  }
+  CSSImportRuleClone.prototype = extend(CSSRuleClone.prototype, {});
+  
+  function CSSCharsetRuleClone(rule) {
+    CSSRuleClone.call(this, rule);
+    this.encoding = rule.encoding;
+  }
+  CSSCharsetRuleClone.prototype = extend(CSSRuleClone.prototype, {});
+  
+
+  function cloneCSSObject(cssRule) {
+    if (cssRule instanceof CSSStyleSheet || cssRule instanceof StyleSheetClone) {
+      return new StyleSheetClone(cssRule);
+    } else if (cssRule instanceof CSSStyleRule || cssRule instanceof CSSStyleRuleClone) {
+      return new CSSStyleRuleClone(cssRule);
+    } else if (cssRule instanceof CSSMediaRule || cssRule instanceof CSSMediaRuleClone) {
+      return new CSSMediaRuleClone(cssRule);
+    } else if (cssRule instanceof CSSFontFaceRule || cssRule instanceof CSSFontFaceRuleClone) {
+      return new CSSFontFaceRuleClone(cssRule);
+    } else if (cssRule instanceof CSSImportRule || cssRule instanceof CSSImportRuleClone) {
+      return new CSSImportRuleClone(cssRule);
+    } else if (cssRule instanceof CSSCharsetRule || cssRule instanceof CSSCharsetRuleClone) {
+      return new CSSCharsetRuleClone(cssRule);
+    } else if (cssRule instanceof CSSUnknownRule || cssRule instanceof CSSRuleClone) {
+      return new CSSRuleClone(cssRule);
+    } else if (cssRule instanceof CSSStyleDeclaration || cssRule instanceof StyleDeclarationClone) {
+      return new StyleDeclarationClone(cssRule);
+    }
+  }
+  
+  this.StyleSheetClone = StyleSheetClone;
+  this.CSSStyleRuleClone = CSSStyleRuleClone;
+  this.CSSMediaRuleClone = CSSMediaRuleClone;
+  this.CSSFontFaceRuleClone = CSSFontFaceRuleClone;
+  this.CSSImportRuleClone = CSSImportRuleClone;
+  this.CSSCharsetRuleClone = CSSCharsetRuleClone;
+  this.CSSRuleClone = CSSRuleClone;
+  this.StyleDeclarationClone = StyleDeclarationClone;
+  this.cloneCSSObject = cloneCSSObject;
+}});
+
+/* See license.txt for terms of usage */
+FireDiff  = FireDiff || {};
+
+FBL.ns(function() { with (FBL) {
+
+var i18n = document.getElementById("strings_firediff");
+
+var Events = FireDiff.events,
+    Path = FireDiff.Path,
+    Reps = FireDiff.reps,
+    CSSModel = FireDiff.CSSModel;
+
+const CHANGES = "firebug-firediff-changes";
+const ATTR_CHANGES = "firebug-firediff-attrChanges";
+const REMOVE_CHANGES = "firebug-firediff-removeChanges";
+
+var ChangeSource = {
+    APP_CHANGE: "APP_CHANGE",
+    FIREBUG_CHANGE: "FIREBUG_CHANGE"
+};
+
+function ChangeEvent(changeSource) {
+  this.date = new Date();
+  this.changeSource = changeSource || ChangeSource.APP_CHANGE;
+}
+ChangeEvent.prototype = {
+    getChangeType: function() { return this.changeType; },
+    getSummary: function() {},
+    merge: function(candidate, simplifyOnly) {},
+    
+    /**
+     * Determines if a candidate change needs to be reverted or
+     * restored in order to revert or restore this change. The implementation
+     * should assume that the reverted field has already been set to the correct
+     * value for this event when called.
+     */
+    mergeRevert: function(candidate) {},
+    
+    /**
+     * Determines if a candidate change cancels the effects of this change.
+     */
+    isCancellation: function(candidate) {},
+    
+    /**
+     * Determines if this change affects the cancellation of another change.
+     * 
+     * I.e. this change must be reverted to revert the candidate change.
+     */
+    affectsCancellation: function(candidate) {},
+    
+    /**
+     * Determines if this change negates any effect of a prior change.
+     */
+    overridesChange: function(prior) {},
+    cloneOnXPath: function(xpath) {},
+    appliesTo: function(target, cachedXpath) {
+      // Any change that is made to the target or a child
+      return target && Path.isChildOrSelf(cachedXpath || this.getXpath(target), this.xpath);
+    },
+    
+    /**
+     * Determines if a given change is in the same file as this change.
+     * The definition of file is up to the implementation, but may mean CSS
+     * style sheet, DOM document, etc.
+     */
+    sameFile: function(otherChange) {},
+    getSnapshot: function(context) {},
+    getBaseSnapshot: function(context) {},
+    getDocumentName: function(context) {},
+    
+    apply: function() {},
+    revert: function() {},
+
+    getMergedXPath: function(prior) {
+      var updatedPath;
+      if (!prior.isElementRemoved() || this.xpath != prior.xpath) {
+        if (this.isElementAdded()) {
+          updatedPath = Path.updateForInsert(prior.xpath, this.xpath);
+        } else if (this.isElementRemoved()) {
+          updatedPath = Path.updateForRemove(prior.xpath, this.xpath);
+        }
+      }
+
+      if (updatedPath && updatedPath != prior.xpath) {
+        return updatedPath;
+      }
+    },
+    getRevertXPath: function(prior) {
+      var updatedPath;
+      if (this.isElementAdded()) {
+        updatedPath = Path.updateForRevertRemove(prior.xpath, this.xpath);
+      } else if (this.isElementRemoved()) {
+        updatedPath = Path.updateForInsert(prior.xpath, this.xpath);
+      }
+
+      if (updatedPath && updatedPath != prior.xpath) {
+        return updatedPath;
+      }
+    },
+    
+    getXpath: function(target) {},
+    xpathLookup: function(xpath, root) {},
+    getActionNode: function(target, xpath) {
+      try {
+        xpath = xpath || this.getXpath(target);
+        if (xpath == this.xpath) {
+          // Empty string passed to evaluate is bad. 
+          return target;
+        }
+        
+        var components = Path.getRelativeComponents(this.xpath, xpath);
+        if (!components.right) {
+          return this.xpathLookup(components.left, target);
+        }
+      } catch (err) {
+        if (FBTrace.DBG_ERRORS) {
+          FBTrace.sysout("getActionNode Error: " + err, err);
+          FBTrace.sysout(" - getActionNode: " + this.xpath + " " + xpath, components);
+        }
+        throw err;
+      }
+    },
+    getInsertActionNode: function(target, xpath) {
+      xpath = xpath || this.getXpath(target);
+      
+      var parentPath = Path.getParentPath(this.xpath);
+      var selfId = Path.getIdentifier(this.xpath);
+      
+      var components = Path.getRelativeComponents(parentPath, xpath);
+      var parentEl;
+      if (components.left) {
+        parentEl = this.xpathLookup(components.left, target);
+      } else {
+        parentEl = target;
+      }
+      
+      var siblingEl = this.xpathLookup(selfId.tag + "[" + selfId.index + "]", parentEl);
+      return {
+        parent: parentEl,
+        sibling: siblingEl
+      };
+    },
+    
+    isElementAdded: function() { return false; },
+    isElementRemoved: function() { return false; },
+    
+    toString: function() {
+      return "[object ChangeEvent-" + this.changeType + "-" + this.subType + " " + this.xpath + "]";
+    }
+};
+
+// Global API
+FireDiff.events = {
+    ChangeEvent: ChangeEvent,
+    
+    ChangeSource: ChangeSource,
+    AnnotateAttrs: {
+      CHANGES: CHANGES,
+      ATTR_CHANGES: ATTR_CHANGES,
+      REMOVE_CHANGES: REMOVE_CHANGES
+    },
+
+    /**
+     * Simplifies the given change set to a reduced form, optionally updating
+     * all changes to the current point in time.
+     * 
+     * simplifyOnly:
+     *    truthy: Do not merge change xpaths. Change sets merged in this mode can be integrated with
+     *        other change sets without xpath corruption.
+     *    falsy: Merge change xpaths. This will update all changes so their xpaths reflect the current
+     *        state of the document. Change sets merged in this mode can not be merged with other
+     *        change sets.
+     */
+    merge: function(changes, simplifyOnly) {
+      if (!changes.length) {
+        return changes;
+      }
+
+      if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("Merge prior simplifyOnly: " + simplifyOnly, changes);
+      changes = changes.slice();
+
+      var ret = [];
+      for (var i = 0; i < changes.length; i++) {
+        var changeMerge = mergeChange(changes, changes[i], i, simplifyOnly);
+        if (changeMerge) {
+          ret.push(changeMerge);
+        }
+      }
+
+      if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("Merge result", ret);
+      return ret;
+    },
+    
+    /**
+     * Determines the changes necessary to revert a given change.
+     * 
+     * Returns an array of events that need to be reverted in order to
+     * restore the associated object to the state prior to the given change.
+     * These events are defined in reverse order, with change n being dependent
+     * upon change n+1. These events will be merged where possible.
+     * 
+     * The changes array will be modified to remove the reverted events as well
+     * as update the xpath of the remaining events to reflect the state of the
+     * system after the reverts occur.
+     */
+    mergeRevert: function(change, changes) {
+      var changeIndex = getChangeIndex(changes, change);
+
+      // Merge all relevant changes into this change.
+      var reverts = [];
+      change = revertChange(changes, change, changeIndex, reverts);
+
+      if (change) {
+        reverts.splice(0, 0, change);
+      }
+
+      changes[changeIndex] = undefined;
+      for (var i = changes.length; i > 0; i--) {
+        if (!changes[i-1]) {
+          changes.splice(i-1, 1);
+        }
+      }
+
+      reverts.sort(function(a, b) { return b.xpath.localeCompare(a.xpath); });
+      return reverts;
+    }
+};
+
+function mergeChange(changes, change, changeIndex, simplifyOnly) {
+  if (!change) {
+    return;
+  }
+
+  for (var outerIter = changeIndex + 1; change && outerIter < changes.length; outerIter++) {
+    var candidate = changes[outerIter],
+        mergeValue;
+    if (!candidate || candidate.changeType != change.changeType) {
+      continue;
+    }
+
+    if (change.isCancellation(candidate)) {
+      mergeValue = [];
+    } else if (candidate.overridesChange(change)) {
+      mergeValue = [undefined, candidate];
+    } else {
+      mergeValue = change.merge(changes[outerIter], simplifyOnly);
+    }
+    if (!mergeValue) {
+      continue;
+    }
+    if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("Merge change " + changeIndex + " " + outerIter, mergeValue);
+
+    if (mergeValue.length == 0 && !mergeValue[0]) {
+      // Cancellation special case:
+      updateXPathFromCancellation(changes, change, changeIndex, outerIter);
+    }
+
+    change = mergeValue[0];
+    changes[outerIter] = mergeValue[1];
+  }
+
+  return change;
+}
+
+function revertChange(changes, change, changeIndex, parentDeletes) {
+  if (!change) {
+    return;
+  }
+
+  for (var outerIter = changeIndex + 1; change && outerIter < changes.length; outerIter++) {
+    var candidate = changes[outerIter],
+        mergeValue = undefined,
+        updateXPath;
+
+    if (change.isCancellation(candidate)) {
+      mergeValue = [];
+    } else if (candidate.isElementRemoved()
+        && (Path.isChild(candidate.xpath, change.xpath)
+          || (!change.isElementRemoved() && change.xpath == candidate.xpath))) {
+      changes[outerIter] = undefined;
+      parentDeletes.push(candidate);
+    } else if (Path.isChildOrSelf(change.xpath, candidate.xpath)) {
+      mergeValue = change.mergeRevert(candidate);
+    }
+    
+    if (mergeValue) {
+      if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("Merge revert change " + changeIndex + " " + outerIter, mergeValue);
+      changes[outerIter] = mergeValue[1];
+
+      if (!mergeValue[0]) {
+        // Cancellation special case:
+        updateXPathFromCancellation(changes, change, changeIndex, outerIter);
+
+        changeIndex = processRevertCancel(changes, candidate, outerIter, parentDeletes);
+        if (changeIndex) {
+          outerIter = changeIndex;
+          change = changes[changeIndex];
+          changes[changeIndex] = undefined;
+          continue;
+        } else {
+          return;
+        }
+      }
+
+      change = mergeValue[0];
+    } else {
+      // We are only merging a particular change and do not need to do a full 
+      // merge outside of this path, but we do need to make sure that xpaths
+      // are up to date
+      // Check to see if we update the candidate
+      updatedXPath = change.getRevertXPath(candidate);
+      
+      // Check to see if the candidate updates us
+      if (!updatedXPath) {
+        updatedXPath = candidate.getMergedXPath(change);
+        if (updatedXPath) {
+          change = change.cloneOnXPath(updatedXPath);
+          changes[changeIndex] = change;
+        }
+      }
+    }
+  }
+
+  for (outerIter = changeIndex + 1; outerIter < changes.length; outerIter++) {
+    candidate = changes[outerIter];
+    if (!candidate) {
+      continue;
+    }
+    updatedXPath = change.getRevertXPath(candidate);
+    if (updatedXPath) {
+      changes[outerIter] = candidate.cloneOnXPath(updatedXPath);
+    }
+  }
+
+  return change;
+}
+
+/**
+ * Lookup the next change that we may have to revert to fully revert the
+ * element in question to the previous state.
+ */
+function processRevertCancel(changes, change, curIndex, parentDeletes) {
+  for (; curIndex < changes.length; curIndex++) {
+    var candidate = changes[curIndex];
+    if (!candidate) {
+      continue;
+    }
+    
+    // Check for the applies to case
+    if (change.affectsCancellation(candidate)) {
+      return curIndex;
+    }
+    
+    // Check for the parent delete case
+    if (candidate.isElementRemoved()
+        && Path.isChild(candidate.xpath, change.xpath)) {
+      changes[curIndex] = undefined;
+      parentDeletes.push(candidate);
+    }
+    
+    // Update xpaths as necessary
+    var updatedXPath = candidate.getMergedXPath(change);
+    if (updatedXPath) {
+      change = change.cloneOnXPath(updatedXPath);
+    }
+  }
+};
+
+function updateXPathFromCancellation(changes, change, changeIndex, outerIter) {
+  // Update any changes that happened between the current change and the
+  // cancellation change so their xpath acts as though these changes
+  // never existed
+  for (var cancelIter = changeIndex + 1; cancelIter < outerIter; cancelIter++) {
+    if (changes[cancelIter]) {
+      var updatedXPath = change.getRevertXPath(changes[cancelIter]);
+      if (updatedXPath) {
+        changes[cancelIter] = changes[cancelIter].cloneOnXPath(updatedXPath);
+      }
+    }
+  }
+}
+function getChangeIndex(changes, change) {
+  if (!change) {
+    return 0;
+  }
+  for (var i = 0; i < changes.length && changes[i] != change; i++) {
+    /* NOP */
+  }
+  return i;
+}
+
+}});
+
+/* See license.txt for terms of usage */
+FireDiff  = FireDiff || {};
+
+FBL.ns(function() { with (FBL) {
+
+var i18n = document.getElementById("strings_firediff");
+
+var Path = FireDiff.Path,
+  Reps = FireDiff.reps,
+  ChangeEvent = FireDiff.events.ChangeEvent,
+  
+  CHANGES = FireDiff.events.AnnotateAttrs.CHANGES,
+  ATTR_CHANGES = FireDiff.events.AnnotateAttrs.ATTR_CHANGES,
+  REMOVE_CHANGES = FireDiff.events.AnnotateAttrs.REMOVE_CHANGES;
+
+function DOMChangeEvent(target, xpath, displayXPath, changeSource) {
+  ChangeEvent.call(this, changeSource);
+  this.changeType = "DOM";
+  this.xpath = xpath || Path.getElementPath(target);
+  this.displayXPath = displayXPath || Path.getElementPath(target, true);
+  
+  // Store this just to create a mostly accurate repobject link. This shouldn't be used otherwise
+  this.target = target;
+}
+DOMChangeEvent.prototype = extend(ChangeEvent.prototype, {
+    sameFile: function(target) {
+      return this.target.ownerDocument == target.ownerDocument
+          || (target.target && this.target.ownerDocument == target.target.ownerDocument);
+    },
+    getSnapshot: function(context) {
+      return new Reps.DOMSnapshot(this, context.window.document);
+    },
+    getBaseSnapshot: function(context) {
+      return new Reps.DOMSnapshot(null, context.window.document);
+    },
+    getDocumentName: function() {
+      return this.target.ownerDocument.URL;
+    },
+    
+    getXpath: function(target) { return Path.getElementPath(target); },
+    xpathLookup: function(xpath, root) {
+      var iterate = (root.ownerDocument || root).evaluate(xpath, root, null, XPathResult.ANY_TYPE, null);
+      return iterate.iterateNext();
+    },
+    
+    annotateTree: function(tree, root) {
+      var actionNode = this.getActionNode(tree, root);
+      if (!actionNode) {
+        if (FBTrace.DBG_ERRORS) {
+          FBTrace.sysout("ERROR: annotateTree: actionNode is undefined tree: " + root, tree);
+          FBTrace.sysout("annotateTree: change", this);
+        }
+      }
+      actionNode[CHANGES] = this;
+
+      if (actionNode.nodeType == Node.TEXT_NODE) {
+        return this;
+      } else {
+        return actionNode;
+      }
+    }
+});
+
+function DOMInsertedEvent(target, clone, xpath, displayXPath, changeSource) {
+  DOMChangeEvent.call(this, target, xpath, displayXPath, changeSource);
+  this.clone = clone || target.cloneNode(true);
+
+  if (target instanceof Text) {
+    this.previousValue = "";
+    this.value = target.data;
+  }
+}
+DOMInsertedEvent.prototype = extend(DOMChangeEvent.prototype, {
+    subType: "dom_inserted",
+    
+    getSummary: function() {
+      return i18n.getString("summary.DOMInserted");
+    },
+    isElementAdded: function() { return true; },
+    
+    apply: function(target, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getInsertActionNode(target, xpath);
+            
+            actionNode.parent.insertBefore(this.clone.cloneNode(true), actionNode.sibling);
+          }, this));
+    },
+    revert: function(target, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(target, xpath);
+            if (actionNode) {
+              actionNode.parentNode.removeChild(actionNode);
+            }
+          }, this));
+    },
+
+    merge: function(candidate, simplifyOnly) {
+      // Only changes that affect us are:
+      // - Remove on same xpath (Overrides)
+      // - Modification of self (by attr or char data change)
+      // - Any modification of children
+      // - XPath updates
+      
+      var updateXPath = candidate.getMergedXPath(this);
+      
+      // Self and Child modification
+      if (Path.isChild(this.xpath, candidate.xpath)
+          || (!updateXPath && this.xpath == candidate.xpath)) {
+        // Something changed without our own tree, apply those changes and call
+        // it a day
+        var clone = this.clone.cloneNode(true);   // Yeah..... <Clone, Clone, Clone, ...>
+        candidate.apply(clone, this.xpath);
+        
+        return [new DOMInsertedEvent(this.target, clone, this.xpath, this.displayXPath, this.changeSource)];
+      }
+      
+      // XPath modification
+      if (!simplifyOnly && updateXPath) {
+        return [
+                this.cloneOnXPath(updateXPath),
+                candidate
+            ];
+      }
+    },
+    mergeRevert: function(candidate) {
+      // On revert we want to
+      //  - Revert any changes made on this object or a child
+      if (Path.isChildOrSelf(this.xpath, candidate.xpath)) {
+        var ret = this.merge(candidate);
+        if (ret) {
+          return ret;
+        }
+        
+        // XPath modification
+        var updateXPath = candidate.getMergedXPath(this);
+        if (updateXPath) {
+          return [
+              this.cloneOnXPath(updateXPath),
+              candidate
+          ];
+        }
+      }
+    },
+    isCancellation: function(candidate) {
+      return candidate.overridesChange(this) && this.xpath == candidate.xpath;
+    },
+    affectsCancellation: function(candidate) {
+      return Path.isChildOrSelf(this.xpath, candidate.xpath);
+    },
+    cloneOnXPath: function(xpath) {
+      return new DOMInsertedEvent(this.target, this.clone, xpath, this.displayXPath, this.changeSource);
+    }
+});
+function DOMRemovedEvent(target, clone, xpath, displayXPath, changeSource) {
+  DOMChangeEvent.call(this, target, xpath, displayXPath, changeSource);
+  this.clone = clone || target.cloneNode(true);
+
+  if (target instanceof Text) {
+    this.value = "";
+    this.previousValue = target.data;
+  }
+}
+DOMRemovedEvent.prototype = extend(DOMChangeEvent.prototype, {
+    subType: "dom_removed",
+    
+    getSummary: function() {
+      return i18n.getString("summary.DOMRemoved");
+    },
+    isElementRemoved: function() { return true; },
+    
+    apply: function(target, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(target, xpath);
+            actionNode.parentNode.removeChild(actionNode);
+          }, this));
+    },
+    revert: function(target, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getInsertActionNode(target, xpath);
+            
+            actionNode.parent.insertBefore(this.clone.cloneNode(true), actionNode.sibling);
+          }, this));
+    },
+    
+    merge: function(candidate, simplifyOnly) {
+      if (Path.isChild(this.xpath, candidate.xpath)) {
+        // If this is a child WRT to xpath, we don't touch it.
+        return undefined;
+      }
+      
+        // Check for xpath modifications
+        var updateXpath = candidate.getMergedXPath(this);
+        if (!simplifyOnly && updateXpath) {
+          return [
+              this.cloneOnXPath(updateXpath),
+              candidate
+          ];
+        }
+    },
+    mergeRevert: function(candidate) {
+      // The only thing that a delete might revert is an insert operation
+      // of its identity
+      if (this.isCancellation(candidate)) {
+        return [];
+      }
+    },
+    isCancellation: function(candidate) {
+      return this.xpath == candidate.xpath
+          && candidate.isElementAdded()
+          && this.clone.isEqualNode(candidate.clone);
+    },
+    affectsCancellation: function(candidate) {
+      return this.isCancellation(candidate);
+    },
+    cloneOnXPath: function(xpath) {
+      return new DOMRemovedEvent(this.target, this.clone, xpath, this.displayXPath, this.changeSource);
+    },
+
+    overridesChange: function(prior) {
+      return (!prior.isElementRemoved() && this.xpath == prior.xpath)
+          || Path.isChild(this.xpath, prior.xpath);
+    },
+    
+    annotateTree: function(tree, root) {
+      var actionNode = this.getInsertActionNode(tree, root).parent;
+      var list = actionNode[REMOVE_CHANGES] || [],
+          i = list.length;
+      while (i > 0 && Path.compareXPaths(this.xpath, list[i-1].xpath) < 0) {
+        i--;
+      }
+      list.splice(i, 0, this);
+      actionNode[REMOVE_CHANGES] = list;
+      
+      this.clone.change = this;
+      
+      return this;
+    }
+});
+
+
+function DOMAttrChangedEvent(target, attrChange, attrName, newValue, prevValue, xpath, displayXPath, changeSource, clone) {
+  DOMChangeEvent.call(this, target, xpath, displayXPath, changeSource);
+  
+  this.attrChange = attrChange;
+  this.attrName = attrName;
+  this.previousValue = prevValue;
+  this.value = newValue;
+  
+  this.clone = clone || target.cloneNode(false);
+}
+DOMAttrChangedEvent.prototype = extend(DOMChangeEvent.prototype, {
+    subType: "attr_changed",
+    getSummary: function() {
+      if (this.attrChange == MutationEvent.MODIFICATION) {
+        return i18n.getString("summary.DOMAttrChanged");
+      } else if (this.attrChange == MutationEvent.ADDITION) {
+        return i18n.getString("summary.DOMAttrAddition");
+      } else if (this.attrChange == MutationEvent.REMOVAL) {
+        return i18n.getString("summary.DOMAttrRemoval");
+      }
+    },
+    isAddition: function() { return this.attrChange == MutationEvent.ADDITION; },
+    isRemoval: function() { return this.attrChange == MutationEvent.REMOVAL; },
+    
+    merge: function(candidate, simplifyOnly) {
+      if (this.subType != candidate.subType
+              || this.xpath != candidate.xpath
+              || this.attrName != candidate.attrName) {
+        // Check for xpath modifications
+        var updateXpath = candidate.getMergedXPath(this);
+        if (!simplifyOnly && updateXpath) {
+          return [
+              this.cloneOnXPath(updateXpath),
+              candidate
+          ];
+        }
+        return;
+      }
+
+      var attrChange = this.attrChange;
+      if (candidate.attrChange == MutationEvent.REMOVAL) {
+        attrChange = candidate.attrChange;
+      } else if (this.attrChange == MutationEvent.REMOVAL) {
+        attrChange = MutationEvent.MODIFICATION;
+      }
+      return [
+        new DOMAttrChangedEvent(
+            this.target,
+            attrChange, this.attrName,
+            candidate.value, this.previousValue,
+            this.xpath, this.displayXPath, this.changeSource, this.clone)
+      ];
+    },
+    cloneOnXPath: function(xpath) {
+      return new DOMAttrChangedEvent(
+          this.target,
+          this.attrChange, this.attrName,
+          this.value, this.previousValue,
+          xpath, this.displayXPath, this.changeSource, this.clone);
+    },
+    mergeRevert: function(candidate) {
+      // On revert we want to
+      //  - Revert any changes made on this exact attr
+      if (this.xpath == candidate.xpath && this.attrName == candidate.attrName) {
+        return this.merge(candidate);
+      }
+    },
+    isCancellation: function(candidate) {
+      return this.xpath == candidate.xpath
+          && this.attrName == candidate.attrName
+          && (this.previousValue == candidate.value
+              || (this.attrChange == MutationEvent.ADDITION
+                  && candidate.attrChange == MutationEvent.REMOVAL));
+    },
+    affectsCancellation: function(candidate) {
+      return this.xpath == candidate.xpath
+          && this.attrName == candidate.attrName;
+    },
+    
+    apply: function(target, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(target, xpath);
+            if (this.attrChange == MutationEvent.REMOVAL) {
+              actionNode.removeAttribute(this.attrName);
+            } else if (this.attrChange == MutationEvent.ADDITION
+                || this.attrChange == MutationEvent.MODIFICATION) {
+              actionNode.setAttribute(this.attrName, this.value);
+            }
+          }, this));
+    },
+    revert: function(target, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(target, xpath);
+            if (this.attrChange == MutationEvent.ADDITION) {
+              actionNode.removeAttribute(this.attrName);
+            } else if (this.attrChange == MutationEvent.REMOVAL
+                || this.attrChange == MutationEvent.MODIFICATION) {
+              actionNode.setAttribute(this.attrName, this.previousValue);
+            }
+          }, this));
+    },
+    
+    annotateTree: function(tree, root) {
+      var actionNode = this.getActionNode(tree, root);
+      var list = actionNode[ATTR_CHANGES] || {};
+      list[this.attrName] = this;
+      actionNode[ATTR_CHANGES] = list;
+      
+      return actionNode;
+    }
+});
+
+function DOMCharDataModifiedEvent(target, newValue, prevValue, xpath, displayXPath, changeSource, clone) {
+    DOMChangeEvent.call(this, target, xpath, displayXPath, changeSource);
+    
+    this.previousValue = prevValue;
+    this.value = newValue;
+    
+    this.clone = clone || target.cloneNode(false);
+}
+DOMCharDataModifiedEvent.prototype = extend(DOMChangeEvent.prototype, {
+    subType: "char_data_modified",
+    getSummary: function() {
+      return i18n.getString("summary.DOMCharDataModified");
+    },
+    merge: function(candidate, simplifyOnly) {
+      if (this.subType != candidate.subType
+              || this.xpath != candidate.xpath) {
+        // Check for xpath modifications
+        var updateXpath = candidate.getMergedXPath(this);
+        if (!simplifyOnly && updateXpath) {
+          return [
+              this.cloneOnXPath(updateXpath),
+              candidate
+          ];
+        }
+        return undefined;
+      }
+      
+      return [ new DOMCharDataModifiedEvent(this.target, candidate.value, this.previousValue, this.xpath, this.displayXPath, this.changeSource, this.clone) ];
+    },
+    mergeRevert: function(candidate) {
+      if (this.xpath == candidate.xpath) {
+        return this.merge(candidate);
+      }
+    },
+    isCancellation: function(candidate) {
+      return this.xpath == candidate.xpath
+          && this.subType == candidate.subType
+          && this.previousValue == candidate.value;
+    },
+    affectsCancellation: function(candidate) {
+      return this.xpath == candidate.xpath
+          && this.subType == candidate.subType;
+    },
+
+    cloneOnXPath: function(xpath) {
+      return new DOMCharDataModifiedEvent(
+          this.target, this.value, this.previousValue, xpath, this.displayXPath, this.changeSource, this.clone);
+    },
+    
+    apply: function(target, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(target, xpath);
+            actionNode.replaceData(0, actionNode.length, this.value);
+          }, this));
+    },
+    revert: function(target, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(target, xpath);
+            actionNode.replaceData(0, actionNode.length, this.previousValue);
+          }, this));
+    }
+});
+
+FireDiff.events.dom = {
+    DOMInsertedEvent: DOMInsertedEvent,
+    DOMRemovedEvent: DOMRemovedEvent,
+    DOMAttrChangedEvent: DOMAttrChangedEvent,
+    DOMCharDataModifiedEvent: DOMCharDataModifiedEvent,
+    
+    createDOMChange: function(ev, changeSource) {
+      switch (ev.type) {
+      case "DOMNodeInserted":
+      case "DOMNodeInsertedInfoDocument":
+        return new DOMInsertedEvent(ev.target, undefined, undefined, undefined, changeSource);
+      case "DOMNodeRemoved":
+      case "DOMNodeRemovedFromDocument":
+        return new DOMRemovedEvent(ev.target, undefined, undefined, undefined, changeSource);
+      case "DOMAttrModified":
+        return new DOMAttrChangedEvent(ev.target, ev.attrChange, ev.attrName, ev.newValue, ev.prevValue, undefined, undefined, changeSource);
+      case "DOMCharacterDataModified":
+        return new DOMCharDataModifiedEvent(ev.target, ev.newValue, ev.prevValue, undefined, undefined, changeSource);
+      }
+    }
+};
+
+}});
+
+/* See license.txt for terms of usage */
+FireDiff  = FireDiff || {};
+
+FBL.ns(function() { with (FBL) {
+
+var i18n = document.getElementById("strings_firediff");
+i18n = {
+  getString: function(name)
+  {
+      return name;
+  }
+};
+
+var Path = FireDiff.Path,
+  Reps = FireDiff.reps,
+  CSSModel = FireDiff.CSSModel,
+  ChangeEvent = FireDiff.events.ChangeEvent,
+  
+  CHANGES = FireDiff.events.AnnotateAttrs.CHANGES,
+  REMOVE_CHANGES = FireDiff.events.AnnotateAttrs.REMOVE_CHANGES;
+
+function CSSChangeEvent(style, changeSource, xpath) {
+    ChangeEvent.call(this, changeSource);
+    
+    this.style = style;
+    this.xpath = xpath || Path.getStylePath(style);
+}
+CSSChangeEvent.prototype = extend(ChangeEvent.prototype, {
+    changeType: "CSS",
+
+    isPropSet: function() {},
+    isPropRemoval: function() {},
+
+    getXpath: function(target) { return Path.getStylePath(target); },
+    xpathLookup: function(xpath, root) {
+      return Path.evaluateStylePath(xpath, root);
+    },
+    sameFile: function(target) {
+      var targetXpath = target && (target.xpath || this.getXpath(target));
+      return targetXpath && Path.getTopPath(targetXpath) == Path.getTopPath(this.xpath);
+    },
+    getSnapshot: function(context) {
+      return new Reps.CSSSnapshot(this, context);
+    },
+    getBaseSnapshot: function(context) {
+      var rootPath = Path.getTopPath(this.xpath);
+      var sheet = Path.evaluateStylePath(rootPath, context.window.document);
+      return new Reps.CSSSnapshot(sheet, context);
+    },
+    getDocumentName: function(context) {
+      var rootPath = Path.getTopPath(this.xpath);
+      var sheet = Path.evaluateStylePath(rootPath, context.window.document);
+
+      return sheet.href;
+    }
+});
+
+function CSSRuleEvent(style, changeSource, xpath, clone) {
+  CSSChangeEvent.call(this, style, changeSource, xpath);
+  
+  this.clone = clone || CSSModel.cloneCSSObject(style);
+}
+CSSRuleEvent.prototype = extend(CSSChangeEvent.prototype, {
+  // This is a little bit of a hack. The rule editor does not always have a
+  // valid rep object and as a consequence we can't key on the target.
+  //
+  // Since rule insert and remove events always come from Firebug we assume
+  // that this change applies to the current editor
+  appliesTo: function(target) { return target; },
+
+  mergeRevert: function(candidate) {
+    if (Path.isChildOrSelf(this.xpath, candidate.xpath)
+        && this.subType != candidate.subType) {
+      return this.merge(candidate);
+    }
+  }
+});
+
+function CSSInsertRuleEvent(style, changeSource, xpath, clone) {
+  CSSRuleEvent.call(this, style, changeSource, xpath, clone);
+}
+CSSInsertRuleEvent.prototype = extend(CSSRuleEvent.prototype, {
+  subType: "insertRule",
+  getSummary: function() {
+    return i18n.getString("summary.CSSInsertRule");
+  },
+  isElementAdded: function() { return true; },
+
+  annotateTree: function(tree, root) {
+    var parent = this.getInsertActionNode(tree, root).parent;
+    var identifier = Path.getIdentifier(this.xpath);
+    
+    if (!parent && FBTrace.DBG_ERRORS) {
+      FBTrace.sysout("CSSRuleEvent.annotateTree: Failed to lookup parent " + this.xpath + " " + root, tree);
+    }
+    var rule = parent.cssRules[identifier.index-1];
+    if (!rule && FBTrace.DBG_ERRORS) {
+      FBTrace.sysout("CSSRuleEvent.annotateTree: Failed to lookup rule: " + identifier.index + " " + parent, unwrapObject(parent));
+    }
+    rule[CHANGES] = this;
+    rule.xpath = this.xpath;
+    return rule;
+  },
+  merge: function(candidate, simplifyOnly) {
+    if (candidate.isElementRemoved() && this.xpath == candidate.xpath) {
+      return;
+    }
+    
+    var updateXpath = candidate.getMergedXPath(this);
+    if (!simplifyOnly && updateXpath) {
+      return [
+          this.cloneOnXPath(updateXpath),
+          candidate
+        ];
+    } else if (Path.isChildOrSelf(this.xpath, candidate.xpath)
+        && (candidate.isPropSet() || candidate.isPropRemoval())){
+      // TODO : Handle @media nested changes?
+      var clone = this.clone.clone();
+      candidate.apply(clone, this.xpath);
+      
+      return [ new CSSInsertRuleEvent(this.style, this.changeSource, this.xpath, clone) ];
+    }
+  },
+  isCancellation: function(candidate) {
+    return candidate.isElementRemoved()
+        && this.xpath == candidate.xpath
+        && this.clone.equals(candidate.clone);
+  },
+  affectsCancellation: function(candidate) {
+    return Path.isChildOrSelf(this.xpath, candidate.xpath);
+  },
+  cloneOnXPath: function(xpath) {
+    return new CSSInsertRuleEvent(this.style, this.changeSource, xpath, this.clone);
+  },
+  
+  apply: function(style, xpath) {
+    Firebug.DiffModule.ignoreChanges(bindFixed(
+        function() {
+          var actionNode = this.getInsertActionNode(style, xpath);
+          var identifier = Path.getIdentifier(this.xpath);
+          identifier.index--;
+          
+          if (actionNode.parent instanceof CSSStyleSheet
+              || actionNode.parent instanceof CSSMediaRule) {
+            Firebug.CSSModule.insertRule(actionNode.parent, this.clone.cssText, identifier.index);
+          } else {
+            actionNode.parent.cssRules.splice(identifier.index, 0, CSSModel.cloneCSSObject(this.clone));
+          }
+        }, this));
+  },
+  revert: function(style, xpath) {
+    Firebug.DiffModule.ignoreChanges(bindFixed(
+        function() {
+          var actionNode = this.getInsertActionNode(style, xpath);
+          var identifier = Path.getIdentifier(this.xpath);
+          identifier.index--;
+          
+          if (actionNode.parent instanceof CSSStyleSheet
+              || actionNode.parent instanceof CSSMediaRule) {
+            Firebug.CSSModule.deleteRule(actionNode.parent, identifier.index);
+          } else {
+            actionNode.parent.cssRules.splice(identifier.index, 1);
+          }
+        }, this));
+  }
+});
+
+function CSSRemoveRuleEvent(style, changeSource, xpath, clone, styleSheet) {
+  CSSRuleEvent.call(this, style, changeSource, xpath, clone);
+  this.styleSheet = styleSheet || style.parentStyleSheet;
+}
+CSSRemoveRuleEvent.prototype = extend(CSSRuleEvent.prototype, {
+  subType: "removeRule",
+  getSummary: function() {
+    return i18n.getString("summary.CSSRemoveRule");
+  },
+  isElementRemoved: function() { return true; },
+
+  annotateTree: function(tree, root) {
+    var actionNode = this.getInsertActionNode(tree, root).parent;
+    var list = actionNode[REMOVE_CHANGES] || [];
+    list.push(this);
+    actionNode[REMOVE_CHANGES] = list;
+    // TODO : Verify this is UTed
+    actionNode.xpath = this.xpath;
+    
+    return this;
+  },
+  merge: function(candidate, simplifyOnly) {
+    if (candidate.isElementAdded() && this.xpath == candidate.xpath) {
+      return;
+    }
+    
+    var updateXpath = candidate.getMergedXPath(this);
+    if (!simplifyOnly && updateXpath) {
+      return [
+          this.cloneOnXPath(updateXpath),
+          candidate
+        ];
+    }
+  },
+  mergeRevert: function(candidate) {
+    if (this.isCancellation(candidate)) {
+      return [];
+    }
+  },
+  overridesChange: function(prior) {
+    return !prior.isElementRemoved() && this.xpath == prior.xpath;
+  },
+  isCancellation: function(candidate) {
+    return this.xpath == candidate.xpath
+        && candidate.isElementAdded()
+        && this.clone.equals(candidate.clone);
+  },
+  affectsCancellation: function(candidate) {
+    return this.isCancellation(candidate);
+  },
+  cloneOnXPath: function(xpath) {
+    return new CSSRemoveRuleEvent(this.style, this.changeSource, xpath, this.clone, this.styleSheet);
+  },
+  
+  apply: CSSInsertRuleEvent.prototype.revert,
+  revert: CSSInsertRuleEvent.prototype.apply
+});
+
+function CSSPropChangeEvent(style, propName, changeSource, xpath) {
+  CSSChangeEvent.call(this, style, changeSource, xpath);
+  
+  this.propName = propName;
+}
+CSSPropChangeEvent.prototype = extend(CSSChangeEvent.prototype, {
+  annotateTree: function(tree, root) {
+    var parent = this.getActionNode(tree, root);
+    
+    if (!parent && FBTrace.DBG_ERRORS) {
+      FBTrace.sysout("CSSRuleEvent.annotateTree: Failed to lookup parent " + this.xpath, tree);
+    }
+    var changes = parent.propChanges || [];
+    changes.push(this);
+    parent.propChanges = changes;
+    parent.xpath = this.xpath;
+    return parent;
+  },
+  
+  merge: function(candidate, simplifyOnly) {
+    var updateXpath = candidate.getMergedXPath(this);
+    if (!simplifyOnly && updateXpath) {
+      return [
+          this.cloneOnXPath(updateXpath),
+          candidate
+        ];
+    }
+    if (this.xpath != candidate.xpath
+        || this.propName != candidate.propName) {
+      return;
+    }
+
+    if (candidate.isPropSet()) {
+      return [
+        new CSSSetPropertyEvent(
+              this.style, this.propName,
+              candidate.propValue, candidate.propPriority,
+              this.prevValue, this.prevPriority, this.changeSource,
+              this.xpath)
+      ];
+    } else {
+      return [
+        new CSSRemovePropertyEvent(
+              this.style, this.propName,
+              this.prevValue, this.prevPriority,
+              this.changeSource, this.xpath)
+      ];
+    }
+  },
+  mergeRevert: function(candidate) {
+    if (this.xpath == candidate.xpath
+        && this.propName == candidate.propName) {
+      return this.merge(candidate);
+    }
+  },
+  affectsCancellation: function(candidate) {
+    return this.xpath == candidate.xpath
+        && this.propName == candidate.propName;
+  }
+});
+
+function CSSSetPropertyEvent(style, propName, propValue, propPriority, prevValue, prevPriority, changeSource, xpath) {
+  CSSPropChangeEvent.call(this, style, propName, changeSource, xpath);
+  
+  this.propValue = propValue;
+  this.propPriority = propPriority;
+  this.prevValue = prevValue;
+  this.prevPriority = prevPriority;
+}
+CSSSetPropertyEvent.prototype = extend(CSSPropChangeEvent.prototype, {
+    subType: "setProp",
+    
+    getSummary: function() {
+        return i18n.getString("summary.CSSSetProperty");
+    },
+    isPropSet: function() { return true; },
+    isCancellation: function(candidate) {
+      return this.xpath == candidate.xpath
+          && this.propName == candidate.propName
+          && this.prevValue == candidate.propValue
+          && this.prevPriority == candidate.propPriority;
+    },
+    cloneOnXPath: function(xpath) {
+      return new CSSSetPropertyEvent(
+          this.style, this.propName,
+          this.propValue, this.propPriority,
+          this.prevValue, this.prevPriority,
+          this.changeSource,
+          xpath);
+    },
+    
+    apply: function(style, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(style, xpath);
+            Firebug.CSSModule.setProperty(actionNode.style, this.propName, this.propValue, this.propPriority);
+          }, this));
+    },
+    revert: function(style, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(style, xpath);
+            if (this.prevValue) {
+              Firebug.CSSModule.setProperty(actionNode.style, this.propName, this.prevValue, this.prevPriority);
+            } else {
+              Firebug.CSSModule.removeProperty(actionNode.style, this.propName);
+            }
+          }, this));
+    }
+});
+
+function CSSRemovePropertyEvent(style, propName, prevValue, prevPriority, changeSource, xpath) {
+  CSSPropChangeEvent.call(this, style, propName, changeSource, xpath);
+
+  // Seed empty values for the current state. This makes the domplate
+  // display much easier
+  this.propValue = "";
+  this.propPriority = "";
+  
+  this.prevValue = prevValue;
+  this.prevPriority = prevPriority;
+}
+CSSRemovePropertyEvent.prototype = extend(CSSPropChangeEvent.prototype, {
+    subType: "removeProp",
+    
+    getSummary: function() {
+        return i18n.getString("summary.CSSRemoveProperty");
+    },
+    isPropRemoval: function() { return true; },
+    isCancellation: function(candidate) {
+      return this.xpath == candidate.xpath
+          && this.subType != candidate.subType
+          && this.propName == candidate.propName
+          && this.prevValue == candidate.propValue
+          && this.prevPriority == candidate.propPriority;
+    },
+    cloneOnXPath: function(xpath) {
+      return new CSSRemovePropertyEvent(
+          this.style, this.propName,
+          this.prevValue, this.prevPriority,
+          this.changeSource,
+          xpath);
+    },
+    apply: function(style, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(style, xpath);
+            Firebug.CSSModule.removeProperty(actionNode.style, this.propName);
+          }, this));
+    },
+    revert: function(style, xpath) {
+      Firebug.DiffModule.ignoreChanges(bindFixed(
+          function() {
+            var actionNode = this.getActionNode(style, xpath);
+            Firebug.CSSModule.setProperty(actionNode.style, this.propName, this.prevValue, this.prevPriority);
+          }, this));
+    }
+});
+
+FireDiff.events.css = {
+  CSSInsertRuleEvent: CSSInsertRuleEvent,
+  CSSRemoveRuleEvent: CSSRemoveRuleEvent,
+  CSSSetPropertyEvent: CSSSetPropertyEvent,
+  CSSRemovePropertyEvent: CSSRemovePropertyEvent
+};
+
+}});
+
+/* See license.txt for terms of usage */
+var FireDiff = FireDiff || {};
+FireDiff.domplate = {};
+
+FBL.ns(function() {
+(function () { with(FBL) {
+
+var i18n = document.getElementById("strings_firediff");
+const Events = FireDiff.events,
+      Path = FireDiff.Path,
+      CSSModel = FireDiff.CSSModel,
+      VersionCompat = FireDiff.VersionCompat,
+      Search = FireDiff.search;
+
+var DomUtil = {
+  diffText: function(change) {
+    function getText(value) {
+      return Firebug.showWhitespaceNodes ? value : value.replace(/(?:^\s+)|(?:\s+$)/g, "");
+    }
+
+    var diffChanges = change[FireDiff.events.AnnotateAttrs.CHANGES] || change;
+    if (diffChanges.changeType) {
+      return JsDiff.diffWords(getText(diffChanges.previousValue), getText(diffChanges.value));
+    } else {
+      return [{ value: getText(change.nodeValue) }];
+    }
+  },
+  diffAttr: function(attr) {
+    if (attr.change) {
+      if (attr.localName == "style") {
+        return JsDiff.diffCss(attr.change.previousValue, attr.change.value);
+      } else {
+        return JsDiff.diffWords(attr.change.previousValue, attr.change.value);
+      }
+    } else {
+        return [ { value: attr.nodeValue } ];
+    }
+  },
+  isEmptyElement: function(element) {
+    return !element.firstChild && !element[Events.AnnotateAttrs.REMOVE_CHANGES];
+  },
+
+  isPureText: function(element) {
+    for (var child = element.firstChild; child; child = child.nextSibling) {
+      if (child.nodeType == Node.ELEMENT_NODE) {
+        return false;
+      }
+    }
+    var removeChanges = element[Events.AnnotateAttrs.REMOVE_CHANGES] || [];
+    for (var i = 0; i < removeChanges.length; i++) {
+      if (removeChanges[i].clone.nodeType == Node.ELEMENT_NODE) {
+        return false;
+      }
+    }
+    return true;
+  },
+
+  isWhitespaceText: function(node) {
+    return VersionCompat.isWhitespaceText(node.clone || node);
+  },
+
+  isSourceElement: VersionCompat.isSourceElement
+};
+this.DomUtil = DomUtil;
+
+// Common Domplates
+/**
+ * Pretty print attribute list.
+ * 
+ * Represents a list of attributes as well as any changes that have been applies
+ * to these attributes.
+ * 
+ * Parameter:
+ *   change: Change object that we are displaying
+ */
+var attributeList = domplate({
+  tag: FOR("attr", "$change|attrIterator", TAG("$attr|getAttrTag", {attr: "$attr"})),
+  attributeDiff:
+      SPAN({"class": "nodeAttr", $removedClass: "$attr|isAttrRemoved", $addedClass: "$attr|isAttrAdded",
+        $firebugDiff: "$attr|isFirebugDiff", $appDiff: "$attr|isAppDiff"},
+          "&nbsp;",
+          SPAN({"class": "nodeName"}, "$attr.localName"), "=&quot;",
+          SPAN({"class": "nodeValue"}, 
+              FOR("block", "$attr|diffAttr",
+                      SPAN({$removedClass: "$block.removed", $addedClass: "$block.added"}, "$block.value"))
+          ),
+          "&quot;"
+     ),
+  
+  getAttrTag: function(attr) {
+      return this.attributeDiff;
+  },
+
+  attrIterator: function(change) {
+    return Search.getAttributes(change);
+  },
+
+  isAttrAdded: function(attr) {
+      return attr.change && attr.change.isAddition();
+  },
+  isAttrRemoved: function(attr) {
+      return attr.change && attr.change.isRemoval();
+  },
+  isFirebugDiff: function(attr) {
+    return attr.change && attr.change.changeSource == Events.ChangeSource.FIREBUG_CHANGE;
+  },
+  isAppDiff: function(attr) {
+    return attr.change && attr.change.changeSource == Events.ChangeSource.APP_CHANGE;
+  },
+  diffAttr: function(attr) {
+    return DomUtil.diffAttr(attr);
+  }
+});
+
+var propertyDefinition = domplate({
+  tag: 
+    DIV({"class": "cssPropDiff"},
+      SPAN({$removedClass: "$change|isPropRemoved", $addedClass: "$change|isPropAdded"},
+        SPAN({"class": "cssPropName"}, "$change.propName"),
+        SPAN({"class": "cssColon"}, ":"),
+        SPAN({"class": "cssPropValue"},
+          FOR("block", "$change|diffProp",
+            SPAN({$removedClass: "$block.removed", $addedClass: "$block.added"}, "$block.value")),
+          SPAN({$removedClass: "$change|isPriorityRemoved", $addedClass: "$change|isPriorityAdded"},
+            "$change|getPriorityText")
+        ),
+        SPAN({"class": "cssSemi"}, ";")
+    )),
+  
+  diffProp: function(change) {
+      return JsDiff.diffCss(change.prevValue, change.propValue);
+  },
+  isPropAdded: function(change) { return !change.prevValue; },
+  isPropRemoved: function(change) { return !change.propValue; },
+  
+  getPriorityText: function(change) {
+    var important = change.propPriority || change.prevPriority;
+    return important ? (" !" + important) : "";
+  },
+  isPriorityAdded: function(change) { return !change.prevPriority; },
+  isPriorityRemoved: function(change) { return !change.propPriority; }
+});
+
+// Diff Monitor Domplates
+// TODO : Allow replink in the monitor case
+var textChanged = domplate(FirebugReps.TextNode, {
+  tag: SPAN(
+      {"class": "textDiff", $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded"},
+        FOR("block", "$change|diffText",
+            SPAN({$removedClass: "$block.removed", $addedClass: "$block.added"}, "$block.value")
+        )),
+  diffText: function(change) {
+    return DomUtil.diffText(change);
+  },
+  isElementAdded: function(change) {
+    change = change || change[FireDiff.events.AnnotateAttrs.CHANGES];
+    return change && change.isElementAdded && change.isElementAdded();
+  },
+  isElementRemoved: function(change) {
+    change = change || change[FireDiff.events.AnnotateAttrs.CHANGES];
+    return change && change.isElementRemoved && change.isElementRemoved();
+  }
+});
+
+this.TextChanged = textChanged;
+
+// Displays a rep link to an element that has changed.
+// 
+// These changes are primarily attribute and insertion changes
+// TODO : Attempt to merge this with the domplate defined below
+this.ElementChanged = domplate(FirebugReps.Element, {
+    tag: FirebugReps.OBJECTLINK(
+        {$removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded"},
+        "&lt;",
+        SPAN({"class": "nodeTag"}, "$change.clone.localName|toLowerCase"),
+        TAG(attributeList.tag, {change: "$change"}),
+        "&gt;"
+    ),
+    isElementAdded: function(change) {
+        return change.isElementAdded();
+    },
+    isElementRemoved: function(change) {
+        return change.isElementRemoved();
+    }
+});
+
+// All Changes Domplates
+var ChangeElement = extend(FirebugReps.Element, {
+  removedChanges: function(node) {
+    return node[FireDiff.events.AnnotateAttrs.REMOVE_CHANGES] || [];
+  },
+  
+  getElementName: function(change) {
+    // TODO : XML Handling
+    change = change.clone || change;
+    return (change.localName || "").toLowerCase();
+  },
+  isElementAdded: function(change) {
+    change = change[FireDiff.events.AnnotateAttrs.CHANGES] || change;
+    return change && change.isElementAdded && change.isElementAdded();
+  },
+  isElementRemoved: function(change) {
+    change = change[FireDiff.events.AnnotateAttrs.CHANGES] || change;
+    return change && change.isElementRemoved && change.isElementRemoved();
+  },
+  isFirebugDiff: function(change) {
+    change = change[FireDiff.events.AnnotateAttrs.CHANGES] || change;
+    return change.changeSource == Events.ChangeSource.FIREBUG_CHANGE;
+  },
+  isAppDiff: function(change) {
+    change = change[FireDiff.events.AnnotateAttrs.CHANGES] || change;
+    return change.changeSource == Events.ChangeSource.APP_CHANGE;
+  }
+});
+
+var ParentChangeElement = extend(ChangeElement, {
+  childIterator: function(node) {
+    node = node.clone || node;
+    if (node.contentDocument)
+      // TODO : Should this use contentDocument.childNodes?
+      return [node.contentDocument.documentElement];
+    
+    function includeChild(child) {
+      return Firebug.showWhitespaceNodes || !DomUtil.isWhitespaceText(child);
+    }
+    return new Search.RemovedIterator(new Search.DOMIterator(node), this.removedChanges(node), includeChild);
+  }
+});
+
+var allChanges = {
+    getNodeTag: function(node, inline) {
+      if (node instanceof Element) {
+        if (node instanceof HTMLAppletElement)
+          return allChanges.EmptyElement.tag;
+        else if (node.firebugIgnore)
+          return null;
+        else if (DomUtil.isEmptyElement(node))
+          return allChanges.EmptyElement.tag;
+        else if (!DomUtil.isSourceElement(node) && DomUtil.isPureText(node))
+          return allChanges.TextElement.tag;
+        else
+          return allChanges.Element.tag;
+      }
+      else if (node instanceof CDATASection)  // Must occur before instanceof Text
+        return allChanges.CDATANode.tag;
+      else if (node instanceof Text)
+        return inline ? allChanges.InlineTextNode.tag : allChanges.TextNode.tag;
+      else if (node instanceof ProcessingInstruction)
+        return allChanges.ProcessingInstruction.tag;
+      else if (node instanceof Comment && Firebug.showCommentNodes)
+        return allChanges.CommentNode.tag;
+      else if (node instanceof SourceText)
+        return FirebugReps.SourceText.tag;
+      else if (node instanceof Document)
+        return allChanges.Document.tag;
+      else if (node instanceof DocumentType)
+        return allChanges.DocType.tag;
+      else if (node instanceof DocumentFragment)
+        return allChanges.Document.tag;
+      else
+        return FirebugReps.Nada.tag;
+    },
+
+    Document: domplate(ParentChangeElement, {
+      tag:
+        DIV({"class": "nodeBox containerNodeBox repIgnore", _repObject: "$change" }, DIV({"class": "nodeChildBox"}))
+    }),
+
+    DocType: domplate(ChangeElement, {
+      tag: DIV({"class": "nodeBox emptyNodeBox repIgnore", _repObject: "$change",
+        $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+        $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+      DIV({"class": "nodeLabel"},
+        SPAN({"class": "nodeLabelBox repTarget"},
+          "&lt;!DOCTYPE&nbsp;",
+          SPAN({"class": "nodeTag"}, "$change|getDocTypeName"),
+
+          SPAN({$collapsed: "$change|hidePublicId"}, "&nbsp;PUBLIC&nbsp;"),
+          SPAN({"class": "nodeValue", $collapsed: "$change|hidePublicId"}, "&quot;", "$change|getPublicId", "&quot;"),
+
+          SPAN({$collapsed: "$change|hideSystemIdTag"}, "&nbsp;SYSTEM&nbsp;"),
+          SPAN({"class": "nodeValue", $collapsed: "$change|hideSystemId"}, "&quot;", "$change|getSystemId", "&quot;"),
+
+          SPAN({"class": "nodeInternalSubset", $collapsed: "$change|hideInternalSubset"},
+              "&nbsp;[", "$change|getInternalSubset", "]"),
+          SPAN({"class": "nodeBracket"}, "&gt;")
+          )
+        )
+      ),
+
+      getDocTypeName: function(change) {
+        // TODO : XML Handling
+        var docType = change.clone || change;
+        return (docType.name || docType).toLowerCase();
+      },
+
+      hidePublicId: function(change) {
+        return !this.getPublicId(change);
+      },
+      getPublicId: function(change) {
+        var docType = change.clone || change;
+        return docType.publicId;
+      },
+
+      hideSystemId: function(change) {
+        return !this.getSystemId(change);
+      },
+      hideSystemIdTag: function(change) {
+        return this.hideSystemId(change) || !this.hidePublicId(change);
+      },
+      getSystemId: function(change) {
+        var docType = change.clone || change;
+        return docType.systemId;
+      },
+
+      hideInternalSubset: function(change) {
+        return !this.getInternalSubset(change);
+      },
+      getInternalSubset: function(change) {
+        var docType = change.clone || change;
+        return docType.internalSubset;
+      }
+    }),
+
+    ProcessingInstruction: domplate(ChangeElement, {
+      tag: DIV({"class": "nodeBox emptyNodeBox repIgnore", _repObject: "$change",
+        $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+        $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+      DIV({"class": "nodeLabel"},
+        SPAN({"class": "nodeLabelBox repTarget"},
+          "&lt;?",
+          SPAN({"class": "nodeTag"}, "xslt-param"),
+          SPAN({"class": "nodeValue", $collapsed: "$change|hideContent"}, "&nbsp;", "$change|getContent"),
+          SPAN({"class": "nodeBracket"}, "?&gt;")
+          )
+        )
+      ),
+
+      hideContent: function(change) {
+        return !this.getContent(change);
+      },
+      getContent: function(change) {
+        var instruct = change.clone || change;
+        return instruct.nodeValue;
+      }
+    }),
+
+    Element: domplate(ChangeElement, {
+      tag:
+        DIV({"class": "nodeBox containerNodeBox repIgnore", _repObject: "$change",
+          $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+          $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+          DIV({"class": "nodeLabel nodeContainerLabel"},
+            IMG({"class": "twisty"}),
+            SPAN({"class": "nodeLabelBox repTarget"},
+              "&lt;",
+              SPAN({"class": "nodeTag"}, "$change|getElementName"),
+              TAG(attributeList.tag, {change: "$change"}),
+              SPAN({"class": "nodeBracket"}, "&gt;")
+            )
+          ),
+          DIV({"class": "nodeChildBox"}),
+          DIV({"class": "nodeCloseLabel"},
+            SPAN({"class": "nodeCloseLabelBox repTarget"},
+              "&lt;/", SPAN({"class": "nodeTag"}, "$change|getElementName"), "&gt;"
+            )
+          )
+        )
+    }),
+
+    TextElement: domplate(ParentChangeElement, {
+      tag:
+        DIV({"class": "nodeBox textNodeBox open repIgnore", _repObject: "$change",
+            $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+            $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+          SPAN({"class": "nodeLabel"},
+            SPAN({"class": "nodeLabelBox repTarget"},
+              "&lt;",
+              SPAN({"class": "nodeTag"}, "$change|getElementName"),
+              TAG(attributeList.tag, {change: "$change"}),
+              SPAN({"class": "nodeBracket"}, "&gt;"))),
+          SPAN({"class": "nodeChildBox"},
+            FOR("child", "$change|childIterator",
+              TAG("$child|getNodeTag", {change: "$child"})
+            )),
+          SPAN(
+            "&lt;/",
+            SPAN({"class": "nodeTag"}, "$change|getElementName"),
+            "&gt;"
+          )
+        ),
+        getNodeTag: function(node) {
+          return allChanges.getNodeTag(node.clone || node, true);
+        }
+    }),
+
+    EmptyElement: domplate(ChangeElement, {
+      tag: DIV({"class": "nodeBox emptyNodeBox repIgnore", _repObject: "$change",
+          $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+          $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+        DIV({"class": "nodeLabel"},
+          SPAN({"class": "nodeLabelBox repTarget"},
+            "&lt;",
+            SPAN({"class": "nodeTag"}, "$change|getElementName"),
+            TAG(attributeList.tag, {change: "$change"}),
+            SPAN({"class": "nodeBracket"}, "/&gt;")
+            )
+          )
+        )
+    }),
+
+    TextNode: domplate(ChangeElement, {
+      tag:
+        DIV({"class": "nodeBox", _repObject: "$change",
+            $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+            $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+          SPAN({"class": "nodeText"}, TAG(textChanged.tag, {change: "$change"}))
+        )
+    }),
+    InlineTextNode: domplate(ChangeElement, {
+      tag:
+        SPAN({_repObject: "$change",
+            $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+            $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+          SPAN({"class": "nodeText"}, TAG(textChanged.tag, {change: "$change"}))
+        )
+    }),
+
+    CDATANode: domplate(ChangeElement, {
+      tag: DIV({"class": "nodeBox", _repObject: "$change",
+          $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+          $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+        "&lt;![CDATA[",
+        SPAN({"class": "nodeText"}, TAG(textChanged.tag, {change: "$change"})),
+        "]]&gt;"
+        )
+    }),
+
+    CommentNode: domplate(ChangeElement, {
+      tag: DIV({"class": "nodeBox", _repObject: "$change",
+          $removedClass: "$change|isElementRemoved", $addedClass: "$change|isElementAdded",
+          $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff"},
+        DIV({"class": "nodeComment"},
+          "&lt;!--", TAG(textChanged.tag, {change: "$change"}), "--&gt;"
+          )
+        )
+    })
+};
+
+this.HtmlSnapshotView = function(tree, rootXPath, panelNode) {
+  this.tree = tree;
+  this.rootXPath = rootXPath;
+  this.panelNode = panelNode;
+}
+this.HtmlSnapshotView.prototype = {
+  childIterator: function(parent) {
+    return new Search.RemovedIterator(
+        new Search.DOMIterator(parent.clone || parent),
+        parent[FireDiff.events.AnnotateAttrs.REMOVE_CHANGES],
+        this.includeChild);
+  },
+  includeChild: function(child) {
+    return Firebug.showWhitespaceNodes || !DomUtil.isWhitespaceText(child);
+  },
+  
+  /* InsideOutBox View Interface */
+  getParentObject: function(child) {
+    if (child.parentNode) {
+      return child.parentNode.change || child.parentNode;
+    }
+    if (child.change) {
+      return child.change;
+    }
+    
+    if (child.xpath) {
+      var components = Path.getRelativeComponents(Path.getParentPath(child.xpath), this.rootXPath);
+      if (!components.right) {
+        var iterate = (this.tree.ownerDocument || this.tree).evaluate(components.left, this.tree, null, XPathResult.ANY_TYPE, null);
+        var ret = iterate.iterateNext();
+        return ret;
+      }
+    }
+  },
+  getChildObject: function(parent, index, prevSibling) {
+    if (!parent)    return;
+
+    var iter = parent._diffIter || this.childIterator(parent.clone || parent);
+    var diffCache = parent._diffCache || [];
+    // Read in more elements if the this is a cache miss
+    while (diffCache.length <= index && !parent._diffIterExhausted) {
+      try {
+        diffCache.push(iter.next());
+      } catch (err) {
+        // Assume this is StopIterator
+        parent._diffIterExhausted = true;
+      }
+    }
+    
+    parent._diffIter = iter;
+    parent._diffCache = diffCache;
+    
+    return diffCache[index];
+  },
+  createObjectBox: function(object, isRoot) {
+    var tag = allChanges.getNodeTag(object.clone || object, false);
+    return tag.replace({change: object}, this.panelNode.document);
+  }
+};
+
+var CSSChangeElement = {
+  getCSSRules: function(change) {
+    var removed = change[FireDiff.events.AnnotateAttrs.REMOVE_CHANGES] || [];
+    return new Search.RemovedIterator(new Search.ArrayIterator(change.cssRules), removed);
+  },
+  
+  getNodeTag: function(cssRule) {
+    var CSSChanges = FireDiff.domplate.CSSChanges;
+    
+    cssRule = cssRule.changeType ? cssRule.clone : cssRule;
+    if (cssRule instanceof CSSStyleSheet || cssRule instanceof CSSModel.StyleSheetClone) {
+      return CSSChanges.CSSList.tag;
+    } else if (cssRule instanceof CSSStyleRule || cssRule instanceof CSSModel.CSSStyleRuleClone
+        || cssRule instanceof CSSFontFaceRule || cssRule instanceof CSSModel.CSSFontFaceRuleClone) {
+      return CSSChanges.CSSStyleRule.tag;
+    } else if (cssRule instanceof CSSMediaRule || cssRule instanceof CSSModel.CSSMediaRuleClone) {
+      return CSSChanges.CSSMediaRule.tag;
+    } else if (cssRule instanceof CSSImportRule || cssRule instanceof CSSModel.CSSImportRuleClone) {
+      return CSSChanges.CSSImportRule.tag;
+    } else if (cssRule instanceof CSSCharsetRule || cssRule instanceof CSSModel.CSSCharsetRuleClone) {
+      return CSSChanges.CSSCharsetRule.tag;
+    }
+  }
+};
+this.CSSChanges = {
+  CSSList: domplate(CSSChangeElement, {
+    tag: FOR("rule", "$change|getCSSRules",
+      TAG("$rule|getNodeTag", {change: "$rule"})
+    )
+  }),
+  CSSImportRule: domplate(CSSChangeElement, {
+    tag: DIV({
+          "class": "cssRuleDiff firebugDiff",
+          _repObject: "$change"},
+      "@import &quot;$change.href&quot;;")
+  }),
+  CSSCharsetRule: domplate(CSSChangeElement, {
+    tag: DIV({
+          "class": "cssRuleDiff firebugDiff",
+          _repObject: "$change"
+        }, "@charset &quot;$change.encoding&quot;;")
+  }),
+  CSSMediaRule: domplate(CSSChangeElement, {
+    tag: DIV({
+          "class": "cssMediaRuleDiff firebugDiff",
+          _repObject: "$change"
+        },
+        DIV({"class": "cssSelector"}, "@media $change|getMediaList {"),
+        DIV({"class": "cssMediaRuleContent"},
+          FOR("rule", "$change|getCSSRules",
+              TAG("$rule|getNodeTag", {change: "$rule"}))),
+        DIV("}")
+    ),
+    getMediaList: function(change) {
+      var content = [],
+          media = change.media;
+      for (var i = 0; i < media.length; i++) {
+        content.push(media.item ? media.item(i) : media[i]);
+      }
+      return content.join(", ");
+    }
+  }),
+  CSSStyleRule: domplate(CSSChangeElement, {
+    tag: DIV({
+        "class": "cssRuleDiff firebugDiff",
+        _repObject: "$change",
+        $removedClass: "$change|isRemoved", $addedClass: "$change|isAdded"
+      },
+      DIV({"class": "cssHead"},
+        SPAN({"class": "cssSelector"}, "$change|getSelectorText"), " {"),
+          FOR("prop", "$change|getRemovedProps",
+            TAG(propertyDefinition.tag, {change: "$prop"})),
+          FOR("prop", "$change|getCurrentProps",
+            TAG(propertyDefinition.tag, {change: "$prop"})),
+        DIV("}")
+      ),
+    getSelectorText: function(change) {
+      return change.selectorText || (change.clone || change.style).selectorText;
+    },
+    isAdded: function(change) {
+      change = change[FireDiff.events.AnnotateAttrs.CHANGES] || change;
+      return change.subType == "insertRule";
+    },
+    isRemoved: function(change) {
+      change = change[FireDiff.events.AnnotateAttrs.CHANGES] || change;
+      return change.subType == "removeRule";
+    },
+    getRemovedProps: function(change) {
+      if (!change.propChanges) {
+        if (change.subType == "removeProp") {
+          return [change];
+        } else {
+          return [];
+        }
+      }
+      
+      var ret = [];
+      for (var i = 0; i < change.propChanges.length; i++) {
+        var prop = change.propChanges[i];
+        if (prop.subType == "removeProp") {
+          ret.push(prop);
+        }
+      }
+      return ret;
+    },
+    getCurrentProps: function(change) {
+      if (change.subType == "setProp") {
+        return [change];
+      } else if (change.subType == "removeProp") {
+        return [];
+      }
+      
+      var propList = {},
+          i = 0, index = 0,
+          style = (change.clone || change.style).style || change.style;
+      for (i = 0; i < style.length; i++) {
+        var propName = style[i],
+            propValue = style.getPropertyValue(propName),
+            propPriority = style.getPropertyPriority(propName);
+        propList[propName] = {
+          propName: propName,
+          propValue: propValue, propPriority: propPriority,
+          prevValue: propValue, prevPriority: propPriority
+        };
+      }
+      if (change.propChanges) {
+        for (i = 0; i < change.propChanges.length; i++) {
+          var prop = change.propChanges[i];
+          if (prop.subType == "setProp") {
+            propList[prop.propName] = prop;
+          }
+        }
+      }
+      return {
+        next: function() {
+          if (index >= style.length)   $break();
+          return propList[style[index++]];
+        }
+      }
+    }
+  })
+};
+
+}}).apply(FireDiff.domplate);
+});
+
+/* See license.txt for terms of usage */
+var FireDiff  = FireDiff || {};
+
+/**
+ * Classes used to iterate over DOM content and search Firediff pages.
+ */
+FireDiff.search = FBL.ns(function() { with (FBL) {
+
+const Events = FireDiff.events,
+      VersionCompat = FireDiff.VersionCompat,
+      DiffDomplate = FireDiff.domplate,
+      Search = this;
+
+/**
+ * @class Search for use in pages where all content is available and visible at all times.
+ */
+this.PageSearch = function() {
+  var currentSearch;
+
+  /**
+   * Execute the search
+   *
+   * @param {String} text Search text
+   * @param {boolean} reverse true to perform a reverse search
+   * @param {Element} panel Panel to search
+   */
+  this.search = function(text, reverse, panel) {
+    var panelNode = panel.panelNode;
+    if (!text) {
+      currentSearch = undefined;
+      return false;
+    }
+
+    var row;
+    if (currentSearch && text == currentSearch.text) {
+      row = currentSearch.findNext(true, false, reverse, Firebug.searchCaseSensitive);
+    } else {
+      function findRow(node) { return node.nodeType == 1 ? node : node.parentNode; }
+      currentSearch = new TextSearch(panelNode, findRow);
+      row = currentSearch.find(text, reverse, Firebug.searchCaseSensitive);
+    }
+
+    // TODO : What a11y events should this produce?
+    if (row) {
+      panel.document.defaultView.getSelection().selectAllChildren(row);
+      scrollIntoCenterView(row, panelNode);
+      return true;
+    } else {
+      return false;
+    }
+  };
+};
+
+/**
+ * Constructs a NodeSearch instance.
+ *
+ * @class Class used to search a DOM tree for the given text. Will display
+ *        the search results in a IO Box.
+ *
+ * @constructor
+ * @param {String} text Text to search for
+ * @param {Object} root Root of search. This may be an element or a document
+ * @param {Object} panelNode Panel node containing the IO Box representing the DOM tree.
+ * @param {Object} ioBox IO Box to display the search results in
+ */
+this.DOMDiffNodeSearch = function(text, root, panelNode, ioBox) {
+  VersionCompat.NodeSearch.call(
+      this, text, root, panelNode, ioBox, new Search.DOMDiffWalker(root));
+  var re = new ReversibleRegExp(text, "m");
+
+  /**
+   * Checks a given node for a search match.
+   *
+   * @private
+   */
+  this.checkNode = function(node, reverse, caseSensitive, firstStep) {
+    var originalNode = node;
+    node = node.clone || node;
+
+    var checkOrder, checkValues = [];
+    if (originalNode.attrNode) {
+      originalNode = node.attrNode;
+
+      var diff = DiffDomplate.DomUtil.diffAttr(node);
+      diff = diff.reduce(function(prev, current) { return prev + current.value; }, "");
+
+      var nameCheck = { value: originalNode.nodeName, isValue: false, caseSensitive: false };
+      var valueCheck = { value: diff, isValue: true, caseSensitive: caseSensitive };
+      checkOrder = reverse ? [ valueCheck, nameCheck ] : [ nameCheck, valueCheck ];
+    } else if (originalNode.subType == "char_data_modified") {
+      var diff = DiffDomplate.DomUtil.diffText(originalNode);
+      diff = diff.reduce(function(prev, current) { return prev + current.value; }, "");
+
+      checkOrder = [{value: diff, isValue: false, caseSensitive: caseSensitive }];
+    } else if (node.nodeType != Node.TEXT_NODE) {
+      var nameCheck = { value: node.nodeName, isValue: false, caseSensitive: false };
+      var valueCheck = { value: node.nodeValue, isValue: true, caseSensitive: caseSensitive };
+      checkOrder = reverse ? [ valueCheck, nameCheck ] : [ nameCheck, valueCheck ];
+    } else {
+      checkOrder = [{value: node.nodeValue, isValue: false, caseSensitive: caseSensitive }];
+    }
+
+    for (var i = firstStep || 0; i < checkOrder.length; i++) {
+      var m = re.exec(checkOrder[i].value, reverse, checkOrder[i].caseSensitive);
+      if (m) {
+        return {
+            node: originalNode,
+            isValue: checkOrder[i].isValue,
+            match: m
+        };
+      }
+    }
+  };
+
+  var super_openToNode = this.openToNode;
+  this.openToNode = function(node, isValue) {
+    var ret = super_openToNode.call(this, node, isValue);
+    if (!ret) {
+      // Fail over to the node if it's not supported by the base impl
+      ret = ioBox.openToObject(node);
+    }
+    return ret;
+  };
+};
+
+/**
+ * Constructs a DOMDiffWalker instance.
+ *
+ * @constructor
+ * @class Implements an ordered traveral of the document, including diff events,
+ *        attributes and iframe contents within the results.
+ *
+ *        Note that the order for attributes is not defined. This will follow the
+ *        same order as the Element.attributes accessor.
+ * @param {Element} root Element to traverse
+ */
+this.DOMDiffWalker = function(root) {
+  var stack = [];
+  var pastStart, pastEnd;
+
+  function pushStack(currentNode, reverse) {
+    if (currentNode) {
+      var attrs = Search.getAttributes(currentNode),
+          children = [];
+
+      // Precache the child elements to make the logic easier. If this becomes
+      // a performance issue then this can be revisited using an inline selection
+      // algorithm
+      try {
+        var baseIter;
+        var removeIter = new Search.RemovedIterator(
+            new Search.DOMIterator(currentNode.clone || currentNode),
+            currentNode[Events.AnnotateAttrs.REMOVE_CHANGES]);
+        while (1) {
+          children.push(removeIter.next());
+        }
+      } catch (err) {
+        /* NOP */
+      }
+
+      stack.unshift({
+        node: currentNode,
+        attrs: attrs,
+        attrIndex: reverse ? attrs.length-1 : -1,
+        children: children,
+        childIndex: reverse ? children.length-1 : -1
+      });
+      return stack[0];
+    }
+  }
+
+  function pushDescendents(el) {
+    while (el) {
+      pushStack(el, true);
+      if (((el.nodeName || "").toUpperCase() == "IFRAME")) {
+        el = el.contentDocument.documentElement;
+      } else {
+        el = stack[0].children[stack[0].children.length-1];
+      }
+    }
+  }
+
+  /**
+   * Move to the next node.
+   *
+   * @return The next node if one exists, otherwise undefined.
+   */
+  this.nextNode = function() {
+    if (pastEnd) {
+      return undefined;
+    }
+
+    if (!stack.length) {
+      // We are working with a new tree walker
+      pushStack(root);
+    } else {
+      var stackEl = stack[0];
+
+      // First check attributes
+      if (stackEl.attrIndex < stackEl.attrs.length-1) {
+        stackEl.attrIndex++;
+      } else if ((stackEl.node.nodeName || "").toUpperCase() == "IFRAME"
+          && stackEl.node.contentDocument) {
+        // Attributes have completed, check for iframe contents
+        pushStack(stackEl.node.contentDocument.documentElement);
+      } else {
+        while (stack.length) {
+          stackEl = stack[0];
+          stackEl.childIndex++;
+          if (stackEl.childIndex < stackEl.children.length) {
+            pushStack(stackEl.children[stackEl.childIndex]);
+            break;
+          } else {
+            // The end, pop
+            stack.shift();
+          }
+        }
+      }
+    }
+
+    if (!stack.length) {
+      pastEnd = true;
+    } else {
+      pastStart = false;
+    }
+
+    return this.currentNode();
+  };
+
+  /**
+   * Move to the previous node.
+   *
+   * @return The previous node if one exists, undefined otherwise.
+   */
+  this.previousNode = function() {
+    if (pastStart) {
+      return undefined;
+    }
+
+    var stackEl = stack[0];
+    if (!stackEl) {
+      // Generate the stack up to the last element
+      pushDescendents(root);
+    } else if (stackEl.childIndex >= 0) {
+      stackEl.childIndex--;
+      pushDescendents(stackEl.children[stackEl.childIndex]);
+    } else if (stackEl.attrIndex >= 0) {
+      stackEl.attrIndex--;
+    } else {
+      stack.shift();
+      stackEl = stack[0];
+      if (stackEl && stackEl.childIndex >= 0) {
+        stackEl.childIndex--;
+        pushDescendents(stackEl.children[stackEl.childIndex]);
+      }
+    }
+
+    if (!stack.length) {
+      pastStart = true;
+    } else {
+      pastEnd = false;
+    }
+
+    return this.currentNode();
+  };
+
+  /**
+   * Retrieves the current node.
+   *
+   * @return The current node, if not past the beginning or end of the iteration.
+   */
+  this.currentNode = function() {
+    var stackEl = stack[0];
+    if (stackEl) {
+      if (stackEl.attrIndex >= 0) {
+        return stackEl.attrs[stackEl.attrIndex];
+      } else {
+        return stackEl.node;
+      }
+    }
+  };
+
+  /**
+   * Resets the walker position back to the initial position.
+   */
+  this.reset = function() {
+    pastStart = false;
+    pastEnd = false;
+    stack = [];
+  };
+
+  this.reset();
+};
+
+/**
+ * @class Iterates over the contents of an array
+ */
+this.ArrayIterator = function(array) {
+  var index = -1;
+
+  /**
+   * Retrieves the next element in the iteration.
+   */
+  this.next = function() {
+    if (++index >= array.length)    $break();
+    return array[index];
+  };
+};
+
+/**
+ * @class Iterates over the children of a given node.
+ */
+this.DOMIterator = function(node) {
+  var curNode = node.firstChild;
+
+  /**
+   * Retrieves the next element in the iteration.
+   */
+  this.next = function() {
+    var ret = curNode;
+
+    curNode = curNode.nextSibling;
+    while (curNode && Firebug.DiffModule.ignoreNode(curNode)) {
+      curNode = curNode.nextSibling;
+    }
+
+    if (!ret)  $break();
+    return ret;
+  }
+}
+
+/**
+ * @class Iterates over a child iterator and a set of removed events, merging
+ *        the remove events at the proper location in the iteration.
+ */
+this.RemovedIterator = function(content, removed, includeFilter) {
+  removed = removed || [];
+
+  var nodeIndex = 1, removedIndex = 0,
+      lastId;
+
+  /**
+   * Retrieves the next element in the iteration.
+   */
+  this.next = function() {
+    // Check for removed at the current position
+    while (true) {
+      while (removedIndex < removed.length) {
+        var curChange = removed[removedIndex];
+        lastId = lastId || FireDiff.Path.getIdentifier(curChange.xpath);
+        if (lastId.index <= nodeIndex || nodeIndex < 0) {
+          removedIndex++;   lastId = undefined;
+          if (!includeFilter || includeFilter(curChange)) {
+            return curChange;
+          }
+        } else {
+          break;
+        }
+      }
+
+      // Read the content list
+      nodeIndex++;
+      if (content) {
+        try {
+          var ret = content.next();
+          if (ret && (!includeFilter || includeFilter(ret))) {
+            if (ret.nodeType == Node.TEXT_NODE && ret[Events.AnnotateAttrs.CHANGES]) {
+              return ret[Events.AnnotateAttrs.CHANGES];
+            } else {
+              return ret;
+            }
+          }
+        } catch (err) {
+          // Assume this is StopIteration
+          content = undefined;
+        }
+      } else if (removedIndex >= removed.length) {
+        // Content and removed exhausted
+        $break();
+      }
+    }
+  };
+};
+
+/**
+ * Retrieves all attributes for a given change or element. This includes all
+ * changes and existing attributes.
+ */
+this.getAttributes = function(change) {
+  var attrs = [], attrSeen = {};
+  var idAttr, classAttr, changeAttr;
+  var el = change.clone || change;
+
+  var changes = el[Events.AnnotateAttrs.ATTR_CHANGES] || {};
+  if (change.clone && change.attrName) {
+    changes = {};
+    changes[change.attrName] = change;
+  }
+
+  if (el.attributes) {
+    for (var i = 0; i < el.attributes.length; ++i) {
+      var attr = el.attributes[i];
+      if (attr.localName.indexOf("firebug-") != -1)
+         continue;
+
+      // We need to include the change object as domplate does not have an easy way
+      // to pass multiple arguments to a processing method
+      var curChange = changes[attr.localName];
+      if (curChange) {
+          changeAttr = {
+              localName: attr.localName,
+              nodeValue: attr.nodeValue,
+              attrNode: attr,
+              change: curChange
+          };
+          attr = changeAttr;
+      }
+
+      attrSeen[attr.localName] = true;
+      if (attr.localName == "id") {
+        idAttr = attr;
+      }
+      else if (attr.localName == "class") {
+       classAttr = attr;
+      }
+      else {
+        attrs.push(attr);
+      }
+    }
+  }
+  if (classAttr) {
+    attrs.splice(0, 0, classAttr);
+  }
+  if (idAttr) {
+    attrs.splice(0, 0, idAttr);
+  }
+
+  // Handle any removed attributes
+  for (var i in changes) {
+    if (changes.hasOwnProperty(i) && !attrSeen.hasOwnProperty(i)) {
+      attrs.push({
+          localName: i,
+          nodeValue: changes[i].previousValue,
+          change: changes[i]
+      });
+    }
+  }
+
+  return attrs;
+};
+
+}});
+
+/* See license.txt for terms of usage */
+var FireDiff  = FireDiff || {};
+
+FireDiff.reps = FBL.ns(function() { with (FBL) {
+
+var Fireformat = {};
+
+try {
+  //Components.utils.import("resource://fireformat/formatters.jsm", Fireformat);
+} catch (err) {
+}
+
+//const dateFormat = CCSV("@mozilla.org/intl/scriptabledateformat;1", "nsIScriptableDateFormat");
+
+var Events = FireDiff.events,
+    Path = FireDiff.Path,
+    CSSModel = FireDiff.CSSModel,
+    DiffDomplate = FireDiff.domplate,
+    Search = FireDiff.search;
+
+var i18n = document.getElementById("strings_firediff");
+i18n = {
+  getString: function(name)
+  {
+      return name;
+  }
+};
+
+// Object used to define the monitor view
+this.Monitor = domplate({
+  entry: DIV(
+      {"class": "diffMonitorElement", $firebugDiff: "$change|isFirebugDiff", $appDiff: "$change|isAppDiff", _repObject: "$change"},
+      SPAN({"class": "diffSummary"}, "$change|getSummary"),
+      SPAN({"class": "diffSep"}, ":"),
+      SPAN({"class": "diffSource"}, "$change|getDiffSource"),
+      SPAN({"class": "diffDate"}, "$change|getDate"),
+      DIV({"class": "diffXPath"}, "$change|getXPath"),
+      DIV({"class": "logEntry"}, TAG("$change|getChangeTag", {change: "$change", object: "$change.target"}))
+      ),
+  
+  getChangeTag: function(change) {
+    if (change.changeType == "CSS") {
+      return DiffDomplate.CSSChanges.CSSStyleRule.tag;
+    } else if (change.clone instanceof Text) {
+      return DiffDomplate.TextChanged.tag;
+    } else {
+      return DiffDomplate.ElementChanged.tag;
+    }
+  },
+  getSummary: function(change) {
+    return change.getSummary();
+  },
+  getDiffSource: function(change) {
+    if (this.isFirebugDiff(change)) {
+      return i18n.getString("source.firebug");
+    } else {
+      return i18n.getString("source.application");
+    }
+  },
+  getDate: function(change) {
+    var date = change.date;
+    return date+"";
+    return dateFormat.FormatDateTime(
+        "", dateFormat.dateFormatLong, dateFormat.timeFormatSeconds,
+        date.getFullYear(), date.getMonth() + 1, date.getDate(),
+        date.getHours(), date.getMinutes(), date.getSeconds()); 
+  },
+  getXPath: function(change) {
+    return change.displayXPath || change.xpath || "";
+  },
+  isFirebugDiff: function(change) {
+    return change.changeSource == Events.ChangeSource.FIREBUG_CHANGE;
+  },
+  isAppDiff: function(change) {
+    return change.changeSource == Events.ChangeSource.APP_CHANGE;
+  },
+  
+  getChanges: function() {
+    return Firebug.DiffModule.getChanges();
+  },
+  getTag: function(object) {
+    return this.entry;
+  },
+  
+  show: function(panel) {
+    var changes = Firebug.DiffModule.getChanges();
+    for (var i = 0; i < changes.length; i++) {
+      this.onChange(changes[i], panel);
+    }
+  },
+  onChange: function(change, panel) {
+    try {
+      this.entry.append({change: change}, panel.panelNode);
+    } catch (err) {
+      FBTrace.sysout("ERROR: onChange", err);
+    }
+  },
+  search: function(text, reverse, panel) {
+    this.searchHelper = this.searchHelper || new Search.PageSearch();
+    return this.searchHelper.search(text, reverse, panel);
+  }
+});
+this.MonitorRep = domplate(Firebug.Rep,{
+  supportsObject: function(object, type) {
+    return object == FireDiff.reps.Monitor;
+  },
+  getTitle: function(object) {
+    return i18n.getString("page.ChangeLog");
+  }
+});
+
+/**
+ * Initializes the base snapshot datastructures. The passed parameter may be a
+ * change event to generate a snapshot for a single document at a given point in
+ * time or it may be a document to generate the base snapshot for that document.
+ * 
+ * @constructor
+ * @class Base class for snapshots of a document state at a given point of time.
+ * @param {Object} change The change event of document to create a snapshot for.
+ */
+function Snapshot(change) {
+  var changes = Firebug.DiffModule.getChanges();
+  var displayChanges = [], revertChanges = [];
+  var foundChange = false;
+  for (var i = 0; i < changes.length; i++) {
+    if (changes[i] == change) {
+      displayChanges.push(changes[i]);
+      foundChange = true;
+    } else if (changes[i].sameFile(change)) {
+      (foundChange ? revertChanges : displayChanges).push(changes[i]);
+    }
+  }
+  if (!foundChange) {
+    // If the change was not in the list then we assume that this is the revert
+    // to base case
+    revertChanges = displayChanges;
+    displayChanges = [];
+  }
+  displayChanges = Events.merge(displayChanges);
+  
+  this.displayChanges = displayChanges;
+  this.revertChanges = revertChanges;
+}
+Snapshot.prototype = {
+  updateCloneToChange: function(clone, cloneXPath) {
+    this.changeNodeList = [];
+    if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("Revert changes", this.revertChanges);
+    
+    var i = this.revertChanges.length;
+    while (i--) {
+      try {
+        this.revertChanges[i].revert(clone, cloneXPath);
+      } catch (err) {
+        FBTrace.sysout("Snapshot.updateCloneToChane: revert " + i + " " + err, this.revertChanges[i]);
+        throw err;
+      }
+    }
+    for (var i = 0; i < this.displayChanges.length; i++) {
+      try {
+        this.changeNodeList.push(this.displayChanges[i].annotateTree(clone, cloneXPath));
+      } catch (err) {
+        FBTrace.sysout("ERROR: Failed to annotate tree: " + i, this.displayChanges[i]);
+        throw err;
+      }
+    }
+    this.normalizeChangeNodes();
+  },
+  
+  navigableChange: function(changeNode) {},
+  iterateChanges: function(stepper) {
+    var change = stepper(this.curChange);
+
+    for (var i = 0; i < this.changeNodeList.length+1; i++) {
+      if (change >= this.changeNodeList.length) {
+        change = 0;
+      } else if (change < 0) {
+        change = this.changeNodeList.length - 1;
+      }
+
+      if (this.navigableChange(this.changeNodeList[change])) {
+        return change;
+      }
+      
+      change = stepper(change);
+    }
+    return -1;
+  },
+  
+  showNext: function() {
+    this.curChange = this.iterateChanges(
+        function(change) { return change + 1; });
+    
+    this.showCurNode();
+  },
+  showPrev: function() {
+    this.curChange = this.iterateChanges(
+        function(change) { return change - 1; });
+    
+    this.showCurNode();
+  },
+  getCurNode: function() {},
+  showCurNode: function() {
+    if (this.curChange < 0) {
+      return;
+    }
+
+    var objectBox = this.getCurNode();
+    if (objectBox) {
+      scrollIntoCenterView(objectBox);
+      setClassTimed(objectBox, "jumpHighlight", this.panel.context);
+    }
+    return objectBox;
+  },
+  getChangeNodePath: function(changeNode) {},
+  normalizeChangeNodes: function() {
+    // Reduce to one element per xpath
+    var pathList = {};
+    var ret = [];
+    if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("Snapshot.normalizeChangeNodes prior", this.changeNodeList);
+    
+    for (var i = 0; i < this.changeNodeList.length; i++) {
+      var change = this.changeNodeList[i];
+      var path = change.xpath || Path.getElementPath(change, false, this.cloneXPath);
+      
+      if (!change.normalized) {
+        change.lookupXPath = path;
+        change.normalized = true;
+        ret.push(change);
+      }
+    }
+    
+    ret.sort(function(a, b) { return Path.compareXPaths(a.lookupXPath, b.lookupXPath); });
+
+    // Since we are operating on a shared object we need to revert our tracking
+    // var for future operations.
+    for (var i = 0; i < this.changeNodeList.length; i++) {
+      var change = this.changeNodeList[i];
+      change.normalized = undefined;
+    }
+
+    this.changeNodeList = ret;
+    if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("Snapshot.normalizeChangeNodes post", this.changeNodeList);
+  }
+};
+
+this.DOMSnapshot = function(change, document){
+  Snapshot.call(this, change || document.documentElement);
+  
+  // This requires Firefox 3.5
+  this.displayTree = document.cloneNode(true);
+  this.cloneXPath = Path.getElementPath(document);
+  this.updateCloneToChange(this.displayTree, this.cloneXPath);
+  
+  this.onMouseDown = bind(this.onMouseDown, this);
+};
+this.DOMSnapshot.prototype = extend(Snapshot.prototype, {
+  show: function(panel) {
+    this.panel = panel;
+    
+    this.ioBox = new InsideOutBox(
+        new DiffDomplate.HtmlSnapshotView(this.displayTree, this.cloneXPath, panel),
+        panel.panelNode);
+    this.ioBox.openObject(this.displayTree);
+    
+    for (var i = 0; i < this.changeNodeList.length; i++) {
+      this.ioBox.openToObject(this.changeNodeList[i]);
+    }
+    this.curChange = -1;
+    panel.panelNode.scrollTop = 0;
+
+    panel.panelNode.addEventListener("mousedown", this.onMouseDown, false);
+  },
+  hide: function(panel) {
+    if (this.ioBox) {
+      this.ioBox.destroy();
+      delete this.ioBox;
+    }
+
+    panel.panelNode.removeEventListener("mousedown", this.onMouseDown, false);
+    
+    delete this.panel;
+  },
+  search: function(text, reverse, panel) {
+    if (!text)  { return; }
+
+    var search;
+    if (text == this.searchText && this.lastSearch) {
+      search = this.lastSearch;
+    } else {
+      search = this.lastSearch = new Search.DOMDiffNodeSearch(text, this.displayTree, panel.panelNode, this.ioBox);
+      this.searchText = text;
+    }
+
+    var loopAround = search.find(reverse, Firebug.searchCaseSensitive);
+    if (loopAround) {
+      delete this.lastSearch;
+      return this.search(text, reverse, panel);
+    }
+
+    return !search.noMatch;
+  },
+
+  getText: function() {
+    return Fireformat.Formatters.getHTMLFormatter().format(this.displayTree);
+  },
+
+  navigableChange: function(changeNode) {
+    var displayedTypes = {};
+    displayedTypes[Events.ChangeSource.APP_CHANGE] = this.panel.isDisplayAppChanges();
+    displayedTypes[Events.ChangeSource.FIREBUG_CHANGE] = this.panel.isDisplayFirebugChanges();
+
+    // Accept the change if
+    //  - Is not whitespace only or we are displaying whitespace
+    //  - Is an app change and we are displaying app changes
+    //  - Is a firebug change and we are displaying firebug changes
+    if (!Firebug.showWhitespaceNodes && DiffDomplate.DomUtil.isWhitespaceText(changeNode)) {
+      return false;
+    }
+
+    var change = changeNode[Events.AnnotateAttrs.CHANGES] || changeNode;
+    if (displayedTypes[change.changeSource]) {
+      return true;
+    }
+    var changes = changeNode[Events.AnnotateAttrs.ATTR_CHANGES] || {};
+    for (var i in changes) {
+      if (displayedTypes[changes[i].changeSource]) {
+        return true;
+      }
+    }
+  },
+  getCurNode: function() {
+    var change = this.changeNodeList[this.curChange];
+    var objectBox = this.ioBox.openToObject(change);
+
+    if (objectBox) {
+      // For dom removed and events that register themselves as the elements
+      // sole change, highlight the entire element, otherwise
+      // highlight the label only (this should only be the attr case)
+      if (change.subType == "dom_removed" || change[FireDiff.events.AnnotateAttrs.CHANGES]) {
+        return objectBox;
+      } else {
+        return getChildByClass(objectBox.firstChild, 'nodeLabelBox') || objectBox;
+      }
+    }
+  },
+  
+  onMouseDown: function(event) {
+    if (isLeftClick(event) && getAncestorByClass(event.target, "nodeContainerLabel")) {
+      this.ioBox.expandObject(Firebug.getRepObject(event.target));
+    }
+  }
+});
+this.DOMSnapshotRep = domplate(Firebug.Rep, {
+  supportsObject: function(object, type) {
+    return object instanceof FireDiff.reps.DOMSnapshot;
+  },
+  getTitle: function(object) {
+    return i18n.getString("page.DOMSnapshot");
+  }
+});
+
+this.CSSSnapshot = function(change, context){
+  Snapshot.call(this, change);
+
+  var rootPath = Path.getTopPath(change.xpath || Path.getStylePath(change));
+  this.sheet = Path.evaluateStylePath(rootPath, context.window.document);
+  this.displayTree = CSSModel.cloneCSSObject(this.sheet);
+  this.updateCloneToChange(this.displayTree, rootPath);
+};
+this.CSSSnapshot.prototype = extend(Snapshot.prototype, {
+  show: function(panel) {
+    this.panel = panel;
+    DiffDomplate.CSSChanges.CSSList.tag.append({change: this.displayTree}, panel.panelNode);
+
+    this.curChange = -1;
+    panel.panelNode.scrollTop = 0;
+  },
+  hide: function() {
+    delete this.panel;
+  },
+  search: function(text, reverse, panel) {
+    this.searchHelper = this.searchHelper || new Search.PageSearch();
+    return this.searchHelper.search(text, reverse, panel);
+  },
+  
+  getText: function() {
+    return Fireformat.Formatters.getCSSFormatter().format(this.displayTree);
+  },
+  
+  navigableChange: function(change) {
+    return this.panel.isDisplayFirebugChanges();
+  },
+  getCurNode: function() {
+    var change = this.changeNodeList[this.curChange];
+    return Firebug.getElementByRepObject(this.panel.panelNode, change);
+  }
+});
+this.CSSSnapshotRep = domplate(Firebug.Rep, {
+  supportsObject: function(object, type) {
+    return object instanceof FireDiff.reps.CSSSnapshot;
+  },
+  getTitle: function(object) {
+    return i18n.getString("page.CSSSnapshot");
+  }
+});
+
+Firebug.registerRep(
+    this.MonitorRep,
+    this.DOMSnapshotRep,
+    this.CSSSnapshotRep);
+}});
+
+/* See license.txt for terms of usage */
+
+FBL.ns(function() { with (FBL) {
+
+var FirebugContext;
+var Events = FireDiff.events,
+    Path = FireDiff.Path;
+
+function revertChange(curChange, context) {
+  var ownerDoc, rootPath;
+  if (curChange.changeType == "CSS") {
+    rootPath = Path.getTopPath(curChange.xpath);
+    ownerDoc = Path.evaluateStylePath(rootPath, context.window.document);
+  } else {
+    ownerDoc = context.window.document.documentElement;
+    rootPath = Path.getElementPath(ownerDoc);
+  }
+
+  if (FBTrace.DBG_FIREDIFF) FBTrace.sysout("Revert change", curChange);
+  curChange.revert(ownerDoc, rootPath);
+}
+
+Firebug.DiffModule = extend(Firebug.Module, {
+    panelName: "firediff",
+    
+    supportsFirebugEdits: Firebug.Editor.supportsStopEvent,
+    
+    initialize: function() {
+        //Firebug.ActivableModule.initialize.apply(this, arguments);
+        Firebug.Module.initialize.apply(this, arguments);
+        
+        if (Firebug.CSSModule) {
+            // Maintain support for older versions of firebug that do not
+            // have the CSS change event implementation
+            Firebug.CSSModule.addListener(this);
+        }
+        if (Firebug.HTMLModule) {
+          Firebug.HTMLModule.addListener(this);
+        }
+        if (Firebug.Editor.supportsStopEvent) {
+          Firebug.Editor.addListener(this);
+        }
+    },
+
+    loadedContext: function(context) {
+      if (this.isAlwaysEnabled()) {
+        this.monitorContext(context);
+      }
+    },
+    onEnabled: function(context) {
+      this.monitorContext(context);
+    },
+    onDisabled: function(context) {
+      this.unmonitorContext(context);
+    },
+    
+    //////////////////////////////////////////////
+    // Actions
+    revertAllChanges: function(change, context) {
+      var diffContext = this.getDiffContext(context);
+      var changes = diffContext.changes;
+
+      // Revert means everything, not just those that are filtered.
+      // Keeping the change model in sync for arbitrary changes is
+      // currently out of scope
+      //
+      // We also rely on filter to be designed such that the model's
+      // integrity remains.
+      for (var i = changes.length; i > 0; i--) {
+        var curChange = changes[i-1];
+
+        revertChange(curChange, context);
+        changes.splice(i-1, 1);
+
+        if (change == curChange) {
+          break;
+        }
+      }
+    },
+    revertChange: function(change, context, force) {
+      var diffContext = this.getDiffContext(context);
+      var changes = diffContext.changes;
+      
+      var tempChanges = changes.slice();
+      var revert = Events.mergeRevert(change, tempChanges);
+      if ((revert.length > 1 || changes.length - tempChanges.length > 1) && !force) {
+        return false; 
+      }
+      
+      // Perform the revert
+      for (var i = revert.length; i > 0; i--) {
+        var curChange = revert[i-1];
+
+        revertChange(curChange, context);
+      }
+      
+      diffContext.changes = tempChanges;
+      return revert;
+    },
+    
+    //////////////////////////////////////////////
+    // Editor Listener
+    onBeginEditing: function(panel, editor, target, value) {
+      this.onBeginFirebugChange(target);
+      this.onSaveEdit(panel, editor, target, value);
+    },
+    onSaveEdit: function(panel, editor, target, value, previousValue) {
+      // Update the data store used for the HTML editor monitoring
+      var diffContext = this.getDiffContext();
+      diffContext.htmlEditPath = this.getHtmlEditorPaths(editor);
+    },
+    onStopEdit: function(panel, editor, target) {
+      this.onEndFirebugChange(target);
+    },
+    
+    //////////////////////////////////////////////
+    // CSSModule Listener
+    onCSSInsertRule: function(styleSheet, cssText, ruleIndex) {
+      styleSheet.source = "dispatch";
+      this.recordChange(
+          new Events.css.CSSInsertRuleEvent(
+              styleSheet.cssRules[ruleIndex],
+              Events.ChangeSource.FIREBUG_CHANGE));
+    },
+    onCSSDeleteRule: function(styleSheet, ruleIndex) {
+      styleSheet.source = "dispatch";
+      this.recordChange(
+          new Events.css.CSSRemoveRuleEvent(
+              styleSheet.cssRules[ruleIndex],
+              Events.ChangeSource.FIREBUG_CHANGE));
+    },
+    onCSSSetProperty: function(style, propName, propValue, propPriority, prevValue, prevPriority, parent, baseText) {
+      if (!style.parentRule) {
+        // If we are dealing with an older version of firebug, protect ourselves from this failure and
+        // just drop the change completely
+        if (!parent)
+          return;
+        
+        // This is a change to the inline style of a particular element, handle this.
+        // See: https://bugzilla.mozilla.org/show_bug.cgi?id=338679
+        this.recordChange(
+            new Events.dom.DOMAttrChangedEvent(
+                parent, MutationEvent.MODIFICATION, "style", style.cssText, baseText,
+                undefined, undefined, Events.ChangeSource.FIREBUG_CHANGE));
+      } else {
+        this.recordChange(
+            new Events.css.CSSSetPropertyEvent(
+                style.parentRule, propName, propValue, propPriority, prevValue, prevPriority, Events.ChangeSource.FIREBUG_CHANGE));
+      }
+    },
+    
+    onCSSRemoveProperty: function(style, propName, prevValue, prevPriority, parent, baseText) {
+      if (!style.parentRule) {
+        // If we are dealing with an older version of firebug, protect ourselves from this failure and
+        // just drop the change completely
+        if (!parent)
+          return;
+        
+        // This is a change to the inline style of a particular element, handle this.
+        // See: https://bugzilla.mozilla.org/show_bug.cgi?id=338679
+        this.recordChange(
+            new Events.dom.DOMAttrChangedEvent(
+                parent, MutationEvent.MODIFICATION, "style", style.cssText, baseText,
+                undefined, undefined, Events.ChangeSource.FIREBUG_CHANGE));
+      } else {
+        this.recordChange(
+            new Events.css.CSSRemovePropertyEvent(
+                style.parentRule, propName, prevValue, prevPriority, Events.ChangeSource.FIREBUG_CHANGE));
+      }
+    },
+    
+    //////////////////////////////////////////////
+    // HTMLModule Listener
+    onBeginFirebugChange: function(node, context) {
+      var diffContext = this.getDiffContext(context);
+      
+      diffContext.editTarget = node;
+      
+      var rep = Firebug.getRepObject(node) || node;
+      if (rep instanceof Node) {
+        diffContext.editTargetXpath = Path.getElementPath(rep);
+      } else if (rep instanceof CSSRule || rep instanceof StyleSheet) {
+        diffContext.editTargetXpath = Path.getStylePath(rep);
+      } else {
+        diffContext.editTargetXpath = undefined;
+      }
+
+      if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModule.onBeginFirebugChange", diffContext.editTarget);
+      
+      diffContext.editEvents = [];
+    },
+    
+    onEndFirebugChange: function(node, context) {
+      var diffContext = this.getDiffContext(context);
+      if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModile.onEndFirebugChange: " + node, diffContext.editEvents);
+      
+      var editEvents = diffContext.editEvents;
+      if (editEvents.length) {
+        editEvents = Events.merge(editEvents, true);
+        
+        for (var i = 0; i < editEvents.length; i++) {
+          var change = editEvents[i];
+          // Special case for HTML free edit. It's not pretty but it gets the
+          // job done. In the future we may want to consider executing changes
+          // in the Firebug editors within ignore blocks, and generating events
+          // for the final states, but for now we want to keep the coupling
+          // low
+          function htmlEditChange() {
+            return diffContext.htmlEditPath
+                && diffContext.htmlEditPath[0] <= change.xpath
+                && change.xpath <= diffContext.htmlEditPath[1];
+          }
+          function changeApplies() {
+            return change.appliesTo(Firebug.getRepObject(diffContext.editTarget) || diffContext.editTarget, diffContext.editTargetXpath);
+          }
+          if (htmlEditChange() || changeApplies()) {
+            change.changeSource = Events.ChangeSource.FIREBUG_CHANGE;
+          }
+          this.dispatchChange(change);
+        }
+      }
+      
+      delete diffContext.editTarget;
+      delete diffContext.editTargetXpath;
+      delete diffContext.editEvents;
+      delete diffContext.htmlEditPath;
+    },
+    
+    //////////////////////////////////////////////
+    // Self
+    domEventLogger: function(ev, context) {
+      if (!this.ignoreNode(ev.target)) {
+        var diffContext = this.getDiffContext(context);
+        this.recordChange(
+            Events.dom.createDOMChange(ev, diffContext.changeSource),
+            context);
+      }
+    },
+    charDataChangedEventLogger: function(ev, context) {
+      // Filter out char data events whose parents are a firebug object
+      var filterNode = ev.target.parentNode;
+      if (!this.ignoreNode(ev.target.parentNode)) {
+        this.domEventLogger(ev, context);
+      }
+    },
+    attributeChangedEventLogger: function(ev, context) {
+        // We only care about attributes that actually change or are created or deleted
+        if (ev.attrChange != MutationEvent.MODIFICATION
+                || ev.newValue != ev.prevValue) {
+            this.domEventLogger(ev, context);
+        }
+    },
+    
+    monitorContext: function(context) {
+      if (FBTrace.DBG_ACTIVATION || FBTrace.DBG_FIREDIFF) { FBTrace.sysout("DiffModule.monitorContext", context); }
+      var diffContext = this.getDiffContext(context);
+      if (diffContext.eventLogger)    return;
+
+      diffContext.eventLogger = bind(this.domEventLogger, this, context);
+      diffContext.attrEventLogger = bind(this.attributeChangedEventLogger, this, context);
+      diffContext.charDataEventLogger = bind(this.charDataChangedEventLogger, this, context);
+      
+      context.window.addEventListener("DOMNodeInserted", diffContext.eventLogger, true);
+      context.window.addEventListener("DOMNodeRemoved", diffContext.eventLogger, true);
+      context.window.addEventListener("DOMAttrModified", diffContext.attrEventLogger, true);
+      context.window.addEventListener("DOMCharacterDataModified", diffContext.charDataEventLogger, true);
+    },
+    unmonitorContext: function(context) {
+        if (FBTrace.DBG_ACTIVATION || FBTrace.DBG_FIREDIFF) { FBTrace.sysout("DiffModule.unmonitorContext", context); }
+        var diffContext = this.getDiffContext(context);
+        if (!diffContext.eventLogger)    return;
+        
+        context.window.removeEventListener("DOMNodeInserted", diffContext.eventLogger, true);
+        context.window.removeEventListener("DOMNodeRemoved", diffContext.eventLogger, true);
+        context.window.removeEventListener("DOMAttrModified", diffContext.attrEventLogger, true);
+        context.window.removeEventListener("DOMCharacterDataModified", diffContext.charDataEventLogger, true);
+        
+        delete diffContext.eventLogger;
+        delete diffContext.attrEventLogger;
+        delete diffContext.charDataEventLogger;
+    },
+    
+    ignoreNode: function(node) {
+      // Ignore firebug elements and any top level elements that are not the doc element
+      return node.firebugIgnore
+          || unwrapObject(node).firebugIgnore
+          || (node.className || "").indexOf("firebug") > -1
+          ||        (node.id || "").indexOf("firebug") > -1
+          || (node.hasAttribute && node.hasAttribute("firebugIgnore"));
+    },
+    
+    getHtmlEditorPaths: function(editor) {
+      // Select the xpath update range. This is from the first to after the
+      // last element in the range (or '}' if there is no sibling after that
+      // to simplify the match test)
+      //
+      // This is not 100%, erroring on the side marking app changes as Firebug changes
+      // To fully resolve this, deeper integration with Firebug will be required,
+      // most likely in the form of changes to the editors to use diff ignore
+      // blocks and generate custom events.
+      var elements = editor.editingElements;
+      if (elements) {
+        var nextEl = getNextElement((elements[1] || elements[0]).nextSibling);
+        return [
+                Path.getElementPath(elements[0]),
+                Path.getElementPath(nextEl) || '}'
+            ];
+      }
+    },
+    
+    clearChanges: function(context) {
+      if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModule.clearChanges", context);
+      
+      var diffContext = this.getDiffContext(context);
+      diffContext.changes = [];
+      
+      dispatch(this.fbListeners, "onClearChanges", [context || Firebug.context]);
+    },
+    
+    navNextChange: function(context) {
+      dispatch(this.fbListeners, "onNavNextChange", [context || Firebug.context]);
+    },
+    navPrevChange: function(context) {
+      dispatch(this.fbListeners, "onNavPrevChange", [context || Firebug.context]);
+    },
+    
+    ignoreChanges: function(worker, context) {
+      // If no context is available failover. This failover is mostly for testing merges.
+      var diffContext = this.getDiffContext(context) || {};
+      try {
+        if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModule: Set ignore changes", context);
+        diffContext.ignore = true;
+        
+        worker();
+      } finally {
+        if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModule: Reset ignore changes", context);
+        diffContext.ignore = false;
+      }
+    },
+    firebugChanges: function(worker, context) {
+      // If no context is available failover. This failover is mostly for testing merges.
+      var diffContext = this.getDiffContext(context) || {};
+      try {
+        if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModule: Set firebug changes", context);
+        diffContext.changeSource = Events.ChangeSource.FIREBUG_CHANGE;
+        
+        worker();
+      } finally {
+        if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModule: Reset firebug changes", context);
+        delete diffContext.changeSource;
+      }
+    },
+    
+    recordChange: function(change, context) {
+        if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModule.recordChange", change);
+        var diffContext = this.getDiffContext(context);
+        diffContext.eventLogger = true;
+        
+        // Ignore if a context does not exist, we are in ignore mode, or the context is not attached
+        if (!diffContext || diffContext.ignore || !diffContext.eventLogger)   return;
+        
+        if (!diffContext.editTarget) {
+          this.dispatchChange(change, context);
+        } else {
+          diffContext.editEvents.push(change);
+        }
+    },
+    dispatchChange: function(change, context) {
+      if (FBTrace.DBG_FIREDIFF)   FBTrace.sysout("DiffModule.dispatchChange", change);
+      
+      var diffContext = this.getDiffContext(context);
+      diffContext.changes.push(change);
+      
+      dispatch(this.fbListeners, "onDiffChange", [change, context || Firebug.context]);
+    },
+    
+    getChanges: function(context) {
+      var diffContext = this.getDiffContext(context);
+      return (diffContext && diffContext.changes) || [];
+    },
+    
+    getDiffContext: function(context) {
+      context = context || Firebug.context;
+      if (!context) {
+        return null;
+      }
+      
+      context.diffContext = context.diffContext || { changes: [] };
+      return context.diffContext;
+    }
+});
+
+//Firebug.registerActivableModule(Firebug.DiffModule);
+Firebug.registerModule(Firebug.DiffModule);
+
+}});
+
+/* See license.txt for terms of usage */
+var FireDiff = FireDiff || {};
+
+FBL.ns(function() { with (FBL) {
+
+//const Cc = Components.classes;
+//const Ci = Components.interfaces;
+//const nsIDocumentEncoder = Ci.nsIDocumentEncoder;
+//const nsIFile = Ci.nsIFile;
+//const nsIFileOutputStream = Ci.nsIFileOutputStream;
+//const nsIFilePicker = Ci.nsIFilePicker;
+//const nsIPrefBranch2 = Ci.nsIPrefBranch2;
+//const EncoderService = Cc["@mozilla.org/layout/documentEncoder;1?type=text/plain"];
+//const FileOutputService = Cc["@mozilla.org/network/file-output-stream;1"];
+//const PickerService = Cc["@mozilla.org/filepicker;1"];
+//const PrefService = Cc["@mozilla.org/preferences-service;1"];
+//const prefs = PrefService.getService(nsIPrefBranch2);
+//const PromptService = Cc["@mozilla.org/embedcomp/prompt-service;1"];
+//const prompt = PromptService.getService(Ci.nsIPromptService);
+
+var Events = FireDiff.events,
+    Path = FireDiff.Path,
+    Reps = FireDiff.reps,
+    Fireformat = {};
+
+try {
+  //Components.utils.import("resource://fireformat/formatters.jsm", Fireformat);
+} catch (err) {
+}
+
+var i18n = document.getElementById("strings_firediff");
+i18n = {
+  getString: function(name)
+  {
+      return name;
+  }
+};
+
+var Panel = Firebug.ActivablePanel || Firebug.Panel;
+
+function DiffMonitor() {}
+DiffMonitor.prototype = extend(Panel, {
+    name: "firediff",
+    title: "Changes", //i18n.getString("title.diffMonitor"),
+    statusSeparator: ">",
+    searchable: true,
+    
+    create: function(panelNode) {
+      Firebug.Panel.create.apply(this, arguments);
+      
+      this.context = Firebug.context;
+      this.document = Firebug.chrome.document;
+      this.selection = this.getDefaultSelection();
+      
+      if (Firebug.DiffModule.addListener) {
+        Firebug.DiffModule.addListener(this);
+      }
+      
+      this.addStyleSheet(this.document, "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/content/firediff/skin/classic/firediff.css", "fireDiffCss");
+      this.applyDisplayPrefs();
+      
+      if (Firebug.DiffModule.supportsFirebugEdits) {
+        //prefs.addObserver(Firebug.prefDomain, this, false);
+      }
+    },
+    
+    ishow: function(state) {
+      if (Firebug.version < "1.4") {
+        this.panelNode.innerHTML = i18n.getString("warning.firebugVersion");
+        return;
+      }
+      
+      var enabled = Firebug.DiffModule.isAlwaysEnabled();
+      if (enabled) {
+           Firebug.DiffModule.disabledPanelPage.hide(this);
+
+           this.showToolbarButtons("fbDiffMonitorButtons", true);
+           $("cmd_copy").setAttribute("disabled", true);
+
+           if (!this.selection) {
+             this.select(this.getDefaultSelection());
+           }
+      } else {
+          this.hide();
+          Firebug.DiffModule.disabledPanelPage.show(this);
+      }
+    },
+    enablePanel: function(module) {
+      Panel.enablePanel.apply(this, arguments);
+      this.show();
+    },
+    disablePanel: function(module) {
+      Panel.disablePanel.apply(this, arguments);
+      this.hide();
+    },
+    ihide: function(state) {
+      this.showToolbarButtons("fbDiffMonitorButtons", false);
+      $("cmd_copy").removeAttribute("disabled");
+
+      var panelStatus = Firebug.chrome.getPanelStatusElements();
+      panelStatus.clear(); // clear stack on status bar
+      this.selection = undefined;
+    },
+
+    addStyleSheet: function(doc, uri, id) {
+        // Make sure the stylesheet isn't appended twice. 
+        if ($(id, doc))   return;
+
+        var styleSheet = createStyleSheet(doc, uri);
+        styleSheet.setAttribute("id", id);
+        addStyleSheet(doc, styleSheet);
+    },
+    getOptionsMenuItems: function(context) {
+      var ret = [];
+      if (Firebug.DiffModule.supportsFirebugEdits) {
+        ret.push(
+            this.optionsMenu("option.showAppChanges", "firediff.displayAppChanges"),
+            this.optionsMenu("option.showFirebugChanges", "firediff.displayFirebugChanges"),
+            "-"
+        );
+      }
+      ret.push({
+          label: i18n.getString("option.formatterOptions"),
+          nol10n: true,
+          command: bindFixed(this.showFormatterOptions, this)
+      });
+      
+      return ret;
+    },
+    optionsMenu: function(label, option) {
+      var value = Firebug.getPref(Firebug.prefDomain, option);
+      return {
+          label: i18n.getString(label),
+          nol10n: true,
+          type: "checkbox",
+          checked: value,
+          command: bindFixed(Firebug.setPref, this, Firebug.prefDomain, option, !value)
+      };
+    },
+    showFormatterOptions: function() {
+      // See cmd_options in extensions.js
+      var features= "chrome,titlebar,toolbar,centerscreen,";
+      try {
+        var instantApply = gPref.getBoolPref("browser.preferences.instantApply");
+        features += (instantApply ? "dialog=no" : "modal");
+      } catch (e) {
+        features += "modal";
+      }
+      window.openDialog("chrome://fireformat/content/options.xul", "", features);
+    },
+    
+    selectSnapshot: function(change) {
+      try {
+        // We run this here to defer change processing
+        this.select(change.getSnapshot(this.context));
+      } catch (err) {
+        FBTrace.sysout(err,err);
+      }
+    },
+    revertAllChanges: function(change) {
+      try {
+        Firebug.DiffModule.revertAllChanges(change, this.context);
+        this.updateSelection(this.lastSel);
+      } catch (err) {
+        FBTrace.sysout(err,err);
+      }
+    },
+    revertChange: function(change) {
+      try {
+        var dontPrompt = this.isDontPromptOnMultipleRevert();
+        var ret = Firebug.DiffModule.revertChange(change, this.context, dontPrompt);
+        if (!ret) {
+          var checked = { value: false };
+          var button = prompt.confirmCheck(
+              null,
+              i18n.getString("prompt.title.MultipleRevert"),
+              i18n.getString("prompt.text.MultipleRevert"),
+              i18n.getString("prompt.dontAskAgain"),
+              checked);
+          if (!button) {
+            return;
+          }
+
+          // Save the pref value
+          Firebug.setPref(Firebug.prefDomain, "firediff.revertMultiple.dontPrompt", checked.value);
+
+          // Perform a forced revert
+          Firebug.DiffModule.revertChange(change, this.context, true);
+        }
+
+        this.updateSelection(this.lastSel);
+      } catch (err) {
+        FBTrace.sysout(err,err);
+      }
+    },
+    saveSnapshot: function(change) {
+      var file = this.promptForFileName(i18n.getString("menu.SaveSnapshot"), change.changeType);
+      if (file) {
+        var snapshot = change.getSnapshot(this.context);
+        this.writeString(file, snapshot.getText());
+      }
+    },
+    saveDiff: function(change) {
+      try {
+        var file = this.promptForFileName(i18n.getString("menu.SaveDiff"), "diff");
+        if (file) {
+          var snapshot = change.getSnapshot(this.context),
+              base = change.getBaseSnapshot(this.context),
+              snapshotText = snapshot.getText(),
+              baseText = base.getText(),
+              diff = JsDiff.createPatch(
+                  change.getDocumentName(this.context),
+                  baseText, snapshotText,
+                  i18n.getString("diff.baseFile"), i18n.getString("diff.snapshot"));
+  
+          this.writeString(file, diff);
+        }
+      } catch (err) {
+        FBTrace.sysout(err, err);
+      }
+    },
+
+
+    promptForFileName: function(caption, mode) {
+      var picker = PickerService.createInstance(nsIFilePicker);
+      picker.init(window, caption, nsIFilePicker.modeSave);
+      if (mode == "DOM") {
+        picker.appendFilters(nsIFilePicker.filterHTML);
+        picker.defaultExtension = "html";
+      } else if (mode == "CSS") {
+        picker.appendFilter(i18n.getString("prompt.cssFiles"), "*.css");
+        picker.defaultExtension = "css";
+      } else if (mode == "diff") {
+        picker.appendFilter(i18n.getString("prompt.diffFiles"), "*.diff");
+        picker.defaultExtension = "diff";
+      }
+      picker.appendFilters(nsIFilePicker.filterText);
+      picker.appendFilters(nsIFilePicker.filterAll);
+      var ret = picker.show();
+      if ((ret == nsIFilePicker.returnOK || ret == nsIFilePicker.returnReplace) && picker.file) {
+        return picker.file;
+      }
+    },
+    writeString: function(file, string) {
+      var outputStream = FileOutputService.createInstance(nsIFileOutputStream);
+      outputStream.init(file, -1, -1, 0);   // Default mode and permissions
+
+      // The Document encoder handles all of the heavy lifting here: encoding and line break conversion
+      var serializer = EncoderService.createInstance(nsIDocumentEncoder);
+      serializer.init(document, "text/plain", nsIDocumentEncoder.OutputPreformatted);
+      serializer.setCharset("UTF-8");
+      serializer.setNode(document.createTextNode(string));
+      serializer.encodeToStream(outputStream);
+
+      outputStream.close();
+    },
+
+    getContextMenuItems: function(object, target) {
+      if (this.selection == Reps.Monitor) {
+        var ret = [
+           { label: i18n.getString("menu.ChangeSnapshot"), command: bindFixed(this.selectSnapshot, this, object), nol10n: true },
+           "-"
+        ];
+
+        if (Fireformat.Formatters) {
+          ret.push({ label: i18n.getString("menu.SaveSnapshot"), command: bindFixed(this.saveSnapshot, this, object), nol10n: true });
+          ret.push({ label: i18n.getString("menu.SaveDiff"), command: bindFixed(this.saveDiff, this, object), nol10n: true });
+          ret.push("-");
+        }
+
+        ret.push({ label: i18n.getString("menu.RevertChange"), command: bindFixed(this.revertChange, this, object), nol10n: true });
+        ret.push({ label: i18n.getString("menu.RevertAllChanges"), command: bindFixed(this.revertAllChanges, this, object), nol10n: true });
+        return ret;
+      }
+    },
+    
+    getDefaultSelection: function(object) {
+      return Reps.Monitor;
+    },
+    updateSelection: function(object) {
+      clearNode(this.panelNode);
+      
+      if (this.lastSel && this.lastSel.hide) {
+        this.lastSel.hide(this);
+      }
+      
+      object.show(this);
+      //this.showToolbarButtons("fbDiffSnapshotNav", !!object.showNext);
+      this.lastSel = object;
+    },
+    
+    getObjectPath: function(object) {
+      var ret = [ Reps.Monitor ];
+      if (Reps.DOMSnapshotRep.supportsObject(object)
+          || Reps.CSSSnapshotRep.supportsObject(object)) {
+        ret.push(object);
+      }
+      return ret;
+    },
+    supportsObject: function(object) {
+      if (Reps.MonitorRep.supportsObject(object)
+          || Reps.DOMSnapshotRep.supportsObject(object)
+          || Reps.CSSSnapshotRep.supportsObject(object))
+        return 1000;
+      return 0;
+    },
+
+    search: function(text, reverse) {
+      if (this.selection.search) {
+        return this.selection.search(text, reverse, this);
+      }
+    },
+
+    // nsIPrefObserver
+    observe: function(subject, topic, data)
+    {
+      // We're observing preferences only.
+      if (topic != "nsPref:changed")
+        return;
+
+      var prefName = data.substr(Firebug.prefDomain.length + 1);
+      if (prefName == "firediff.displayAppChanges"
+          || prefName == "firediff.displayFirebugChanges") {
+        this.applyDisplayPrefs();
+      }
+    },
+    
+    applyDisplayPrefs: function() {
+      this.applyDisplayPref("firediff.displayAppChanges", "showAppChanges", !Firebug.DiffModule.supportsFirebugEdits);
+      this.applyDisplayPref("firediff.displayFirebugChanges", "showFirebugChanges");
+    },
+    applyDisplayPref: function(prefName, cssName, force) {
+      if (force || Firebug.getPref(Firebug.prefDomain, prefName)) {
+        setClass(this.panelNode, cssName);
+      } else {
+        removeClass(this.panelNode, cssName);
+      }
+    },
+    isDisplayAppChanges: function() {
+      return Firebug.getPref(Firebug.prefDomain, "firediff.displayAppChanges");
+    },
+    isDisplayFirebugChanges: function() {
+      return Firebug.getPref(Firebug.prefDomain, "firediff.displayFirebugChanges");
+    },
+    isDontPromptOnMultipleRevert: function() {
+      return !!Firebug.getPref(Firebug.prefDomain, "firediff.revertMultiple.dontPrompt");
+    },
+    
+    onDiffChange: function(change, context) {
+      if (this.context != context || !this.selection)    return;
+      
+      // this.selection could be null if an event occurs before we are displayed
+      if (this.selection.onChange) {
+        this.selection.onChange(change, this);
+      }
+    },
+    onClearChanges: function(context) {
+      if (this.context != context)    return;
+      
+      if (this.panelNode) {
+        clearNode(this.panelNode);
+      }
+    },
+    onNavNextChange: function(context) {
+      if (this.selection.showNext) {
+        this.selection.showNext();
+      }
+    },
+    onNavPrevChange: function(context) {
+      if (this.selection.showPrev) {
+        this.selection.showPrev();
+      }
+    }
+});
+
+Firebug.registerPanel(DiffMonitor);
+
 }});
 
 /* See license.txt for terms of usage */
