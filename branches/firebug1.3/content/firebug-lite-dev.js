@@ -73,6 +73,22 @@ window.FBDev =
         "firebug/tracePanel.js",
         
         // ****************************************************************************************
+        // Firediff
+        
+        "firediff/content/firediff/versionCompat.js",
+        "firediff/content/firediff/diff.js",
+        "firediff/content/firediff/path.js",
+        "firediff/content/firediff/cssModel.js",
+        "firediff/content/firediff/events.js",
+        "firediff/content/firediff/domEvents.js",
+        "firediff/content/firediff/cssEvents.js",
+        "firediff/content/firediff/domplate.js",
+        "firediff/content/firediff/search.js",
+        "firediff/content/firediff/pages.js",
+        "firediff/content/firediff/diffModule.js",
+        "firediff/content/firediff/diffMonitor.js",
+        
+        // ****************************************************************************************
         // Plugin
         
         "firebug/plugin.js", // must be the last module loaded
