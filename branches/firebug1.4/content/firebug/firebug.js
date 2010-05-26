@@ -326,9 +326,49 @@ FBL.cacheDocument = function cacheDocument()
 };
 
 // ************************************************************************************************
+
+/**
+ * Support for listeners registration. This object also extended by Firebug.Module so,
+ * all modules supports listening automatically. Notice that array of listeners
+ * is created for each intance of a module within initialize method. Thus all derived
+ * module classes must ensure that Firebug.Module.initialize method is called for the
+ * super class.
+ */
+Firebug.Listener = function()
+{
+    // The array is created when the first listeners is added.
+    // It can't be created here since derived objects would share
+    // the same array.
+    this.fbListeners = null;
+}
+Firebug.Listener.prototype =
+{
+    addListener: function(listener)
+    {
+        if (!this.fbListeners)
+            this.fbListeners = []; // delay the creation until the objects are created so 'this' causes new array for each module
+
+        this.fbListeners.push(listener);
+    },
+
+    removeListener: function(listener)
+    {
+        remove(this.fbListeners, listener);  // if this.fbListeners is null, remove is being called with no add
+    }
+};
+
+// ************************************************************************************************
+
+
+// ************************************************************************************************
 // Module
 
-Firebug.Module =
+/**
+ * @module Base class for all modules. Every derived module object must be registered using
+ * <code>Firebug.registerModule</code> method. There is always one instance of a module object
+ * per browser window.
+ */
+Firebug.Module = extend(new Firebug.Listener(),
 {
     /**
      * Called when the window is opened.
@@ -399,7 +439,7 @@ Firebug.Module =
     getObjectByURL: function(context, url)
     {
     }
-};
+});
 
 // ************************************************************************************************
 // Panel

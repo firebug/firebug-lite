@@ -856,6 +856,15 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
     dependents: ["css", "computed", "layout", "dom", "domSide", "watch"],
     inspectorHistory: new Array(5),
 
+    create: function()
+    {
+        Firebug.Panel.create.apply(this, arguments);
+        
+        var doc = Firebug.chrome.document;
+        var styleSheet = createStyleSheet(doc, "http://fbug.googlecode.com/svn/lite/branches/firebug1.4/skin/xp/html.css");
+        addStyleSheet(doc, styleSheet);
+    },
+
     initialize: function()
     {
         this.onMutateText = bind(this.onMutateText, this);

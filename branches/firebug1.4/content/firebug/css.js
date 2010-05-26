@@ -600,7 +600,7 @@ Firebug.CSSModule = extend(Firebug.Module,
         if (FBTrace.DBG_CSS)
             FBTrace.sysout("css.saveEdit styleSheet.href:"+styleSheet.href+" got innerHTML:"+value+"\n");
 
-        dispatch(this.fbListener, "onCSSFreeEdit", [styleSheet, value]);
+        dispatch(this.fbListeners, "onCSSFreeEdit", [styleSheet, value]);
     },
 
     insertRule: function(styleSheet, cssText, ruleIndex)
@@ -649,9 +649,9 @@ Firebug.CSSModule = extend(Firebug.Module,
             style[toCamelCase(propName)] = propValue;
         }
 
-        //if (propName) {
-        //    dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
-        //}
+        if (propName) {
+            dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
+        }
     },
 
     removeProperty: function(rule, propName, parent)

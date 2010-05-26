@@ -427,6 +427,13 @@ Firebug.extend(function(FBL) {
             },
             /////////////////////////////////////////////////////////////////////////////////////////
             initialize: function() {
+            
+                setTimeout(function(){
+                    var doc = Firebug.chrome.document;
+                    var styleSheet = createStyleSheet(doc, "http://fbug.googlecode.com/svn/lite/branches/firebug1.4/test/firequery/firequery.css");
+                    addStyleSheet(doc, styleSheet);
+                },0);
+        
                 dbg(">>>FireQuery.initialize");
                 this.panelName = 'FireQuery';
                 this.description = "jQuery related enhancements for Firebug.";
