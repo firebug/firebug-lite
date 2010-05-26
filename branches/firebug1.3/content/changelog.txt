@@ -10,7 +10,7 @@ Extensions
 -------------------------------------------------------------------------------
 CSS
 -------------------------------------------------------------------------------
-    - Properly dispatching CSS change events to listeners
+    - Properly dispatching some CSS change events to listeners
 
 -------------------------------------------------------------------------------
 Firebug
