@@ -1,5 +1,19 @@
 /* See license.txt for terms of usage */
 
+/*
+
+Firebug.chrome.currentPanel = Firebug.chrome.selectedPanel; 
+Firebug.showInfoTips = true; 
+Firebug.InfoTip.initializeBrowser(Firebug.chrome);
+
+
+
+workaround
+Firebug.showInfoTips
+Firebug.chrome.currentPanel
+
+/**/
+
 FBL.ns(function() { with (FBL) {
 
 // ************************************************************************************************
@@ -105,6 +119,7 @@ Firebug.InfoTip = extend(Firebug.Module,
 
     initializeBrowser: function(browser)
     {
+    debugger;
         browser.onInfoTipMouseOut = bind(this.onMouseOut, this, browser);
         browser.onInfoTipMouseMove = bind(this.onMouseMove, this, browser);
 
@@ -199,6 +214,7 @@ Firebug.InfoTip = extend(Firebug.Module,
 
     onMouseMove: function(event, browser)
     {
+    //debugger;
         // Ignore if the mouse is moving over the existing info tip.
         if (getAncestorByClass(event.target, "infoTip"))
             return;

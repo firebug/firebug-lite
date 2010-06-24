@@ -807,7 +807,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         if (this.onScroller)
             removeEvent(this.panelNode, "scroll", this.onScroller);
 
-        removeEvent(this.resizeEventTarget, "resize", this.onResizer);
+        //removeEvent(this.resizeEventTarget, "resize", this.onResizer);
     },
 
     shutdown: function()

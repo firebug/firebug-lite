@@ -2220,6 +2220,8 @@ this.removeGlobalEvent = function(name, handler)
 
 this.dispatch = function(listeners, name, args)
 {
+    if (!listeners) return;
+    
     try
     {
         if (typeof listeners.length != "undefined")
@@ -2910,26 +2912,34 @@ this.setSelectionRange = function (input, start, length)
 };
 
 // ************************************************************************************************
-// Input Caret Position
+// Input Selection Start / Caret Position
 
-this.getInputCaretPosition = function(input)
+this.getInputSelectionStart = function(input)
 {
-    var position = 0;
-    
     if (document.selection)
     {
-        input.focus();
+        var range = input.ownerDocument.selection.createRange();
+        var text = range.text;
         
-        //var range = input.ownerDocument.selection.createRange();
-        var range = document.selection.createRange();
-        range.moveStart("character", -input.value.length);
+        //console.log("range", range.text);
         
-        position = range.text.length;
+        // if there is a selection, find the start position
+        if (text)
+        {
+            return input.value.indexOf(text);
+        }
+        // if there is no selection, find the caret position
+        else
+        {
+            range.moveStart("character", -input.value.length);
+            
+            return range.text.length;
+        }
     }
-    else if (input.selectionStart || input.selectionStart == "0")
-        position = input.selectionStart;
+    else if (typeof input.selectionStart != "undefined")
+        return input.selectionStart;
     
-    return (position);
+    return 0;
 };
 
 // ************************************************************************************************

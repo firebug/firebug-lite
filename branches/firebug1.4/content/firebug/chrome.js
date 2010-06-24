@@ -885,7 +885,7 @@ append(ChromeBase,
             Firebug.Console.logFormatted([
                   "A new bookmarlet version is available. " +
                   "Please visit http://getfirebug.com/firebuglite and update it."
-                ], Firebug.browser, "warn");
+                ], Firebug.context, "warn");
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (Firebug.Console)
@@ -1056,7 +1056,67 @@ append(ChromeBase,
             return panel;
         };
         
+        
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        // TODO: xxxpedro port to Firebug
+        
+        // Improved window key code event listener. Only one "keydown" event will be attached
+        // to the window, and the onKeyCodeListen() function will delegate which listeners
+        // should be called according to the event.keyCode fired.
+        var onKeyCodeListenersMap = [];
+        var onKeyCodeListen = function(event)
+        {
+            for (var keyCode in onKeyCodeListenersMap)
+            {
+                var listeners = onKeyCodeListenersMap[keyCode];
+                
+                for (var i = 0, listener; listener = listeners[i]; i++)
+                {
+                    var filter = listener.filter || FBL.noKeyModifiers;
+        
+                    if (event.keyCode == keyCode && (!filter || filter(event)))
+                    {
+                        listener.listener();
+                        FBL.cancelEvent(event, true);
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        addEvent(Firebug.chrome.document, "keydown", onKeyCodeListen);
 
+        Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
+        {
+            var keyCode = KeyEvent["DOM_VK_"+key];
+            
+            if (!onKeyCodeListenersMap[keyCode])
+                onKeyCodeListenersMap[keyCode] = [];
+            
+            onKeyCodeListenersMap[keyCode].push({
+                filter: filter,
+                listener: listener
+            });
+    
+            return keyCode;
+        };
+        
+        Firebug.chrome.keyIgnore = function(keyCode)
+        {
+            onKeyCodeListenersMap[keyCode] = null;
+            delete onKeyCodeListenersMap[keyCode];
+        };
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        /**/
+        // move to shutdown 
+        //removeEvent(Firebug.chrome.document, "keydown", listener[0]);
+
+
+        /*
         Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
         {
             if (!filter)
@@ -1083,7 +1143,7 @@ append(ChromeBase,
         {
             removeEvent(Firebug.chrome.document, "keydown", listener[0]);
         };
-
+        /**/
         
         
         this.addController(
@@ -1863,8 +1923,6 @@ var ChromePopupBase = extend(ChromeBase, {
                     
                     try
                     {
-                        var persistDelay = new Date().getTime() - persistTimeStart;
-                
                         window.Firebug = Firebug;
                         window.opener.Firebug = Firebug;
                 
@@ -1872,6 +1930,11 @@ var ChromePopupBase = extend(ChromeBase, {
                         Firebug.browser = Firebug.context = new Context(Env.browser);
                 
                         registerConsole();
+                
+                        // the delay time should be calculated right after registering the 
+                        // console, once right after the console registration, call log messages
+                        // will be properly handled
+                        var persistDelay = new Date().getTime() - persistTimeStart;
                 
                         var chrome = Firebug.chrome;
                         addEvent(Firebug.browser.window, "unload", chrome.persist)
@@ -1882,8 +1945,12 @@ var ChromePopupBase = extend(ChromeBase, {
                         var htmlPanel = chrome.getPanel("HTML");
                         htmlPanel.createUI();
                         
-                        Firebug.Console.info("Firebug could not capture console calls during " + 
-                                persistDelay + "ms");
+                        Firebug.Console.logFormatted(
+                            ["Firebug could not capture console calls during " +
+                            persistDelay + "ms"],
+                            Firebug.context,
+                            "info"
+                        );
                     }
                     catch(pE)
                     {

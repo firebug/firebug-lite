@@ -1322,7 +1322,7 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
     getBreakOnNextTooltip: function(enabled)
     {
         return (enabled ? $STR("html.Disable Break On Mutate") : $STR("html.Break On Mutate"));
-    },
+    }
 });
 
 // ************************************************************************************************
@@ -1783,7 +1783,7 @@ Firebug.HTMLPanel.Editors = {
 // ************************************************************************************************
 // Local Helpers
 
-function getEmptyElementTag(node)
+var getEmptyElementTag = function getEmptyElementTag(node)
 {
     var isXhtml= isElementXHTML(node);
     if (isXhtml)
@@ -1792,8 +1792,10 @@ function getEmptyElementTag(node)
         return Firebug.HTMLPanel.EmptyElement.tag;
 }
 
-function getNodeTag(node, expandAll)
+// xxxpedro HTML3
+var getNodeTag = function getNodeTag(node, expandAll)
 {
+    // xxxpedro html3 instanceof problem with different windows
     if (node instanceof Element)
     {
         if (node instanceof HTMLAppletElement)
@@ -1825,7 +1827,7 @@ function getNodeTag(node, expandAll)
         return FirebugReps.Nada.tag;
 }
 
-function getNodeBoxTag(nodeBox)
+var getNodeBoxTag = function getNodeBoxTag(nodeBox)
 {
     var re = /([^\s]+)NodeBox/;
     var m = re.exec(nodeBox.className);
@@ -1890,7 +1892,7 @@ Firebug.HTMLModule.MutationBreakpoints =
             prevValue: event.prevValue,
             newValue: event.newValue,
             attrName: event.attrName,
-            attrChange: event.attrChange,
+            attrChange: event.attrChange
         };
 
         Firebug.Breakpoint.breakNow(context.getPanel("html", true));
@@ -2029,7 +2031,7 @@ Firebug.HTMLModule.MutationBreakpoints =
             breakpoints.removeBreakpoint(bp);
         else
             context.mutationBreakpoints.addBreakpoint(node, type);
-    },
+    }
 };
 
 Firebug.HTMLModule.Breakpoint = function(node, type)
