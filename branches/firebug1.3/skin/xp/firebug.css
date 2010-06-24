@@ -902,6 +902,8 @@ h1.groupHeader {
     border: 1px solid #D7D7D7 !important;
     border-bottom: none !important;
     -moz-border-radius: 4px 4px 0 0;
+    -webkit-border-radius: 4px 4px 0 0;
+    border-radius: 4px 4px 0 0;
     background-color: #FFFFFF;
 }
 
@@ -932,7 +934,7 @@ h1.groupHeader {
     padding: 8px;
     background-color: #FFFFFF;
     font-family: Monaco, monospace;
-    /* white-space: pre; */
+    white-space: pre-wrap;
     /*overflow-x: auto; HTML is damaged in case of big (2-3MB) responses */
 }
 
@@ -2291,8 +2293,13 @@ h1.groupHeader {
     height: 100%;
     width: 100%;
     border-collapse: collapse;
+    border-spacing: 0;
     background: #fff;
     overflow: hidden;
+}
+
+#fbChrome > tbody > tr > td {
+    padding: 0;
 }
 
 #fbTop {
