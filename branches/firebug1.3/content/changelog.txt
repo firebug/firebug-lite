@@ -1,5 +1,5 @@
 ###################################################################################################
- 1.3.1 - 2009-xx-xx - Revision: xxxx
+ 1.3.1a2 - 2009-06-24 - Revision: 7125
 ###################################################################################################
 
 Overview:
@@ -7,6 +7,8 @@ Overview:
     - Major performance improvement in Chrome.keyCodeListen 
     - Issue 3118: Long lines in XHR response
     - Issue 2981: Switching from CSS tab and back causes an error
+    - Fix bug in Google Chrome 5 which causes representation of "object links" 
+      not being properly styled
 
 
 -------------------------------------------------------------------------------
@@ -41,8 +43,9 @@ Extensions
 -------------------------------------------------------------------------------
 CSS
 -------------------------------------------------------------------------------
-    - Properly dispatching some CSS change events to listeners
+    - Issue 2981: Switching from CSS tab and back causes an error
     - Destroying the inline editor when the panel is destroyed or hidden
+    - Properly dispatching some CSS change events to listeners
 
 -------------------------------------------------------------------------------
 Firebug
