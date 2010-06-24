@@ -75,6 +75,7 @@ window.FBDev =
         // ****************************************************************************************
         // Firediff
         
+        /*
         "firediff/content/firediff/versionCompat.js",
         "firediff/content/firediff/diff.js",
         "firediff/content/firediff/path.js",
@@ -87,6 +88,7 @@ window.FBDev =
         "firediff/content/firediff/pages.js",
         "firediff/content/firediff/diffModule.js",
         "firediff/content/firediff/diffMonitor.js",
+        /**/
         
         // ****************************************************************************************
         // Plugin

@@ -51,6 +51,9 @@ New issues
           
       Need to investigate if these changes break the layout in other browsers.  
     
+    - Opera 9 - inline editor does not show (hack is to change its z-index to 9).
+    
+    - Opera 9 and 10 - should ignore the tab event properly in the inline editor
     
     - editor.updateLayout() in IE, when element has a "auto" margin
     
@@ -749,6 +752,32 @@ IE problems with templates
 
 3 - event handlers  
 
+
+
+---------------------------------------------------------------------------------------------------
+Opera tab 
+---------------------------------------------------------------------------------------------------
+http://www.webdeveloper.com/forum/showpost.php?p=806588&postcount=8
+
+  function handleBlur(e) {
+    if (this.lastKey == 9)
+      this.focus();
+  }
+  
+  function handleKeyDown(e) {
+    this.lastKey = e.keyCode;
+  }
+  
+  function handleFocus(e) {
+    this.lastKey = null;
+  }
+
+  window.onload = function() {
+    var elm = document.getElementById('myTextarea');
+    elm.onfocus = handleFocus;
+    elm.onblur = handleBlur;
+    elm.onkeydown = handleKeyDown;
+  };
 
 
 ---------------------------------------------------------------------------------------------------
