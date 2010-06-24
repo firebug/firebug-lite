@@ -7,7 +7,8 @@ xmlns="http://www.w3.org/1999/xhtml" xmlns:h="http://www.w3.org/1999/xhtml">
   <body>
     <h1>Test console...</h1>
     <!-- Change the location of the Firebug Lite source below if needed -->
-    <script type="text/javascript" src="../../../build/firebug.uncompressed.js#startOpened"></script>
+    <script type="text/javascript" src="../../../build/firebug-lite-debug.js#startOpened"></script>
+    
     <!--
     <script type="text/javascript">
     var script = document.createElementNS(document.documentElement.namespaceURI, "script");
@@ -19,9 +20,11 @@ xmlns="http://www.w3.org/1999/xhtml" xmlns:h="http://www.w3.org/1999/xhtml">
     </script>
     -->
     <script type="text/javascript">
+    /*
     setTimeout(function(){
         console.log("Hello, World.");
     },500);
+    /**/
     </script>
   </body>
 </html>   
