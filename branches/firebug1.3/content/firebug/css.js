@@ -1255,6 +1255,9 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     
     shutdown: function()
     {
+        // must destroy the editor when we leave the panel to avoid problems (Issue 2981)
+        Firebug.Editor.stopEditing();
+        
         if (this.name == "stylesheet")
         {
             removeEvent(this.selectNode, "change", this.onChangeSelect);
@@ -1271,7 +1274,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
         //persistObjects(this, state);
 
-        Firebug.Editor.stopEditing();
+        // xxxpedro we are stopping the editor in the shutdown method already
+        //Firebug.Editor.stopEditing();
         Firebug.Panel.destroy.apply(this, arguments);
     },
 
@@ -1456,7 +1460,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         if (this.selection instanceof Element)
         {
             items.push(
-                "-",
+                //"-",
                 {label: "EditStyle",
                     command: bindFixed(this.editElementStyle, this) }
             );
@@ -1464,7 +1468,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         else if (!isSystemStyleSheet(this.selection))
         {
             items.push(
-                    "-",
+                    //"-",
                     {label: "NewRule",
                         command: bindFixed(this.insertRule, this, target) }
                 );
