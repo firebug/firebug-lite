@@ -42,9 +42,6 @@ r.tag.tag.renderDOM.apply(self ? self : r.tag.subject, domArgs);
 var consoleQueue = [];
 var lastHighlightedObject;
 var FirebugContext = Env.browser;
-var $STRF = function(){
-    return "$STRF not supported yet";
-}
 
 // ************************************************************************************************
 

@@ -9,6 +9,7 @@ var bookmarletMode = true;
 
 //var bookmarletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // latest
 var bookmarletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
+var bookmarletSkinURL = "http://getfirebug.local:8740/releases/lite/beta/skin/xp/"; // beta
 //var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
 
 // ************************************************************************************************
@@ -23,6 +24,8 @@ window.FBDev =
         // Application Core
         
         "firebug/lib.js",
+        
+        "firebug/i18n.js",
         
         "firebug/firebug.js",
         
@@ -56,6 +59,9 @@ window.FBDev =
         "firebug/xhr.js",
         "firebug/net.js",
         "firebug/spy.js",
+        
+        //"firebug/jsonViewer.js",
+        //"firebug/xmlViewer.js",
         
         // ****************************************************************************************
         // Application Modules/Panels
