@@ -1022,15 +1022,25 @@ append(ChromeBase,
 
         var onPanelMouseDown = function onPanelMouseDown(event)
         {
+            //console.log("onPanelMouseDown", event.target || event.srcElement, event);
+            
             var target = event.target || event.srcElement;
             
             if (FBL.isLeftClick(event))
             {
                 var editable = FBL.getAncestorByClass(target, "editable");
+                
+                // if an editable element has been clicked then start editing
                 if (editable)
                 {
                     Firebug.Editor.startEditing(editable);
                     FBL.cancelEvent(event);
+                }
+                // if any other element has been clicked then stop editing
+                else
+                {
+                    if (!hasClass(target, "textEditorInner"))
+                        Firebug.Editor.stopEditing();
                 }
             }
             else if (FBL.isMiddleClick(event) && Firebug.getRepNode(target))
