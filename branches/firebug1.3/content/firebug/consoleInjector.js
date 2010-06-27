@@ -313,9 +313,11 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
     this.dirxml = function(o)
     {
-        if (o instanceof Window)
+        ///if (o instanceof Window)
+        if (instanceOf(o, "Window"))
             o = o.document.documentElement;
-        else if (o instanceof Document)
+        ///else if (o instanceof Document)
+        else if (instanceOf(o, "Document"))
             o = o.documentElement;
 
         // TODO: xxxpedro html3
