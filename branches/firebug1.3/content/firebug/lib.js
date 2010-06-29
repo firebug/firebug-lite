@@ -26,7 +26,7 @@ var FBL = {};
 // Constants
     
 var productionDir = "http://getfirebug.com/releases/lite/";
-var bookmarletVersion = 4;
+var bookmarkletVersion = 4;
 
 // ************************************************************************************************
 
@@ -329,7 +329,7 @@ var findLocation =  function findLocation()
     var path = null;
     var doc = document;
     
-    // Firebug Lite 1.3.0 bookmarlet identification
+    // Firebug Lite 1.3.0 bookmarklet identification
     var script = doc.getElementById("FirebugLite");
     
     if (script)
@@ -339,10 +339,9 @@ var findLocation =  function findLocation()
         var version = script.getAttribute("FirebugLite");
         var number = version ? parseInt(version) : 0; 
         
-        if (!version || !number || number < bookmarletVersion)
+        if (!version || !number || number < bookmarkletVersion)
         {
-            // TODO: xxxpedro bookmarlet
-            //FBL.Env.bookmarletOutdated = true;
+            FBL.Env.bookmarkletOutdated = true;
         }
     }
     else

@@ -5,11 +5,11 @@
 
 // ************************************************************************************************
     
-var bookmarletMode = true;
+var bookmarkletMode = true;
 
-//var bookmarletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // latest
-//var bookmarletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
-var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
+//var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // latest
+//var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
+var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
 
 // ************************************************************************************************
 
@@ -464,7 +464,7 @@ function loadModules() {
     
     findLocation();
     
-    publishedURL = bookmarletMode ? bookmarletSkinURL : skinURL;
+    publishedURL = bookmarkletMode ? bookmarkletSkinURL : skinURL;
     
     var sufix = isApplicationContext ? "#app" : "";
     

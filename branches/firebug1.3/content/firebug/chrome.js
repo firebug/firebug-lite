@@ -290,7 +290,7 @@ var createChromeWindow = function(options)
             body.appendChild(node);
             
             // must set the id after appending to the document, otherwise will cause an
-            // strange error in IE, making the iframe load the page in which the bookmarlet
+            // strange error in IE, making the iframe load the page in which the bookmarklet
             // was created (like getfirebug.com), before loading the injected UI HTML,
             // generating an "Access Denied" error.
             node.id = options.id;
@@ -387,7 +387,7 @@ var createChromeWindow = function(options)
         if (/access/i.test(msg))
         {
             // Firebug Lite could not create a window for its Graphical User Interface due to
-            // a access restriction. This happens in some pages, when loading via bookmarlet.
+            // a access restriction. This happens in some pages, when loading via bookmarklet.
             // In such cases, the only way is to load the GUI in a "windowless mode".
             
             if (isChromeFrame)
@@ -881,10 +881,10 @@ append(ChromeBase,
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (Env.bookmarletOutdated)
+        if (Env.bookmarkletOutdated)
             Firebug.Console.logFormatted([
-                  "A new bookmarlet version is available. " +
-                  "Please visit http://getfirebug.com/firebuglite and update it."
+                  "A new bookmarklet version is available. " +
+                  "Please visit http://getfirebug.com/firebuglite#Install and update it."
                 ], Firebug.context, "warn");
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
