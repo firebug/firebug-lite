@@ -26,7 +26,7 @@ var FBL = {};
 // Constants
     
 var productionDir = "http://getfirebug.com/releases/lite/";
-var bookmarletVersion = 3;
+var bookmarletVersion = 4;
 
 // ************************************************************************************************
 
@@ -430,8 +430,9 @@ var findLocation =  function findLocation()
         if (fileName == "firebug-lite-dev.js")
         {
             Env.isDevelopmentMode = true;
-            Env.useLocalSkin = true;
             Env.isDebugMode = true;
+            // only use the local skin when running in the same domain
+            Env.useLocalSkin = path.indexOf(location.protocol + "//" + location.host + "/") == 0;
         }
         else if (fileName == "firebug-lite-debug.js")
         {
