@@ -1,6 +1,6 @@
 /*!*************************************************************
  *
- *    Firebug Lite 1.3.1a3
+ *    Firebug Lite 1.3.1b1
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
