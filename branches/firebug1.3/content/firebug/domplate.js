@@ -696,21 +696,6 @@ function parseParts(str)
     var index = 0;
     var parts = [];
 
-    // TODO: xxxpedro investigate with Chrome tream
-    // Avoid strange problem in Google Chrome 5. For some reason, re.exec(str) is
-    // returning null even when the string matches the expression, resulting in
-    // in the className of OBJECTLINK representations not being properly adjusted
-    // and consequently the styles not being properly applied to it. 
-    //
-    // Even more strange is the fact that after executing the regex object once, 
-    // the next call will matches the string.
-    //
-    // This fix will break the styles on Firefox 
-    if (FBL.isSafari && str == "objectLink objectLink-$className a11yFocus")
-    {
-        re.exec(str);
-    }
-    
     var m;
     while (m = re.exec(str))
     {
