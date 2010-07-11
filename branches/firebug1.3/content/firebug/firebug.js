@@ -26,7 +26,7 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.1b1",
+    version: "Firebug Lite 1.3.1b2",
     revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1050,7 +1050,30 @@ if (FBL.domplate) Firebug.Rep = domplate(
 
         var re = /\[object (.*?)\]/;
         var m = re.exec(label);
-        return m ? m[1] : label;
+        
+        ///return m ? m[1] : label;
+        
+        // if the label is in the "[object TYPE]" format return its type
+        if (m)
+        {
+            return m[1];
+        }
+        // if it is IE we need to handle some special cases
+        else if (
+                // safeToString() fails to recognize some objects in IE
+                isIE && 
+                // safeToString() returns "[object]" for some objects like window.Image 
+                (label == "[object]" || 
+                // safeToString() returns undefined for some objects like window.clientInformation 
+                typeof object == "object" && typeof label == "undefined")
+            )
+        {
+            return "Object";
+        }
+        else
+        {
+            return label;
+        }
     },
 
     getTooltip: function(object)
