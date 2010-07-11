@@ -234,12 +234,7 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         var result = this.evaluate(command);
         
-        // avoid logging the console command twice, in case it is a console function
-        // that is being executed in the command line
-        if (result != Firebug.Console.LOG_COMMAND)
-        {
-            Firebug.Console.log(result);
-        }
+        Firebug.Console.log(result);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

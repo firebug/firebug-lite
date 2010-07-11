@@ -1,6 +1,6 @@
 /*!*************************************************************
  *
- *    Firebug Lite 1.3.1b1
+ *    Firebug Lite 1.3.1b2
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -1068,7 +1068,9 @@ this.safeToString = function(ob)
     }
     catch (exc)
     {
-        return "[an object with no toString() function]";
+        // xxxpedro it is not safe to use ob+""?
+        return ob + "";
+        ///return "[an object with no toString() function]";
     }
 };
 
