@@ -173,13 +173,25 @@ var createCache = function()
 
 var globalCSSRuleIndex;
 
+var externalStyleSheetURLs = [];
+var externalStyleSheetWarning = domplate(Firebug.Rep,
+{
+    tag:
+        DIV({"class": "warning focusRow", style: "font-weight:normal;", role: 'listitem'},
+            SPAN("$object|STR"),
+            A({"href": "$href", target:"_blank"}, "$link|STR")
+        )
+})
+
+
 FBL.processAllStyleSheets = function(doc, styleSheetIterator)
 {
     styleSheetIterator = styleSheetIterator || processStyleSheet;
     
     globalCSSRuleIndex = -1;
-    var index = 0;
+    
     var styleSheets = doc.styleSheets;
+    var importedStyleSheets = [];
     
     if (FBTrace.DBG_CSS)
         var start = new Date().getTime();
@@ -190,41 +202,77 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
         {
             var styleSheet = styleSheets[i];
             
-            // process imported styleSheets
-            if (isIE)
-            {
-                var imports = styleSheet.imports;
-                
-                for(var j=0, importsLength=imports.length; j<importsLength; j++)
-                {
-                    styleSheetIterator(doc, imports[j]);
-                }
-            }
-            else
-            {
-                var rules = styleSheet.cssRules;
-                
-                for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
-                {
-                    var rule = rules[j];
-                    
-                    if (rule.styleSheet)
-                        styleSheetIterator(doc, rule.styleSheet);
-                    else
-                        break;
-                }
-                
-                index = j;
-            }
+            // we must read the rules to make sure we have permission to read 
+            // the stylesheet's content. If an error occurs here, we cannot 
+            // read the stylesheet due to access restriction policy
+            var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
         }
         catch(e)
         {
+            externalStyleSheetURLs.push(styleSheet.href);
             styleSheet.restricted = true;
             var ssid = StyleSheetCache(styleSheet);
         }
         
         // process internal and external styleSheets
         styleSheetIterator(doc, styleSheet);
+        
+        var importedStyleSheet, importedRules;
+        
+        // process imported styleSheets in IE
+        if (isIE)
+        {
+            var imports = styleSheet.imports;
+            
+            for(var j=0, importsLength=imports.length; j<importsLength; j++)
+            {
+                try
+                {
+                    importedStyleSheet = imports[j];
+                    // we must read the rules to make sure we have permission
+                    // to read the imported stylesheet's content. 
+                    importedRules = importedStyleSheet.rules;
+                }
+                catch(e)
+                {
+                    externalStyleSheetURLs.push(styleSheet.href);
+                    importedStyleSheet.restricted = true;
+                    var ssid = StyleSheetCache(importedStyleSheet);
+                }
+                
+                styleSheetIterator(doc, importedStyleSheet);
+            }
+        }
+        // process imported styleSheets in other browsers
+        else if (rules)
+        {
+            for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
+            {
+                try
+                {
+                    var rule = rules[j];
+                    
+                    importedStyleSheet = rule.styleSheet;
+                    
+                    if (importedStyleSheet)
+                    {
+                        // we must read the rules to make sure we have permission
+                        // to read the imported stylesheet's content. 
+                        importedRules = importedStyleSheet.cssRules;
+                    }
+                    else
+                        break;
+                }
+                catch(e)
+                {
+                    externalStyleSheetURLs.push(styleSheet.href);
+                    importedStyleSheet.restricted = true;
+                    var ssid = StyleSheetCache(importedStyleSheet);
+                }
+
+                styleSheetIterator(doc, importedStyleSheet);
+            }
+        }
     };
     
     if (FBTrace.DBG_CSS)
@@ -1354,6 +1402,14 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         if (styleSheet.restricted)
         {
             FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, this.panelNode);
+
+            // TODO: xxxpedro remove when there the external resource problem is fixed
+            externalStyleSheetWarning.tag.append({
+                object: "The stylesheet could not be loaded due to access restrictions. ",
+                link: "more...",
+                href: "#XXX"
+            }, this.panelNode);
+            
             return;
         }
 
@@ -1790,6 +1846,15 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
             var result = FirebugReps.Warning.tag.replace({object: "EmptyElementCSS"}, this.panelNode);
             //dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, result]);
         }
+
+        // TODO: xxxpedro remove when there the external resource problem is fixed
+        if (externalStyleSheetURLs.length > 0)
+            externalStyleSheetWarning.tag.append({
+                object: "The results here may be inaccurate because some " +
+                        "stylesheets could not be loaded due to access restrictions. ",
+                link: "more...",
+                href: "#XXX"
+            }, this.panelNode);
     },
 
     getStylesheetURL: function(rule)
