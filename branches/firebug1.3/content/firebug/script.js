@@ -79,7 +79,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         removeEvent(this.selectNode, "change", this.onChangeSelect);
         
-        Firebug.Panel.shutdown.apply(this, arguments);        
+        Firebug.Panel.shutdown.apply(this, arguments);
     },
     
     detach: function(oldChrome, newChrome)
