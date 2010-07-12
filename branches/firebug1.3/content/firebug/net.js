@@ -152,7 +152,7 @@ Firebug.NetMonitor = extend(Firebug.ActivableModule,
  * @domplate Represents a template that is used to reneder detailed info about a request.
  * This template is rendered when a request is expanded.
  */
-Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
+Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
 {
     tag:
         DIV({"class": "netInfoBody", _repObject: "$file"},
@@ -303,7 +303,6 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
 
     hideHtml: function(file)
     {
-        return true;
         return (file.mimeType != "text/html") && (file.mimeType != "application/xhtml+xml");
     },
 
@@ -331,8 +330,10 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
     {
         // Create new tab and body.
         var args = {tabId: tabId, tabTitle: tabTitle};
-        this.customTab.append(args, netInfoBox.getElementsByClassName("netInfoTabs").item(0));
-        this.customBody.append(args, netInfoBox.getElementsByClassName("netInfoBodies").item(0));
+        ///this.customTab.append(args, netInfoBox.getElementsByClassName("netInfoTabs").item(0));
+        ///this.customBody.append(args, netInfoBox.getElementsByClassName("netInfoBodies").item(0));
+        this.customTab.append(args, $$(".netInfoTabs", netInfoBox)[0]);
+        this.customBody.append(args, $$(".netInfoBodies", netInfoBox)[0]);
     },
 
     selectTabByName: function(netInfoBox, tabName)
@@ -447,8 +448,8 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
 
         else if (hasClass(tab, "netInfoResponseTab") && file.loaded && !netInfoBox.responsePresented)
         {
+            ///var responseTextBox = netInfoBox.getElementsByClassName("netInfoResponseText").item(0);
             var responseTextBox = $$(".netInfoResponseText", netInfoBox)[0];
-            //var responseTextBox = netInfoBox.getElementsByClassName("netInfoResponseText").item(0);
             if (file.category == "image")
             {
                 netInfoBox.responsePresented = true;
@@ -459,7 +460,7 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
                 clearNode(responseTextBox);
                 responseTextBox.appendChild(responseImage, responseTextBox);
             }
-            else //if (!(binaryCategoryMap.hasOwnProperty(file.category)))
+            else ///if (!(binaryCategoryMap.hasOwnProperty(file.category)))
             {
                 this.setResponseText(file, netInfoBox, responseTextBox, context);
             }
@@ -479,12 +480,23 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
             netInfoBox.htmlPresented = true;
 
             var text = Utils.getResponseText(file, context);
-            var iframe = netInfoBox.getElementsByClassName("netInfoHtmlPreview").item(0);
-            iframe.contentWindow.document.body.innerHTML = text;
+            
+            ///var iframe = netInfoBox.getElementsByClassName("netInfoHtmlPreview").item(0);
+            var iframe = $$(".netInfoHtmlPreview", netInfoBox)[0];
+            
+            ///iframe.contentWindow.document.body.innerHTML = text;
+            
+            // TODO: xxxpedro net - remove scripts
+            var reScript = /<script(.|\s)*?\/script>/gi;
+            
+            text = text.replace(reScript, "");
+                
+            iframe.contentWindow.document.write(text);
+            iframe.contentWindow.document.close();
         }
 
         // Notify listeners about update so, content of custom tabs can be updated.
-        //dispatch(NetInfoBody.fbListeners, "updateTabBody", [netInfoBox, file, context]);
+        dispatch(NetInfoBody.fbListeners, "updateTabBody", [netInfoBox, file, context]);
     },
 
     setResponseText: function(file, netInfoBox, responseTextBox, context)
@@ -493,7 +505,6 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
         //**********************************************
         //**********************************************
         netInfoBox.responsePresented = true;
-        
         // line breaks somehow are different in IE
         // make this only once in the initialization? we don't have net panels and modules yet.
         if (isIE)
@@ -634,9 +645,11 @@ Firebug.NetMonitor.NetInfoHeaders = domplate(Firebug.Rep, //new Firebug.Listener
         //if (source)
         //    source = source.replace(/\r\n/gm, "<span style='color:lightgray'>\\r\\n</span>\r\n");
 
-        var tbody = netInfoBox.getElementsByClassName("netInfo" + rowName + "Body").item(0);
+        ///var tbody = netInfoBox.getElementsByClassName("netInfo" + rowName + "Body").item(0);
+        var tbody = $$(".netInfo" + rowName + "Body", netInfoBox)[0];
         var node = this.sourceTag.replace({}, tbody);
-        var sourceNode = node.getElementsByClassName("source").item(0);
+        ///var sourceNode = node.getElementsByClassName("source").item(0);
+        var sourceNode = $$(".source", node)[0];
         sourceNode.innerHTML = source;
     },
 
@@ -735,11 +748,13 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
     // application/json
     jsonTable:
         TABLE({"class": "netInfoPostJSONTable", cellpadding: 0, cellspacing: 0, "role": "presentation"},
-            TBODY({"role": "list", "aria-label": $STR("jsonviewer.tab.JSON")},
+            ///TBODY({"role": "list", "aria-label": $STR("jsonviewer.tab.JSON")},
+            TBODY({"role": "list", "aria-label": $STR("JSON")},
                 TR({"class": "netInfoPostJSONTitle", "role": "presentation"},
                     TD({"role": "presentation" },
                         DIV({"class": "netInfoPostParams"},
-                            $STR("jsonviewer.tab.JSON")
+                            ///$STR("jsonviewer.tab.JSON")
+                            $STR("JSON")
                         )
                     )
                 ),
@@ -795,55 +810,54 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
 
     render: function(context, parentNode, file)
     {
-        //------------------------------------------------------------------
-        //------------------------------------------------------------------
-        //TODO: xxxpedro net
+        //debugger;
         var spy = getAncestorByClass(parentNode, "spyHead");
         var spyObject = spy.repObject;
         var data = spyObject.data;
         
-        var params = parseURLEncodedTextArray(data);
-        if (params)
-            this.insertParameters(parentNode, params);
+        var contentType = Utils.findHeader(file.requestHeaders, "content-type");
         
-        var postText = data;
-        //postText = Utils.formatPostText(postText);
-        if (postText)
-            this.insertSource(parentNode, postText);
-        
-        return;
-        //------------------------------------------------------------------
-        //------------------------------------------------------------------
-        
-        var text = Utils.getPostText(file, context, true);
-        if (text == undefined)
-            return;
+        ///var text = Utils.getPostText(file, context, true);
+        ///if (text == undefined)
+        ///    return;
 
-        if (Utils.isURLEncodedRequest(file, context))
+        ///if (Utils.isURLEncodedRequest(file, context))
+        // fake Utils.isURLEncodedRequest identification
+        if (contentType && contentType == "application/x-www-form-urlencoded" ||
+            data && data.indexOf("=") != -1) 
         {
-            var lines = text.split("\n");
-            var params = parseURLEncodedText(lines[lines.length-1]);
+            ///var lines = text.split("\n");
+            ///var params = parseURLEncodedText(lines[lines.length-1]);
+            var params = parseURLEncodedTextArray(data);
             if (params)
                 this.insertParameters(parentNode, params);
         }
 
-        if (Utils.isMultiPartRequest(file, context))
-        {
-            var data = this.parseMultiPartText(file, context);
-            if (data)
-                this.insertParts(parentNode, data);
-        }
+        ///if (Utils.isMultiPartRequest(file, context))
+        ///{
+        ///    var data = this.parseMultiPartText(file, context);
+        ///    if (data)
+        ///        this.insertParts(parentNode, data);
+        ///}
 
-        var contentType = Utils.findHeader(file.requestHeaders, "content-type");
+        // moved to the top
+        ///var contentType = Utils.findHeader(file.requestHeaders, "content-type");
 
-        if (Firebug.JSONViewerModel.isJSON(contentType))
-            this.insertJSON(parentNode, file, context);
+        ///if (Firebug.JSONViewerModel.isJSON(contentType))
+        var jsonData = {
+            responseText: data
+        };
+        
+        if (Firebug.JSONViewerModel.isJSON(contentType, data))
+            ///this.insertJSON(parentNode, file, context);
+            this.insertJSON(parentNode, jsonData, context);
 
-        if (Firebug.XMLViewerModel.isXML(contentType))
-            this.insertXML(parentNode, file, context);
+        ///if (Firebug.XMLViewerModel.isXML(contentType))
+        ///    this.insertXML(parentNode, file, context);
 
-        var postText = Utils.getPostText(file, context);
-        postText = Utils.formatPostText(postText);
+        ///var postText = Utils.getPostText(file, context);
+        ///postText = Utils.formatPostText(postText);
+        var postText = data;
         if (postText)
             this.insertSource(parentNode, postText);
     },
@@ -878,13 +892,17 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
 
     insertJSON: function(parentNode, file, context)
     {
-        var text = Utils.getPostText(file, context);
-        var data = parseJSONString(text, "http://" + file.request.originalURI.host);
+        ///var text = Utils.getPostText(file, context);
+        var text = file.responseText;
+        ///var data = parseJSONString(text, "http://" + file.request.originalURI.host);
+        var data = parseJSONString(text);
         if (!data)
             return;
 
-        var jsonTable = this.jsonTable.append(null, parentNode);
-        var jsonBody = jsonTable.getElementsByClassName("netInfoPostJSONBody").item(0);
+        ///var jsonTable = this.jsonTable.append(null, parentNode);
+        var jsonTable = this.jsonTable.append({}, parentNode);
+        ///var jsonBody = jsonTable.getElementsByClassName("netInfoPostJSONBody").item(0);
+        var jsonBody = $$(".netInfoPostJSONBody", jsonTable)[0];
 
         if (!this.toggles)
             this.toggles = {};
@@ -898,7 +916,8 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
         var text = Utils.getPostText(file, context);
 
         var jsonTable = this.xmlTable.append(null, parentNode);
-        var jsonBody = jsonTable.getElementsByClassName("netInfoPostXMLBody").item(0);
+        ///var jsonBody = jsonTable.getElementsByClassName("netInfoPostXMLBody").item(0);
+        var jsonBody = $$(".netInfoPostXMLBody", jsonTable)[0];
 
         Firebug.XMLViewerModel.insertXML(jsonBody, text);
     },
