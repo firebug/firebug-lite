@@ -49,7 +49,8 @@ Firebug.JSONViewerModel = extend(Firebug.Module,
         // The JSON is still no there, try to parse most common cases.
         if (!file.jsonObject)
         {
-            if (this.isJSON(safeGetContentType(file.request), file.responseText))
+            ///if (this.isJSON(safeGetContentType(file.request), file.responseText))
+            if (this.isJSON(file.mimeType, file.responseText))
                 file.jsonObject = this.parseJSON(file);
         }
 
@@ -57,7 +58,8 @@ Firebug.JSONViewerModel = extend(Firebug.Module,
         if (file.jsonObject && hasProperties(file.jsonObject))
         {
             Firebug.NetMonitor.NetInfoBody.appendTab(infoBox, "JSON",
-                $STR("jsonviewer.tab.JSON"));
+                ///$STR("jsonviewer.tab.JSON"));
+                $STR("JSON"));
 
             if (FBTrace.DBG_JSONVIEWER)
                 FBTrace.sysout("jsonviewer.initTabBody; JSON object available " +
@@ -73,7 +75,11 @@ Firebug.JSONViewerModel = extend(Firebug.Module,
         // responses (and post data) (with "{") can be parsed unnecessarily,
         // which represents a little overhead, but this happens only if the request
         // is actually expanded by the user in the UI (Net & Console panels).
-        var responseText = data ? trimLeft(data) : null;
+        
+        ///var responseText = data ? trimLeft(data) : null;
+        ///if (responseText && responseText.indexOf("{") == 0)
+        ///    return true;
+        var responseText = data ? trim(data) : null;
         if (responseText && responseText.indexOf("{") == 0)
             return true;
 
@@ -89,7 +95,8 @@ Firebug.JSONViewerModel = extend(Firebug.Module,
     updateTabBody: function(infoBox, file, context)
     {
         var tab = infoBox.selectedTab;
-        var tabBody = infoBox.getElementsByClassName("netInfoJSONText").item(0);
+        ///var tabBody = infoBox.getElementsByClassName("netInfoJSONText").item(0);
+        var tabBody = $$(".netInfoJSONText", infoBox)[0];
         if (!hasClass(tab, "netInfoJSONTab") || tabBody.updated)
             return;
 
@@ -104,8 +111,9 @@ Firebug.JSONViewerModel = extend(Firebug.Module,
     parseJSON: function(file)
     {
         var jsonString = new String(file.responseText);
-        return parseJSONString(jsonString, "http://" + file.request.originalURI.host);
-    },
+        ///return parseJSONString(jsonString, "http://" + file.request.originalURI.host);
+        return parseJSONString(jsonString);
+    }
 });
 
 // ************************************************************************************************

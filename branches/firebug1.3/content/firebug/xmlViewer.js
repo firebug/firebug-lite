@@ -32,13 +32,15 @@ Firebug.XMLViewerModel = extend(Firebug.Module,
 
     initialize: function()
     {
-        Firebug.ActivableModule.initialize.apply(this, arguments);
+        ///Firebug.ActivableModule.initialize.apply(this, arguments);
+        Firebug.Module.initialize.apply(this, arguments);
         Firebug.NetMonitor.NetInfoBody.addListener(this);
     },
 
     shutdown: function()
     {
-        Firebug.ActivableModule.shutdown.apply(this, arguments);
+        ///Firebug.ActivableModule.shutdown.apply(this, arguments);
+        Firebug.Module.shutdown.apply(this, arguments);
         Firebug.NetMonitor.NetInfoBody.removeListener(this);
     },
 
@@ -51,10 +53,12 @@ Firebug.XMLViewerModel = extend(Firebug.Module,
             FBTrace.sysout("xmlviewer.initTabBody", infoBox);
 
         // If the response is XML let's display a pretty preview.
-        if (this.isXML(safeGetContentType(file.request)))
+        ///if (this.isXML(safeGetContentType(file.request)))
+        if (this.isXML(file.mimeType, file.responseText))
         {
             Firebug.NetMonitor.NetInfoBody.appendTab(infoBox, "XML",
-                $STR("xmlviewer.tab.XML"));
+                ///$STR("xmlviewer.tab.XML"));
+                $STR("XML"));
 
             if (FBTrace.DBG_XMLVIEWER)
                 FBTrace.sysout("xmlviewer.initTabBody; XML response available");
@@ -82,7 +86,8 @@ Firebug.XMLViewerModel = extend(Firebug.Module,
     updateTabBody: function(infoBox, file, context)
     {
         var tab = infoBox.selectedTab;
-        var tabBody = infoBox.getElementsByClassName("netInfoXMLText").item(0);
+        ///var tabBody = infoBox.getElementsByClassName("netInfoXMLText").item(0);
+        var tabBody = $$(".netInfoXMLText", infoBox)[0];
         if (!hasClass(tab, "netInfoXMLTab") || tabBody.updated)
             return;
 
@@ -93,6 +98,14 @@ Firebug.XMLViewerModel = extend(Firebug.Module,
 
     insertXML: function(parentNode, text)
     {
+        var xmlText = text.replace(/^\s*<?.+?>\s*/, "");
+        
+        var div = parentNode.ownerDocument.createElement("div");
+        div.innerHTML = xmlText;
+        
+        var root = div.getElementsByTagName("*")[0];
+    
+        /***
         var parser = CCIN("@mozilla.org/xmlextras/domparser;1", "nsIDOMParser");
         var doc = parser.parseFromString(text, "text/xml");
         var root = doc.documentElement;
@@ -107,12 +120,14 @@ Firebug.XMLViewerModel = extend(Firebug.Module,
             }}, parentNode);
             return;
         }
+        /**/
 
         if (FBTrace.DBG_XMLVIEWER)
             FBTrace.sysout("xmlviewer.updateTabBody; XML response parsed", doc);
 
         // Override getHidden in these templates. The parsed XML documen is
         // hidden, but we want to display it using 'visible' styling.
+        /*
         var templates = [
             Firebug.HTMLPanel.CompleteElement,
             Firebug.HTMLPanel.Element,
@@ -129,12 +144,21 @@ Firebug.XMLViewerModel = extend(Firebug.Module,
                 return "";
             }
         }
+        /**/
 
         // Generate XML preview.
-        Firebug.HTMLPanel.CompleteElement.tag.replace({object: doc.documentElement}, parentNode);
+        ///Firebug.HTMLPanel.CompleteElement.tag.replace({object: doc.documentElement}, parentNode);
+        
+        // TODO: xxxpedro html3
+        ///Firebug.HTMLPanel.CompleteElement.tag.replace({object: root}, parentNode);
+        var html = [];
+        Firebug.Reps.appendNode(root, html);
+        parentNode.innerHTML = html.join("");
+        
 
+        /*
         for (var i=0; i<originals.length; i++)
-            templates[i].getHidden = originals[i];
+            templates[i].getHidden = originals[i];/**/
     }
 });
 
