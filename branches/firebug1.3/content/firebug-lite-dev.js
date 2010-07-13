@@ -7,9 +7,12 @@
     
 var bookmarkletMode = true;
 
-//var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // latest
+//var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // stable
 //var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
-var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
+//var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
+
+var bookmarkletSkinURL = "chrome-extension://amhgmhckicahldhddajanlhlhipgafkc/skin/xp/"; // chrome beta
+
 
 // ************************************************************************************************
 
@@ -59,8 +62,8 @@ window.FBDev =
         "firebug/net.js",
         "firebug/spy.js",
         
-        //"firebug/jsonViewer.js",
-        //"firebug/xmlViewer.js",
+        "firebug/jsonViewer.js",
+        "firebug/xmlViewer.js",
         
         // ****************************************************************************************
         // Application Modules/Panels

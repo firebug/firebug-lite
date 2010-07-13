@@ -1,9 +1,92 @@
 ###################################################################################################
- 1.3.1b1 - 2009-xx-xx - Revision: xxxx
+ 1.3.1b2 - 2009-xx-xx - Revision: xxxx
+###################################################################################################
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TODO: create 2 issues:
+    - "Access to restricted URI denied."
+    - "This element has no style rules."
+
+TODO: create FAQ:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Overview:
+    - Issue 3224: Firebug Lite shows error when trying to read some external stylesheets
+    - Issue 3181: Missing XHR methods/properties
+    - Custom Net response viewers (XML and JSON viewers)
+        - Port of HTML viewer used in XHR representations
+        - Port of jsonViewer used in XHR representations
+        - Port of xmlViewer used in XHR representations
+
+-------------------------------------------------------------------------------
+XHR
+-------------------------------------------------------------------------------
+    - Issue 3181: Missing XHR methods/properties
+    - Adjusting spy.mimeType according XHR response so we can detect when to
+      use custom response viewers (like HTML, XML and JSON viewers)
+
+-------------------------------------------------------------------------------
+jsonViewer
+-------------------------------------------------------------------------------
+    - Port of jsonViewer used in XHR representations
+
+-------------------------------------------------------------------------------
+xmlViewer    
+-------------------------------------------------------------------------------
+    - Port of xmlViewer used in XHR representations
+
+-------------------------------------------------------------------------------
+Net 
+-------------------------------------------------------------------------------
+    - Custom Net response viewers (XML and JSON viewers)
+    - Port of HTML viewer used in XHR representations
+
+-------------------------------------------------------------------------------
+Spy 
+-------------------------------------------------------------------------------
+    - dispatching "initTabBody" event to Firebug.NetMonitor.NetInfoBody listeners
+      so custom response viewers can be properly initialized
+
+-------------------------------------------------------------------------------
+CSS
+-------------------------------------------------------------------------------
+    - Included warnings when some external stylesheets could not be loaded
+    - Issue 3224: Firebug Lite shows error when trying to read some external stylesheets
+    
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+    - Avoid error when the element is not attached a document
+
+-------------------------------------------------------------------------------
+Domplate
+-------------------------------------------------------------------------------
+    - Removing the temporary fix to RegExp problem Google Chrome 5 once it 
+      is now fixed (and the temporary fix breaks the latest version).
+
+-------------------------------------------------------------------------------
+Firebug
+-------------------------------------------------------------------------------
+    - Firebug.Rep.getTitle now works for some special cases in IE
+
+-------------------------------------------------------------------------------
+Command Line
+-------------------------------------------------------------------------------
+    - Firebug.Console no longer uses Firebug.Console.LOG_COMMAND to identify 
+      console calls as in the old Console panel version.
+
+
+
+###################################################################################################
+ 1.3.1b1 - 2009-06-29 - Revision: 7198
 ###################################################################################################
 
 Overview:
     - Issue 2958: Unable to add CSS to an element that has no style rules
+    - Issue 3165: Styling problem with nested expandable groups
+    - Issue 3178: Bookmarklet does not support XML+XSLT documents
+    - Context menu support for Style and CSS Panels
+    - Using double click to insert new CSS rule (instead of mouse down)  
     
 
 -------------------------------------------------------------------------------
@@ -49,7 +132,9 @@ Lib
 -------------------------------------------------------------------------------
     - Ported lib.hasProperties()
     - Fixed IE mouse button detection for "dblclick" events
-    - port of lib.parseJSONString()
+    - Port of lib.parseJSONString()
+    - Making the development mode work online without requiring pre-configuration
+    - Enabled the bookmarlet update detection
 
 -------------------------------------------------------------------------------
 HTML
@@ -66,8 +151,10 @@ CommandLine
 -------------------------------------------------------------------------------
     - Fixed the broken dirxml() command line shortcut 
 
-
-
+-------------------------------------------------------------------------------
+Bookmarklet
+-------------------------------------------------------------------------------
+    - Issue 3178: Bookmarklet does not support XML+XSLT documents
 
 
 ###################################################################################################

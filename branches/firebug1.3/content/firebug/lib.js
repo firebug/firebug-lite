@@ -5303,7 +5303,7 @@ this.Ajax =
     
         // Caso tenha sido informado algum dado
         if (data = FBL.Ajax.serialize(r.data))
-          t.setRequestHeader("Content-Type", r.contentType);
+            t.setRequestHeader("Content-Type", r.contentType);
     
         /** @ignore */
         // Tratamento de evento de mudanÃ§a de estado

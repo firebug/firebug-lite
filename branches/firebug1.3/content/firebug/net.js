@@ -815,7 +815,8 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
         var spyObject = spy.repObject;
         var data = spyObject.data;
         
-        var contentType = Utils.findHeader(file.requestHeaders, "content-type");
+        ///var contentType = Utils.findHeader(file.requestHeaders, "content-type");
+        var contentType = file.mimeType;
         
         ///var text = Utils.getPostText(file, context, true);
         ///if (text == undefined)
