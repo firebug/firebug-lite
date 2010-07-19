@@ -5,10 +5,14 @@
 
 // ************************************************************************************************
     
-var bookmarletMode = true;
+var bookmarkletMode = true;
 
-//var bookmarletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/";
-var bookmarletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/";
+//var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // stable
+//var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
+//var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
+
+var bookmarkletSkinURL = "chrome-extension://amhgmhckicahldhddajanlhlhipgafkc/skin/xp/"; // chrome beta
+
 
 // ************************************************************************************************
 
@@ -22,6 +26,8 @@ window.FBDev =
         // Application Core
         
         "firebug/lib.js",
+        
+        "firebug/i18n.js",
         
         "firebug/firebug.js",
         
@@ -56,6 +62,9 @@ window.FBDev =
         "firebug/net.js",
         "firebug/spy.js",
         
+        "firebug/jsonViewer.js",
+        "firebug/xmlViewer.js",
+        
         // ****************************************************************************************
         // Application Modules/Panels
         
@@ -69,23 +78,43 @@ window.FBDev =
         "firebug/infotip.js", // experimental
         
         "firebug/css.js",
-        
         "firebug/script.js",
         "firebug/dom.js",
         
+        //"firebug/helloWorld.js",
+        
         // ****************************************************************************************
         // Trace Module/Panel
+        
         "firebug/trace.js",
         "firebug/tracePanel.js",
         
         // ****************************************************************************************
+        // Firediff
+        
+        /*
+        "firediff/content/firediff/versionCompat.js",
+        "firediff/content/firediff/diff.js",
+        "firediff/content/firediff/path.js",
+        "firediff/content/firediff/cssModel.js",
+        "firediff/content/firediff/events.js",
+        "firediff/content/firediff/domEvents.js",
+        "firediff/content/firediff/cssEvents.js",
+        "firediff/content/firediff/domplate.js",
+        "firediff/content/firediff/search.js",
+        "firediff/content/firediff/pages.js",
+        "firediff/content/firediff/diffModule.js",
+        "firediff/content/firediff/diffMonitor.js",
+        /**/
+        
+        // ****************************************************************************************
         // Plugin
+        
         "firebug/plugin.js", // must be the last module loaded
         
         // ****************************************************************************************
         // Bootstrap
         "firebug/boot.js"
-        
     ],
     // ********************************************************************************************
 
@@ -446,7 +475,7 @@ function loadModules() {
     
     findLocation();
     
-    publishedURL = bookmarletMode ? bookmarletSkinURL : skinURL;
+    publishedURL = bookmarkletMode ? bookmarkletSkinURL : skinURL;
     
     var sufix = isApplicationContext ? "#app" : "";
     
