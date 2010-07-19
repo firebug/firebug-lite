@@ -701,7 +701,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         var focusAndSelect = function(){
             self.input.focus();
             self.input.select();
-        },0);
+        };
     },
 
     hide: function()
