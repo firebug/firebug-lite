@@ -281,6 +281,10 @@ Firebug.Inspector =
     
     drawBoxModel: function(el)
     {
+        // avoid error when the element is not attached a document
+        if (!el || !el.parentNode)
+            return;
+        
         var box = Firebug.browser.getElementBox(el);
         
         var windowSize = Firebug.browser.getWindowSize();

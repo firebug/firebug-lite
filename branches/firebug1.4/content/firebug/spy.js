@@ -695,7 +695,7 @@ var updateHttpSpyInfo = function updateHttpSpyInfo(spy, logRow)
     {
         var head = getChildByClass(spy.logRow, "spyHead");
         netInfoBox = template.tag.append({"file": spy}, head);
-        //dispatch(template.fbListeners, "initTabBody", [netInfoBox, spy]);
+        dispatch(template.fbListeners, "initTabBody", [netInfoBox, spy]);
         template.selectTabByName(netInfoBox, "Response");
     }
     else

@@ -603,6 +603,9 @@ Firebug.Panel =
         
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.create", this.name);
         
+        // xxxpedro contextMenu
+        this.onContextMenu = bind(this.onContextMenu, this);
+        
         /*
         this.context = context;
         this.document = doc;
@@ -683,6 +686,9 @@ Firebug.Panel =
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // restore persistent state
         this.containerNode.scrollTop = this.lastScrollTop;
+        
+        // xxxpedro contextMenu
+        addEvent(this.containerNode, "contextmenu", this.onContextMenu);
     },
     
     shutdown: function()
@@ -704,6 +710,9 @@ Firebug.Panel =
         
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
+        
+        // xxxpedro contextMenu
+        removeEvent(this.containerNode, "contextmenu", this.onContextMenu);
     },
 
     detach: function(oldChrome, newChrome)
@@ -889,8 +898,62 @@ Firebug.Panel =
 
     search: function(text)
     {
-    }
+    },
 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    // xxxpedro contextMenu
+    onContextMenu: function(event)
+    {
+        if (!this.getContextMenuItems)
+            return;
+        
+        cancelEvent(event, true);
+
+        var target = event.target || event.srcElement;
+        
+        var menu = this.getContextMenuItems(this.selection, target);
+        if (!menu) 
+            return;
+        
+        var contextMenu = new Menu(
+        {
+            id: "fbPanelContextMenu",
+            
+            items: menu
+        });
+        
+        contextMenu.show(event.clientX, event.clientY);
+        
+        return true;
+        
+        /*
+        // TODO: xxxpedro move code to somewhere. code to get cross-browser
+        // window to screen coordinates
+        var box = Firebug.browser.getElementPosition(Firebug.chrome.node);
+        
+        var screenY = 0;
+        
+        // Firefox
+        if (typeof window.mozInnerScreenY != "undefined")
+        {
+            screenY = window.mozInnerScreenY; 
+        }
+        // Chrome
+        else if (typeof window.innerHeight != "undefined")
+        {
+            screenY = window.outerHeight - window.innerHeight;
+        }
+        // IE
+        else if (typeof window.screenTop != "undefined")
+        {
+            screenY = window.screenTop;
+        }
+        
+        contextMenu.show(event.screenX-box.left, event.screenY-screenY-box.top);
+        /**/
+    }
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 };
 
@@ -987,7 +1050,30 @@ if (FBL.domplate) Firebug.Rep = domplate(
 
         var re = /\[object (.*?)\]/;
         var m = re.exec(label);
-        return m ? m[1] : label;
+        
+        ///return m ? m[1] : label;
+        
+        // if the label is in the "[object TYPE]" format return its type
+        if (m)
+        {
+            return m[1];
+        }
+        // if it is IE we need to handle some special cases
+        else if (
+                // safeToString() fails to recognize some objects in IE
+                isIE && 
+                // safeToString() returns "[object]" for some objects like window.Image 
+                (label == "[object]" || 
+                // safeToString() returns undefined for some objects like window.clientInformation 
+                typeof object == "object" && typeof label == "undefined")
+            )
+        {
+            return "Object";
+        }
+        else
+        {
+            return label;
+        }
     },
 
     getTooltip: function(object)

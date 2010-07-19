@@ -173,13 +173,25 @@ var createCache = function()
 
 var globalCSSRuleIndex;
 
+var externalStyleSheetURLs = [];
+var externalStyleSheetWarning = domplate(Firebug.Rep,
+{
+    tag:
+        DIV({"class": "warning focusRow", style: "font-weight:normal;", role: 'listitem'},
+            SPAN("$object|STR"),
+            A({"href": "$href", target:"_blank"}, "$link|STR")
+        )
+})
+
+
 FBL.processAllStyleSheets = function(doc, styleSheetIterator)
 {
     styleSheetIterator = styleSheetIterator || processStyleSheet;
     
     globalCSSRuleIndex = -1;
-    var index = 0;
+    
     var styleSheets = doc.styleSheets;
+    var importedStyleSheets = [];
     
     if (FBTrace.DBG_CSS)
         var start = new Date().getTime();
@@ -190,41 +202,77 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
         {
             var styleSheet = styleSheets[i];
             
-            // process imported styleSheets
-            if (isIE)
-            {
-                var imports = styleSheet.imports;
-                
-                for(var j=0, importsLength=imports.length; j<importsLength; j++)
-                {
-                    styleSheetIterator(doc, imports[j]);
-                }
-            }
-            else
-            {
-                var rules = styleSheet.cssRules;
-                
-                for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
-                {
-                    var rule = rules[j];
-                    
-                    if (rule.styleSheet)
-                        styleSheetIterator(doc, rule.styleSheet);
-                    else
-                        break;
-                }
-                
-                index = j;
-            }
+            // we must read the rules to make sure we have permission to read 
+            // the stylesheet's content. If an error occurs here, we cannot 
+            // read the stylesheet due to access restriction policy
+            var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
         }
         catch(e)
         {
+            externalStyleSheetURLs.push(styleSheet.href);
             styleSheet.restricted = true;
             var ssid = StyleSheetCache(styleSheet);
         }
         
         // process internal and external styleSheets
         styleSheetIterator(doc, styleSheet);
+        
+        var importedStyleSheet, importedRules;
+        
+        // process imported styleSheets in IE
+        if (isIE)
+        {
+            var imports = styleSheet.imports;
+            
+            for(var j=0, importsLength=imports.length; j<importsLength; j++)
+            {
+                try
+                {
+                    importedStyleSheet = imports[j];
+                    // we must read the rules to make sure we have permission
+                    // to read the imported stylesheet's content. 
+                    importedRules = importedStyleSheet.rules;
+                }
+                catch(e)
+                {
+                    externalStyleSheetURLs.push(styleSheet.href);
+                    importedStyleSheet.restricted = true;
+                    var ssid = StyleSheetCache(importedStyleSheet);
+                }
+                
+                styleSheetIterator(doc, importedStyleSheet);
+            }
+        }
+        // process imported styleSheets in other browsers
+        else if (rules)
+        {
+            for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
+            {
+                try
+                {
+                    var rule = rules[j];
+                    
+                    importedStyleSheet = rule.styleSheet;
+                    
+                    if (importedStyleSheet)
+                    {
+                        // we must read the rules to make sure we have permission
+                        // to read the imported stylesheet's content. 
+                        importedRules = importedStyleSheet.cssRules;
+                    }
+                    else
+                        break;
+                }
+                catch(e)
+                {
+                    externalStyleSheetURLs.push(styleSheet.href);
+                    importedStyleSheet.restricted = true;
+                    var ssid = StyleSheetCache(importedStyleSheet);
+                }
+
+                styleSheetIterator(doc, importedStyleSheet);
+            }
+        }
     };
     
     if (FBTrace.DBG_CSS)
@@ -1007,7 +1055,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     editElementStyle: function()
     {
-        var rulesBox = this.panelNode.getElementsByClassName("cssElementRuleContainer")[0];
+        ///var rulesBox = this.panelNode.getElementsByClassName("cssElementRuleContainer")[0];
+        var rulesBox = $$(".cssElementRuleContainer", this.panelNode)[0];
         var styleRuleBox = rulesBox && Firebug.getElementByRepObject(rulesBox, this.selection);
         if (!styleRuleBox)
         {
@@ -1020,12 +1069,14 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                     rules: [rule], inherited: [], inheritLabel: "Inherited from" // $STR("InheritedFrom")
                 }, this.panelNode);
 
-                styleRuleBox = styleRuleBox.getElementsByClassName("cssElementRuleContainer")[0];
+                ///styleRuleBox = styleRuleBox.getElementsByClassName("cssElementRuleContainer")[0];
+                styleRuleBox = $$(".cssElementRuleContainer", styleRuleBox)[0];
             }
             else
                 styleRuleBox = this.template.ruleTag.insertBefore({rule: rule}, rulesBox);
 
-            styleRuleBox = styleRuleBox.getElementsByClassName("insertInto")[0];
+            ///styleRuleBox = styleRuleBox.getElementsByClassName("insertInto")[0];
+            styleRuleBox = $$(".insertInto", styleRuleBox)[0];
         }
 
         Firebug.Editor.insertRowForObject(styleRuleBox);
@@ -1123,6 +1174,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onMouseDown: function(event)
     {
+        //console.log("onMouseDown", event.target || event.srcElement, event);
+        
         // xxxpedro adjusting coordinates because the panel isn't a window yet
         var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
         
@@ -1142,8 +1195,10 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         }
     },
 
-    onClick: function(event)
+    onDoubleClick: function(event)
     {
+        //console.log("onDoubleClick", event.target || event.srcElement, event);
+        
         // xxxpedro adjusting coordinates because the panel isn't a window yet
         var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
         
@@ -1151,6 +1206,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             return;
 
         var target = event.target || event.srcElement;
+        
+        //console.log("ok", target, hasClass(target, "textEditorInner"), !isLeftClick(event), offset <= 20);
         
         // if the inline editor was clicked, don't insert a new rule
         if (hasClass(target, "textEditorInner"))
@@ -1184,7 +1241,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         Firebug.Panel.create.apply(this, arguments);
         
         this.onMouseDown = bind(this.onMouseDown, this);
-        this.onClick = bind(this.onClick, this);
+        this.onDoubleClick = bind(this.onDoubleClick, this);
 
         if (this.name == "stylesheet")
         {
@@ -1282,7 +1339,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     initializeNode: function(oldPanelNode)
     {
         addEvent(this.panelNode, "mousedown", this.onMouseDown);
-        addEvent(this.panelNode, "click", this.onClick);
+        addEvent(this.panelNode, "dblclick", this.onDoubleClick);
         //Firebug.SourceBoxPanel.initializeNode.apply(this, arguments);
         //dispatch([Firebug.A11yModel], 'onInitializeNode', [this, 'css']);
     },
@@ -1290,7 +1347,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     destroyNode: function()
     {
         removeEvent(this.panelNode, "mousedown", this.onMouseDown);
-        removeEvent(this.panelNode, "click", this.onClick);
+        removeEvent(this.panelNode, "dblclick", this.onDoubleClick);
         //Firebug.SourceBoxPanel.destroyNode.apply(this, arguments);
         //dispatch([Firebug.A11yModel], 'onDestroyNode', [this, 'css']);
     },
@@ -1345,6 +1402,14 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         if (styleSheet.restricted)
         {
             FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, this.panelNode);
+
+            // TODO: xxxpedro remove when there the external resource problem is fixed
+            externalStyleSheetWarning.tag.append({
+                object: "The stylesheet could not be loaded due to access restrictions. ",
+                link: "more...",
+                href: "#XXX"
+            }, this.panelNode);
+            
             return;
         }
 
@@ -1457,7 +1522,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             );
         }
 
-        if (this.selection instanceof Element)
+        ///if (this.selection instanceof Element)
+        if (isElement(this.selection))
         {
             items.push(
                 //"-",
@@ -1780,6 +1846,15 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
             var result = FirebugReps.Warning.tag.replace({object: "EmptyElementCSS"}, this.panelNode);
             //dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, result]);
         }
+
+        // TODO: xxxpedro remove when there the external resource problem is fixed
+        if (externalStyleSheetURLs.length > 0)
+            externalStyleSheetWarning.tag.append({
+                object: "The results here may be inaccurate because some " +
+                        "stylesheets could not be loaded due to access restrictions. ",
+                link: "more...",
+                href: "#XXX"
+            }, this.panelNode);
     },
 
     getStylesheetURL: function(rule)
@@ -1996,15 +2071,15 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
             // Normally these would not be required, but in order to update after the state is set
             // using the options menu we need to monitor these global events as well
             var doc = win.document;
-            addEvent(doc, "mouseover", this.onHoverChange);
-            addEvent(doc, "mousedown", this.onActiveChange);
+            ///addEvent(doc, "mouseover", this.onHoverChange);
+            ///addEvent(doc, "mousedown", this.onActiveChange);
         }
     },
     unwatchWindow: function(win)
     {
         var doc = win.document;
-        removeEvent(doc, "mouseover", this.onHoverChange);
-        removeEvent(doc, "mousedown", this.onActiveChange);
+        ///removeEvent(doc, "mouseover", this.onHoverChange);
+        ///removeEvent(doc, "mousedown", this.onActiveChange);
 
         if (isAncestor(this.stateChangeEl, doc))
         {
@@ -2089,12 +2164,14 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
     {
       this.removeStateChangeHandlers();
 
+      /*
       addEvent(el, "focus", this.onStateChange);
       addEvent(el, "blur", this.onStateChange);
       addEvent(el, "mouseup", this.onStateChange);
       addEvent(el, "mousedown", this.onStateChange);
       addEvent(el, "mouseover", this.onStateChange);
       addEvent(el, "mouseout", this.onStateChange);
+      /**/
 
       this.stateChangeEl = el;
     },
@@ -2104,12 +2181,14 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
         var sel = this.stateChangeEl;
         if (sel)
         {
+            /*
             removeEvent(sel, "focus", this.onStateChange);
             removeEvent(sel, "blur", this.onStateChange);
             removeEvent(sel, "mouseup", this.onStateChange);
             removeEvent(sel, "mousedown", this.onStateChange);
             removeEvent(sel, "mouseover", this.onStateChange);
             removeEvent(sel, "mouseout", this.onStateChange);
+            /**/
         }
     },
 

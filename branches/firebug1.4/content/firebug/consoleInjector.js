@@ -313,12 +313,19 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
     this.dirxml = function(o)
     {
-        if (o instanceof Window)
+        ///if (o instanceof Window)
+        if (instanceOf(o, "Window"))
             o = o.document.documentElement;
-        else if (o instanceof Document)
+        ///else if (o instanceof Document)
+        else if (instanceOf(o, "Document"))
             o = o.documentElement;
 
-        Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        // TODO: xxxpedro html3
+        ///Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        var div = Firebug.Console.log(o, context, "dirxml");
+        var html = [];
+        Firebug.Reps.appendNode(o, html);
+        div.innerHTML = html.join("");
     };
 
     this.group = function()

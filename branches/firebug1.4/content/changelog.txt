@@ -1,4 +1,236 @@
 ###################################################################################################
+ 1.3.1b2 - 2009-xx-xx - Revision: xxxx
+###################################################################################################
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TODO: create 2 issues:
+    - "Access to restricted URI denied."
+    - "This element has no style rules."
+
+TODO: create FAQ:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Overview:
+    - Issue 3224: Firebug Lite shows error when trying to read some external stylesheets
+    - Issue 3181: Missing XHR methods/properties
+    - Custom Net response viewers (XML and JSON viewers)
+        - Port of HTML viewer used in XHR representations
+        - Port of jsonViewer used in XHR representations
+        - Port of xmlViewer used in XHR representations
+
+-------------------------------------------------------------------------------
+XHR
+-------------------------------------------------------------------------------
+    - Issue 3181: Missing XHR methods/properties
+    - Adjusting spy.mimeType according XHR response so we can detect when to
+      use custom response viewers (like HTML, XML and JSON viewers)
+
+-------------------------------------------------------------------------------
+jsonViewer
+-------------------------------------------------------------------------------
+    - Port of jsonViewer used in XHR representations
+
+-------------------------------------------------------------------------------
+xmlViewer    
+-------------------------------------------------------------------------------
+    - Port of xmlViewer used in XHR representations
+
+-------------------------------------------------------------------------------
+Net 
+-------------------------------------------------------------------------------
+    - Custom Net response viewers (XML and JSON viewers)
+    - Port of HTML viewer used in XHR representations
+
+-------------------------------------------------------------------------------
+Spy 
+-------------------------------------------------------------------------------
+    - dispatching "initTabBody" event to Firebug.NetMonitor.NetInfoBody listeners
+      so custom response viewers can be properly initialized
+
+-------------------------------------------------------------------------------
+CSS
+-------------------------------------------------------------------------------
+    - Included warnings when some external stylesheets could not be loaded
+    - Issue 3224: Firebug Lite shows error when trying to read some external stylesheets
+    
+-------------------------------------------------------------------------------
+Inspector
+-------------------------------------------------------------------------------
+    - Avoid error when the element is not attached a document
+
+-------------------------------------------------------------------------------
+Domplate
+-------------------------------------------------------------------------------
+    - Removing the temporary fix to RegExp problem Google Chrome 5 once it 
+      is now fixed (and the temporary fix breaks the latest version).
+
+-------------------------------------------------------------------------------
+Firebug
+-------------------------------------------------------------------------------
+    - Firebug.Rep.getTitle now works for some special cases in IE
+
+-------------------------------------------------------------------------------
+Command Line
+-------------------------------------------------------------------------------
+    - Firebug.Console no longer uses Firebug.Console.LOG_COMMAND to identify 
+      console calls as in the old Console panel version.
+
+
+
+###################################################################################################
+ 1.3.1b1 - 2009-06-29 - Revision: 7198
+###################################################################################################
+
+Overview:
+    - Issue 2958: Unable to add CSS to an element that has no style rules
+    - Issue 3165: Styling problem with nested expandable groups
+    - Issue 3178: Bookmarklet does not support XML+XSLT documents
+    - Context menu support for Style and CSS Panels
+    - Using double click to insert new CSS rule (instead of mouse down)  
+    
+
+-------------------------------------------------------------------------------
+i18n
+-------------------------------------------------------------------------------
+    - Unified all localization-related functions inside i18n.js
+    - Implemented $STRF (required for context menus)
+
+-------------------------------------------------------------------------------
+GUI
+-------------------------------------------------------------------------------
+    - Improved GUI Menu component to support content menus
+
+-------------------------------------------------------------------------------
+Editor
+-------------------------------------------------------------------------------
+    - Fixed timing issues when calling input.focus() and input.select()
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - Panels now will stop editing when clicking on any non-editable element
+
+-------------------------------------------------------------------------------
+UI
+-------------------------------------------------------------------------------
+    - Issue 3165: Styling problem with nested expandable groups
+
+-------------------------------------------------------------------------------
+CSS
+-------------------------------------------------------------------------------
+    - Issue 2958: Unable to add CSS to an element that has no style rules
+    - Using double click to insert new CSS rule (instead of mouse down)  
+    - IE support for new features being used (context menu, double click, etc)
+
+-------------------------------------------------------------------------------
+Firebug
+-------------------------------------------------------------------------------
+    - Implemented panel.onContextMenu()
+
+-------------------------------------------------------------------------------
+Lib
+-------------------------------------------------------------------------------
+    - Ported lib.hasProperties()
+    - Fixed IE mouse button detection for "dblclick" events
+    - Port of lib.parseJSONString()
+    - Making the development mode work online without requiring pre-configuration
+    - Enabled the bookmarlet update detection
+
+-------------------------------------------------------------------------------
+HTML
+-------------------------------------------------------------------------------
+    - Added the old representations back to Firebug Lite source (Firebug.Reps)
+
+-------------------------------------------------------------------------------
+Console
+-------------------------------------------------------------------------------
+    - Fixed the broken console.dirxml() function
+
+-------------------------------------------------------------------------------
+CommandLine
+-------------------------------------------------------------------------------
+    - Fixed the broken dirxml() command line shortcut 
+
+-------------------------------------------------------------------------------
+Bookmarklet
+-------------------------------------------------------------------------------
+    - Issue 3178: Bookmarklet does not support XML+XSLT documents
+
+
+###################################################################################################
+ 1.3.1a2 - 2009-06-24 - Revision: 7125
+###################################################################################################
+
+Overview:
+    - Major performance improvements in the inline editor
+    - Major performance improvement in Chrome.keyCodeListen 
+    - Issue 3118: Long lines in XHR response
+    - Issue 2981: Switching from CSS tab and back causes an error
+    - Fix bug in Google Chrome 5 which causes representation of "object links" 
+      not being properly styled
+
+
+-------------------------------------------------------------------------------
+Editor
+-------------------------------------------------------------------------------
+    - autocompletion cycling (with UP/DOWN keys) now works as expected for partially
+      typed words in IE6+, Safari/Google Chrome, and Opera
+      
+    - Major improvement in editor's autocomplete performance (was too slow on IE)
+    - No more problems with autocomplete when typing fast (timing issues)
+    - ignoring the inline editor spell checking in Safari/Google Chrome
+
+-------------------------------------------------------------------------------
+Domplate
+-------------------------------------------------------------------------------
+    - Fix bug in Google Chrome 5 which causes representation of "object links" 
+      not being properly styled
+
+-------------------------------------------------------------------------------
+UI
+-------------------------------------------------------------------------------
+    - Issue 3118: Long lines in XHR response
+    - Added round corner support in the XHR tabs to Chrome and Opera
+    - Resetting user agent styles for tables which was creating a small glitch
+      (undesired blank space) between the toolbar and the panel content
+
+-------------------------------------------------------------------------------
+Extensions
+-------------------------------------------------------------------------------
+    - Testing Firediff extension support
+
+-------------------------------------------------------------------------------
+CSS
+-------------------------------------------------------------------------------
+    - Issue 2981: Switching from CSS tab and back causes an error
+    - Destroying the inline editor when the panel is destroyed or hidden
+    - Properly dispatching some CSS change events to listeners
+
+-------------------------------------------------------------------------------
+Firebug
+-------------------------------------------------------------------------------
+    - Port of Firebug.Listener
+    - Firebug.Module now inherits from Firebug.Listener as in Firebug
+    - Experimental context menu support
+
+-------------------------------------------------------------------------------
+Chrome
+-------------------------------------------------------------------------------
+    - Improved window key code event listener. Only one "keydown" event will be 
+      attached to the window, and the onKeyCodeListen() function will delegate 
+      which listeners should be called according to the event.keyCode fired.
+
+    - Fixing bug in the persistent mode (related to the new console panel)
+    - Improving the accuracy of the delay time calculated in the persist process.
+
+-------------------------------------------------------------------------------
+Lib
+-------------------------------------------------------------------------------
+    - Fixed problem in Lib.dispatch which was preventing some listeners to be called.
+
+
+
+###################################################################################################
  1.3.0 - 2009-05-24 - Revision: 6859
 ###################################################################################################
 
@@ -12,7 +244,6 @@
         - https://getfirebug.com/firebug-lite.js (compressed)
         - https://getfirebug.com/firebug-lite-debug.js (uncompressed, trace)
         - https://getfirebug.com/firebug-lite-beta.js (beta channel)
-        - https://getfirebug.com/firebug-lite-alpha.js (alpha channel)
     
     - Added "debug" URL option
     

@@ -430,7 +430,7 @@ IconButton.prototype = extend(Button.prototype,
 // Menu
 
 var menuItemProps = {"class": "$item.className", type: "$item.type", value: "$item.value",
-        command: "$item.command"};
+        _command: "$item.command"};
 
 if (isIE6)
     menuItemProps.href = "javascript:void(0)";
@@ -541,6 +541,8 @@ var MenuPlate = domplate(Firebug.Rep,
                 className += "fbMenuDisabled ";
             
             item.className = className;
+            
+            item.label = $STR(item.label);
             
             result.push(item);
         }
@@ -832,8 +834,19 @@ Menu.prototype =  extend(Controller,
                 target.setAttribute("selected", "true");
             }            
             
-            var cmd = target.getAttribute("command");
-            var handler = this[cmd];
+            var handler = null;
+             
+            // target.command can be a function or a string. 
+            var cmd = target.command;
+            
+            // If it is a function it will be used as the handler
+            if (isFunction(cmd))
+                handler = cmd;
+            // If it is a string it the property of the current menu object 
+            // will be used as the handler
+            else if (typeof cmd == "string")
+                handler = this[cmd];
+            
             var closeMenu = true;
             
             if (handler)

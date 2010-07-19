@@ -695,18 +695,13 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         // Display the editor after change its size and position to avoid flickering
         this.box.style.display = "block";
         
+        // we need to call input.focus() and input.select() with a timeout, 
+        // otherwise it won't work on all browsers due to timing issues 
         var self = this;
         var focusAndSelect = function(){
             self.input.focus();
             self.input.select();
-        };
-        
-        // In Safari/Chrome we need to call focusAndSelect the input with a timeout, 
-        // otherwise it won't focus and select the input 
-        if (isSafari)
-            setTimeout(focusAndSelect,0);
-        else
-            focusAndSelect();
+        },0);
     },
 
     hide: function()
@@ -725,7 +720,9 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
         if (this.box.parentNode)
         {
-            setSelectionRange(this.input, 0, 0);
+            ///setSelectionRange(this.input, 0, 0);
+            this.input.blur();
+            
             this.input.blur();
             
             this.box.parentNode.removeChild(this.box);

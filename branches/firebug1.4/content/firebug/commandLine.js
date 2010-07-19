@@ -234,12 +234,7 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         var result = this.evaluate(command);
         
-        // avoid logging the console command twice, in case it is a console function
-        // that is being executed in the command line
-        if (result != Firebug.Console.LOG_COMMAND)
-        {
-            Firebug.Console.log(result);
-        }
+        Firebug.Console.log(result);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -514,12 +509,20 @@ var CommandLineAPI =
 
     dirxml: function(o)
     {
-        if (o instanceof Window)
+        ///if (o instanceof Window)
+        if (instanceOf(o, "Window"))
             o = o.document.documentElement;
-        else if (o instanceof Document)
+        ///else if (o instanceof Document)
+        else if (instanceOf(o, "Document"))
             o = o.documentElement;
 
-        Firebug.Console.log(o, Firebug.context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        // TODO: xxxpedro html3
+        ///Firebug.Console.log(o, Firebug.context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        var div = Firebug.Console.log(o, Firebug.context, "dirxml");
+        var html = [];
+        Firebug.Reps.appendNode(o, html);
+        div.innerHTML = html.join("");
+        
     }
 };
 

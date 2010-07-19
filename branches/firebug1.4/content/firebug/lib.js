@@ -26,7 +26,7 @@ var FBL = {};
 // Constants
     
 var productionDir = "http://getfirebug.com/releases/lite/";
-var bookmarletVersion = 3;
+var bookmarkletVersion = 4;
 
 // ************************************************************************************************
 
@@ -329,7 +329,7 @@ var findLocation =  function findLocation()
     var path = null;
     var doc = document;
     
-    // Firebug Lite 1.3.0 bookmarlet identification
+    // Firebug Lite 1.3.0 bookmarklet identification
     var script = doc.getElementById("FirebugLite");
     
     if (script)
@@ -339,10 +339,9 @@ var findLocation =  function findLocation()
         var version = script.getAttribute("FirebugLite");
         var number = version ? parseInt(version) : 0; 
         
-        if (!version || !number || number < bookmarletVersion)
+        if (!version || !number || number < bookmarkletVersion)
         {
-            // TODO: xxxpedro bookmarlet
-            //FBL.Env.bookmarletOutdated = true;
+            FBL.Env.bookmarkletOutdated = true;
         }
     }
     else
@@ -430,8 +429,9 @@ var findLocation =  function findLocation()
         if (fileName == "firebug-lite-dev.js")
         {
             Env.isDevelopmentMode = true;
-            Env.useLocalSkin = true;
             Env.isDebugMode = true;
+            // only use the local skin when running in the same domain
+            Env.useLocalSkin = path.indexOf(location.protocol + "//" + location.host + "/") == 0;
         }
         else if (fileName == "firebug-lite-debug.js")
         {
@@ -1068,8 +1068,22 @@ this.safeToString = function(ob)
     }
     catch (exc)
     {
-        return "[an object with no toString() function]";
+        // xxxpedro it is not safe to use ob+""?
+        return ob + "";
+        ///return "[an object with no toString() function]";
     }
+};
+
+// ************************************************************************************************
+
+this.hasProperties = function(ob)
+{
+    try
+    {
+        for (var name in ob)
+            return true;
+    } catch (exc) {}
+    return false;
 };
 
 // ************************************************************************************************
@@ -2073,17 +2087,26 @@ this.createGlobalElement = function(tagName, properties)
 
 this.isLeftClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 1 : // IE "click" and "dblclick" button model
+            event.button == 0) && // others
+        this.noKeyModifiers(event);
 };
 
 this.isMiddleClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 4 : event.button == 1) && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 4 : // IE "click" and "dblclick" button model
+            event.button == 1) && 
+        this.noKeyModifiers(event);
 };
 
 this.isRightClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 2 : event.button == 2) && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 2 : // IE "click" and "dblclick" button model
+            event.button == 2) && 
+        this.noKeyModifiers(event);
 };
 
 this.noKeyModifiers = function(event)
@@ -2093,12 +2116,18 @@ this.noKeyModifiers = function(event)
 
 this.isControlClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.isControl(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 1 : // IE "click" and "dblclick" button model
+            event.button == 0) && 
+        this.isControl(event);
 };
 
 this.isShiftClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.isShift(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 1 : // IE "click" and "dblclick" button model
+            event.button == 0) && 
+        this.isShift(event);
 };
 
 this.isControl = function(event)
@@ -2113,7 +2142,10 @@ this.isAlt = function(event)
 
 this.isAltClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.isAlt(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 1 : // IE "click" and "dblclick" button model
+            event.button == 0) && 
+        this.isAlt(event);
 };
 
 this.isControlShift = function(event)
@@ -2223,7 +2255,7 @@ this.dispatch = function(listeners, name, args)
     if (!listeners) return;
     
     try
-    {
+    {/**/
         if (typeof listeners.length != "undefined")
         {
             if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
@@ -2254,8 +2286,8 @@ this.dispatch = function(listeners, name, args)
             FBTrace.sysout(" Exception in lib.dispatch "+ name, exc);
             //FBTrace.dumpProperties(" Exception in lib.dispatch listener", listener);
         }
-        /**/
     }
+    /**/
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -2846,15 +2878,19 @@ this.parseJSONString = function(jsonString, originURL)
     // throw on the extra parentheses
     jsonString = "(" + jsonString + ")";
 
-    var s = Components.utils.Sandbox(originURL);
+    ///var s = Components.utils.Sandbox(originURL);
     var jsonObject = null;
 
     try
     {
-        jsonObject = Components.utils.evalInSandbox(jsonString, s);
+        ///jsonObject = Components.utils.evalInSandbox(jsonString, s);
+        
+        //jsonObject = Firebug.context.eval(jsonString);
+        jsonObject = Firebug.context.evaluate(jsonString, null, null, function(){return null});
     }
     catch(e)
     {
+        /***
         if (e.message.indexOf("is not defined"))
         {
             var parts = e.message.split(" ");
@@ -2868,11 +2904,11 @@ this.parseJSONString = function(jsonString, originURL)
             }
         }
         else
-        {
+        {/**/
             if (FBTrace.DBG_ERRORS || FBTrace.DBG_JSONVIEWER)
                 FBTrace.sysout("jsonviewer.parseJSON EXCEPTION", e);
             return null;
-        }
+        ///}
     }
 
     return jsonObject;
@@ -2895,7 +2931,7 @@ this.objectToString = function(object)
 // ************************************************************************************************
 // Input Caret Position
 
-this.setSelectionRange = function (input, start, length)
+this.setSelectionRange = function(input, start, length)
 {
     if (input.createTextRange)
     {
@@ -5267,7 +5303,7 @@ this.Ajax =
     
         // Caso tenha sido informado algum dado
         if (data = FBL.Ajax.serialize(r.data))
-          t.setRequestHeader("Content-Type", r.contentType);
+            t.setRequestHeader("Content-Type", r.contentType);
     
         /** @ignore */
         // Tratamento de evento de mudanÃ§a de estado

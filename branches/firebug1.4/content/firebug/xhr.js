@@ -62,6 +62,48 @@ var XMLHttpRequestWrapper = function(activeXObject)
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper internal methods
     
+    var updateSelfProperties = function()
+    {
+        var self = self;
+        
+        for (var propName in xhrRequest)
+        {
+            try
+            {
+                var propValue = xhrRequest[propName];
+                
+                if (!isFunction(propValue))
+                    self[propName] = propValue;
+            }
+            catch(E)
+            {
+                //console.log(propName, E.message);
+            }
+        }
+    };
+    
+    var updateXHRProperties = function()
+    {
+        var self = self;
+        
+        for (var propName in self)
+        {
+            try
+            {
+                var propValue = self[propName];
+                
+                if (!xhrRequest[propName])
+                {
+                    xhrRequest[propName] = propValue;
+                }
+            }
+            catch(E)
+            {
+                //console.log(propName, E.message);
+            }
+        }
+    };
+    
     var logXHR = function() 
     {
         var row = Firebug.Console.log(spy, null, "spy", Firebug.Spy.XHR);
@@ -89,9 +131,30 @@ var XMLHttpRequestWrapper = function(activeXObject)
             
             if (match)
             {
+                var name = match[1];
+                var value = match[2];
+                
+                // update the spy mimeType property so we can detect when to show 
+                // custom response viewers (such as HTML, XML or JSON viewer)
+                if (name == "Content-Type")
+                    spy.mimeType = value;
+                
+                /*
+                if (name == "Last Modified")
+                {
+                    if (!spy.cacheEntry)
+                        spy.cacheEntry = [];
+                    
+                    spy.cacheEntry.push({
+                       name: [name],
+                       value: [value]
+                    });
+                }
+                /**/
+                
                 spy.responseHeaders.push({
-                   name: [match[1]],
-                   value: [match[2]]
+                   name: [name],
+                   value: [value]
                 });
             }
         }
@@ -104,6 +167,8 @@ var XMLHttpRequestWrapper = function(activeXObject)
         })
         {
             setTimeout(function(){
+                
+                spy.responseText = xhrRequest.responseText;
                 
                 // update row information to avoid "ethernal spinning gif" bug in IE 
                 row = row || spy.logRow;
@@ -126,12 +191,13 @@ var XMLHttpRequestWrapper = function(activeXObject)
         }
         
         spy.loaded = true;
-        spy.responseText = xhrRequest.responseText;
         
         self.status = xhrRequest.status;
         self.statusText = xhrRequest.statusText;
         self.responseText = xhrRequest.responseText;
         self.responseXML = xhrRequest.responseXML;
+        
+        updateSelfProperties();
     };
     
     var handleStateChange = function()
@@ -148,6 +214,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
         }
         
         //Firebug.Console.log(spy.url + ": " + xhrRequest.readyState);
+        
         self.onreadystatechange();
     };
     
@@ -161,9 +228,11 @@ var XMLHttpRequestWrapper = function(activeXObject)
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper public methods
     
-    this.open = function(method, url, async)
+    this.open = function(method, url, async, user, password)
     {
         //Firebug.Console.log("xhrRequest open");
+        
+        updateSelfProperties();
         
         if (spy.loaded)
             spy = new XHRSpy();
@@ -179,11 +248,10 @@ var XMLHttpRequestWrapper = function(activeXObject)
             xhrRequest.onreadystatechange = handleStateChange;
         
         // xhr.open.apply not available in IE
-        if (xhrRequest.open.apply)
+        if (typeof xhrRequest.open.apply != "undefined")
             xhrRequest.open.apply(xhrRequest, arguments)
         else
-            // TODO: xxxpedro user and pass parameters?
-            xhrRequest.open(method, url, async);
+            xhrRequest.open(method, url, async, user, password);
         
         if (FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
@@ -199,6 +267,8 @@ var XMLHttpRequestWrapper = function(activeXObject)
         spy.data = data;
         
         reqStartTS = new Date().getTime();
+        
+        updateXHRProperties();
         
         try
         {
@@ -226,7 +296,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
     this.setRequestHeader = function(header, value)
     {
         spy.requestHeaders.push({name: [header], value: [value]});
-        xhrRequest.setRequestHeader(header, value);
+        return xhrRequest.setRequestHeader(header, value);
     };
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -249,6 +319,49 @@ var XMLHttpRequestWrapper = function(activeXObject)
     {
         return xhrRequest.abort();
     };
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Clone XHR object
+
+    var supportsApply = xhrRequest && 
+            xhrRequest.open && 
+            typeof xhrRequest.open.apply != "undefined";
+    
+    for (var propName in xhrRequest)
+    {
+        if (propName == "onreadystatechange")
+            continue;
+        
+        try
+        {
+            var propValue = xhrRequest[propName];
+            
+            if (isFunction(propValue))
+            {
+                if (typeof self[propName] == "undefined")
+                {
+                    this[propName] = supportsApply ?
+                        // if the browser supports apply 
+                        function()
+                        {
+                            return xhrRequest[propName].apply(xhrRequest, arguments)
+                        }
+                        :
+                        function(a,b,c,d,e)
+                        {
+                            return xhrRequest[propName](a,b,c,d,e)
+                        };
+                } 
+            }
+            else
+                this[propName] = propValue;
+        }
+        catch(E)
+        {
+            //console.log(propName, E.message);
+        }
+    }
+    /**/
     
     return this;
 };
