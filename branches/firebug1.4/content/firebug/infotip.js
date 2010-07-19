@@ -23,13 +23,6 @@ var maxWidth = 100, maxHeight = 80;
 var infoTipMargin = 10;
 var infoTipWindowPadding = 25;
 
-var $STR = function(name)
-{
-    return ""+name;
-};
-
-var $STRF = $STR;
-
 // ************************************************************************************************
 
 Firebug.InfoTip = extend(Firebug.Module,

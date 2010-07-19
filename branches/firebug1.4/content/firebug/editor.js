@@ -698,10 +698,10 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         // we need to call input.focus() and input.select() with a timeout, 
         // otherwise it won't work on all browsers due to timing issues 
         var self = this;
-        var focusAndSelect = function(){
+        setTimeout(function(){
             self.input.focus();
             self.input.select();
-        };
+        },0);
     },
 
     hide: function()
@@ -721,8 +721,6 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         if (this.box.parentNode)
         {
             ///setSelectionRange(this.input, 0, 0);
-            this.input.blur();
-            
             this.input.blur();
             
             this.box.parentNode.removeChild(this.box);
