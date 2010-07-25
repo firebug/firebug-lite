@@ -3215,6 +3215,160 @@ var instanceCheckMap =
 // ************************************************************************************************
 // DOM Constants
 
+/*
+
+Problems:
+
+  - IE does not have window.Node, window.Element, etc
+  - for (var name in Node.prototype) return nothing on FF
+
+*/
+
+
+var domMemberMap2 = {};
+
+var domMemberMap2Sandbox = null;
+
+var getDomMemberMap2 = function(name)
+{
+    if (!domMemberMap2Sandbox)
+    {
+        var doc = Firebug.chrome.document;
+        var frame = doc.createElement("iframe");
+        
+        frame.id = "FirebugSandbox";
+        frame.style.display = "none";
+        frame.src = "about:blank";
+        
+        doc.body.appendChild(frame);
+        
+        domMemberMap2Sandbox = frame.window || frame.contentWindow;
+    }
+    
+    var props = [];
+    
+    //var object = domMemberMap2Sandbox[name];
+    //object = object.prototype || object;
+    
+    var object = null;
+    
+    if (name == "Window")
+        object = domMemberMap2Sandbox.window;
+    
+    else if (name == "Document")
+        object = domMemberMap2Sandbox.document;
+        
+    else if (name == "HTMLScriptElement")
+        object = domMemberMap2Sandbox.document.createElement("script");
+    
+    else if (name == "HTMLAnchorElement")
+        object = domMemberMap2Sandbox.document.createElement("a");
+    
+    else if (name.indexOf("Element") != -1)
+    {
+        object = domMemberMap2Sandbox.document.createElement("div");
+    }
+    
+    if (object)
+    {
+        //object = object.prototype || object;
+        
+        //props  = 'addEventListener,document,location,navigator,window'.split(',');
+        
+        for (var n in object)
+          props.push(n);
+    }
+    /**/
+    
+    return props;
+    return extendArray(props, domMemberMap[name]);
+}
+
+// xxxpedro experimental get DOM members
+this.getDOMMembers = function(object)
+{
+    if (!domMemberCache)
+    {
+        FBL.domMemberCache = domMemberCache = {};
+        
+        for (var name in domMemberMap)
+        {
+            var builtins = getDomMemberMap2(name);
+            var cache = domMemberCache[name] = {};
+            
+            /*
+            if (name.indexOf("Element") != -1)
+            {
+                this.append(cache, this.getDOMMembers("Node"));
+                this.append(cache, this.getDOMMembers("Element"));
+            }
+            /**/
+            
+            for (var i = 0; i < builtins.length; ++i)
+                cache[builtins[i]] = i;
+        }
+    }
+    
+    try
+    {
+        if (this.instanceOf(object, "Window"))
+            { return domMemberCache.Window; }
+        else if (this.instanceOf(object, "Document") || this.instanceOf(object, "XMLDocument"))
+            { return domMemberCache.Document; }
+        else if (this.instanceOf(object, "Location"))
+            { return domMemberCache.Location; }
+        else if (this.instanceOf(object, "HTMLImageElement"))
+            { return domMemberCache.HTMLImageElement; }
+        else if (this.instanceOf(object, "HTMLAnchorElement"))
+            { return domMemberCache.HTMLAnchorElement; }
+        else if (this.instanceOf(object, "HTMLInputElement"))
+            { return domMemberCache.HTMLInputElement; }
+        else if (this.instanceOf(object, "HTMLButtonElement"))
+            { return domMemberCache.HTMLButtonElement; }
+        else if (this.instanceOf(object, "HTMLFormElement"))
+            { return domMemberCache.HTMLFormElement; }
+        else if (this.instanceOf(object, "HTMLBodyElement"))
+            { return domMemberCache.HTMLBodyElement; }
+        else if (this.instanceOf(object, "HTMLHtmlElement"))
+            { return domMemberCache.HTMLHtmlElement; }
+        else if (this.instanceOf(object, "HTMLScriptElement"))
+            { return domMemberCache.HTMLScriptElement; }
+        else if (this.instanceOf(object, "HTMLTableElement"))
+            { return domMemberCache.HTMLTableElement; }
+        else if (this.instanceOf(object, "HTMLTableRowElement"))
+            { return domMemberCache.HTMLTableRowElement; }
+        else if (this.instanceOf(object, "HTMLTableCellElement"))
+            { return domMemberCache.HTMLTableCellElement; }
+        else if (this.instanceOf(object, "HTMLIFrameElement"))
+            { return domMemberCache.HTMLIFrameElement; }
+        else if (this.instanceOf(object, "SVGSVGElement"))
+            { return domMemberCache.SVGSVGElement; }
+        else if (this.instanceOf(object, "SVGElement"))
+            { return domMemberCache.SVGElement; }
+        else if (this.instanceOf(object, "Element"))
+            { return domMemberCache.Element; }
+        else if (this.instanceOf(object, "Text") || this.instanceOf(object, "CDATASection"))
+            { return domMemberCache.Text; }
+        else if (this.instanceOf(object, "Attr"))
+            { return domMemberCache.Attr; }
+        else if (this.instanceOf(object, "Node"))
+            { return domMemberCache.Node; }
+        else if (this.instanceOf(object, "Event") || this.instanceOf(object, "EventCopy"))
+            { return domMemberCache.Event; }
+        else
+            return {};
+    }
+    catch(E)
+    {
+        if (FBTrace.DBG_ERRORS)
+            FBTrace.sysout("lib.getDOMMembers FAILED ", E);
+        
+        return {};
+    }
+};
+
+
+/*
 this.getDOMMembers = function(object)
 {
     if (!domMemberCache)
@@ -3285,6 +3439,7 @@ this.getDOMMembers = function(object)
         return {};
     }
 };
+/**/
 
 this.isDOMMember = function(object, propName)
 {
