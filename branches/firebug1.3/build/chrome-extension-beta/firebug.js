@@ -3,11 +3,11 @@
 // *************************************************************************************************
 // *************************************************************************************************
 
-var firebug = function(){
+var firebug = (function(){
 
 /*!*************************************************************
  *
- *    Firebug Lite 1.3.0
+ *    Firebug Lite 1.3.1b2
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -33,7 +33,7 @@ var FBL = {};
 // Constants
     
 var productionDir = "http://getfirebug.com/releases/lite/";
-var bookmarletVersion = 3;
+var bookmarkletVersion = 4;
 
 // ************************************************************************************************
 
@@ -336,7 +336,7 @@ var findLocation =  function findLocation()
     var path = null;
     var doc = document;
     
-    // Firebug Lite 1.3.0 bookmarlet identification
+    // Firebug Lite 1.3.0 bookmarklet identification
     var script = doc.getElementById("FirebugLite");
     
     if (script)
@@ -346,10 +346,9 @@ var findLocation =  function findLocation()
         var version = script.getAttribute("FirebugLite");
         var number = version ? parseInt(version) : 0; 
         
-        if (!version || !number || number < bookmarletVersion)
+        if (!version || !number || number < bookmarkletVersion)
         {
-            // TODO: xxxpedro bookmarlet
-            //FBL.Env.bookmarletOutdated = true;
+            FBL.Env.bookmarkletOutdated = true;
         }
     }
     else
@@ -424,6 +423,7 @@ var findLocation =  function findLocation()
     if (FBL.Env.isChromeExtension)
     {
         path = productionDir;
+        FBL.Env.bookmarkletOutdated = false;
         script = {innerHTML: "{showIconWhenHidden:false}"};
     }
     
@@ -437,8 +437,9 @@ var findLocation =  function findLocation()
         if (fileName == "firebug-lite-dev.js")
         {
             Env.isDevelopmentMode = true;
-            Env.useLocalSkin = true;
             Env.isDebugMode = true;
+            // only use the local skin when running in the same domain
+            Env.useLocalSkin = path.indexOf(location.protocol + "//" + location.host + "/") == 0;
         }
         else if (fileName == "firebug-lite-debug.js")
         {
@@ -1075,8 +1076,22 @@ this.safeToString = function(ob)
     }
     catch (exc)
     {
-        return "[an object with no toString() function]";
+        // xxxpedro it is not safe to use ob+""?
+        return ob + "";
+        ///return "[an object with no toString() function]";
     }
+};
+
+// ************************************************************************************************
+
+this.hasProperties = function(ob)
+{
+    try
+    {
+        for (var name in ob)
+            return true;
+    } catch (exc) {}
+    return false;
 };
 
 // ************************************************************************************************
@@ -2080,17 +2095,26 @@ this.createGlobalElement = function(tagName, properties)
 
 this.isLeftClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 1 : // IE "click" and "dblclick" button model
+            event.button == 0) && // others
+        this.noKeyModifiers(event);
 };
 
 this.isMiddleClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 4 : event.button == 1) && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 4 : // IE "click" and "dblclick" button model
+            event.button == 1) && 
+        this.noKeyModifiers(event);
 };
 
 this.isRightClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 2 : event.button == 2) && this.noKeyModifiers(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 2 : // IE "click" and "dblclick" button model
+            event.button == 2) && 
+        this.noKeyModifiers(event);
 };
 
 this.noKeyModifiers = function(event)
@@ -2100,12 +2124,18 @@ this.noKeyModifiers = function(event)
 
 this.isControlClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.isControl(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 1 : // IE "click" and "dblclick" button model
+            event.button == 0) && 
+        this.isControl(event);
 };
 
 this.isShiftClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.isShift(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 1 : // IE "click" and "dblclick" button model
+            event.button == 0) && 
+        this.isShift(event);
 };
 
 this.isControl = function(event)
@@ -2120,7 +2150,10 @@ this.isAlt = function(event)
 
 this.isAltClick = function(event)
 {
-    return (this.isIE && event.type != "click" ? event.button == 1 : event.button == 0) && this.isAlt(event);
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+            event.button == 1 : // IE "click" and "dblclick" button model
+            event.button == 0) && 
+        this.isAlt(event);
 };
 
 this.isControlShift = function(event)
@@ -2227,8 +2260,10 @@ this.removeGlobalEvent = function(name, handler)
 
 this.dispatch = function(listeners, name, args)
 {
+    if (!listeners) return;
+    
     try
-    {
+    {/**/
         if (typeof listeners.length != "undefined")
         {
             if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
@@ -2236,7 +2271,7 @@ this.dispatch = function(listeners, name, args)
             for (var i = 0; i < listeners.length; ++i)
             {
                 var listener = listeners[i];
-                if ( listener.hasOwnProperty(name) )
+                if ( listener[name] )
                     listener[name].apply(listener, args);
             }
         }
@@ -2247,7 +2282,7 @@ this.dispatch = function(listeners, name, args)
             for (var prop in listeners)
             {
                 var listener = listeners[prop];
-                if ( listeners.hasOwnProperty(prop) && listener[name] )
+                if ( listener[name] )
                     listener[name].apply(listener, args);
             }
         }
@@ -2259,8 +2294,8 @@ this.dispatch = function(listeners, name, args)
             FBTrace.sysout(" Exception in lib.dispatch "+ name, exc);
             //FBTrace.dumpProperties(" Exception in lib.dispatch listener", listener);
         }
-        /**/
     }
+    /**/
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -2851,15 +2886,19 @@ this.parseJSONString = function(jsonString, originURL)
     // throw on the extra parentheses
     jsonString = "(" + jsonString + ")";
 
-    var s = Components.utils.Sandbox(originURL);
+    ///var s = Components.utils.Sandbox(originURL);
     var jsonObject = null;
 
     try
     {
-        jsonObject = Components.utils.evalInSandbox(jsonString, s);
+        ///jsonObject = Components.utils.evalInSandbox(jsonString, s);
+        
+        //jsonObject = Firebug.context.eval(jsonString);
+        jsonObject = Firebug.context.evaluate(jsonString, null, null, function(){return null});
     }
     catch(e)
     {
+        /***
         if (e.message.indexOf("is not defined"))
         {
             var parts = e.message.split(" ");
@@ -2873,11 +2912,11 @@ this.parseJSONString = function(jsonString, originURL)
             }
         }
         else
-        {
+        {/**/
             if (FBTrace.DBG_ERRORS || FBTrace.DBG_JSONVIEWER)
                 FBTrace.sysout("jsonviewer.parseJSON EXCEPTION", e);
             return null;
-        }
+        ///}
     }
 
     return jsonObject;
@@ -2900,7 +2939,7 @@ this.objectToString = function(object)
 // ************************************************************************************************
 // Input Caret Position
 
-this.setSelectionRange = function (input, start, length)
+this.setSelectionRange = function(input, start, length)
 {
     if (input.createTextRange)
     {
@@ -2917,26 +2956,34 @@ this.setSelectionRange = function (input, start, length)
 };
 
 // ************************************************************************************************
-// Input Caret Position
+// Input Selection Start / Caret Position
 
-this.getInputCaretPosition = function(input)
+this.getInputSelectionStart = function(input)
 {
-    var position = 0;
-    
     if (document.selection)
     {
-        input.focus();
+        var range = input.ownerDocument.selection.createRange();
+        var text = range.text;
         
-        //var range = input.ownerDocument.selection.createRange();
-        var range = document.selection.createRange();
-        range.moveStart("character", -input.value.length);
+        //console.log("range", range.text);
         
-        position = range.text.length;
+        // if there is a selection, find the start position
+        if (text)
+        {
+            return input.value.indexOf(text);
+        }
+        // if there is no selection, find the caret position
+        else
+        {
+            range.moveStart("character", -input.value.length);
+            
+            return range.text.length;
+        }
     }
-    else if (input.selectionStart || input.selectionStart == "0")
-        position = input.selectionStart;
+    else if (typeof input.selectionStart != "undefined")
+        return input.selectionStart;
     
-    return (position);
+    return 0;
 };
 
 // ************************************************************************************************
@@ -3176,6 +3223,160 @@ var instanceCheckMap =
 // ************************************************************************************************
 // DOM Constants
 
+/*
+
+Problems:
+
+  - IE does not have window.Node, window.Element, etc
+  - for (var name in Node.prototype) return nothing on FF
+
+*/
+
+
+var domMemberMap2 = {};
+
+var domMemberMap2Sandbox = null;
+
+var getDomMemberMap2 = function(name)
+{
+    if (!domMemberMap2Sandbox)
+    {
+        var doc = Firebug.chrome.document;
+        var frame = doc.createElement("iframe");
+        
+        frame.id = "FirebugSandbox";
+        frame.style.display = "none";
+        frame.src = "about:blank";
+        
+        doc.body.appendChild(frame);
+        
+        domMemberMap2Sandbox = frame.window || frame.contentWindow;
+    }
+    
+    var props = [];
+    
+    //var object = domMemberMap2Sandbox[name];
+    //object = object.prototype || object;
+    
+    var object = null;
+    
+    if (name == "Window")
+        object = domMemberMap2Sandbox.window;
+    
+    else if (name == "Document")
+        object = domMemberMap2Sandbox.document;
+        
+    else if (name == "HTMLScriptElement")
+        object = domMemberMap2Sandbox.document.createElement("script");
+    
+    else if (name == "HTMLAnchorElement")
+        object = domMemberMap2Sandbox.document.createElement("a");
+    
+    else if (name.indexOf("Element") != -1)
+    {
+        object = domMemberMap2Sandbox.document.createElement("div");
+    }
+    
+    if (object)
+    {
+        //object = object.prototype || object;
+        
+        //props  = 'addEventListener,document,location,navigator,window'.split(',');
+        
+        for (var n in object)
+          props.push(n);
+    }
+    /**/
+    
+    return props;
+    return extendArray(props, domMemberMap[name]);
+}
+
+// xxxpedro experimental get DOM members
+this.getDOMMembers = function(object)
+{
+    if (!domMemberCache)
+    {
+        FBL.domMemberCache = domMemberCache = {};
+        
+        for (var name in domMemberMap)
+        {
+            var builtins = getDomMemberMap2(name);
+            var cache = domMemberCache[name] = {};
+            
+            /*
+            if (name.indexOf("Element") != -1)
+            {
+                this.append(cache, this.getDOMMembers("Node"));
+                this.append(cache, this.getDOMMembers("Element"));
+            }
+            /**/
+            
+            for (var i = 0; i < builtins.length; ++i)
+                cache[builtins[i]] = i;
+        }
+    }
+    
+    try
+    {
+        if (this.instanceOf(object, "Window"))
+            { return domMemberCache.Window; }
+        else if (this.instanceOf(object, "Document") || this.instanceOf(object, "XMLDocument"))
+            { return domMemberCache.Document; }
+        else if (this.instanceOf(object, "Location"))
+            { return domMemberCache.Location; }
+        else if (this.instanceOf(object, "HTMLImageElement"))
+            { return domMemberCache.HTMLImageElement; }
+        else if (this.instanceOf(object, "HTMLAnchorElement"))
+            { return domMemberCache.HTMLAnchorElement; }
+        else if (this.instanceOf(object, "HTMLInputElement"))
+            { return domMemberCache.HTMLInputElement; }
+        else if (this.instanceOf(object, "HTMLButtonElement"))
+            { return domMemberCache.HTMLButtonElement; }
+        else if (this.instanceOf(object, "HTMLFormElement"))
+            { return domMemberCache.HTMLFormElement; }
+        else if (this.instanceOf(object, "HTMLBodyElement"))
+            { return domMemberCache.HTMLBodyElement; }
+        else if (this.instanceOf(object, "HTMLHtmlElement"))
+            { return domMemberCache.HTMLHtmlElement; }
+        else if (this.instanceOf(object, "HTMLScriptElement"))
+            { return domMemberCache.HTMLScriptElement; }
+        else if (this.instanceOf(object, "HTMLTableElement"))
+            { return domMemberCache.HTMLTableElement; }
+        else if (this.instanceOf(object, "HTMLTableRowElement"))
+            { return domMemberCache.HTMLTableRowElement; }
+        else if (this.instanceOf(object, "HTMLTableCellElement"))
+            { return domMemberCache.HTMLTableCellElement; }
+        else if (this.instanceOf(object, "HTMLIFrameElement"))
+            { return domMemberCache.HTMLIFrameElement; }
+        else if (this.instanceOf(object, "SVGSVGElement"))
+            { return domMemberCache.SVGSVGElement; }
+        else if (this.instanceOf(object, "SVGElement"))
+            { return domMemberCache.SVGElement; }
+        else if (this.instanceOf(object, "Element"))
+            { return domMemberCache.Element; }
+        else if (this.instanceOf(object, "Text") || this.instanceOf(object, "CDATASection"))
+            { return domMemberCache.Text; }
+        else if (this.instanceOf(object, "Attr"))
+            { return domMemberCache.Attr; }
+        else if (this.instanceOf(object, "Node"))
+            { return domMemberCache.Node; }
+        else if (this.instanceOf(object, "Event") || this.instanceOf(object, "EventCopy"))
+            { return domMemberCache.Event; }
+        else
+            return {};
+    }
+    catch(E)
+    {
+        if (FBTrace.DBG_ERRORS)
+            FBTrace.sysout("lib.getDOMMembers FAILED ", E);
+        
+        return {};
+    }
+};
+
+
+/*
 this.getDOMMembers = function(object)
 {
     if (!domMemberCache)
@@ -3246,6 +3447,7 @@ this.getDOMMembers = function(object)
         return {};
     }
 };
+/**/
 
 this.isDOMMember = function(object, propName)
 {
@@ -5264,7 +5466,7 @@ this.Ajax =
     
         // Caso tenha sido informado algum dado
         if (data = FBL.Ajax.serialize(r.data))
-          t.setRequestHeader("Content-Type", r.contentType);
+            t.setRequestHeader("Content-Type", r.contentType);
     
         /** @ignore */
         // Tratamento de evento de mudanÃ§a de estado
@@ -5457,6 +5659,133 @@ this.SourceText.getLineAsHTML = function(lineNo)
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+// TODO: xxxpedro localization
+var oSTR =
+{
+    "NoMembersWarning": "There are no properties to show for this object.",
+    
+    "EmptyStyleSheet": "There are no rules in this stylesheet.",
+    "EmptyElementCSS": "This element has no style rules.",
+    "AccessRestricted": "Access to restricted URI denied.",
+    
+    "net.label.Parameters": "Parameters",
+    "net.label.Source": "Source",
+    "URLParameters": "Params",
+    
+    "EditStyle": "Edit Element Style...",
+    "NewRule": "New Rule...",
+    
+    "NewProp": "New Property...",
+    "EditProp": 'Edit "%s"',
+    "DeleteProp": 'Delete "%s"',
+    "DisableProp": 'Disable "%s"'
+};
+
+// ************************************************************************************************
+
+FBL.$STR = function(name)
+{
+    return oSTR.hasOwnProperty(name) ? oSTR[name] : name;
+};
+
+FBL.$STRF = function(name, args)
+{
+    if (!oSTR.hasOwnProperty(name)) return name;
+    
+    var format = oSTR[name];
+    var objIndex = 0;
+    
+    var parts = parseFormat(format);
+    var trialIndex = objIndex;
+    var objects = args;
+    
+    for (var i= 0; i < parts.length; i++)
+    {
+        var part = parts[i];
+        if (part && typeof(part) == "object")
+        {
+            if (++trialIndex > objects.length)  // then too few parameters for format, assume unformatted.
+            {
+                format = "";
+                objIndex = -1;
+                parts.length = 0;
+                break;
+            }
+        }
+
+    }
+    
+    var result = [];
+    for (var i = 0; i < parts.length; ++i)
+    {
+        var part = parts[i];
+        if (part && typeof(part) == "object")
+        {
+            result.push(""+args.shift());
+        }
+        else
+            result.push(part);
+    }
+    
+    return result.join("");
+};
+
+// ************************************************************************************************
+
+var parseFormat = function parseFormat(format)
+{
+    var parts = [];
+    if (format.length <= 0)
+        return parts;
+
+    var reg = /((^%|.%)(\d+)?(\.)([a-zA-Z]))|((^%|.%)([a-zA-Z]))/;
+    for (var m = reg.exec(format); m; m = reg.exec(format))
+    {
+        if (m[0].substr(0, 2) == "%%")
+        {
+            parts.push(format.substr(0, m.index));
+            parts.push(m[0].substr(1));
+        }
+        else
+        {
+            var type = m[8] ? m[8] : m[5];
+            var precision = m[3] ? parseInt(m[3]) : (m[4] == "." ? -1 : 0);
+
+            var rep = null;
+            switch (type)
+            {
+                case "s":
+                    rep = FirebugReps.Text;
+                    break;
+                case "f":
+                case "i":
+                case "d":
+                    rep = FirebugReps.Number;
+                    break;
+                case "o":
+                    rep = null;
+                    break;
+            }
+
+            parts.push(format.substr(0, m[0][0] == "%" ? m.index : m.index+1));
+            parts.push({rep: rep, precision: precision, type: ("%" + type)});
+        }
+
+        format = format.substr(m.index+m[0].length);
+    }
+
+    parts.push(format);
+    return parts;
+};
+
+// ************************************************************************************************
+}});
+
+/* See license.txt for terms of usage */
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
 // ************************************************************************************************
 // Globals
 
@@ -5480,8 +5809,8 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.3.0",
-    revision: "$Revision: 6879 $",
+    version: "Firebug Lite 1.3.1b2",
+    revision: "$Revision: 7294 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -5517,7 +5846,7 @@ window.Firebug = FBL.Firebug =
             var onLoad = Env.onLoad;
             delete Env.onLoad;
             
-            setTimeout(onLoad, 201);
+            setTimeout(onLoad, 200);
         }
     },
   
@@ -5780,9 +6109,49 @@ FBL.cacheDocument = function cacheDocument()
 };
 
 // ************************************************************************************************
+
+/**
+ * Support for listeners registration. This object also extended by Firebug.Module so,
+ * all modules supports listening automatically. Notice that array of listeners
+ * is created for each intance of a module within initialize method. Thus all derived
+ * module classes must ensure that Firebug.Module.initialize method is called for the
+ * super class.
+ */
+Firebug.Listener = function()
+{
+    // The array is created when the first listeners is added.
+    // It can't be created here since derived objects would share
+    // the same array.
+    this.fbListeners = null;
+}
+Firebug.Listener.prototype =
+{
+    addListener: function(listener)
+    {
+        if (!this.fbListeners)
+            this.fbListeners = []; // delay the creation until the objects are created so 'this' causes new array for each module
+
+        this.fbListeners.push(listener);
+    },
+
+    removeListener: function(listener)
+    {
+        remove(this.fbListeners, listener);  // if this.fbListeners is null, remove is being called with no add
+    }
+};
+
+// ************************************************************************************************
+
+
+// ************************************************************************************************
 // Module
 
-Firebug.Module =
+/**
+ * @module Base class for all modules. Every derived module object must be registered using
+ * <code>Firebug.registerModule</code> method. There is always one instance of a module object
+ * per browser window.
+ */
+Firebug.Module = extend(new Firebug.Listener(),
 {
     /**
      * Called when the window is opened.
@@ -5853,7 +6222,7 @@ Firebug.Module =
     getObjectByURL: function(context, url)
     {
     }
-};
+});
 
 // ************************************************************************************************
 // Panel
@@ -6017,6 +6386,9 @@ Firebug.Panel =
         
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.create", this.name);
         
+        // xxxpedro contextMenu
+        this.onContextMenu = bind(this.onContextMenu, this);
+        
         /*
         this.context = context;
         this.document = doc;
@@ -6097,6 +6469,9 @@ Firebug.Panel =
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // restore persistent state
         this.containerNode.scrollTop = this.lastScrollTop;
+        
+        // xxxpedro contextMenu
+        addEvent(this.containerNode, "contextmenu", this.onContextMenu);
     },
     
     shutdown: function()
@@ -6118,6 +6493,9 @@ Firebug.Panel =
         
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
+        
+        // xxxpedro contextMenu
+        removeEvent(this.containerNode, "contextmenu", this.onContextMenu);
     },
 
     detach: function(oldChrome, newChrome)
@@ -6303,8 +6681,62 @@ Firebug.Panel =
 
     search: function(text)
     {
-    }
+    },
 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    // xxxpedro contextMenu
+    onContextMenu: function(event)
+    {
+        if (!this.getContextMenuItems)
+            return;
+        
+        cancelEvent(event, true);
+
+        var target = event.target || event.srcElement;
+        
+        var menu = this.getContextMenuItems(this.selection, target);
+        if (!menu) 
+            return;
+        
+        var contextMenu = new Menu(
+        {
+            id: "fbPanelContextMenu",
+            
+            items: menu
+        });
+        
+        contextMenu.show(event.clientX, event.clientY);
+        
+        return true;
+        
+        /*
+        // TODO: xxxpedro move code to somewhere. code to get cross-browser
+        // window to screen coordinates
+        var box = Firebug.browser.getElementPosition(Firebug.chrome.node);
+        
+        var screenY = 0;
+        
+        // Firefox
+        if (typeof window.mozInnerScreenY != "undefined")
+        {
+            screenY = window.mozInnerScreenY; 
+        }
+        // Chrome
+        else if (typeof window.innerHeight != "undefined")
+        {
+            screenY = window.outerHeight - window.innerHeight;
+        }
+        // IE
+        else if (typeof window.screenTop != "undefined")
+        {
+            screenY = window.screenTop;
+        }
+        
+        contextMenu.show(event.screenX-box.left, event.screenY-screenY-box.top);
+        /**/
+    }
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 };
 
@@ -6401,7 +6833,30 @@ if (FBL.domplate) Firebug.Rep = domplate(
 
         var re = /\[object (.*?)\]/;
         var m = re.exec(label);
-        return m ? m[1] : label;
+        
+        ///return m ? m[1] : label;
+        
+        // if the label is in the "[object TYPE]" format return its type
+        if (m)
+        {
+            return m[1];
+        }
+        // if it is IE we need to handle some special cases
+        else if (
+                // safeToString() fails to recognize some objects in IE
+                isIE && 
+                // safeToString() returns "[object]" for some objects like window.Image 
+                (label == "[object]" || 
+                // safeToString() returns undefined for some objects like window.clientInformation 
+                typeof object == "object" && typeof label == "undefined")
+            )
+        {
+            return "Object";
+        }
+        else
+        {
+            return label;
+        }
     },
 
     getTooltip: function(object)
@@ -6881,7 +7336,7 @@ IconButton.prototype = extend(Button.prototype,
 // Menu
 
 var menuItemProps = {"class": "$item.className", type: "$item.type", value: "$item.value",
-        command: "$item.command"};
+        _command: "$item.command"};
 
 if (isIE6)
     menuItemProps.href = "javascript:void(0)";
@@ -6992,6 +7447,8 @@ var MenuPlate = domplate(Firebug.Rep,
                 className += "fbMenuDisabled ";
             
             item.className = className;
+            
+            item.label = $STR(item.label);
             
             result.push(item);
         }
@@ -7283,8 +7740,19 @@ Menu.prototype =  extend(Controller,
                 target.setAttribute("selected", "true");
             }            
             
-            var cmd = target.getAttribute("command");
-            var handler = this[cmd];
+            var handler = null;
+             
+            // target.command can be a function or a string. 
+            var cmd = target.command;
+            
+            // If it is a function it will be used as the handler
+            if (isFunction(cmd))
+                handler = cmd;
+            // If it is a string it the property of the current menu object 
+            // will be used as the handler
+            else if (typeof cmd == "string")
+                handler = this[cmd];
+            
             var closeMenu = true;
             
             if (handler)
@@ -8349,7 +8817,7 @@ var createChromeWindow = function(options)
             body.appendChild(node);
             
             // must set the id after appending to the document, otherwise will cause an
-            // strange error in IE, making the iframe load the page in which the bookmarlet
+            // strange error in IE, making the iframe load the page in which the bookmarklet
             // was created (like getfirebug.com), before loading the injected UI HTML,
             // generating an "Access Denied" error.
             node.id = options.id;
@@ -8446,7 +8914,7 @@ var createChromeWindow = function(options)
         if (/access/i.test(msg))
         {
             // Firebug Lite could not create a window for its Graphical User Interface due to
-            // a access restriction. This happens in some pages, when loading via bookmarlet.
+            // a access restriction. This happens in some pages, when loading via bookmarklet.
             // In such cases, the only way is to load the GUI in a "windowless mode".
             
             if (isChromeFrame)
@@ -8940,11 +9408,11 @@ append(ChromeBase,
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        if (Env.bookmarletOutdated)
+        if (Env.bookmarkletOutdated)
             Firebug.Console.logFormatted([
-                  "A new bookmarlet version is available. " +
-                  "Please visit http://getfirebug.com/firebuglite and update it."
-                ], Firebug.browser, "warn");
+                  "A new bookmarklet version is available. " +
+                  "Please visit http://getfirebug.com/firebuglite#Install and update it."
+                ], Firebug.context, "warn");
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (Firebug.Console)
@@ -9081,15 +9549,25 @@ append(ChromeBase,
 
         var onPanelMouseDown = function onPanelMouseDown(event)
         {
+            //console.log("onPanelMouseDown", event.target || event.srcElement, event);
+            
             var target = event.target || event.srcElement;
             
             if (FBL.isLeftClick(event))
             {
                 var editable = FBL.getAncestorByClass(target, "editable");
+                
+                // if an editable element has been clicked then start editing
                 if (editable)
                 {
                     Firebug.Editor.startEditing(editable);
                     FBL.cancelEvent(event);
+                }
+                // if any other element has been clicked then stop editing
+                else
+                {
+                    if (!hasClass(target, "textEditorInner"))
+                        Firebug.Editor.stopEditing();
                 }
             }
             else if (FBL.isMiddleClick(event) && Firebug.getRepNode(target))
@@ -9115,7 +9593,67 @@ append(ChromeBase,
             return panel;
         };
         
+        
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        // TODO: xxxpedro port to Firebug
+        
+        // Improved window key code event listener. Only one "keydown" event will be attached
+        // to the window, and the onKeyCodeListen() function will delegate which listeners
+        // should be called according to the event.keyCode fired.
+        var onKeyCodeListenersMap = [];
+        var onKeyCodeListen = function(event)
+        {
+            for (var keyCode in onKeyCodeListenersMap)
+            {
+                var listeners = onKeyCodeListenersMap[keyCode];
+                
+                for (var i = 0, listener; listener = listeners[i]; i++)
+                {
+                    var filter = listener.filter || FBL.noKeyModifiers;
+        
+                    if (event.keyCode == keyCode && (!filter || filter(event)))
+                    {
+                        listener.listener();
+                        FBL.cancelEvent(event, true);
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        addEvent(Firebug.chrome.document, "keydown", onKeyCodeListen);
 
+        Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
+        {
+            var keyCode = KeyEvent["DOM_VK_"+key];
+            
+            if (!onKeyCodeListenersMap[keyCode])
+                onKeyCodeListenersMap[keyCode] = [];
+            
+            onKeyCodeListenersMap[keyCode].push({
+                filter: filter,
+                listener: listener
+            });
+    
+            return keyCode;
+        };
+        
+        Firebug.chrome.keyIgnore = function(keyCode)
+        {
+            onKeyCodeListenersMap[keyCode] = null;
+            delete onKeyCodeListenersMap[keyCode];
+        };
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        
+        /**/
+        // move to shutdown 
+        //removeEvent(Firebug.chrome.document, "keydown", listener[0]);
+
+
+        /*
         Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
         {
             if (!filter)
@@ -9142,7 +9680,7 @@ append(ChromeBase,
         {
             removeEvent(Firebug.chrome.document, "keydown", listener[0]);
         };
-
+        /**/
         
         
         this.addController(
@@ -9922,8 +10460,6 @@ var ChromePopupBase = extend(ChromeBase, {
                     
                     try
                     {
-                        var persistDelay = new Date().getTime() - persistTimeStart;
-                
                         window.Firebug = Firebug;
                         window.opener.Firebug = Firebug;
                 
@@ -9931,6 +10467,11 @@ var ChromePopupBase = extend(ChromeBase, {
                         Firebug.browser = Firebug.context = new Context(Env.browser);
                 
                         registerConsole();
+                
+                        // the delay time should be calculated right after registering the 
+                        // console, once right after the console registration, call log messages
+                        // will be properly handled
+                        var persistDelay = new Date().getTime() - persistTimeStart;
                 
                         var chrome = Firebug.chrome;
                         addEvent(Firebug.browser.window, "unload", chrome.persist)
@@ -9941,8 +10482,12 @@ var ChromePopupBase = extend(ChromeBase, {
                         var htmlPanel = chrome.getPanel("HTML");
                         htmlPanel.createUI();
                         
-                        Firebug.Console.info("Firebug could not capture console calls during " + 
-                                persistDelay + "ms");
+                        Firebug.Console.logFormatted(
+                            ["Firebug could not capture console calls during " +
+                            persistDelay + "ms"],
+                            Firebug.context,
+                            "info"
+                        );
                     }
                     catch(pE)
                     {
@@ -11942,20 +12487,6 @@ function parseParts(str)
     var index = 0;
     var parts = [];
 
-    // Avoid strange problem in Google Chrome 5. For some reason, re.exec(str) is
-    // returning null even when the string matches the expression, resulting in
-    // in the className of OBJECTLINK representations not being properly adjusted
-    // and consequently the styles not being properly applied to it. 
-    //
-    // Even more strange is the fact that after executing the regex object once, 
-    // the next call will matches the string.
-    //
-    // This fix will break the styles on Firefox 
-    if (FBL.isSafari && str == "objectLink objectLink-$className a11yFocus")
-    {
-        re.exec(str);
-    }
-    
     var m;
     while (m = re.exec(str))
     {
@@ -12674,13 +13205,200 @@ this.Obj = domplate(Firebug.Rep,
 {
     tag:
         OBJECTLINK(
-            SPAN({"class": "objectTitle"}, "$object|getTitle"),
-            FOR("prop", "$object|propIterator",
-                " $prop.name=",
-                SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
+            SPAN({"class": "objectTitle"}, "$object|getTitle "),
+            
+            SPAN({"class": "objectProps"}, 
+                SPAN({"class": "objectLeftBrace", role: "presentation"}, "{"),
+                FOR("prop", "$object|propIterator",
+                    SPAN({"class": "objectPropName", role: "presentation"}, "$prop.name"),
+                    SPAN({"class": "objectEqual", role: "presentation"}, "$prop.equal"),
+                    TAG("$prop.tag", {object: "$prop.object"}),
+                    SPAN({"class": "objectComma", role: "presentation"}, "$prop.delim")
+                ),
+                SPAN({"class": "objectRightBrace"}, "}")
             )
         ),
 
+    propNumberTag:
+        SPAN({"class": "objectProp-number"}, "$object"),
+
+    propStringTag:
+        SPAN({"class": "objectProp-string"}, "&quot;$object&quot;"),
+
+    propObjectTag:
+        SPAN({"class": "objectProp-object"}, "$object"),
+
+    propIterator: function (object)
+    {
+        ///Firebug.ObjectShortIteratorMax;
+        maxLength = 55; // default max length for long representation
+        
+        if (!object)
+            return [];
+
+        var props = [];
+        var length = 0;
+        
+        var numProperties = 0;
+        var numPropertiesShown = 0;
+        var maxLengthReached = false;
+        
+        var lib = this;
+        
+        var propRepsMap = 
+        {
+            "boolean": this.propNumberTag,
+            "number": this.propNumberTag,
+            "string": this.propStringTag,
+            "object": this.propObjectTag
+        };
+
+        try
+        {
+            var title = Firebug.Rep.getTitle(object);
+            length += title.length;
+
+            for (var name in object)
+            {
+                var value;
+                try
+                {
+                    value = object[name];
+                }
+                catch (exc)
+                {
+                    continue;
+                }
+                
+                var type = typeof(value);
+                if (type == "boolean" || 
+                    type == "number" || 
+                    (type == "string" && value) || 
+                    (type == "object" && value && value.toString))
+                {
+                    var tag = propRepsMap[type];
+                    
+                    var value = (type == "object") ?
+                        Firebug.getRep(value).getTitle(value) :
+                        value + "";
+                        
+                    length += name.length + value.length + 4;
+                    
+                    if (length <= maxLength)
+                    {
+                        props.push({
+                            tag: tag, 
+                            name: name, 
+                            object: value, 
+                            equal: "=", 
+                            delim: ", "
+                        });
+                        
+                        numPropertiesShown++;
+                    }
+                    else
+                        maxLengthReached = true;
+
+                }
+                
+                numProperties++;
+                
+                if (maxLengthReached && numProperties > numPropertiesShown)
+                    break;
+            }
+            
+            if (numProperties > numPropertiesShown)
+            {
+                props.push({
+                    object: "...", //xxxHonza localization
+                    tag: FirebugReps.Caption.tag,
+                    name: "",
+                    equal:"",
+                    delim:""
+                });
+            }
+            else if (props.length > 0)
+            {
+                props[props.length-1].delim = '';
+            }
+        }
+        catch (exc)
+        {
+            // Sometimes we get exceptions when trying to read from certain objects, like
+            // StorageList, but don't let that gum up the works
+            // XXXjjb also History.previous fails because object is a web-page object which does not have
+            // permission to read the history
+        }
+        return props;
+    },
+    
+    fb_1_6_propIterator: function (object, max)
+    {
+        max = max || 3;
+        if (!object)
+            return [];
+
+        var props = [];
+        var len = 0, count = 0;
+
+        try
+        {
+            for (var name in object)
+            {
+                var value;
+                try
+                {
+                    value = object[name];
+                }
+                catch (exc)
+                {
+                    continue;
+                }
+
+                var t = typeof(value);
+                if (t == "boolean" || t == "number" || (t == "string" && value)
+                    || (t == "object" && value && value.toString))
+                {
+                    var rep = Firebug.getRep(value);
+                    var tag = rep.shortTag || rep.tag;
+                    if (t == "object")
+                    {
+                        value = rep.getTitle(value);
+                        tag = rep.titleTag;
+                    }
+                    count++;
+                    if (count <= max)
+                        props.push({tag: tag, name: name, object: value, equal: "=", delim: ", "});
+                    else
+                        break;
+                }
+            }
+            if (count > max)
+            {
+                props[Math.max(1,max-1)] = {
+                    object: "more...", //xxxHonza localization
+                    tag: FirebugReps.Caption.tag,
+                    name: "",
+                    equal:"",
+                    delim:""
+                };
+            }
+            else if (props.length > 0)
+            {
+                props[props.length-1].delim = '';
+            }
+        }
+        catch (exc)
+        {
+            // Sometimes we get exceptions when trying to read from certain objects, like
+            // StorageList, but don't let that gum up the works
+            // XXXjjb also History.previous fails because object is a web-page object which does not have
+            // permission to read the history
+        }
+        return props;
+    },
+    
+    /*
     propIterator: function (object)
     {
         if (!object)
@@ -12729,6 +13447,7 @@ this.Obj = domplate(Firebug.Rep,
 
         return props;
     },
+    /**/
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -14287,7 +15006,7 @@ Firebug.Editor = extend(Firebug.Module,
     saveEditAndNotifyListeners: function(currentTarget, value, previousValue)
     {
         currentEditor.saveEdit(currentTarget, value, previousValue);
-        dispatch(this.fbListeners, "onSaveEdit", [currentPanel, currentEditor, currentTarget, value, previousValue]);
+        //dispatch(this.fbListeners, "onSaveEdit", [currentPanel, currentEditor, currentTarget, value, previousValue]);
     },
 
     setEditTarget: function(element)
@@ -14557,6 +15276,35 @@ Firebug.BaseEditor = extend(Firebug.MeasureBox,
 // ************************************************************************************************
 // InlineEditor
 
+// basic inline editor attributes
+var inlineEditorAttributes = {
+    "class": "textEditorInner",
+    
+    type: "text", 
+    spellcheck: "false",
+    
+    onkeypress: "$onKeyPress",
+    
+    onoverflow: "$onOverflow",
+    oncontextmenu: "$onContextMenu"
+};
+
+// IE does not support the oninput event, so we're using the onkeydown to signalize
+// the relevant keyboard events, and the onpropertychange to actually handle the
+// input event, which should happen after the onkeydown event is fired and after the 
+// value of the input is updated, but before the onkeyup and before the input (with the 
+// new value) is rendered
+if (isIE)
+{
+    inlineEditorAttributes.onpropertychange = "$onInput";
+    inlineEditorAttributes.onkeydown = "$onKeyDown";
+}
+// for other browsers we use the oninput event
+else
+{
+    inlineEditorAttributes.oninput = "$onInput";
+}
+
 Firebug.InlineEditor = function(doc)
 {
     this.initializeInline(doc);
@@ -14575,12 +15323,8 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             ),
             DIV({"class": "textEditorInner1"},
                 DIV({"class": "textEditorInner2"},
-                    INPUT({"class": "textEditorInner", type: "text",
-                        /*oninput: "$onInput", */
-                        onkeypress: "$onKeyPress",
-                        onkeyup: "$onKeyUp",
-                        onoverflow: "$onOverflow",
-                        oncontextmenu: "$onContextMenu"}
+                    INPUT(
+                        inlineEditorAttributes
                     )
                 )
             ),
@@ -14623,8 +15367,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         this.box = this.tag.append({}, doc.body, this);
         
         //this.input = this.box.childNodes[1].firstChild.firstChild;  // XXXjjb childNode[1] required
-        
-        this.input = this.box.getElementsByTagName("input")[0];  // XXXjjb childNode[1] required
+        this.input = this.box.getElementsByTagName("input")[0];
         
         if (isIElt8)
         {
@@ -14729,6 +15472,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         
         if (isIE)
         {
+            // reset input style
             this.input.style.fontFamily = "Monospace";
             this.input.style.fontSize = "11px";
         }
@@ -14749,17 +15493,19 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         // Display the editor after change its size and position to avoid flickering
         this.box.style.display = "block";
         
+        // we need to call input.focus() and input.select() with a timeout, 
+        // otherwise it won't work on all browsers due to timing issues 
         var self = this;
         setTimeout(function(){
             self.input.focus();
             self.input.select();
-        },0);        
+        },0);
     },
 
     hide: function()
     {
         this.box.className = this.originalClassName;
-
+        
         if (!this.fixedWidth)
         {
             this.stopMeasuring();
@@ -14772,7 +15518,9 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
         if (this.box.parentNode)
         {
-            setSelectionRange(this.input, 0, 0);
+            ///setSelectionRange(this.input, 0, 0);
+            this.input.blur();
+            
             this.box.parentNode.removeChild(this.box);
         }
 
@@ -14844,8 +15592,19 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
     {
         //console.log("completeValue");
         
-        if (this.getAutoCompleter().complete(currentPanel.context, this.input, true, amt < 0))
+        var selectRangeCallback = this.getAutoCompleter().complete(currentPanel.context, this.input, true, amt < 0); 
+        
+        if (selectRangeCallback)
+        {
             Firebug.Editor.update(true);
+            
+            // We need to select the editor text after calling update in Safari/Chrome,
+            // otherwise the text won't be selected
+            if (isSafari)
+                setTimeout(selectRangeCallback,0);
+            else
+                selectRangeCallback();
+        }
         else
             this.incrementValue(amt);
     },
@@ -14856,10 +15615,11 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         
         // TODO: xxxpedro editor
         if (isIE)
-            var start = getInputCaretPosition(this.input), end = start;
+            var start = getInputSelectionStart(this.input), end = start;
         else
             var start = this.input.selectionStart, end = this.input.selectionEnd;
 
+        //debugger;
         var range = this.getAutoCompleteRange(value, start);
         if (!range || range.type != "int")
             range = {start: 0, end: value.length-1};
@@ -14890,19 +15650,9 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-    onKeyUp: function(event)
-    {
-        // IE and Safari won't fire the onkeypress event for special keys like insert/delete,
-        // up/down arrows and others. So, we must listen for the onkeyup event too, and
-        // call the onKeyPress handler manually
-        if (isIE || isSafari)
-        {
-            this.onKeyPress(event);
-        }
-    },
-    
     onKeyPress: function(event)
     {
+        //console.log("onKeyPress", event);
         if (event.keyCode == 27 && !this.completeAsYouType)
         {
             var reverted = this.getAutoCompleter().revert(this.input);
@@ -14923,12 +15673,6 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             {
                 // If the user backspaces, don't autocomplete after the upcoming input event
                 this.ignoreNextInput = event.keyCode == 8;
-                
-                // TODO: xxxpedro IE and oninput                
-                var self = this;
-                setTimeout(function(){
-                    self.onInput();
-                },0)
             }
         }
     },
@@ -14938,20 +15682,54 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         this.updateLayout(false, false, 3);
     },
 
-    onInput: function()
+    onKeyDown: function(event)
     {
-        //console.log("onInput");
+        //console.log("onKeyDown", event.keyCode);
+        if (event.keyCode > 46 || event.keyCode == 32 || event.keyCode == 8)
+        {
+            this.keyDownPressed = true;
+        }
+    },
+    
+    onInput: function(event)
+    {
+        //debugger;
+        
+        // skip not relevant onpropertychange calls on IE
+        if (isIE)
+        {
+            if (event.propertyName != "value" || !isVisible(this.input) || !this.keyDownPressed) 
+                return;
+            
+            this.keyDownPressed = false;
+        }
+        
+        //console.log("onInput", event);
+        //console.trace();
+        
+        var selectRangeCallback;
+        
         if (this.ignoreNextInput)
         {
             this.ignoreNextInput = false;
             this.getAutoCompleter().reset();
         }
         else if (this.completeAsYouType)
-            this.getAutoCompleter().complete(currentPanel.context, this.input, false);
+            selectRangeCallback = this.getAutoCompleter().complete(currentPanel.context, this.input, false);
         else
             this.getAutoCompleter().reset();
 
         Firebug.Editor.update();
+        
+        if (selectRangeCallback)
+        {
+            // We need to select the editor text after calling update in Safari/Chrome,
+            // otherwise the text won't be selected
+            if (isSafari)
+                setTimeout(selectRangeCallback,0);
+            else
+                selectRangeCallback();
+        }
     },
 
     onContextMenu: function(event)
@@ -15055,7 +15833,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             }
 
             this.expander.style.width = approxTextWidth + "px";
-            this.expander.style.height = (this.textSize.height-3) + "px";
+            this.expander.style.height = Math.max(this.textSize.height-3,0) + "px";
         }
 
         if (forceAll)
@@ -15109,16 +15887,17 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
 
     this.complete = function(context, textBox, cycle, reverse)
     {
+        //console.log("complete", context, textBox, cycle, reverse);
         // TODO: xxxpedro important port to firebug (variable leak)
         //var value = lastValue = textBox.value;
         var value = textBox.value;
         
         //var offset = textBox.selectionStart;
-        var offset = getInputCaretPosition(textBox);
+        var offset = getInputSelectionStart(textBox);
         
         // The result of selectionStart() in Safari/Chrome is 1 unit less than the result
-        // in Firebug. Therefore, we need to manually adjust the value here.
-        //if (isSafari && offset >= 0) offset++;
+        // in Firefox. Therefore, we need to manually adjust the value here.
+        if (isSafari && !cycle && offset >= 0) offset++;
         
         if (!selectMode && originalOffset != -1)
             offset = originalOffset;
@@ -15302,6 +16081,7 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         // we must select the range with a timeout, otherwise the text won't
         // be properly selected (because after this function executes, the editor's
         // input will be resized to fit the whole text)
+        /*
         setTimeout(function(){
             if (selectMode)
                 setSelectionRange(textBox, offset, offsetEnd);
@@ -15309,8 +16089,25 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
                 setSelectionRange(textBox, offsetEnd, offsetEnd);
         },0);
                 
-
         return true;
+        /**/
+        
+        // The editor text should be selected only after calling the editor.update() 
+        // in Safari/Chrome, otherwise the text won't be selected. So, we're returning
+        // a function to be called later (in the proper time for all browsers).
+        //
+        // TODO: xxxpedro see if we can move the editor.update() calls to here, and avoid
+        // returning a closure. the complete() function seems to be called only twice in
+        // editor.js. See if this function is called anywhere else (like css.js for example).
+        return function(){
+            //console.log("autocomplete ", textBox, offset, offsetEnd);
+            
+            if (selectMode)
+                setSelectionRange(textBox, offset, offsetEnd);
+            else
+                setSelectionRange(textBox, offsetEnd, offsetEnd);
+        };
+        /**/
     };
 };
 
@@ -15679,6 +16476,10 @@ Firebug.Inspector =
     
     drawBoxModel: function(el)
     {
+        // avoid error when the element is not attached a document
+        if (!el || !el.parentNode)
+            return;
+        
         var box = Firebug.browser.getElementBox(el);
         
         var windowSize = Firebug.browser.getWindowSize();
@@ -15950,9 +16751,6 @@ r.tag.tag.renderDOM.apply(self ? self : r.tag.subject, domArgs);
 var consoleQueue = [];
 var lastHighlightedObject;
 var FirebugContext = Env.browser;
-var $STRF = function(){
-    return "$STRF not supported yet";
-}
 
 // ************************************************************************************************
 
@@ -16715,7 +17513,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         if (this.onScroller)
             removeEvent(this.panelNode, "scroll", this.onScroller);
 
-        removeEvent(this.resizeEventTarget, "resize", this.onResizer);
+        //removeEvent(this.resizeEventTarget, "resize", this.onResizer);
     },
 
     shutdown: function()
@@ -17415,12 +18213,19 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
     this.dirxml = function(o)
     {
-        if (o instanceof Window)
+        ///if (o instanceof Window)
+        if (instanceOf(o, "Window"))
             o = o.document.documentElement;
-        else if (o instanceof Document)
+        ///else if (o instanceof Document)
+        else if (instanceOf(o, "Document"))
             o = o.documentElement;
 
-        Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        // TODO: xxxpedro html3
+        ///Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        var div = Firebug.Console.log(o, context, "dirxml");
+        var html = [];
+        Firebug.Reps.appendNode(o, html);
+        div.innerHTML = html.join("");
     };
 
     this.group = function()
@@ -18146,12 +18951,7 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         var result = this.evaluate(command);
         
-        // avoid logging the console command twice, in case it is a console function
-        // that is being executed in the command line
-        if (result != Firebug.Console.LOG_COMMAND)
-        {
-            Firebug.Console.log(result);
-        }
+        Firebug.Console.log(result);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -18426,12 +19226,20 @@ var CommandLineAPI =
 
     dirxml: function(o)
     {
-        if (o instanceof Window)
+        ///if (o instanceof Window)
+        if (instanceOf(o, "Window"))
             o = o.document.documentElement;
-        else if (o instanceof Document)
+        ///else if (o instanceof Document)
+        else if (instanceOf(o, "Document"))
             o = o.documentElement;
 
-        Firebug.Console.log(o, Firebug.context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        // TODO: xxxpedro html3
+        ///Firebug.Console.log(o, Firebug.context, "dirxml", Firebug.HTMLPanel.SoloElement);
+        var div = Firebug.Console.log(o, Firebug.context, "dirxml");
+        var html = [];
+        Firebug.Reps.appendNode(o, html);
+        div.innerHTML = html.join("");
+        
     }
 };
 
@@ -18519,6 +19327,74 @@ var XMLHttpRequestWrapper = function(activeXObject)
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper internal methods
     
+    var updateSelfPropertiesIgnore = {
+        abort: 1,
+        channel: 1,
+        getInterface: 1,
+        mozBackgroundRequest: 1,
+        multipart: 1,
+        onreadystatechange: 1,
+        open: 1,
+        send: 1,
+        setRequestHeader: 1
+    };
+    
+    var updateSelfProperties = function()
+    {
+        for (var propName in xhrRequest)
+        {
+            if (propName in updateSelfPropertiesIgnore)
+                continue;
+            
+            try
+            {
+                var propValue = xhrRequest[propName];
+                
+                if (propValue && !isFunction(propValue))
+                    self[propName] = propValue;
+            }
+            catch(E)
+            {
+                //console.log(propName, E.message);
+            }
+        }
+    };
+    
+    var updateXHRPropertiesIgnore = {
+        channel: 1,
+        onreadystatechange: 1,
+        readyState: 1,
+        responseBody: 1,
+        responseText: 1,
+        responseXML: 1,
+        status: 1,
+        statusText: 1,
+        upload: 1
+    };
+    
+    var updateXHRProperties = function()
+    {
+        for (var propName in self)
+        {
+            try
+            {
+                if (propName in updateXHRPropertiesIgnore)
+                    continue;
+            
+                var propValue = self[propName];
+                
+                if (propValue && !xhrRequest[propName])
+                {
+                    xhrRequest[propName] = propValue;
+                }
+            }
+            catch(E)
+            {
+                //console.log(propName, E.message);
+            }
+        }
+    };
+    
     var logXHR = function() 
     {
         var row = Firebug.Console.log(spy, null, "spy", Firebug.Spy.XHR);
@@ -18546,9 +19422,30 @@ var XMLHttpRequestWrapper = function(activeXObject)
             
             if (match)
             {
+                var name = match[1];
+                var value = match[2];
+                
+                // update the spy mimeType property so we can detect when to show 
+                // custom response viewers (such as HTML, XML or JSON viewer)
+                if (name == "Content-Type")
+                    spy.mimeType = value;
+                
+                /*
+                if (name == "Last Modified")
+                {
+                    if (!spy.cacheEntry)
+                        spy.cacheEntry = [];
+                    
+                    spy.cacheEntry.push({
+                       name: [name],
+                       value: [value]
+                    });
+                }
+                /**/
+                
                 spy.responseHeaders.push({
-                   name: [match[1]],
-                   value: [match[2]]
+                   name: [name],
+                   value: [value]
                 });
             }
         }
@@ -18562,33 +19459,29 @@ var XMLHttpRequestWrapper = function(activeXObject)
         {
             setTimeout(function(){
                 
+                spy.responseText = xhrRequest.responseText;
+                
                 // update row information to avoid "ethernal spinning gif" bug in IE 
                 row = row || spy.logRow;
                 
                 // if chrome document is not loaded, there will be no row yet, so just ignore
                 if (!row) return;
                 
-                FBL.removeClass(row, "loading");
-                
-                if (!success)
-                    FBL.setClass(row, "error");
-                
-                var item = FBL.$$(".spyStatus", row)[0];
-                item.innerHTML = status;
-                
-                var item = FBL.$$(".spyTime", row)[0];
-                item.innerHTML = time + "ms";
+                // update the XHR representation data
+                handleRequestStatus(success, status, time);
                 
             },200);
         }
         
         spy.loaded = true;
-        spy.responseText = xhrRequest.responseText;
-        
+        /*
+        // commented because they are being updated by the updateSelfProperties() function
         self.status = xhrRequest.status;
         self.statusText = xhrRequest.statusText;
         self.responseText = xhrRequest.responseText;
         self.responseXML = xhrRequest.responseXML;
+        /**/
+        updateSelfProperties();
     };
     
     var handleStateChange = function()
@@ -18605,7 +19498,27 @@ var XMLHttpRequestWrapper = function(activeXObject)
         }
         
         //Firebug.Console.log(spy.url + ": " + xhrRequest.readyState);
+        
         self.onreadystatechange();
+    };
+    
+    // update the XHR representation data
+    var handleRequestStatus = function(success, status, time)
+    {
+        var row = spy.logRow;
+        FBL.removeClass(row, "loading");
+        
+        if (!success)
+            FBL.setClass(row, "error");
+        
+        var item = FBL.$$(".spyStatus", row)[0];
+        item.innerHTML = status;
+        
+        if (time)
+        {
+            var item = FBL.$$(".spyTime", row)[0];
+            item.innerHTML = time + "ms";
+        }
     };
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -18618,9 +19531,11 @@ var XMLHttpRequestWrapper = function(activeXObject)
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper public methods
     
-    this.open = function(method, url, async)
+    this.open = function(method, url, async, user, password)
     {
         //Firebug.Console.log("xhrRequest open");
+        
+        updateSelfProperties();
         
         if (spy.loaded)
             spy = new XHRSpy();
@@ -18636,11 +19551,10 @@ var XMLHttpRequestWrapper = function(activeXObject)
             xhrRequest.onreadystatechange = handleStateChange;
         
         // xhr.open.apply not available in IE
-        if (xhrRequest.open.apply)
+        if (typeof xhrRequest.open.apply != "undefined")
             xhrRequest.open.apply(xhrRequest, arguments)
         else
-            // TODO: xxxpedro user and pass parameters?
-            xhrRequest.open(method, url, async);
+            xhrRequest.open(method, url, async, user, password);
         
         if (FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
@@ -18656,6 +19570,8 @@ var XMLHttpRequestWrapper = function(activeXObject)
         spy.data = data;
         
         reqStartTS = new Date().getTime();
+        
+        updateXHRProperties();
         
         try
         {
@@ -18683,11 +19599,21 @@ var XMLHttpRequestWrapper = function(activeXObject)
     this.setRequestHeader = function(header, value)
     {
         spy.requestHeaders.push({name: [header], value: [value]});
-        xhrRequest.setRequestHeader(header, value);
+        return xhrRequest.setRequestHeader(header, value);
     };
+    
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
+    this.abort = function()
+    {
+        xhrRequest.abort();
+        updateSelfProperties();
+        handleRequestStatus(false, "Aborted");
+    };
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    /*
     this.getResponseHeader = function(header)
     {
         return xhrRequest.getResponseHeader(header);
@@ -18700,12 +19626,53 @@ var XMLHttpRequestWrapper = function(activeXObject)
         return xhrRequest.getAllResponseHeaders();
     };
     
+    /**/
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Clone XHR object
+
+    var supportsApply = xhrRequest && 
+            xhrRequest.open && 
+            typeof xhrRequest.open.apply != "undefined";
     
-    this.abort = function()
+    for (var propName in xhrRequest)
     {
-        return xhrRequest.abort();
-    };
+        if (propName in updateSelfPropertiesIgnore)
+            continue;
+        
+        try
+        {
+            var propValue = xhrRequest[propName];
+            
+            if (isFunction(propValue))
+            {
+                if (typeof self[propName] == "undefined")
+                {
+                    this[propName] = (function(name, xhr){
+                    
+                        return supportsApply ?
+                            // if the browser supports apply 
+                            function()
+                            {
+                                return xhr[name].apply(xhr, arguments)
+                            }
+                            :
+                            function(a,b,c,d,e)
+                            {
+                                return xhr[name](a,b,c,d,e)
+                            };
+                    
+                    })(propName, xhrRequest);
+                } 
+            }
+            else
+                this[propName] = propValue;
+        }
+        catch(E)
+        {
+            //console.log(propName, E.message);
+        }
+    }
+    /**/
     
     return this;
 };
@@ -18768,25 +19735,6 @@ if (!isIE6)
 /* See license.txt for terms of usage */
 
 FBL.ns(function() { with (FBL) {
-// ************************************************************************************************
-
-// ************************************************************************************************
-// ************************************************************************************************
-// ************************************************************************************************
-var oSTR =
-{
-    NoMembersWarning: "There are no properties to show for this object.",
-    "net.label.Parameters": "Parameters",
-    "net.label.Source": "Source",
-    "URLParameters": "Params"
-}
-
-FBL.$STR = function(name)
-{
-    return oSTR.hasOwnProperty(name) ? oSTR[name] : name;
-};
-// ************************************************************************************************
-// ************************************************************************************************
 // ************************************************************************************************
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -18938,7 +19886,7 @@ Firebug.NetMonitor = extend(Firebug.ActivableModule,
  * @domplate Represents a template that is used to reneder detailed info about a request.
  * This template is rendered when a request is expanded.
  */
-Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
+Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
 {
     tag:
         DIV({"class": "netInfoBody", _repObject: "$file"},
@@ -19089,7 +20037,6 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
 
     hideHtml: function(file)
     {
-        return true;
         return (file.mimeType != "text/html") && (file.mimeType != "application/xhtml+xml");
     },
 
@@ -19117,8 +20064,10 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
     {
         // Create new tab and body.
         var args = {tabId: tabId, tabTitle: tabTitle};
-        this.customTab.append(args, netInfoBox.getElementsByClassName("netInfoTabs").item(0));
-        this.customBody.append(args, netInfoBox.getElementsByClassName("netInfoBodies").item(0));
+        ///this.customTab.append(args, netInfoBox.getElementsByClassName("netInfoTabs").item(0));
+        ///this.customBody.append(args, netInfoBox.getElementsByClassName("netInfoBodies").item(0));
+        this.customTab.append(args, $$(".netInfoTabs", netInfoBox)[0]);
+        this.customBody.append(args, $$(".netInfoBodies", netInfoBox)[0]);
     },
 
     selectTabByName: function(netInfoBox, tabName)
@@ -19233,8 +20182,8 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
 
         else if (hasClass(tab, "netInfoResponseTab") && file.loaded && !netInfoBox.responsePresented)
         {
+            ///var responseTextBox = netInfoBox.getElementsByClassName("netInfoResponseText").item(0);
             var responseTextBox = $$(".netInfoResponseText", netInfoBox)[0];
-            //var responseTextBox = netInfoBox.getElementsByClassName("netInfoResponseText").item(0);
             if (file.category == "image")
             {
                 netInfoBox.responsePresented = true;
@@ -19245,7 +20194,7 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
                 clearNode(responseTextBox);
                 responseTextBox.appendChild(responseImage, responseTextBox);
             }
-            else //if (!(binaryCategoryMap.hasOwnProperty(file.category)))
+            else ///if (!(binaryCategoryMap.hasOwnProperty(file.category)))
             {
                 this.setResponseText(file, netInfoBox, responseTextBox, context);
             }
@@ -19265,12 +20214,23 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
             netInfoBox.htmlPresented = true;
 
             var text = Utils.getResponseText(file, context);
-            var iframe = netInfoBox.getElementsByClassName("netInfoHtmlPreview").item(0);
-            iframe.contentWindow.document.body.innerHTML = text;
+            
+            ///var iframe = netInfoBox.getElementsByClassName("netInfoHtmlPreview").item(0);
+            var iframe = $$(".netInfoHtmlPreview", netInfoBox)[0];
+            
+            ///iframe.contentWindow.document.body.innerHTML = text;
+            
+            // TODO: xxxpedro net - remove scripts
+            var reScript = /<script(.|\s)*?\/script>/gi;
+            
+            text = text.replace(reScript, "");
+                
+            iframe.contentWindow.document.write(text);
+            iframe.contentWindow.document.close();
         }
 
         // Notify listeners about update so, content of custom tabs can be updated.
-        //dispatch(NetInfoBody.fbListeners, "updateTabBody", [netInfoBox, file, context]);
+        dispatch(NetInfoBody.fbListeners, "updateTabBody", [netInfoBox, file, context]);
     },
 
     setResponseText: function(file, netInfoBox, responseTextBox, context)
@@ -19279,7 +20239,6 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, //new Firebug.Listener(),
         //**********************************************
         //**********************************************
         netInfoBox.responsePresented = true;
-        
         // line breaks somehow are different in IE
         // make this only once in the initialization? we don't have net panels and modules yet.
         if (isIE)
@@ -19420,9 +20379,11 @@ Firebug.NetMonitor.NetInfoHeaders = domplate(Firebug.Rep, //new Firebug.Listener
         //if (source)
         //    source = source.replace(/\r\n/gm, "<span style='color:lightgray'>\\r\\n</span>\r\n");
 
-        var tbody = netInfoBox.getElementsByClassName("netInfo" + rowName + "Body").item(0);
+        ///var tbody = netInfoBox.getElementsByClassName("netInfo" + rowName + "Body").item(0);
+        var tbody = $$(".netInfo" + rowName + "Body", netInfoBox)[0];
         var node = this.sourceTag.replace({}, tbody);
-        var sourceNode = node.getElementsByClassName("source").item(0);
+        ///var sourceNode = node.getElementsByClassName("source").item(0);
+        var sourceNode = $$(".source", node)[0];
         sourceNode.innerHTML = source;
     },
 
@@ -19521,11 +20482,13 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
     // application/json
     jsonTable:
         TABLE({"class": "netInfoPostJSONTable", cellpadding: 0, cellspacing: 0, "role": "presentation"},
-            TBODY({"role": "list", "aria-label": $STR("jsonviewer.tab.JSON")},
+            ///TBODY({"role": "list", "aria-label": $STR("jsonviewer.tab.JSON")},
+            TBODY({"role": "list", "aria-label": $STR("JSON")},
                 TR({"class": "netInfoPostJSONTitle", "role": "presentation"},
                     TD({"role": "presentation" },
                         DIV({"class": "netInfoPostParams"},
-                            $STR("jsonviewer.tab.JSON")
+                            ///$STR("jsonviewer.tab.JSON")
+                            $STR("JSON")
                         )
                     )
                 ),
@@ -19581,55 +20544,55 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
 
     render: function(context, parentNode, file)
     {
-        //------------------------------------------------------------------
-        //------------------------------------------------------------------
-        //TODO: xxxpedro net
+        //debugger;
         var spy = getAncestorByClass(parentNode, "spyHead");
         var spyObject = spy.repObject;
         var data = spyObject.data;
         
-        var params = parseURLEncodedTextArray(data);
-        if (params)
-            this.insertParameters(parentNode, params);
+        ///var contentType = Utils.findHeader(file.requestHeaders, "content-type");
+        var contentType = file.mimeType;
         
-        var postText = data;
-        //postText = Utils.formatPostText(postText);
-        if (postText)
-            this.insertSource(parentNode, postText);
-        
-        return;
-        //------------------------------------------------------------------
-        //------------------------------------------------------------------
-        
-        var text = Utils.getPostText(file, context, true);
-        if (text == undefined)
-            return;
+        ///var text = Utils.getPostText(file, context, true);
+        ///if (text == undefined)
+        ///    return;
 
-        if (Utils.isURLEncodedRequest(file, context))
+        ///if (Utils.isURLEncodedRequest(file, context))
+        // fake Utils.isURLEncodedRequest identification
+        if (contentType && contentType == "application/x-www-form-urlencoded" ||
+            data && data.indexOf("=") != -1) 
         {
-            var lines = text.split("\n");
-            var params = parseURLEncodedText(lines[lines.length-1]);
+            ///var lines = text.split("\n");
+            ///var params = parseURLEncodedText(lines[lines.length-1]);
+            var params = parseURLEncodedTextArray(data);
             if (params)
                 this.insertParameters(parentNode, params);
         }
 
-        if (Utils.isMultiPartRequest(file, context))
-        {
-            var data = this.parseMultiPartText(file, context);
-            if (data)
-                this.insertParts(parentNode, data);
-        }
+        ///if (Utils.isMultiPartRequest(file, context))
+        ///{
+        ///    var data = this.parseMultiPartText(file, context);
+        ///    if (data)
+        ///        this.insertParts(parentNode, data);
+        ///}
 
-        var contentType = Utils.findHeader(file.requestHeaders, "content-type");
+        // moved to the top
+        ///var contentType = Utils.findHeader(file.requestHeaders, "content-type");
 
-        if (Firebug.JSONViewerModel.isJSON(contentType))
-            this.insertJSON(parentNode, file, context);
+        ///if (Firebug.JSONViewerModel.isJSON(contentType))
+        var jsonData = {
+            responseText: data
+        };
+        
+        if (Firebug.JSONViewerModel.isJSON(contentType, data))
+            ///this.insertJSON(parentNode, file, context);
+            this.insertJSON(parentNode, jsonData, context);
 
-        if (Firebug.XMLViewerModel.isXML(contentType))
-            this.insertXML(parentNode, file, context);
+        ///if (Firebug.XMLViewerModel.isXML(contentType))
+        ///    this.insertXML(parentNode, file, context);
 
-        var postText = Utils.getPostText(file, context);
-        postText = Utils.formatPostText(postText);
+        ///var postText = Utils.getPostText(file, context);
+        ///postText = Utils.formatPostText(postText);
+        var postText = data;
         if (postText)
             this.insertSource(parentNode, postText);
     },
@@ -19664,13 +20627,17 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
 
     insertJSON: function(parentNode, file, context)
     {
-        var text = Utils.getPostText(file, context);
-        var data = parseJSONString(text, "http://" + file.request.originalURI.host);
+        ///var text = Utils.getPostText(file, context);
+        var text = file.responseText;
+        ///var data = parseJSONString(text, "http://" + file.request.originalURI.host);
+        var data = parseJSONString(text);
         if (!data)
             return;
 
-        var jsonTable = this.jsonTable.append(null, parentNode);
-        var jsonBody = jsonTable.getElementsByClassName("netInfoPostJSONBody").item(0);
+        ///var jsonTable = this.jsonTable.append(null, parentNode);
+        var jsonTable = this.jsonTable.append({}, parentNode);
+        ///var jsonBody = jsonTable.getElementsByClassName("netInfoPostJSONBody").item(0);
+        var jsonBody = $$(".netInfoPostJSONBody", jsonTable)[0];
 
         if (!this.toggles)
             this.toggles = {};
@@ -19684,7 +20651,8 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
         var text = Utils.getPostText(file, context);
 
         var jsonTable = this.xmlTable.append(null, parentNode);
-        var jsonBody = jsonTable.getElementsByClassName("netInfoPostXMLBody").item(0);
+        ///var jsonBody = jsonTable.getElementsByClassName("netInfoPostXMLBody").item(0);
+        var jsonBody = $$(".netInfoPostXMLBody", jsonTable)[0];
 
         Firebug.XMLViewerModel.insertXML(jsonBody, text);
     },
@@ -20774,7 +21742,7 @@ var updateHttpSpyInfo = function updateHttpSpyInfo(spy, logRow)
     {
         var head = getChildByClass(spy.logRow, "spyHead");
         netInfoBox = template.tag.append({"file": spy}, head);
-        //dispatch(template.fbListeners, "initTabBody", [netInfoBox, spy]);
+        dispatch(template.fbListeners, "initTabBody", [netInfoBox, spy]);
         template.selectTabByName(netInfoBox, "Response");
     }
     else
@@ -20839,6 +21807,340 @@ Firebug.registerModule(Firebug.Spy);
 //Firebug.registerRep(Firebug.Spy.XHR);
 
 // ************************************************************************************************
+}});
+
+
+/* See license.txt for terms of usage */
+
+FBL.ns(function() { with (FBL) {
+
+// ************************************************************************************************
+
+// List of JSON content types.
+var contentTypes =
+{
+    "text/plain": 1,
+    "text/javascript": 1,
+    "text/x-javascript": 1,
+    "text/json": 1,
+    "text/x-json": 1,
+    "application/json": 1,
+    "application/x-json": 1,
+    "application/javascript": 1,
+    "application/x-javascript": 1,
+    "application/json-rpc": 1
+};
+
+// ************************************************************************************************
+// Model implementation
+
+Firebug.JSONViewerModel = extend(Firebug.Module,
+{
+    dispatchName: "jsonViewer",
+    initialize: function()
+    {
+        Firebug.NetMonitor.NetInfoBody.addListener(this);
+
+        // Used by Firebug.DOMPanel.DirTable domplate.
+        this.toggles = {};
+    },
+
+    shutdown: function()
+    {
+        Firebug.NetMonitor.NetInfoBody.removeListener(this);
+    },
+
+    initTabBody: function(infoBox, file)
+    {
+        if (FBTrace.DBG_JSONVIEWER)
+            FBTrace.sysout("jsonviewer.initTabBody", infoBox);
+
+        // Let listeners to parse the JSON.
+        dispatch(this.fbListeners, "onParseJSON", [file]);
+
+        // The JSON is still no there, try to parse most common cases.
+        if (!file.jsonObject)
+        {
+            ///if (this.isJSON(safeGetContentType(file.request), file.responseText))
+            if (this.isJSON(file.mimeType, file.responseText))
+                file.jsonObject = this.parseJSON(file);
+        }
+
+        // The jsonObject is created so, the JSON tab can be displayed.
+        if (file.jsonObject && hasProperties(file.jsonObject))
+        {
+            Firebug.NetMonitor.NetInfoBody.appendTab(infoBox, "JSON",
+                ///$STR("jsonviewer.tab.JSON"));
+                $STR("JSON"));
+
+            if (FBTrace.DBG_JSONVIEWER)
+                FBTrace.sysout("jsonviewer.initTabBody; JSON object available " +
+                    (typeof(file.jsonObject) != "undefined"), file.jsonObject);
+        }
+    },
+
+    isJSON: function(contentType, data)
+    {
+        // Workaround for JSON responses without proper content type
+        // Let's consider all responses starting with "{" as JSON. In the worst
+        // case there will be an exception when parsing. This means that no-JSON
+        // responses (and post data) (with "{") can be parsed unnecessarily,
+        // which represents a little overhead, but this happens only if the request
+        // is actually expanded by the user in the UI (Net & Console panels).
+        
+        ///var responseText = data ? trimLeft(data) : null;
+        ///if (responseText && responseText.indexOf("{") == 0)
+        ///    return true;
+        var responseText = data ? trim(data) : null;
+        if (responseText && responseText.indexOf("{") == 0)
+            return true;
+
+        if (!contentType)
+            return false;
+
+        contentType = contentType.split(";")[0];
+        contentType = trim(contentType);
+        return contentTypes[contentType];
+    },
+
+    // Update listener for TabView
+    updateTabBody: function(infoBox, file, context)
+    {
+        var tab = infoBox.selectedTab;
+        ///var tabBody = infoBox.getElementsByClassName("netInfoJSONText").item(0);
+        var tabBody = $$(".netInfoJSONText", infoBox)[0];
+        if (!hasClass(tab, "netInfoJSONTab") || tabBody.updated)
+            return;
+
+        tabBody.updated = true;
+
+        if (file.jsonObject) {
+            Firebug.DOMPanel.DirTable.tag.replace(
+                 {object: file.jsonObject, toggles: this.toggles}, tabBody);
+        }
+    },
+
+    parseJSON: function(file)
+    {
+        var jsonString = new String(file.responseText);
+        ///return parseJSONString(jsonString, "http://" + file.request.originalURI.host);
+        return parseJSONString(jsonString);
+    }
+});
+
+// ************************************************************************************************
+// Registration
+
+Firebug.registerModule(Firebug.JSONViewerModel);
+
+// ************************************************************************************************
+}});
+
+
+/* See license.txt for terms of usage */
+
+FBL.ns(function() { with (FBL) {
+
+// ************************************************************************************************
+// Constants
+
+// List of XML related content types.
+var xmlContentTypes =
+[
+    "text/xml",
+    "application/xml",
+    "application/xhtml+xml",
+    "application/rss+xml",
+    "application/atom+xml",,
+    "application/vnd.mozilla.maybe.feed",
+    "application/rdf+xml",
+    "application/vnd.mozilla.xul+xml"
+];
+
+// ************************************************************************************************
+// Model implementation
+
+/**
+ * @module Implements viewer for XML based network responses. In order to create a new
+ * tab wihin network request detail, a listener is registered into
+ * <code>Firebug.NetMonitor.NetInfoBody</code> object.
+ */
+Firebug.XMLViewerModel = extend(Firebug.Module,
+{
+    dispatchName: "xmlViewer",
+
+    initialize: function()
+    {
+        ///Firebug.ActivableModule.initialize.apply(this, arguments);
+        Firebug.Module.initialize.apply(this, arguments);
+        Firebug.NetMonitor.NetInfoBody.addListener(this);
+    },
+
+    shutdown: function()
+    {
+        ///Firebug.ActivableModule.shutdown.apply(this, arguments);
+        Firebug.Module.shutdown.apply(this, arguments);
+        Firebug.NetMonitor.NetInfoBody.removeListener(this);
+    },
+
+    /**
+     * Check response's content-type and if it's a XML, create a new tab with XML preview.
+     */
+    initTabBody: function(infoBox, file)
+    {
+        if (FBTrace.DBG_XMLVIEWER)
+            FBTrace.sysout("xmlviewer.initTabBody", infoBox);
+
+        // If the response is XML let's display a pretty preview.
+        ///if (this.isXML(safeGetContentType(file.request)))
+        if (this.isXML(file.mimeType, file.responseText))
+        {
+            Firebug.NetMonitor.NetInfoBody.appendTab(infoBox, "XML",
+                ///$STR("xmlviewer.tab.XML"));
+                $STR("XML"));
+
+            if (FBTrace.DBG_XMLVIEWER)
+                FBTrace.sysout("xmlviewer.initTabBody; XML response available");
+        }
+    },
+
+    isXML: function(contentType)
+    {
+        if (!contentType)
+            return false;
+
+        // Look if the response is XML based.
+        for (var i=0; i<xmlContentTypes.length; i++)
+        {
+            if (contentType.indexOf(xmlContentTypes[i]) == 0)
+                return true;
+        }
+
+        return false;
+    },
+
+    /**
+     * Parse XML response and render pretty printed preview.
+     */
+    updateTabBody: function(infoBox, file, context)
+    {
+        var tab = infoBox.selectedTab;
+        ///var tabBody = infoBox.getElementsByClassName("netInfoXMLText").item(0);
+        var tabBody = $$(".netInfoXMLText", infoBox)[0];
+        if (!hasClass(tab, "netInfoXMLTab") || tabBody.updated)
+            return;
+
+        tabBody.updated = true;
+
+        this.insertXML(tabBody, Firebug.NetMonitor.Utils.getResponseText(file, context));
+    },
+
+    insertXML: function(parentNode, text)
+    {
+        var xmlText = text.replace(/^\s*<?.+?>\s*/, "");
+        
+        var div = parentNode.ownerDocument.createElement("div");
+        div.innerHTML = xmlText;
+        
+        var root = div.getElementsByTagName("*")[0];
+    
+        /***
+        var parser = CCIN("@mozilla.org/xmlextras/domparser;1", "nsIDOMParser");
+        var doc = parser.parseFromString(text, "text/xml");
+        var root = doc.documentElement;
+
+        // Error handling
+        var nsURI = "http://www.mozilla.org/newlayout/xml/parsererror.xml";
+        if (root.namespaceURI == nsURI && root.nodeName == "parsererror")
+        {
+            this.ParseError.tag.replace({error: {
+                message: root.firstChild.nodeValue,
+                source: root.lastChild.textContent
+            }}, parentNode);
+            return;
+        }
+        /**/
+
+        if (FBTrace.DBG_XMLVIEWER)
+            FBTrace.sysout("xmlviewer.updateTabBody; XML response parsed", doc);
+
+        // Override getHidden in these templates. The parsed XML documen is
+        // hidden, but we want to display it using 'visible' styling.
+        /*
+        var templates = [
+            Firebug.HTMLPanel.CompleteElement,
+            Firebug.HTMLPanel.Element,
+            Firebug.HTMLPanel.TextElement,
+            Firebug.HTMLPanel.EmptyElement,
+            Firebug.HTMLPanel.XEmptyElement,
+        ];
+
+        var originals = [];
+        for (var i=0; i<templates.length; i++)
+        {
+            originals[i] = templates[i].getHidden;
+            templates[i].getHidden = function() {
+                return "";
+            }
+        }
+        /**/
+
+        // Generate XML preview.
+        ///Firebug.HTMLPanel.CompleteElement.tag.replace({object: doc.documentElement}, parentNode);
+        
+        // TODO: xxxpedro html3
+        ///Firebug.HTMLPanel.CompleteElement.tag.replace({object: root}, parentNode);
+        var html = [];
+        Firebug.Reps.appendNode(root, html);
+        parentNode.innerHTML = html.join("");
+        
+
+        /*
+        for (var i=0; i<originals.length; i++)
+            templates[i].getHidden = originals[i];/**/
+    }
+});
+
+// ************************************************************************************************
+// Domplate
+
+/**
+ * @domplate Represents a template for displaying XML parser errors. Used by
+ * <code>Firebug.XMLViewerModel</code>.
+ */
+Firebug.XMLViewerModel.ParseError = domplate(Firebug.Rep,
+{
+    tag:
+        DIV({"class": "xmlInfoError"},
+            DIV({"class": "xmlInfoErrorMsg"}, "$error.message"),
+            PRE({"class": "xmlInfoErrorSource"}, "$error|getSource")
+        ),
+
+    getSource: function(error)
+    {
+        var parts = error.source.split("\n");
+        if (parts.length != 2)
+            return error.source;
+
+        var limit = 50;
+        var column = parts[1].length;
+        if (column >= limit) {
+            parts[0] = "..." + parts[0].substr(column - limit);
+            parts[1] = "..." + parts[1].substr(column - limit);
+        }
+
+        if (parts[0].length > 80)
+            parts[0] = parts[0].substr(0, 80) + "...";
+
+        return parts.join("\n");
+    }
+});
+
+// ************************************************************************************************
+// Registration
+
+Firebug.registerModule(Firebug.XMLViewerModel);
+
 }});
 
 
@@ -21448,6 +22750,179 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
 
 
 // ************************************************************************************************
+
+Firebug.Reps = {
+
+    appendText: function(object, html)
+    {
+        html.push(escapeHTML(objectToString(object)));
+    },
+    
+    appendNull: function(object, html)
+    {
+        html.push('<span class="objectBox-null">', escapeHTML(objectToString(object)), '</span>');
+    },
+    
+    appendString: function(object, html)
+    {
+        html.push('<span class="objectBox-string">&quot;', escapeHTML(objectToString(object)),
+            '&quot;</span>');
+    },
+    
+    appendInteger: function(object, html)
+    {
+        html.push('<span class="objectBox-number">', escapeHTML(objectToString(object)), '</span>');
+    },
+    
+    appendFloat: function(object, html)
+    {
+        html.push('<span class="objectBox-number">', escapeHTML(objectToString(object)), '</span>');
+    },
+    
+    appendFunction: function(object, html)
+    {
+        var reName = /function ?(.*?)\(/;
+        var m = reName.exec(objectToString(object));
+        var name = m && m[1] ? m[1] : "function";
+        html.push('<span class="objectBox-function">', escapeHTML(name), '()</span>');
+    },
+    
+    appendObject: function(object, html)
+    {
+        /*
+        var rep = Firebug.getRep(object);
+        var outputs = [];
+        
+        rep.tag.tag.compile();
+        
+        var str = rep.tag.renderHTML({object: object}, outputs);
+        html.push(str);
+        /**/
+        
+        try
+        {
+            if (object == undefined)
+                this.appendNull("undefined", html);
+            else if (object == null)
+                this.appendNull("null", html);
+            else if (typeof object == "string")
+                this.appendString(object, html);
+            else if (typeof object == "number")
+                this.appendInteger(object, html);
+            else if (typeof object == "boolean")
+                this.appendInteger(object, html);
+            else if (typeof object == "function")
+                this.appendFunction(object, html);
+            else if (object.nodeType == 1)
+                this.appendSelector(object, html);
+            else if (typeof object == "object")
+            {
+                if (typeof object.length != "undefined")
+                    this.appendArray(object, html);
+                else
+                    this.appendObjectFormatted(object, html);
+            }
+            else
+                this.appendText(object, html);
+        }
+        catch (exc)
+        {
+        }
+        /**/
+    },
+        
+    appendObjectFormatted: function(object, html)
+    {
+        var text = objectToString(object);
+        var reObject = /\[object (.*?)\]/;
+    
+        var m = reObject.exec(text);
+        html.push('<span class="objectBox-object">', m ? m[1] : text, '</span>')
+    },
+    
+    appendSelector: function(object, html)
+    {
+        var uid = object[cacheID];
+        var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";
+        
+        html.push('<span class="objectBox-selector"', uidString, '>');
+    
+        html.push('<span class="selectorTag">', escapeHTML(object.nodeName.toLowerCase()), '</span>');
+        if (object.id)
+            html.push('<span class="selectorId">#', escapeHTML(object.id), '</span>');
+        if (object.className)
+            html.push('<span class="selectorClass">.', escapeHTML(object.className), '</span>');
+    
+        html.push('</span>');
+    },
+    
+    appendNode: function(node, html)
+    {
+        if (node.nodeType == 1)
+        {
+            var uid = node[cacheID];
+            var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";                
+            
+            html.push(
+                '<div class="objectBox-element"', uidString, '">',
+                '<span ', cacheID, '="', uid, '" class="nodeBox">',
+                '&lt;<span class="nodeTag">', node.nodeName.toLowerCase(), '</span>');
+    
+            for (var i = 0; i < node.attributes.length; ++i)
+            {
+                var attr = node.attributes[i];
+                if (!attr.specified || attr.nodeName == cacheID)
+                    continue;
+                
+                var name = attr.nodeName.toLowerCase();
+                var value = name == "style" ? node.style.cssText : attr.nodeValue;
+                
+                html.push('&nbsp;<span class="nodeName">', name,
+                    '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
+                    '</span>&quot;')
+            }
+    
+            if (node.firstChild)
+            {
+                html.push('&gt;</div><div class="nodeChildren">');
+    
+                for (var child = node.firstChild; child; child = child.nextSibling)
+                    this.appendNode(child, html);
+                    
+                html.push('</div><div class="objectBox-element">&lt;/<span class="nodeTag">', 
+                    node.nodeName.toLowerCase(), '&gt;</span></span></div>');
+            }
+            else
+                html.push('/&gt;</span></div>');
+        }
+        else if (node.nodeType == 3)
+        {
+            var value = trim(node.nodeValue);
+            if (value)
+                html.push('<div class="nodeText">', escapeHTML(value),'</div>');
+        }
+    },
+    
+    appendArray: function(object, html)
+    {
+        html.push('<span class="objectBox-array"><b>[</b> ');
+        
+        for (var i = 0, l = object.length, obj; i < l; ++i)
+        {
+            this.appendObject(object[i], html);
+            
+            if (i < l-1)
+            html.push(', ');
+        }
+    
+        html.push(' <b>]</b></span>');
+    }
+
+};
+
+
+
+// ************************************************************************************************
 }});
 
 /* See license.txt for terms of usage */
@@ -21625,13 +23100,25 @@ var createCache = function()
 
 var globalCSSRuleIndex;
 
+var externalStyleSheetURLs = [];
+var externalStyleSheetWarning = domplate(Firebug.Rep,
+{
+    tag:
+        DIV({"class": "warning focusRow", style: "font-weight:normal;", role: 'listitem'},
+            SPAN("$object|STR"),
+            A({"href": "$href", target:"_blank"}, "$link|STR")
+        )
+})
+
+
 FBL.processAllStyleSheets = function(doc, styleSheetIterator)
 {
     styleSheetIterator = styleSheetIterator || processStyleSheet;
     
     globalCSSRuleIndex = -1;
-    var index = 0;
+    
     var styleSheets = doc.styleSheets;
+    var importedStyleSheets = [];
     
     if (FBTrace.DBG_CSS)
         var start = new Date().getTime();
@@ -21642,41 +23129,80 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
         {
             var styleSheet = styleSheets[i];
             
-            // process imported styleSheets
-            if (isIE)
-            {
-                var imports = styleSheet.imports;
-                
-                for(var j=0, importsLength=imports.length; j<importsLength; j++)
-                {
-                    styleSheetIterator(doc, imports[j]);
-                }
-            }
-            else
-            {
-                var rules = styleSheet.cssRules;
-                
-                for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
-                {
-                    var rule = rules[j];
-                    
-                    if (rule.styleSheet)
-                        styleSheetIterator(doc, rule.styleSheet);
-                    else
-                        break;
-                }
-                
-                index = j;
-            }
+            // we must read the length to make sure we have permission to read 
+            // the stylesheet's content. If an error occurs here, we cannot 
+            // read the stylesheet due to access restriction policy
+            var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
+            rules.length;
         }
         catch(e)
         {
+            externalStyleSheetURLs.push(styleSheet.href);
             styleSheet.restricted = true;
             var ssid = StyleSheetCache(styleSheet);
         }
         
         // process internal and external styleSheets
         styleSheetIterator(doc, styleSheet);
+        
+        var importedStyleSheet, importedRules;
+        
+        // process imported styleSheets in IE
+        if (isIE)
+        {
+            var imports = styleSheet.imports;
+            
+            for(var j=0, importsLength=imports.length; j<importsLength; j++)
+            {
+                try
+                {
+                    importedStyleSheet = imports[j];
+                    // we must read the length to make sure we have permission
+                    // to read the imported stylesheet's content. 
+                    importedRules = importedStyleSheet.rules;
+                    importedRules.length;
+                }
+                catch(e)
+                {
+                    externalStyleSheetURLs.push(styleSheet.href);
+                    importedStyleSheet.restricted = true;
+                    var ssid = StyleSheetCache(importedStyleSheet);
+                }
+                
+                styleSheetIterator(doc, importedStyleSheet);
+            }
+        }
+        // process imported styleSheets in other browsers
+        else if (rules)
+        {
+            for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
+            {
+                try
+                {
+                    var rule = rules[j];
+                    
+                    importedStyleSheet = rule.styleSheet;
+                    
+                    if (importedStyleSheet)
+                    {
+                        // we must read the length to make sure we have permission
+                        // to read the imported stylesheet's content. 
+                        importedRules = importedStyleSheet.cssRules;
+                        importedRules.length;
+                    }
+                    else
+                        break;
+                }
+                catch(e)
+                {
+                    externalStyleSheetURLs.push(styleSheet.href);
+                    importedStyleSheet.restricted = true;
+                    var ssid = StyleSheetCache(importedStyleSheet);
+                }
+
+                styleSheetIterator(doc, importedStyleSheet);
+            }
+        }
     };
     
     if (FBTrace.DBG_CSS)
@@ -22052,7 +23578,7 @@ Firebug.CSSModule = extend(Firebug.Module,
         if (FBTrace.DBG_CSS)
             FBTrace.sysout("css.saveEdit styleSheet.href:"+styleSheet.href+" got innerHTML:"+value+"\n");
 
-        dispatch(this.fbListener, "onCSSFreeEdit", [styleSheet, value]);
+        dispatch(this.fbListeners, "onCSSFreeEdit", [styleSheet, value]);
     },
 
     insertRule: function(styleSheet, cssText, ruleIndex)
@@ -22101,9 +23627,9 @@ Firebug.CSSModule = extend(Firebug.Module,
             style[toCamelCase(propName)] = propValue;
         }
 
-        //if (propName) {
-        //    dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
-        //}
+        if (propName) {
+            dispatch(this.fbListeners, "onCSSSetProperty", [style, propName, propValue, propPriority, prevValue, prevPriority, rule, baseText]);
+        }
     },
 
     removeProperty: function(rule, propName, parent)
@@ -22459,7 +23985,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     editElementStyle: function()
     {
-        var rulesBox = this.panelNode.getElementsByClassName("cssElementRuleContainer")[0];
+        ///var rulesBox = this.panelNode.getElementsByClassName("cssElementRuleContainer")[0];
+        var rulesBox = $$(".cssElementRuleContainer", this.panelNode)[0];
         var styleRuleBox = rulesBox && Firebug.getElementByRepObject(rulesBox, this.selection);
         if (!styleRuleBox)
         {
@@ -22472,12 +23999,14 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                     rules: [rule], inherited: [], inheritLabel: "Inherited from" // $STR("InheritedFrom")
                 }, this.panelNode);
 
-                styleRuleBox = styleRuleBox.getElementsByClassName("cssElementRuleContainer")[0];
+                ///styleRuleBox = styleRuleBox.getElementsByClassName("cssElementRuleContainer")[0];
+                styleRuleBox = $$(".cssElementRuleContainer", styleRuleBox)[0];
             }
             else
                 styleRuleBox = this.template.ruleTag.insertBefore({rule: rule}, rulesBox);
 
-            styleRuleBox = styleRuleBox.getElementsByClassName("insertInto")[0];
+            ///styleRuleBox = styleRuleBox.getElementsByClassName("insertInto")[0];
+            styleRuleBox = $$(".insertInto", styleRuleBox)[0];
         }
 
         Firebug.Editor.insertRowForObject(styleRuleBox);
@@ -22575,6 +24104,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onMouseDown: function(event)
     {
+        //console.log("onMouseDown", event.target || event.srcElement, event);
+        
         // xxxpedro adjusting coordinates because the panel isn't a window yet
         var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
         
@@ -22594,8 +24125,10 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         }
     },
 
-    onClick: function(event)
+    onDoubleClick: function(event)
     {
+        //console.log("onDoubleClick", event.target || event.srcElement, event);
+        
         // xxxpedro adjusting coordinates because the panel isn't a window yet
         var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
         
@@ -22603,6 +24136,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             return;
 
         var target = event.target || event.srcElement;
+        
+        //console.log("ok", target, hasClass(target, "textEditorInner"), !isLeftClick(event), offset <= 20);
         
         // if the inline editor was clicked, don't insert a new rule
         if (hasClass(target, "textEditorInner"))
@@ -22636,7 +24171,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         Firebug.Panel.create.apply(this, arguments);
         
         this.onMouseDown = bind(this.onMouseDown, this);
-        this.onClick = bind(this.onClick, this);
+        this.onDoubleClick = bind(this.onDoubleClick, this);
 
         if (this.name == "stylesheet")
         {
@@ -22707,6 +24242,9 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     
     shutdown: function()
     {
+        // must destroy the editor when we leave the panel to avoid problems (Issue 2981)
+        Firebug.Editor.stopEditing();
+        
         if (this.name == "stylesheet")
         {
             removeEvent(this.selectNode, "change", this.onChangeSelect);
@@ -22723,14 +24261,15 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
         //persistObjects(this, state);
 
-        Firebug.Editor.stopEditing();
+        // xxxpedro we are stopping the editor in the shutdown method already
+        //Firebug.Editor.stopEditing();
         Firebug.Panel.destroy.apply(this, arguments);
     },
 
     initializeNode: function(oldPanelNode)
     {
         addEvent(this.panelNode, "mousedown", this.onMouseDown);
-        addEvent(this.panelNode, "click", this.onClick);
+        addEvent(this.panelNode, "dblclick", this.onDoubleClick);
         //Firebug.SourceBoxPanel.initializeNode.apply(this, arguments);
         //dispatch([Firebug.A11yModel], 'onInitializeNode', [this, 'css']);
     },
@@ -22738,7 +24277,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     destroyNode: function()
     {
         removeEvent(this.panelNode, "mousedown", this.onMouseDown);
-        removeEvent(this.panelNode, "click", this.onClick);
+        removeEvent(this.panelNode, "dblclick", this.onDoubleClick);
         //Firebug.SourceBoxPanel.destroyNode.apply(this, arguments);
         //dispatch([Firebug.A11yModel], 'onDestroyNode', [this, 'css']);
     },
@@ -22793,6 +24332,14 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         if (styleSheet.restricted)
         {
             FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, this.panelNode);
+
+            // TODO: xxxpedro remove when there the external resource problem is fixed
+            externalStyleSheetWarning.tag.append({
+                object: "The stylesheet could not be loaded due to access restrictions. ",
+                link: "more...",
+                href: "http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22Access_to_restricted_URI_denied.22"
+            }, this.panelNode);
+            
             return;
         }
 
@@ -22905,10 +24452,11 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             );
         }
 
-        if (this.selection instanceof Element)
+        ///if (this.selection instanceof Element)
+        if (isElement(this.selection))
         {
             items.push(
-                "-",
+                //"-",
                 {label: "EditStyle",
                     command: bindFixed(this.editElementStyle, this) }
             );
@@ -22916,7 +24464,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         else if (!isSystemStyleSheet(this.selection))
         {
             items.push(
-                    "-",
+                    //"-",
                     {label: "NewRule",
                         command: bindFixed(this.insertRule, this, target) }
                 );
@@ -23228,6 +24776,15 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
             var result = FirebugReps.Warning.tag.replace({object: "EmptyElementCSS"}, this.panelNode);
             //dispatch([Firebug.A11yModel], 'onCSSRulesAdded', [this, result]);
         }
+
+        // TODO: xxxpedro remove when there the external resource problem is fixed
+        if (externalStyleSheetURLs.length > 0)
+            externalStyleSheetWarning.tag.append({
+                object: "The results here may be inaccurate because some " +
+                        "stylesheets could not be loaded due to access restrictions. ",
+                link: "more...",
+                href: "http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22This_element_has_no_style_rules.22"
+            }, this.panelNode);
     },
 
     getStylesheetURL: function(rule)
@@ -23444,15 +25001,15 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
             // Normally these would not be required, but in order to update after the state is set
             // using the options menu we need to monitor these global events as well
             var doc = win.document;
-            addEvent(doc, "mouseover", this.onHoverChange);
-            addEvent(doc, "mousedown", this.onActiveChange);
+            ///addEvent(doc, "mouseover", this.onHoverChange);
+            ///addEvent(doc, "mousedown", this.onActiveChange);
         }
     },
     unwatchWindow: function(win)
     {
         var doc = win.document;
-        removeEvent(doc, "mouseover", this.onHoverChange);
-        removeEvent(doc, "mousedown", this.onActiveChange);
+        ///removeEvent(doc, "mouseover", this.onHoverChange);
+        ///removeEvent(doc, "mousedown", this.onActiveChange);
 
         if (isAncestor(this.stateChangeEl, doc))
         {
@@ -23537,12 +25094,14 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
     {
       this.removeStateChangeHandlers();
 
+      /*
       addEvent(el, "focus", this.onStateChange);
       addEvent(el, "blur", this.onStateChange);
       addEvent(el, "mouseup", this.onStateChange);
       addEvent(el, "mousedown", this.onStateChange);
       addEvent(el, "mouseover", this.onStateChange);
       addEvent(el, "mouseout", this.onStateChange);
+      /**/
 
       this.stateChangeEl = el;
     },
@@ -23552,12 +25111,14 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
         var sel = this.stateChangeEl;
         if (sel)
         {
+            /*
             removeEvent(sel, "focus", this.onStateChange);
             removeEvent(sel, "blur", this.onStateChange);
             removeEvent(sel, "mouseup", this.onStateChange);
             removeEvent(sel, "mousedown", this.onStateChange);
             removeEvent(sel, "mouseover", this.onStateChange);
             removeEvent(sel, "mouseout", this.onStateChange);
+            /**/
         }
     },
 
@@ -24220,7 +25781,7 @@ ScriptPanel.prototype = extend(Firebug.Panel,
     {
         removeEvent(this.selectNode, "change", this.onChangeSelect);
         
-        Firebug.Panel.shutdown.apply(this, arguments);        
+        Firebug.Panel.shutdown.apply(this, arguments);
     },
     
     detach: function(oldChrome, newChrome)
@@ -24490,20 +26051,6 @@ var RowTag =
             TAG("$member.tag", {object: "$member.value"})
         )
     );
-
-// TODO: xxxpedro localization
-var oSTR =
-{
-    NoMembersWarning: "There are no properties to show for this object.",
-    EmptyStyleSheet: "There are no rules in this stylesheet.",
-    EmptyElementCSS: "This element has no style rules.",
-    AccessRestricted: "Access to restricted URI denied."
-};
-
-FBL.$STR = function(name)
-{
-    return oSTR.hasOwnProperty(name) ? oSTR[name] : name;
-};
 
 var WatchRowTag =
     TR({"class": "watchNewRow", level: 0},
@@ -25743,7 +27290,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
             }
             else if (isFunction(val))
             {
-                if (isClassFunction(val))
+                if (isClassFunction(val) && !(name in domMembers))
                     addMember("userClass", userClasses, name, val, level);
                 else if (name in domMembers)
                     addMember("domFunction", domFuncs, name, val, level, domMembers[name]);
@@ -25764,7 +27311,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
                 
                 var prefix = "";
 
-                if (name in domMembers)
+                if (name in domMembers && !(name in domConstantMap))
                     addMember("dom", domProps, (prefix+name), val, level, domMembers[name]);
                 else if (name in domConstantMap)
                     addMember("dom", domConstants, (prefix+name), val, level);
@@ -26483,7 +28030,7 @@ FBL.ns(function() { with (FBL) {
 
 FirebugChrome.Skin = 
 {
-    CSS: '.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{min-width:100px;text-align:center;}.infoTipCaption{font:message-box;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.logRow-spy .spyHead .spyTitle,.logGroup .logGroupLabel,.hasChildren .memberLabelCell .memberLabel,.hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}.opened .spyHead .spyTitle,.opened .logGroupLabel,.opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}.twisty{background-position:2px 0;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectPropValue{font-weight:normal;font-style:italic;color:#555555;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.arrayLeftBracket{margin-right:4px;}.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;background:#fff;overflow:hidden;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    CSS: '.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{min-width:100px;text-align:center;}.infoTipCaption{font:message-box;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/beta/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/beta/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/beta/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/beta/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
     HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbWindowButtons"><a id="fbWindow_btDeactivate" class="fbSmallButton fbHover" title="Deactivate Firebug for this web page">&nbsp;</a><a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a><a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div><textarea id="fbLargeCommandLine" class="fbFitHeight"></textarea><div id="fbLargeCommandButtons"><a id="fbCommand_btRun" class="fbButton fbHover">Run</a><a id="fbCommand_btClear" class="fbButton fbHover">Clear</a><a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/><a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
 };
 
@@ -26494,7 +28041,7 @@ FirebugChrome.Skin =
 FBL.initialize();
 // ************************************************************************************************
 
-};
+})();
 
 // *************************************************************************************************
 // *************************************************************************************************
@@ -26532,7 +28079,7 @@ var loadFirebug = function()
     if (isOpen)
         document.documentElement.setAttribute("debug", "true");
     
-    script.text = ("("+firebug+")()").replace(/url\(https\:\/\/getfirebug\.com\/releases\/lite\/latest\//g, "url("+extensionURL);
+    script.text = ("("+firebug+")()").replace(/url\(https\:\/\/getfirebug\.com\/releases\/lite\/beta\//g, "url("+extensionURL);
     script.setAttribute("id", "FirebugLite");
     script.setAttribute("firebugIgnore", "true");
     script.setAttribute("extension", "Chrome");

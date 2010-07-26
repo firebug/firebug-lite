@@ -135,7 +135,6 @@ chrome.extension.onRequest.addListener
         else if (request.name == "FB_deactivate")
         {
             disableIcon();
-            
             chrome.tabs.getSelected(null, function(tab){
                 deactivateFirebug(tab);
             });
