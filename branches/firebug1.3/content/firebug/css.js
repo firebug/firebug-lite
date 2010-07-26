@@ -202,10 +202,11 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
         {
             var styleSheet = styleSheets[i];
             
-            // we must read the rules to make sure we have permission to read 
+            // we must read the length to make sure we have permission to read 
             // the stylesheet's content. If an error occurs here, we cannot 
             // read the stylesheet due to access restriction policy
             var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
+            rules.length;
         }
         catch(e)
         {
@@ -229,9 +230,10 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
                 try
                 {
                     importedStyleSheet = imports[j];
-                    // we must read the rules to make sure we have permission
+                    // we must read the length to make sure we have permission
                     // to read the imported stylesheet's content. 
                     importedRules = importedStyleSheet.rules;
+                    importedRules.length;
                 }
                 catch(e)
                 {
@@ -256,9 +258,10 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
                     
                     if (importedStyleSheet)
                     {
-                        // we must read the rules to make sure we have permission
+                        // we must read the length to make sure we have permission
                         // to read the imported stylesheet's content. 
                         importedRules = importedStyleSheet.cssRules;
+                        importedRules.length;
                     }
                     else
                         break;
@@ -1407,7 +1410,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             externalStyleSheetWarning.tag.append({
                 object: "The stylesheet could not be loaded due to access restrictions. ",
                 link: "more...",
-                href: "#XXX"
+                href: "http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22Access_to_restricted_URI_denied.22"
             }, this.panelNode);
             
             return;
@@ -1853,7 +1856,7 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
                 object: "The results here may be inaccurate because some " +
                         "stylesheets could not be loaded due to access restrictions. ",
                 link: "more...",
-                href: "#XXX"
+                href: "http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22This_element_has_no_style_rules.22"
             }, this.panelNode);
     },
 

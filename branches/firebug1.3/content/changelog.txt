@@ -1,14 +1,6 @@
 ###################################################################################################
- 1.3.1b2 - 2009-xx-xx - Revision: xxxx
+ 1.3.1b2 - 2009-07-26 - Revision: xxxx
 ###################################################################################################
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-TODO: create 2 issues:
-    - "Access to restricted URI denied."
-    - "This element has no style rules."
-
-TODO: create FAQ:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Overview:
     - Issue 3224: Firebug Lite shows error when trying to read some external stylesheets
@@ -77,6 +69,12 @@ Command Line
     - Firebug.Console no longer uses Firebug.Console.LOG_COMMAND to identify 
       console calls as in the old Console panel version.
 
+-------------------------------------------------------------------------------
+Lib
+-------------------------------------------------------------------------------
+    - Added new experimental getDOMMember function to detect user members
+      (properties/functions) of several builtin objects such as window,
+      document, location, and instances of Element and other DOM objects
 
 
 ###################################################################################################
