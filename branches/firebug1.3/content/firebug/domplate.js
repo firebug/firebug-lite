@@ -243,7 +243,7 @@ DomplateTag.prototype =
 
         var js = fnBlock.join("");
         var r = null;
-        eval(js)
+        eval(js);
         this.renderMarkup = r;
     },
 
@@ -401,7 +401,7 @@ DomplateTag.prototype =
 
         function __bind__(object, fn)
         {
-            return function(event) { return fn.apply(object, [event]); }
+            return function(event) { return fn.apply(object, [event]); };
         }
 
         function __link__(node, tag, args)
@@ -456,7 +456,7 @@ DomplateTag.prototype =
         var js = fnBlock.join("");
         //if (FBTrace.DBG_DOM) FBTrace.sysout(js.replace(/(\;|\{)/g, "$1\n"));
         var r = null;
-        eval(js)
+        eval(js);
         this.renderDOM = r;
     },
 
@@ -916,7 +916,7 @@ var Renderer =
         var div = doc.createElement("div");
         div.innerHTML = "<table><tbody>"+html+"</tbody></table>";
 
-        var tbody = div.firstChild.firstChild
+        var tbody = div.firstChild.firstChild;
         var parent = before.tagName == "TR" ? before.parentNode : before;
         var after = before.tagName == "TR" ? before.nextSibling : null;
 
