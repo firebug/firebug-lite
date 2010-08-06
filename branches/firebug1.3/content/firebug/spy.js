@@ -702,7 +702,7 @@ var updateHttpSpyInfo = function updateHttpSpyInfo(spy, logRow)
     {
         template.updateInfo(netInfoBox, spy, spy.context);
     }
-}
+};
 
 
 
