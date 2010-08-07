@@ -109,7 +109,7 @@ var createCache = function()
     var cacheFunction = function(element)
     {
         return cacheAPI.set(element);
-    }
+    };
     
     var cacheAPI =  
     {
@@ -132,7 +132,7 @@ var createCache = function()
             
             if (!map.hasOwnProperty(id))
             {
-                map[id] = element
+                map[id] = element;
             }
             
             return id;
@@ -166,7 +166,7 @@ var createCache = function()
     append(cacheFunction, cacheAPI);
     
     return cacheFunction;
-}
+};
 
 
 // ************************************************************************************************
@@ -181,7 +181,7 @@ var externalStyleSheetWarning = domplate(Firebug.Rep,
             SPAN("$object|STR"),
             A({"href": "$href", target:"_blank"}, "$link|STR")
         )
-})
+});
 
 
 FBL.processAllStyleSheets = function(doc, styleSheetIterator)
@@ -288,8 +288,8 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
 var StyleSheetCache = FBL.StyleSheetCache = createCache();
 var ElementCache = FBL.ElementCache = createCache();
 
-var CSSRuleMap = {}
-var ElementCSSRulesMap = {}
+var CSSRuleMap = {};
+var ElementCSSRulesMap = {};
 
 var processStyleSheet = function(doc, styleSheet)
 {
@@ -308,18 +308,23 @@ var processStyleSheet = function(doc, styleSheet)
         
         if (isIE)
         {
-            selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase()});
+            selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase();});
         }
         
         // TODO: xxxpedro break grouped rules (,) into individual rules, otherwise
         // it will result in a overestimated value for getCSSRuleSpecificity
-        
         CSSRuleMap[rid] =
         {
             styleSheetId: ssid,
             styleSheetIndex: i,
             order: ++globalCSSRuleIndex,
-            specificity: selector ? getCSSRuleSpecificity(selector) : 0,
+            // if it is a grouped selector, do not calculate the specificity
+            // because the correct value will depend of the matched element.
+            // The proper specificity value for grouped selectors are calculated
+            // via getElementCSSRules(element)
+            specificity: selector && selector.indexOf(",") != -1 ? 
+                getCSSRuleSpecificity(selector) : 
+                0,
             
             rule: rule,
             selector: selector,
@@ -342,7 +347,8 @@ var processStyleSheet = function(doc, styleSheet)
         //console.log(selector, elements);
     }
     
-    //sort
+    // TODO: xxxpedro. remove this, we don't need this anymore with the new getElementCSSRules
+    /*
     for (var name in ElementCSSRulesMap)
     {
         if (ElementCSSRulesMap.hasOwnProperty(name))
@@ -356,13 +362,69 @@ var processStyleSheet = function(doc, styleSheet)
     /**/
 };
 
+FBL.getElementCSSRules = function(element)
+{
+    var eid = ElementCache(element);
+    var rules = ElementCSSRulesMap[eid];
+    
+    if (!rules) return;
+    
+    var arr = [element];
+    var Selector = Firebug.Selector;
+    var ruleId, rule;
+    
+    // for the case of grouped selectors, we need to calculate the highest
+    // specificity within the selectors of the group that matches the element,
+    // so we can sort the rules properly without over estimating the specificity
+    // of grouped selectors
+    for (var i = 0, length = rules.length; i < length; i++)
+    {
+        ruleId = rules[i];
+        rule = CSSRuleMap[ruleId];
+        
+        // check if it is a grouped selector
+        if (rule.selector.indexOf(",") != -1)
+        {
+            var selectors = rule.selector.split(",");
+            var maxSpecificity = -1;
+            var sel, spec, mostSpecificSelector;
+            
+            // loop over all selectors in the group
+            for (var j, len = selectors.length; j < len; j++)
+            {
+                sel = selectors[j];
+                
+                // find if the selector matches the element
+                if (Selector.matches(sel, arr).length == 1)
+                {
+                    spec = getCSSRuleSpecificity(sel);
+                    
+                    // find the most specific selector that macthes the element
+                    if (spec > maxSpecificity)
+                    {
+                        maxSpecificity = spec;
+                        mostSpecificSelector = sel;
+                    }
+                }
+            }
+            
+            rule.specificity = maxSpecificity;
+        }
+    }
+    
+    rules.sort(sortElementRules);
+    //rules.sort(solveRulesTied);
+    
+    return rules;
+};
+
 var sortElementRules = function(a, b)
 {
     var ruleA = CSSRuleMap[a];
     var ruleB = CSSRuleMap[b];
     
     var specificityA = ruleA.specificity;
-    var specificityB = ruleB.specificity
+    var specificityB = ruleB.specificity;
     
     if (specificityA > specificityB)
         return 1;
@@ -799,7 +861,7 @@ Firebug.CSSModule = extend(Firebug.Module,
 
 // ************************************************************************************************
 
-Firebug.CSSStyleSheetPanel = function() {}
+Firebug.CSSStyleSheetPanel = function() {};
 
 Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 {
@@ -910,7 +972,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                     if (isIE)
                     {
                         selector = selector.replace(reSelectorTag, 
-                                function(s){return s.toLowerCase()});
+                                function(s){return s.toLowerCase();});
                     }
                     
                     var ruleId = rule.selectorText+"/"+line;
@@ -1543,7 +1605,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                 );
         }
 
-        var cssRule = getAncestorByClass(target, "cssRule")
+        var cssRule = getAncestorByClass(target, "cssRule");
         if (cssRule && hasClass(cssRule, "cssEditableRule"))
         {
             items.push(
@@ -1890,9 +1952,11 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
     {
         var inspectedRules, displayedRules = {};
         
-        var eid = ElementCache(element);
+        // TODO: xxxpedro remove document specificity issue
+        //var eid = ElementCache(element);
+        //inspectedRules = ElementCSSRulesMap[eid];
         
-        inspectedRules = ElementCSSRulesMap[eid];
+        inspectedRules = getElementCSSRules(element);
 
         if (inspectedRules)
         {
@@ -2350,6 +2414,10 @@ CSSEditor.prototype = domplate(Firebug.InlineEditor.prototype,
 
     saveEdit: function(target, value, previousValue)
     {
+    	// We need to check the value first in order to avoid a problem in IE8 
+    	// See Issue 3038: Empty (null) styles when adding CSS styles in Firebug Lite 
+    	if (!value) return;
+    	
         target.innerHTML = escapeForCss(value);
 
         var row = getAncestorByClass(target, "cssProp");
@@ -2629,21 +2697,21 @@ StyleSheetEditor.prototype = domplate(Firebug.BaseEditor,
 var rgbToHex = function rgbToHex(value)
 {
     return value.replace(/\brgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)/gi, rgbToHexReplacer);
-}
+};
 
 var rgbToHexReplacer = function(_, r, g, b) {
     return '#' + ((1 << 24) + (r << 16) + (g << 8) + (b << 0)).toString(16).substr(-6).toUpperCase();
-}
+};
 
 var stripUnits = function stripUnits(value)
 {
     // remove units from '0px', '0em' etc. leave non-zero units in-tact.
     return value.replace(/(url\(.*?\)|[^0]\S*\s*)|0(%|em|ex|px|in|cm|mm|pt|pc)(\s|$)/gi, stripUnitsReplacer);
-}
+};
 
 var stripUnitsReplacer = function(_, skip, remove, whitespace) {
     return skip || ('0' + whitespace);
-}
+};
 
 function parsePriority(value)
 {
