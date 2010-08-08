@@ -1209,8 +1209,14 @@ append(ChromeBase,
         restoreTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Remove the interface elements cache
+        // shutdown inherited classes
+        Controller.shutdown.call(this);
+        PanelBar.shutdown.call(this);
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Remove the interface elements cache (this must happen after calling 
+        // the shutdown method of all dependent components to avoid errors)
+
         fbTop = null;
         fbContent = null;
         fbContentStyle = null;
@@ -1247,12 +1253,6 @@ append(ChromeBase,
         
         topHeight = null;
         topPartialHeight = null;
-        
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // shutdown inherited classes
-        Controller.shutdown.call(this);
-        PanelBar.shutdown.call(this);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
