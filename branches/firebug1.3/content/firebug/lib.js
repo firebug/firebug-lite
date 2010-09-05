@@ -5441,7 +5441,7 @@ this.Ajax =
                     }
                     
             } else 
-                for(param in data) {
+                for(var param in data) {
                     r[rl++] = encodeURIComponent(param); 
                     r[rl++] = "=";
                     r[rl++] = encodeURIComponent(data[param]);
