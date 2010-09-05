@@ -26,7 +26,7 @@ function DomplateLoop()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-(function() {
+( /** @scope ns-domplate */ function() {
 
 var womb = null;
 
