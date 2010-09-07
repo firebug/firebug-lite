@@ -7,7 +7,7 @@ var firebug = function(){
 
 /*!*************************************************************
  *
- *    Firebug Lite 1.3.1b2
+ *    Firebug Lite 1.3.1
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -24,9 +24,12 @@ var firebug = function(){
  *  More information: http://sizzlejs.com/
  */
 
+/** @namespace describe lib */ 
 var FBL = {};
 
-(function() {
+/** @name ns @namespace */
+
+( /** @scope ns-lib @this FBL */ function() {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -206,7 +209,7 @@ this.initialize = function()
             
         this.chromeExtensionDispatch = function(data)
         {
-            channel.innerText = data
+            channel.innerText = data;
             channel.dispatchEvent(channelEvent);
         };
     }
@@ -543,13 +546,13 @@ var findLocation =  function findLocation()
 this.bind = function()  // fn, thisObject, args => thisObject.fn(args, arguments);
 {
    var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
-   return function() { return fn.apply(object, arrayInsert(cloneArray(args), 0, arguments)); }
+   return function() { return fn.apply(object, arrayInsert(cloneArray(args), 0, arguments)); };
 };
 
 this.bindFixed = function() // fn, thisObject, args => thisObject.fn(args);
 {
     var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
-    return function() { return fn.apply(object, args); }
+    return function() { return fn.apply(object, args); };
 };
 
 this.extend = function(l, r)
@@ -686,7 +689,7 @@ this.createStyleSheet = function(doc, url)
     //TODO: xxxpedro
     //style.innerHTML = this.getResource(url);
     return style;
-}
+};
 
 this.addStyleSheet = function(doc, style)
 {
@@ -861,7 +864,7 @@ function createSimpleEscape(name, direction)
                     return list[ch];
                 }
                );
-    }
+    };
 };
 
 function escapeGroupsForEntities(str, lists)
@@ -1140,7 +1143,7 @@ this.collapse = function(elt, collapsed)
     if (this.isIElt8)
     {
         if (collapsed)
-            this.setClass(elt, "collapsed")
+            this.setClass(elt, "collapsed");
         else
             this.removeClass(elt, "collapsed");
     }
@@ -1236,7 +1239,7 @@ this.getClientOffset = function(elt)
             if (otherView.frameElement)
                 addOffset(otherView.frameElement, coords, otherView);
         }
-    }
+    };
 
     var isIE = this.isIE;
     var coords = {x: 0, y: 0};
@@ -1456,7 +1459,7 @@ this.linesIntoCenterView = function(element, scrollBox)  // {before: int, after:
     }
 
     return {before: Math.round((topSpace/element.offsetHeight) + 0.5),
-            after: Math.round((bottomSpace/element.offsetHeight) + 0.5) }
+            after: Math.round((bottomSpace/element.offsetHeight) + 0.5) };
 };
 
 this.scrollIntoCenterView = function(element, scrollBox, notX, notY)
@@ -1827,7 +1830,7 @@ this.$$ = function(selector, doc)
         return FBL.Firebug.Selector(selector, doc);
     else
     {
-        return FBL.Firebug.Selector(selector, FBL.Firebug.chrome.document)
+        return FBL.Firebug.Selector(selector, FBL.Firebug.chrome.document);
     }
 };
 
@@ -2025,13 +2028,13 @@ this.findPrevious = function(node, criteria, downOnly, maxRoot)
 
 this.getNextByClass = function(root, state)
 {
-    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); }
+    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); };
     return this.findNext(root, iter);
 };
 
 this.getPreviousByClass = function(root, state)
 {
-    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); }
+    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); };
     return this.findPrevious(root, iter);
 };
 
@@ -2314,7 +2317,7 @@ this.disableTextSelection = function(e)
         
     else // others
     {
-        e.style.cssText = "user-select: none; -khtml-user-select: none; -moz-user-select: none;"
+        e.style.cssText = "user-select: none; -khtml-user-select: none; -moz-user-select: none;";
         
         // canceling the event in FF will prevent the menu popups to close when clicking over 
         // text-disabled elements
@@ -2332,7 +2335,7 @@ this.restoreTextSelection = function(e)
         
     else // others
     {
-        e.style.cssText = "cursor: default;"
+        e.style.cssText = "cursor: default;";
             
         // canceling the event in FF will prevent the menu popups to close when clicking over 
         // text-disabled elements
@@ -2622,7 +2625,7 @@ this.getDataURLForContent = function(content, url)
 {
     // data:text/javascript;fileName=x%2Cy.js;baseLineNumber=10,<the-url-encoded-data>
     var uri = "data:text/html;";
-    uri += "fileName="+encodeURIComponent(url)+ ","
+    uri += "fileName="+encodeURIComponent(url)+ ",";
     uri += encodeURIComponent(content);
     return uri;
 },
@@ -2689,12 +2692,12 @@ this.normalizeURL = function(url)  // this gets called a lot, any performance im
     if (url.length < 255) // guard against monsters.
     {
         // Replace one or more characters that are not forward-slash followed by /.., by space.
-        url = url.replace(/[^/]+\/\.\.\//, "", "g");
+        url = url.replace(/[^\/]+\/\.\.\//, "", "g");
         // Issue 1496, avoid #
         url = url.replace(/#.*/,"");
         // For some reason, JSDS reports file URLs like "file:/" instead of "file:///", so they
         // don't match up with the URLs we get back from the DOM
-        url = url.replace(/file:\/([^/])/g, "file:///$1");
+        url = url.replace(/file:\/([^\/])/g, "file:///$1");
         if (url.indexOf('chrome:')==0)
         {
             var m = reChromeCase.exec(url);  // 1 is package name, 2 is path
@@ -2894,7 +2897,7 @@ this.parseJSONString = function(jsonString, originURL)
         ///jsonObject = Components.utils.evalInSandbox(jsonString, s);
         
         //jsonObject = Firebug.context.eval(jsonString);
-        jsonObject = Firebug.context.evaluate(jsonString, null, null, function(){return null});
+        jsonObject = Firebug.context.evaluate(jsonString, null, null, function(){return null;});
     }
     catch(e)
     {
@@ -3290,7 +3293,7 @@ var getDomMemberMap2 = function(name)
     
     return props;
     return extendArray(props, domMemberMap[name]);
-}
+};
 
 // xxxpedro experimental get DOM members
 this.getDOMMembers = function(object)
@@ -5346,6 +5349,9 @@ if (typeof KeyEvent == "undefined") {
 // ************************************************************************************************
 // Ajax
 
+/**
+ * @namespace
+ */
 this.Ajax =
 {
   
@@ -5430,7 +5436,7 @@ this.Ajax =
     {
         var r = [""], rl = 0;
         if (data) {
-            if (typeof data == "string")  r[rl++] = data
+            if (typeof data == "string")  r[rl++] = data;
               
             else if (data.innerHTML && data.elements) {
                 for (var i=0,el,l=(el=data.elements).length; i < l; i++)
@@ -5442,7 +5448,7 @@ this.Ajax =
                     }
                     
             } else 
-                for(param in data) {
+                for(var param in data) {
                     r[rl++] = encodeURIComponent(param); 
                     r[rl++] = "=";
                     r[rl++] = encodeURIComponent(data[param]);
@@ -5513,10 +5519,10 @@ this.Ajax =
     {
         var t = this.transport, type = options.dataType;
     
-        if      (t.status != 200) return t.statusText
-        else if (type == "text")  return t.responseText
-        else if (type == "html")  return t.responseText
-        else if (type == "xml")   return t.responseXML
+        if      (t.status != 200) return t.statusText;
+        else if (type == "text")  return t.responseText;
+        else if (type == "html")  return t.responseText;
+        else if (type == "xml")   return t.responseXML;
         else if (type == "json")  return eval("(" + t.responseText + ")");
     },
   
@@ -5656,7 +5662,7 @@ this.SourceText.getLineAsHTML = function(lineNo)
 
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns( /** @scope ns-i18n */ function() { with (FBL) {
 // ************************************************************************************************
 
 // TODO: xxxpedro localization
@@ -5783,7 +5789,7 @@ var parseFormat = function parseFormat(format)
 
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns( /** @scope ns-firebug */ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -5806,11 +5812,15 @@ var parentPanelMap = {};
 // ************************************************************************************************
 // Firebug
 
+/**
+ * @namespace describe Firebug
+ * @exports window.Firebug as Firebug 
+ */
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.1b2",
-    revision: "$Revision: 7294 $",
+    version: "Firebug Lite 1.3.1",
+    revision: "$Revision: 7743 $",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
@@ -6111,6 +6121,8 @@ FBL.cacheDocument = function cacheDocument()
 // ************************************************************************************************
 
 /**
+ * @class
+ *  
  * Support for listeners registration. This object also extended by Firebug.Module so,
  * all modules supports listening automatically. Notice that array of listeners
  * is created for each intance of a module within initialize method. Thus all derived
@@ -6150,8 +6162,10 @@ Firebug.Listener.prototype =
  * @module Base class for all modules. Every derived module object must be registered using
  * <code>Firebug.registerModule</code> method. There is always one instance of a module object
  * per browser window.
+ * @extends Firebug.Listener 
  */
 Firebug.Module = extend(new Firebug.Listener(),
+/** @extend Firebug.Module */
 {
     /**
      * Called when the window is opened.
@@ -6227,6 +6241,11 @@ Firebug.Module = extend(new Firebug.Listener(),
 // ************************************************************************************************
 // Panel
 
+/**
+ * @panel Base class for all panels. Every derived panel must define a constructor and
+ * register with "Firebug.registerPanel" method. An instance of the panel
+ * object is created by the framework for each browser tab where Firebug is activated.
+ */
 Firebug.Panel =
 {
     name: "HelloWorld",
@@ -6742,13 +6761,16 @@ Firebug.Panel =
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-/*
+
+/**
  * MeasureBox
  * To get pixels size.width and size.height:
  * <ul><li>     this.startMeasuring(view); </li>
  *     <li>     var size = this.measureText(lineNoCharsSpacer); </li>
  *     <li>     this.stopMeasuring(); </li>
  * </ul>
+ *  
+ * @namespace
  */
 Firebug.MeasureBox =
 {
@@ -6906,12 +6928,13 @@ if (FBL.domplate) Firebug.Rep = domplate(
 
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns( /** @scope ns-gui */ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
 // Controller
 
+/**@namespace*/
 FBL.Controller = {
         
     controllers: null,
@@ -6979,6 +7002,7 @@ FBL.Controller = {
 // ************************************************************************************************
 // PanelBar
 
+/**@namespace*/
 FBL.PanelBar = 
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -7131,7 +7155,6 @@ FBL.PanelBar =
 // Button
 
 /**
- *
  * options.element
  * options.caption
  * options.title
@@ -7144,6 +7167,9 @@ FBL.PanelBar =
  * options.onUnpress
  * options.onClick
  * 
+ * @class
+ * @extends FBL.Controller 
+ *  
  */
 
 FBL.Button = function(options)
@@ -7180,6 +7206,7 @@ FBL.Button = function(options)
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 Button.prototype = extend(Controller,
+/**@extend FBL.Button.prototype*/
 {
     type: "normal",
     caption: "caption",
@@ -7320,12 +7347,17 @@ Button.prototype = extend(Controller,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+/**
+ * @class
+ * @extends FBL.Button 
+ */
 FBL.IconButton = function()
 {
     Button.apply(this, arguments);
 };
 
-IconButton.prototype = extend(Button.prototype, 
+IconButton.prototype = extend(Button.prototype,
+/**@extend FBL.IconButton.prototype*/ 
 {
     baseClassName: "fbIconButton",
     pressedClassName: "fbIconPressed"
@@ -7474,6 +7506,11 @@ var MenuPlate = domplate(Firebug.Rep,
  * item.selected
  * item.command
  * item.child
+ * 
+ * 
+ * @class
+ * @extends FBL.Controller
+ *   
  */
 FBL.Menu = function(options)
 {
@@ -7522,6 +7559,7 @@ var menuMap = {};
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 Menu.prototype =  extend(Controller,
+/**@extend FBL.Menu.prototype*/
 {
     destroy: function()
     {
@@ -7817,37 +7855,42 @@ Menu.prototype =  extend(Controller,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-Menu.register = function(object)
+append(Menu,
+/**@extend FBL.Menu*/
 {
-    menuMap[object.id] = object;
-};
-
-Menu.check = function(element)
-{
-    setClass(element, "fbMenuChecked");
-    element.setAttribute("checked", "true");
-};
-
-Menu.uncheck = function(element)
-{
-    removeClass(element, "fbMenuChecked");
-    element.setAttribute("checked", "");
-};
-
-Menu.disable = function(element)
-{
-    setClass(element, "fbMenuDisabled");
-};
-
-Menu.enable = function(element)
-{
-    removeClass(element, "fbMenuDisabled");
-};
+    register: function(object)
+    {
+        menuMap[object.id] = object;
+    },
+    
+    check: function(element)
+    {
+        setClass(element, "fbMenuChecked");
+        element.setAttribute("checked", "true");
+    },
+    
+    uncheck: function(element)
+    {
+        removeClass(element, "fbMenuChecked");
+        element.setAttribute("checked", "");
+    },
+    
+    disable: function(element)
+    {
+        setClass(element, "fbMenuDisabled");
+    },
+    
+    enable: function(element)
+    {
+        removeClass(element, "fbMenuDisabled");
+    }
+});
 
 
 //************************************************************************************************
 // Status Bar
 
+/**@class*/
 function StatusBar(){};
 
 StatusBar.prototype = extend(Controller, {
@@ -7862,7 +7905,7 @@ StatusBar.prototype = extend(Controller, {
 
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns( /**@scope ns-context*/ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -7885,7 +7928,8 @@ var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 
 // ************************************************************************************************
 // Context
-  
+
+/** @class */
 FBL.Context = function(win)
 {
     this.window = win.window;
@@ -8527,7 +8571,7 @@ FBL.Context.prototype =
 
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns( /**@scope ns-chrome*/ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -8618,6 +8662,7 @@ var WindowDefaultOptions =
 // ************************************************************************************************
 // FirebugChrome
 
+/**@namespace*/
 FBL.FirebugChrome = 
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -9024,6 +9069,7 @@ var getChromeTemplate = function(isPopup)
 // ************************************************************************************************
 // Chrome Class
     
+/**@class*/
 var Chrome = function Chrome(chrome)
 {
     var type = chrome.type;
@@ -9048,10 +9094,16 @@ var Chrome = function Chrome(chrome)
 // ************************************************************************************************
 // ChromeBase
 
+/**
+ * @namespace
+ * @extends FBL.Controller 
+ * @extends FBL.PanelBar 
+ **/
 var ChromeBase = {};
 append(ChromeBase, Controller); 
 append(ChromeBase, PanelBar);
 append(ChromeBase,
+/**@extend ns-chrome-ChromeBase*/
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // inherited properties
@@ -9208,6 +9260,7 @@ append(ChromeBase,
             
         });
         
+        /**@private*/
         var firebugOptionsMenu =
         {
             id: "fbFirebugOptionsMenu",
@@ -9625,6 +9678,10 @@ append(ChromeBase,
         
         addEvent(Firebug.chrome.document, "keydown", onKeyCodeListen);
 
+        /**
+         * @name keyCodeListen
+         * @memberOf FBL.FirebugChrome
+         */
         Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
         {
             var keyCode = KeyEvent["DOM_VK_"+key];
@@ -9640,6 +9697,10 @@ append(ChromeBase,
             return keyCode;
         };
         
+        /**
+         * @name keyIgnore
+         * @memberOf FBL.FirebugChrome
+         */
         Firebug.chrome.keyIgnore = function(keyCode)
         {
             onKeyCodeListenersMap[keyCode] = null;
@@ -9736,8 +9797,14 @@ append(ChromeBase,
         restoreTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Remove the interface elements cache
+        // shutdown inherited classes
+        Controller.shutdown.call(this);
+        PanelBar.shutdown.call(this);
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Remove the interface elements cache (this must happen after calling 
+        // the shutdown method of all dependent components to avoid errors)
+
         fbTop = null;
         fbContent = null;
         fbContentStyle = null;
@@ -9774,12 +9841,6 @@ append(ChromeBase,
         
         topHeight = null;
         topPartialHeight = null;
-        
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // shutdown inherited classes
-        Controller.shutdown.call(this);
-        PanelBar.shutdown.call(this);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -10081,7 +10142,12 @@ append(ChromeBase,
 // ************************************************************************************************
 // ChromeFrameBase
 
+/**
+ * @namespace
+ * @extends ns-chrome-ChromeBase 
+ */ 
 var ChromeFrameBase = extend(ChromeBase,
+/**@extend ns-chrome-ChromeFrameBase*/
 {
     create: function()
     {
@@ -10289,7 +10355,12 @@ var ChromeFrameBase = extend(ChromeBase,
 // ************************************************************************************************
 // ChromeMini
 
-var ChromeMini = extend(Controller, 
+/**
+ * @namespace
+ * @extends FBL.Controller
+ */  
+var ChromeMini = extend(Controller,
+/**@extend ns-chrome-ChromeMini*/ 
 {
     create: function(chrome)
     {
@@ -10387,7 +10458,13 @@ var ChromeMini = extend(Controller,
 // ************************************************************************************************
 // ChromePopupBase
 
-var ChromePopupBase = extend(ChromeBase, {
+/**
+ * @namespace
+ * @extends ns-chrome-ChromeBase
+ */  
+var ChromePopupBase = extend(ChromeBase,
+/**@extend ns-chrome-ChromePopupBase*/
+{
     
     initialize: function()
     {
@@ -10770,7 +10847,7 @@ var onVSplitterMouseUp = function onVSplitterMouseUp(event)
 
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns( /**@scope ns-selector*/ function() { with (FBL) {
 // ************************************************************************************************
 
 /*
@@ -10795,6 +10872,14 @@ var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^
     return 0;
 });
 
+/**
+ * @name Firebug.Selector 
+ * @namespace
+ */
+
+/**
+ * @exports Sizzle as Firebug.Selector
+ */ 
 var Sizzle = function(selector, context, results, seed) {
     results = results || [];
     var origContext = context = context || document;
@@ -11044,6 +11129,7 @@ Sizzle.filter = function(expr, set, inplace, not){
     return curLoop;
 };
 
+/**#@+ @ignore */
 var Expr = Sizzle.selectors = {
     order: [ "ID", "NAME", "TAG" ],
     match: {
@@ -11786,6 +11872,8 @@ var posProcess = function(selector, context){
 
 Firebug.Selector = Sizzle;
 
+/**#@-*/
+
 // ************************************************************************************************
 }});
 
@@ -11817,7 +11905,7 @@ function DomplateLoop()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-(function() {
+( /** @scope ns-domplate */ function() {
 
 var womb = null;
 
@@ -12034,7 +12122,7 @@ DomplateTag.prototype =
 
         var js = fnBlock.join("");
         var r = null;
-        eval(js)
+        eval(js);
         this.renderMarkup = r;
     },
 
@@ -12192,7 +12280,7 @@ DomplateTag.prototype =
 
         function __bind__(object, fn)
         {
-            return function(event) { return fn.apply(object, [event]); }
+            return function(event) { return fn.apply(object, [event]); };
         }
 
         function __link__(node, tag, args)
@@ -12247,7 +12335,7 @@ DomplateTag.prototype =
         var js = fnBlock.join("");
         //if (FBTrace.DBG_DOM) FBTrace.sysout(js.replace(/(\;|\{)/g, "$1\n"));
         var r = null;
-        eval(js)
+        eval(js);
         this.renderDOM = r;
     },
 
@@ -12707,7 +12795,7 @@ var Renderer =
         var div = doc.createElement("div");
         div.innerHTML = "<table><tbody>"+html+"</tbody></table>";
 
-        var tbody = div.firstChild.firstChild
+        var tbody = div.firstChild.firstChild;
         var parent = before.tagName == "TR" ? before.parentNode : before;
         var after = before.tagName == "TR" ? before.nextSibling : null;
 
@@ -19550,9 +19638,9 @@ var XMLHttpRequestWrapper = function(activeXObject)
         if (!FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
         
-        // xhr.open.apply not available in IE
-        if (typeof xhrRequest.open.apply != "undefined")
-            xhrRequest.open.apply(xhrRequest, arguments)
+        // xhrRequest.open.apply not available in IE
+        if (supportsApply)
+            xhrRequest.open.apply(xhrRequest, arguments);
         else
             xhrRequest.open(method, url, async, user, password);
         
@@ -19630,7 +19718,10 @@ var XMLHttpRequestWrapper = function(activeXObject)
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Clone XHR object
 
-    var supportsApply = xhrRequest && 
+    // xhrRequest.open.apply not available in IE and will throw an error in 
+    // IE6 by simply reading xhrRequest.open so we must sniff it
+    var supportsApply = !isIE6 &&
+            xhrRequest && 
             xhrRequest.open && 
             typeof xhrRequest.open.apply != "undefined";
     
@@ -19653,12 +19744,12 @@ var XMLHttpRequestWrapper = function(activeXObject)
                             // if the browser supports apply 
                             function()
                             {
-                                return xhr[name].apply(xhr, arguments)
+                                return xhr[name].apply(xhr, arguments);
                             }
                             :
                             function(a,b,c,d,e)
                             {
-                                return xhr[name](a,b,c,d,e)
+                                return xhr[name](a,b,c,d,e);
                             };
                     
                     })(propName, xhrRequest);
@@ -19685,7 +19776,7 @@ var isIE6 =  /msie 6/i.test(navigator.appVersion);
 
 if (isIE6)
 {
-    window._ActiveXObject = window.ActiveXObject;
+    _ActiveXObject = window.ActiveXObject;
     
     var xhrObjects = " MSXML2.XMLHTTP.5.0 MSXML2.XMLHTTP.4.0 MSXML2.XMLHTTP.3.0 MSXML2.XMLHTTP Microsoft.XMLHTTP ";
     
@@ -19695,7 +19786,7 @@ if (isIE6)
         
         try
         {
-            var activeXObject = new window._ActiveXObject(name);
+            var activeXObject = new _ActiveXObject(name);
         }
         catch(e)
         {
@@ -19725,7 +19816,7 @@ if (!isIE6)
     window.XMLHttpRequest = function()
     {
         return new XMLHttpRequestWrapper();
-    }
+    };
 }
 
 // ************************************************************************************************
@@ -20697,7 +20788,7 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
             postData.params.push({
                 name: (m && m.length > 1) ? m[1] : "",
                 value: trim(part[1])
-            })
+            });
         }
 
         return postData;
@@ -20710,7 +20801,7 @@ var NetInfoPostData = Firebug.NetMonitor.NetInfoPostData;
 
 
 // TODO: xxxpedro net i18n
-var $STRP = function(a){return a};
+var $STRP = function(a){return a;};
 
 Firebug.NetMonitor.NetLimit = domplate(Firebug.Rep,
 {
@@ -21749,7 +21840,7 @@ var updateHttpSpyInfo = function updateHttpSpyInfo(spy, logRow)
     {
         template.updateInfo(netInfoBox, spy, spy.context);
     }
-}
+};
 
 
 
@@ -23036,7 +23127,7 @@ var createCache = function()
     var cacheFunction = function(element)
     {
         return cacheAPI.set(element);
-    }
+    };
     
     var cacheAPI =  
     {
@@ -23059,7 +23150,7 @@ var createCache = function()
             
             if (!map.hasOwnProperty(id))
             {
-                map[id] = element
+                map[id] = element;
             }
             
             return id;
@@ -23093,7 +23184,7 @@ var createCache = function()
     append(cacheFunction, cacheAPI);
     
     return cacheFunction;
-}
+};
 
 
 // ************************************************************************************************
@@ -23108,7 +23199,7 @@ var externalStyleSheetWarning = domplate(Firebug.Rep,
             SPAN("$object|STR"),
             A({"href": "$href", target:"_blank"}, "$link|STR")
         )
-})
+});
 
 
 FBL.processAllStyleSheets = function(doc, styleSheetIterator)
@@ -23215,8 +23306,8 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
 var StyleSheetCache = FBL.StyleSheetCache = createCache();
 var ElementCache = FBL.ElementCache = createCache();
 
-var CSSRuleMap = {}
-var ElementCSSRulesMap = {}
+var CSSRuleMap = {};
+var ElementCSSRulesMap = {};
 
 var processStyleSheet = function(doc, styleSheet)
 {
@@ -23235,18 +23326,23 @@ var processStyleSheet = function(doc, styleSheet)
         
         if (isIE)
         {
-            selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase()});
+            selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase();});
         }
         
         // TODO: xxxpedro break grouped rules (,) into individual rules, otherwise
         // it will result in a overestimated value for getCSSRuleSpecificity
-        
         CSSRuleMap[rid] =
         {
             styleSheetId: ssid,
             styleSheetIndex: i,
             order: ++globalCSSRuleIndex,
-            specificity: selector ? getCSSRuleSpecificity(selector) : 0,
+            // if it is a grouped selector, do not calculate the specificity
+            // because the correct value will depend of the matched element.
+            // The proper specificity value for grouped selectors are calculated
+            // via getElementCSSRules(element)
+            specificity: selector && selector.indexOf(",") != -1 ? 
+                getCSSRuleSpecificity(selector) : 
+                0,
             
             rule: rule,
             selector: selector,
@@ -23269,7 +23365,8 @@ var processStyleSheet = function(doc, styleSheet)
         //console.log(selector, elements);
     }
     
-    //sort
+    // TODO: xxxpedro. remove this, we don't need this anymore with the new getElementCSSRules
+    /*
     for (var name in ElementCSSRulesMap)
     {
         if (ElementCSSRulesMap.hasOwnProperty(name))
@@ -23283,13 +23380,69 @@ var processStyleSheet = function(doc, styleSheet)
     /**/
 };
 
+FBL.getElementCSSRules = function(element)
+{
+    var eid = ElementCache(element);
+    var rules = ElementCSSRulesMap[eid];
+    
+    if (!rules) return;
+    
+    var arr = [element];
+    var Selector = Firebug.Selector;
+    var ruleId, rule;
+    
+    // for the case of grouped selectors, we need to calculate the highest
+    // specificity within the selectors of the group that matches the element,
+    // so we can sort the rules properly without over estimating the specificity
+    // of grouped selectors
+    for (var i = 0, length = rules.length; i < length; i++)
+    {
+        ruleId = rules[i];
+        rule = CSSRuleMap[ruleId];
+        
+        // check if it is a grouped selector
+        if (rule.selector.indexOf(",") != -1)
+        {
+            var selectors = rule.selector.split(",");
+            var maxSpecificity = -1;
+            var sel, spec, mostSpecificSelector;
+            
+            // loop over all selectors in the group
+            for (var j, len = selectors.length; j < len; j++)
+            {
+                sel = selectors[j];
+                
+                // find if the selector matches the element
+                if (Selector.matches(sel, arr).length == 1)
+                {
+                    spec = getCSSRuleSpecificity(sel);
+                    
+                    // find the most specific selector that macthes the element
+                    if (spec > maxSpecificity)
+                    {
+                        maxSpecificity = spec;
+                        mostSpecificSelector = sel;
+                    }
+                }
+            }
+            
+            rule.specificity = maxSpecificity;
+        }
+    }
+    
+    rules.sort(sortElementRules);
+    //rules.sort(solveRulesTied);
+    
+    return rules;
+};
+
 var sortElementRules = function(a, b)
 {
     var ruleA = CSSRuleMap[a];
     var ruleB = CSSRuleMap[b];
     
     var specificityA = ruleA.specificity;
-    var specificityB = ruleB.specificity
+    var specificityB = ruleB.specificity;
     
     if (specificityA > specificityB)
         return 1;
@@ -23726,7 +23879,7 @@ Firebug.CSSModule = extend(Firebug.Module,
 
 // ************************************************************************************************
 
-Firebug.CSSStyleSheetPanel = function() {}
+Firebug.CSSStyleSheetPanel = function() {};
 
 Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 {
@@ -23837,7 +23990,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                     if (isIE)
                     {
                         selector = selector.replace(reSelectorTag, 
-                                function(s){return s.toLowerCase()});
+                                function(s){return s.toLowerCase();});
                     }
                     
                     var ruleId = rule.selectorText+"/"+line;
@@ -24470,7 +24623,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                 );
         }
 
-        var cssRule = getAncestorByClass(target, "cssRule")
+        var cssRule = getAncestorByClass(target, "cssRule");
         if (cssRule && hasClass(cssRule, "cssEditableRule"))
         {
             items.push(
@@ -24817,9 +24970,11 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
     {
         var inspectedRules, displayedRules = {};
         
-        var eid = ElementCache(element);
+        // TODO: xxxpedro remove document specificity issue
+        //var eid = ElementCache(element);
+        //inspectedRules = ElementCSSRulesMap[eid];
         
-        inspectedRules = ElementCSSRulesMap[eid];
+        inspectedRules = getElementCSSRules(element);
 
         if (inspectedRules)
         {
@@ -25277,6 +25432,10 @@ CSSEditor.prototype = domplate(Firebug.InlineEditor.prototype,
 
     saveEdit: function(target, value, previousValue)
     {
+    	// We need to check the value first in order to avoid a problem in IE8 
+    	// See Issue 3038: Empty (null) styles when adding CSS styles in Firebug Lite 
+    	if (!value) return;
+    	
         target.innerHTML = escapeForCss(value);
 
         var row = getAncestorByClass(target, "cssProp");
@@ -25556,21 +25715,21 @@ StyleSheetEditor.prototype = domplate(Firebug.BaseEditor,
 var rgbToHex = function rgbToHex(value)
 {
     return value.replace(/\brgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)/gi, rgbToHexReplacer);
-}
+};
 
 var rgbToHexReplacer = function(_, r, g, b) {
     return '#' + ((1 << 24) + (r << 16) + (g << 8) + (b << 0)).toString(16).substr(-6).toUpperCase();
-}
+};
 
 var stripUnits = function stripUnits(value)
 {
     // remove units from '0px', '0em' etc. leave non-zero units in-tact.
     return value.replace(/(url\(.*?\)|[^0]\S*\s*)|0(%|em|ex|px|in|cm|mm|pt|pc)(\s|$)/gi, stripUnitsReplacer);
-}
+};
 
 var stripUnitsReplacer = function(_, skip, remove, whitespace) {
     return skip || ('0' + whitespace);
-}
+};
 
 function parsePriority(value)
 {
@@ -26772,7 +26931,8 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
             if (state.propertyPath)
                 this.propertyPath = state.propertyPath;
 
-            var selectObject = defaultObject = this.getDefaultSelection(this.context);
+            var defaultObject = this.getDefaultSelection(this.context);
+            var selectObject = defaultObject; 
 
             if (state.firstSelection)
             {
@@ -28030,7 +28190,7 @@ FBL.ns(function() { with (FBL) {
 
 FirebugChrome.Skin = 
 {
-    CSS: '.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{min-width:100px;text-align:center;}.infoTipCaption{font:message-box;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/beta/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/beta/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/beta/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/beta/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    CSS: '.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{min-width:100px;text-align:center;}.infoTipCaption{font:message-box;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
     HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbWindowButtons"><a id="fbWindow_btDeactivate" class="fbSmallButton fbHover" title="Deactivate Firebug for this web page">&nbsp;</a><a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a><a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div><textarea id="fbLargeCommandLine" class="fbFitHeight"></textarea><div id="fbLargeCommandButtons"><a id="fbCommand_btRun" class="fbButton fbHover">Run</a><a id="fbCommand_btClear" class="fbButton fbHover">Clear</a><a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/><a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
 };
 
