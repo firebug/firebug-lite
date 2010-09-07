@@ -1,4 +1,18 @@
 ###################################################################################################
+ 1.3.1b3 - 2009-08-xx - Revision: xxxx
+###################################################################################################
+
+Issue 3272: Install Google Chrome extension results in a 404 error
+Issue 3384: Just two inadvertent globals across the Firebug Lite files
+Issue 3318: Firebug Lite dies if you hide the UI when the large command line is open
+Issue 3181: Firebug Lite Missing XHR methods/properties
+Issue 3262: CSS specificity is not being calculated properly.
+Issue 3038: Empty (null) styles when adding CSS styles in Firebug Lite
+Normalizing syntax (missing semicolons)
+Added basic JsDoc comment markup
+
+
+###################################################################################################
  1.3.1b2 - 2009-07-26 - Revision: 7413
 ###################################################################################################
 
