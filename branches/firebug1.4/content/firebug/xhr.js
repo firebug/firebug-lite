@@ -62,17 +62,30 @@ var XMLHttpRequestWrapper = function(activeXObject)
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper internal methods
     
+    var updateSelfPropertiesIgnore = {
+        abort: 1,
+        channel: 1,
+        getInterface: 1,
+        mozBackgroundRequest: 1,
+        multipart: 1,
+        onreadystatechange: 1,
+        open: 1,
+        send: 1,
+        setRequestHeader: 1
+    };
+    
     var updateSelfProperties = function()
     {
-        var self = self;
-        
         for (var propName in xhrRequest)
         {
+            if (propName in updateSelfPropertiesIgnore)
+                continue;
+            
             try
             {
                 var propValue = xhrRequest[propName];
                 
-                if (!isFunction(propValue))
+                if (propValue && !isFunction(propValue))
                     self[propName] = propValue;
             }
             catch(E)
@@ -82,17 +95,30 @@ var XMLHttpRequestWrapper = function(activeXObject)
         }
     };
     
+    var updateXHRPropertiesIgnore = {
+        channel: 1,
+        onreadystatechange: 1,
+        readyState: 1,
+        responseBody: 1,
+        responseText: 1,
+        responseXML: 1,
+        status: 1,
+        statusText: 1,
+        upload: 1
+    };
+    
     var updateXHRProperties = function()
     {
-        var self = self;
-        
         for (var propName in self)
         {
             try
             {
+                if (propName in updateXHRPropertiesIgnore)
+                    continue;
+            
                 var propValue = self[propName];
                 
-                if (!xhrRequest[propName])
+                if (propValue && !xhrRequest[propName])
                 {
                     xhrRequest[propName] = propValue;
                 }
@@ -176,27 +202,20 @@ var XMLHttpRequestWrapper = function(activeXObject)
                 // if chrome document is not loaded, there will be no row yet, so just ignore
                 if (!row) return;
                 
-                FBL.removeClass(row, "loading");
-                
-                if (!success)
-                    FBL.setClass(row, "error");
-                
-                var item = FBL.$$(".spyStatus", row)[0];
-                item.innerHTML = status;
-                
-                var item = FBL.$$(".spyTime", row)[0];
-                item.innerHTML = time + "ms";
+                // update the XHR representation data
+                handleRequestStatus(success, status, time);
                 
             },200);
         }
         
         spy.loaded = true;
-        
+        /*
+        // commented because they are being updated by the updateSelfProperties() function
         self.status = xhrRequest.status;
         self.statusText = xhrRequest.statusText;
         self.responseText = xhrRequest.responseText;
         self.responseXML = xhrRequest.responseXML;
-        
+        /**/
         updateSelfProperties();
     };
     
@@ -216,6 +235,25 @@ var XMLHttpRequestWrapper = function(activeXObject)
         //Firebug.Console.log(spy.url + ": " + xhrRequest.readyState);
         
         self.onreadystatechange();
+    };
+    
+    // update the XHR representation data
+    var handleRequestStatus = function(success, status, time)
+    {
+        var row = spy.logRow;
+        FBL.removeClass(row, "loading");
+        
+        if (!success)
+            FBL.setClass(row, "error");
+        
+        var item = FBL.$$(".spyStatus", row)[0];
+        item.innerHTML = status;
+        
+        if (time)
+        {
+            var item = FBL.$$(".spyTime", row)[0];
+            item.innerHTML = time + "ms";
+        }
     };
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -299,8 +337,18 @@ var XMLHttpRequestWrapper = function(activeXObject)
         return xhrRequest.setRequestHeader(header, value);
     };
     
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
+    this.abort = function()
+    {
+        xhrRequest.abort();
+        updateSelfProperties();
+        handleRequestStatus(false, "Aborted");
+    };
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    /*
     this.getResponseHeader = function(header)
     {
         return xhrRequest.getResponseHeader(header);
@@ -313,13 +361,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
         return xhrRequest.getAllResponseHeaders();
     };
     
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
-    this.abort = function()
-    {
-        return xhrRequest.abort();
-    };
-    
+    /**/
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Clone XHR object
 
@@ -329,7 +371,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
     
     for (var propName in xhrRequest)
     {
-        if (propName == "onreadystatechange")
+        if (propName in updateSelfPropertiesIgnore)
             continue;
         
         try
@@ -340,17 +382,21 @@ var XMLHttpRequestWrapper = function(activeXObject)
             {
                 if (typeof self[propName] == "undefined")
                 {
-                    this[propName] = supportsApply ?
-                        // if the browser supports apply 
-                        function()
-                        {
-                            return xhrRequest[propName].apply(xhrRequest, arguments)
-                        }
-                        :
-                        function(a,b,c,d,e)
-                        {
-                            return xhrRequest[propName](a,b,c,d,e)
-                        };
+                    this[propName] = (function(name, xhr){
+                    
+                        return supportsApply ?
+                            // if the browser supports apply 
+                            function()
+                            {
+                                return xhr[name].apply(xhr, arguments)
+                            }
+                            :
+                            function(a,b,c,d,e)
+                            {
+                                return xhr[name](a,b,c,d,e)
+                            };
+                    
+                    })(propName, xhrRequest);
                 } 
             }
             else
