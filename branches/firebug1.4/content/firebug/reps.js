@@ -289,13 +289,200 @@ this.Obj = domplate(Firebug.Rep,
 {
     tag:
         OBJECTLINK(
-            SPAN({"class": "objectTitle"}, "$object|getTitle"),
-            FOR("prop", "$object|propIterator",
-                " $prop.name=",
-                SPAN({"class": "objectPropValue"}, "$prop.value|cropString")
+            SPAN({"class": "objectTitle"}, "$object|getTitle "),
+            
+            SPAN({"class": "objectProps"}, 
+                SPAN({"class": "objectLeftBrace", role: "presentation"}, "{"),
+                FOR("prop", "$object|propIterator",
+                    SPAN({"class": "objectPropName", role: "presentation"}, "$prop.name"),
+                    SPAN({"class": "objectEqual", role: "presentation"}, "$prop.equal"),
+                    TAG("$prop.tag", {object: "$prop.object"}),
+                    SPAN({"class": "objectComma", role: "presentation"}, "$prop.delim")
+                ),
+                SPAN({"class": "objectRightBrace"}, "}")
             )
         ),
 
+    propNumberTag:
+        SPAN({"class": "objectProp-number"}, "$object"),
+
+    propStringTag:
+        SPAN({"class": "objectProp-string"}, "&quot;$object&quot;"),
+
+    propObjectTag:
+        SPAN({"class": "objectProp-object"}, "$object"),
+
+    propIterator: function (object)
+    {
+        ///Firebug.ObjectShortIteratorMax;
+        maxLength = 55; // default max length for long representation
+        
+        if (!object)
+            return [];
+
+        var props = [];
+        var length = 0;
+        
+        var numProperties = 0;
+        var numPropertiesShown = 0;
+        var maxLengthReached = false;
+        
+        var lib = this;
+        
+        var propRepsMap = 
+        {
+            "boolean": this.propNumberTag,
+            "number": this.propNumberTag,
+            "string": this.propStringTag,
+            "object": this.propObjectTag
+        };
+
+        try
+        {
+            var title = Firebug.Rep.getTitle(object);
+            length += title.length;
+
+            for (var name in object)
+            {
+                var value;
+                try
+                {
+                    value = object[name];
+                }
+                catch (exc)
+                {
+                    continue;
+                }
+                
+                var type = typeof(value);
+                if (type == "boolean" || 
+                    type == "number" || 
+                    (type == "string" && value) || 
+                    (type == "object" && value && value.toString))
+                {
+                    var tag = propRepsMap[type];
+                    
+                    var value = (type == "object") ?
+                        Firebug.getRep(value).getTitle(value) :
+                        value + "";
+                        
+                    length += name.length + value.length + 4;
+                    
+                    if (length <= maxLength)
+                    {
+                        props.push({
+                            tag: tag, 
+                            name: name, 
+                            object: value, 
+                            equal: "=", 
+                            delim: ", "
+                        });
+                        
+                        numPropertiesShown++;
+                    }
+                    else
+                        maxLengthReached = true;
+
+                }
+                
+                numProperties++;
+                
+                if (maxLengthReached && numProperties > numPropertiesShown)
+                    break;
+            }
+            
+            if (numProperties > numPropertiesShown)
+            {
+                props.push({
+                    object: "...", //xxxHonza localization
+                    tag: FirebugReps.Caption.tag,
+                    name: "",
+                    equal:"",
+                    delim:""
+                });
+            }
+            else if (props.length > 0)
+            {
+                props[props.length-1].delim = '';
+            }
+        }
+        catch (exc)
+        {
+            // Sometimes we get exceptions when trying to read from certain objects, like
+            // StorageList, but don't let that gum up the works
+            // XXXjjb also History.previous fails because object is a web-page object which does not have
+            // permission to read the history
+        }
+        return props;
+    },
+    
+    fb_1_6_propIterator: function (object, max)
+    {
+        max = max || 3;
+        if (!object)
+            return [];
+
+        var props = [];
+        var len = 0, count = 0;
+
+        try
+        {
+            for (var name in object)
+            {
+                var value;
+                try
+                {
+                    value = object[name];
+                }
+                catch (exc)
+                {
+                    continue;
+                }
+
+                var t = typeof(value);
+                if (t == "boolean" || t == "number" || (t == "string" && value)
+                    || (t == "object" && value && value.toString))
+                {
+                    var rep = Firebug.getRep(value);
+                    var tag = rep.shortTag || rep.tag;
+                    if (t == "object")
+                    {
+                        value = rep.getTitle(value);
+                        tag = rep.titleTag;
+                    }
+                    count++;
+                    if (count <= max)
+                        props.push({tag: tag, name: name, object: value, equal: "=", delim: ", "});
+                    else
+                        break;
+                }
+            }
+            if (count > max)
+            {
+                props[Math.max(1,max-1)] = {
+                    object: "more...", //xxxHonza localization
+                    tag: FirebugReps.Caption.tag,
+                    name: "",
+                    equal:"",
+                    delim:""
+                };
+            }
+            else if (props.length > 0)
+            {
+                props[props.length-1].delim = '';
+            }
+        }
+        catch (exc)
+        {
+            // Sometimes we get exceptions when trying to read from certain objects, like
+            // StorageList, but don't let that gum up the works
+            // XXXjjb also History.previous fails because object is a web-page object which does not have
+            // permission to read the history
+        }
+        return props;
+    },
+    
+    /*
     propIterator: function (object)
     {
         if (!object)
@@ -344,6 +531,7 @@ this.Obj = domplate(Firebug.Rep,
 
         return props;
     },
+    /**/
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 

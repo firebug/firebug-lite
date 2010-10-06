@@ -1532,11 +1532,46 @@ h1.groupHeader {
     white-space: pre-wrap;
 }
 
-.objectPropValue {
-    font-weight: normal;
-    font-style: italic;
-    color: #555555;
+/* xxxpedro reps object representation .................................... */
+.objectProp-object {
+    color: DarkGreen;
 }
+
+.objectProps {
+    color: #000;
+    font-weight: normal;
+}
+
+.objectPropName {
+    /*font-style: italic;*/
+    color: #777;
+}
+
+/*
+.objectProps .objectProp-string,
+.objectProps .objectProp-number,
+.objectProps .objectProp-object
+{
+    font-style: italic;
+}
+/**/
+
+.objectProps .objectProp-string
+{
+    /*font-family: Monaco, monospace;*/
+    color: #f55;
+}
+.objectProps .objectProp-number
+{
+    /*font-family: Monaco, monospace;*/
+    color: #55a;
+}
+.objectProps .objectProp-object
+{
+    /*font-family: Lucida Grande,sans-serif;*/
+    color: #585;
+}
+/* xxxpedro reps object representation .................................... */
 
 /************************************************************************************************/
 
@@ -1598,21 +1633,29 @@ h1.groupHeader {
 
 /*****************************************************************************************/
 
+.objectLeftBrace,
+.objectRightBrace,
+.objectEqual,
+.objectComma,
 .arrayLeftBracket,
 .arrayRightBracket,
 .arrayComma {
     font-family: Monaco, monospace;
 }
 
+.objectLeftBrace,
+.objectRightBrace,
 .arrayLeftBracket,
 .arrayRightBracket {
     font-weight: bold;
 }
 
+.objectLeftBrace,
 .arrayLeftBracket {
     margin-right: 4px;
 }
 
+.objectRightBrace,
 .arrayRightBracket {
     margin-left: 4px;
 }
