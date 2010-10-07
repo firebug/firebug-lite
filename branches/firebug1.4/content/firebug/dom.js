@@ -1290,7 +1290,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
             }
             else if (isFunction(val))
             {
-                if (isClassFunction(val))
+                if (isClassFunction(val) && !(name in domMembers))
                     addMember("userClass", userClasses, name, val, level);
                 else if (name in domMembers)
                     addMember("domFunction", domFuncs, name, val, level, domMembers[name]);
@@ -1311,7 +1311,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
                 
                 var prefix = "";
 
-                if (name in domMembers)
+                if (name in domMembers && !(name in domConstantMap))
                     addMember("dom", domProps, (prefix+name), val, level, domMembers[name]);
                 else if (name in domConstantMap)
                     addMember("dom", domConstants, (prefix+name), val, level);

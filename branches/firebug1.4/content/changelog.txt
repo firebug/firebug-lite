@@ -21,7 +21,9 @@ Overview:
 -------------------------------------------------------------------------------
 XHR
 -------------------------------------------------------------------------------
+    - Compatibility with XMLHttpRequest 2 specification
     - Issue 3181: Missing XHR methods/properties
+    - XHR representation is properly updated when the request is aborted
     - Adjusting spy.mimeType according XHR response so we can detect when to
       use custom response viewers (like HTML, XML and JSON viewers)
 
