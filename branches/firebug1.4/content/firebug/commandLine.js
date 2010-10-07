@@ -516,13 +516,7 @@ var CommandLineAPI =
         else if (instanceOf(o, "Document"))
             o = o.documentElement;
 
-        // TODO: xxxpedro html3
-        ///Firebug.Console.log(o, Firebug.context, "dirxml", Firebug.HTMLPanel.SoloElement);
-        var div = Firebug.Console.log(o, Firebug.context, "dirxml");
-        var html = [];
-        Firebug.Reps.appendNode(o, html);
-        div.innerHTML = html.join("");
-        
+        Firebug.Console.log(o, Firebug.context, "dirxml", Firebug.HTMLPanel.SoloElement);
     }
 };
 

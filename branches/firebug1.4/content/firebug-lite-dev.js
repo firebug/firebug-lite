@@ -66,7 +66,15 @@ window.FBDev =
         // ****************************************************************************************
         // Application Modules/Panels
         
-        "firebug/html.js",
+        //"firebug/html.js",
+        
+        "firebug/insideOutBox.js", // HTML experimental        
+        "firebug/lib/htmlLib.js", // HTML experimental
+        "firebug/html3.js", // HTML experimental
+        //"firebug/html2.js", // HTML experimental
+        
+        "firebug/infotip.js", // experimental
+        
         "firebug/css.js",
         "firebug/script.js",
         "firebug/dom.js",

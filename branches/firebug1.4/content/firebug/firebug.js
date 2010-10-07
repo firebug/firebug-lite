@@ -30,7 +30,7 @@ var parentPanelMap = {};
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version: "Firebug Lite 1.3.1",
+    version:  "Firebug Lite 1.4.0a1",
     revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -52,7 +52,7 @@ window.Firebug = FBL.Firebug =
         // Document must be cached before chrome initialization
         cacheDocument();
         
-        if (Firebug.Inspector)
+        if (Firebug.Inspector && Firebug.Inspector.create)
             Firebug.Inspector.create();
         
         if (FBL.processAllStyleSheets)
