@@ -285,9 +285,9 @@ var XMLHttpRequestWrapper = function(activeXObject)
         if (!FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
         
-        // xhr.open.apply not available in IE
-        if (typeof xhrRequest.open.apply != "undefined")
-            xhrRequest.open.apply(xhrRequest, arguments)
+        // xhrRequest.open.apply not available in IE
+        if (supportsApply)
+            xhrRequest.open.apply(xhrRequest, arguments);
         else
             xhrRequest.open(method, url, async, user, password);
         
@@ -365,7 +365,10 @@ var XMLHttpRequestWrapper = function(activeXObject)
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Clone XHR object
 
-    var supportsApply = xhrRequest && 
+    // xhrRequest.open.apply not available in IE and will throw an error in 
+    // IE6 by simply reading xhrRequest.open so we must sniff it
+    var supportsApply = !isIE6 &&
+            xhrRequest && 
             xhrRequest.open && 
             typeof xhrRequest.open.apply != "undefined";
     
@@ -388,12 +391,12 @@ var XMLHttpRequestWrapper = function(activeXObject)
                             // if the browser supports apply 
                             function()
                             {
-                                return xhr[name].apply(xhr, arguments)
+                                return xhr[name].apply(xhr, arguments);
                             }
                             :
                             function(a,b,c,d,e)
                             {
-                                return xhr[name](a,b,c,d,e)
+                                return xhr[name](a,b,c,d,e);
                             };
                     
                     })(propName, xhrRequest);
@@ -420,7 +423,7 @@ var isIE6 =  /msie 6/i.test(navigator.appVersion);
 
 if (isIE6)
 {
-    window._ActiveXObject = window.ActiveXObject;
+    _ActiveXObject = window.ActiveXObject;
     
     var xhrObjects = " MSXML2.XMLHTTP.5.0 MSXML2.XMLHTTP.4.0 MSXML2.XMLHTTP.3.0 MSXML2.XMLHTTP Microsoft.XMLHTTP ";
     
@@ -430,7 +433,7 @@ if (isIE6)
         
         try
         {
-            var activeXObject = new window._ActiveXObject(name);
+            var activeXObject = new _ActiveXObject(name);
         }
         catch(e)
         {
@@ -460,7 +463,7 @@ if (!isIE6)
     window.XMLHttpRequest = function()
     {
         return new XMLHttpRequestWrapper();
-    }
+    };
 }
 
 // ************************************************************************************************

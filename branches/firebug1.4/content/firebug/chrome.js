@@ -1,6 +1,6 @@
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns( /**@scope ns-chrome*/ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -91,6 +91,7 @@ var WindowDefaultOptions =
 // ************************************************************************************************
 // FirebugChrome
 
+/**@namespace*/
 FBL.FirebugChrome = 
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -497,6 +498,7 @@ var getChromeTemplate = function(isPopup)
 // ************************************************************************************************
 // Chrome Class
     
+/**@class*/
 var Chrome = function Chrome(chrome)
 {
     var type = chrome.type;
@@ -521,10 +523,16 @@ var Chrome = function Chrome(chrome)
 // ************************************************************************************************
 // ChromeBase
 
+/**
+ * @namespace
+ * @extends FBL.Controller 
+ * @extends FBL.PanelBar 
+ **/
 var ChromeBase = {};
 append(ChromeBase, Controller); 
 append(ChromeBase, PanelBar);
 append(ChromeBase,
+/**@extend ns-chrome-ChromeBase*/
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // inherited properties
@@ -681,6 +689,7 @@ append(ChromeBase,
             
         });
         
+        /**@private*/
         var firebugOptionsMenu =
         {
             id: "fbFirebugOptionsMenu",
@@ -1098,6 +1107,10 @@ append(ChromeBase,
         
         addEvent(Firebug.chrome.document, "keydown", onKeyCodeListen);
 
+        /**
+         * @name keyCodeListen
+         * @memberOf FBL.FirebugChrome
+         */
         Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
         {
             var keyCode = KeyEvent["DOM_VK_"+key];
@@ -1113,6 +1126,10 @@ append(ChromeBase,
             return keyCode;
         };
         
+        /**
+         * @name keyIgnore
+         * @memberOf FBL.FirebugChrome
+         */
         Firebug.chrome.keyIgnore = function(keyCode)
         {
             onKeyCodeListenersMap[keyCode] = null;
@@ -1209,8 +1226,14 @@ append(ChromeBase,
         restoreTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Remove the interface elements cache
+        // shutdown inherited classes
+        Controller.shutdown.call(this);
+        PanelBar.shutdown.call(this);
         
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Remove the interface elements cache (this must happen after calling 
+        // the shutdown method of all dependent components to avoid errors)
+
         fbTop = null;
         fbContent = null;
         fbContentStyle = null;
@@ -1247,12 +1270,6 @@ append(ChromeBase,
         
         topHeight = null;
         topPartialHeight = null;
-        
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // shutdown inherited classes
-        Controller.shutdown.call(this);
-        PanelBar.shutdown.call(this);
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1554,7 +1571,12 @@ append(ChromeBase,
 // ************************************************************************************************
 // ChromeFrameBase
 
+/**
+ * @namespace
+ * @extends ns-chrome-ChromeBase 
+ */ 
 var ChromeFrameBase = extend(ChromeBase,
+/**@extend ns-chrome-ChromeFrameBase*/
 {
     create: function()
     {
@@ -1762,7 +1784,12 @@ var ChromeFrameBase = extend(ChromeBase,
 // ************************************************************************************************
 // ChromeMini
 
-var ChromeMini = extend(Controller, 
+/**
+ * @namespace
+ * @extends FBL.Controller
+ */  
+var ChromeMini = extend(Controller,
+/**@extend ns-chrome-ChromeMini*/ 
 {
     create: function(chrome)
     {
@@ -1860,7 +1887,13 @@ var ChromeMini = extend(Controller,
 // ************************************************************************************************
 // ChromePopupBase
 
-var ChromePopupBase = extend(ChromeBase, {
+/**
+ * @namespace
+ * @extends ns-chrome-ChromeBase
+ */  
+var ChromePopupBase = extend(ChromeBase,
+/**@extend ns-chrome-ChromePopupBase*/
+{
     
     initialize: function()
     {
