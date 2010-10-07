@@ -1,6 +1,6 @@
 /* See license.txt for terms of usage */
 
-FBL.ns( /** @scope ns-firebug */ function() { with (FBL) {
+FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -23,10 +23,6 @@ var parentPanelMap = {};
 // ************************************************************************************************
 // Firebug
 
-/**
- * @namespace describe Firebug
- * @exports window.Firebug as Firebug 
- */
 window.Firebug = FBL.Firebug =  
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -332,8 +328,6 @@ FBL.cacheDocument = function cacheDocument()
 // ************************************************************************************************
 
 /**
- * @class
- *  
  * Support for listeners registration. This object also extended by Firebug.Module so,
  * all modules supports listening automatically. Notice that array of listeners
  * is created for each intance of a module within initialize method. Thus all derived
@@ -373,10 +367,8 @@ Firebug.Listener.prototype =
  * @module Base class for all modules. Every derived module object must be registered using
  * <code>Firebug.registerModule</code> method. There is always one instance of a module object
  * per browser window.
- * @extends Firebug.Listener 
  */
 Firebug.Module = extend(new Firebug.Listener(),
-/** @extend Firebug.Module */
 {
     /**
      * Called when the window is opened.
@@ -452,11 +444,6 @@ Firebug.Module = extend(new Firebug.Listener(),
 // ************************************************************************************************
 // Panel
 
-/**
- * @panel Base class for all panels. Every derived panel must define a constructor and
- * register with "Firebug.registerPanel" method. An instance of the panel
- * object is created by the framework for each browser tab where Firebug is activated.
- */
 Firebug.Panel =
 {
     name: "HelloWorld",
@@ -972,16 +959,13 @@ Firebug.Panel =
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-/**
+/*
  * MeasureBox
  * To get pixels size.width and size.height:
  * <ul><li>     this.startMeasuring(view); </li>
  *     <li>     var size = this.measureText(lineNoCharsSpacer); </li>
  *     <li>     this.stopMeasuring(); </li>
  * </ul>
- *  
- * @namespace
  */
 Firebug.MeasureBox =
 {

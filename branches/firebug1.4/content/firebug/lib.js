@@ -17,12 +17,9 @@
  *  More information: http://sizzlejs.com/
  */
 
-/** @namespace describe lib */ 
 var FBL = {};
 
-/** @name ns @namespace */
-
-( /** @scope ns-lib @this FBL */ function() {
+(function() {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -5342,9 +5339,6 @@ if (typeof KeyEvent == "undefined") {
 // ************************************************************************************************
 // Ajax
 
-/**
- * @namespace
- */
 this.Ajax =
 {
   
@@ -5441,7 +5435,7 @@ this.Ajax =
                     }
                     
             } else 
-                for(var param in data) {
+                for(param in data) {
                     r[rl++] = encodeURIComponent(param); 
                     r[rl++] = "=";
                     r[rl++] = encodeURIComponent(data[param]);

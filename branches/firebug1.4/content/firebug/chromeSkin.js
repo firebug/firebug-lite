@@ -1,6 +1,6 @@
 /* See license.txt for terms of usage */
 
-FBL.ns( /**@scope ns-chromeSkin*/ function() { with (FBL) {
+FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
 FirebugChrome.Skin = 

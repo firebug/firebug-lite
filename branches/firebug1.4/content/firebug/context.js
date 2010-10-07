@@ -1,6 +1,6 @@
 /* See license.txt for terms of usage */
 
-FBL.ns( /**@scope ns-context*/ function() { with (FBL) {
+FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -23,8 +23,7 @@ var offscreenStyle = resetStyle + "top:-1234px; left:-1234px;";
 
 // ************************************************************************************************
 // Context
-
-/** @class */
+  
 FBL.Context = function(win)
 {
     this.window = win.window;
