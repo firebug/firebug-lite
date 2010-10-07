@@ -416,6 +416,7 @@ var findLocation =  function findLocation()
     if (FBL.Env.isChromeExtension)
     {
         path = productionDir;
+        FBL.Env.bookmarkletOutdated = false;
         script = {innerHTML: "{showIconWhenHidden:false}"};
     }
     
