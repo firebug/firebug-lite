@@ -199,7 +199,7 @@ this.initialize = function()
             
         this.chromeExtensionDispatch = function(data)
         {
-            channel.innerText = data
+            channel.innerText = data;
             channel.dispatchEvent(channelEvent);
         };
     }
@@ -536,13 +536,13 @@ var findLocation =  function findLocation()
 this.bind = function()  // fn, thisObject, args => thisObject.fn(args, arguments);
 {
    var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
-   return function() { return fn.apply(object, arrayInsert(cloneArray(args), 0, arguments)); }
+   return function() { return fn.apply(object, arrayInsert(cloneArray(args), 0, arguments)); };
 };
 
 this.bindFixed = function() // fn, thisObject, args => thisObject.fn(args);
 {
     var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
-    return function() { return fn.apply(object, args); }
+    return function() { return fn.apply(object, args); };
 };
 
 this.extend = function(l, r)
@@ -679,7 +679,7 @@ this.createStyleSheet = function(doc, url)
     //TODO: xxxpedro
     //style.innerHTML = this.getResource(url);
     return style;
-}
+};
 
 this.addStyleSheet = function(doc, style)
 {
@@ -854,7 +854,7 @@ function createSimpleEscape(name, direction)
                     return list[ch];
                 }
                );
-    }
+    };
 };
 
 function escapeGroupsForEntities(str, lists)
@@ -1133,7 +1133,7 @@ this.collapse = function(elt, collapsed)
     if (this.isIElt8)
     {
         if (collapsed)
-            this.setClass(elt, "collapsed")
+            this.setClass(elt, "collapsed");
         else
             this.removeClass(elt, "collapsed");
     }
@@ -1229,7 +1229,7 @@ this.getClientOffset = function(elt)
             if (otherView.frameElement)
                 addOffset(otherView.frameElement, coords, otherView);
         }
-    }
+    };
 
     var isIE = this.isIE;
     var coords = {x: 0, y: 0};
@@ -1449,7 +1449,7 @@ this.linesIntoCenterView = function(element, scrollBox)  // {before: int, after:
     }
 
     return {before: Math.round((topSpace/element.offsetHeight) + 0.5),
-            after: Math.round((bottomSpace/element.offsetHeight) + 0.5) }
+            after: Math.round((bottomSpace/element.offsetHeight) + 0.5) };
 };
 
 this.scrollIntoCenterView = function(element, scrollBox, notX, notY)
@@ -1820,7 +1820,7 @@ this.$$ = function(selector, doc)
         return FBL.Firebug.Selector(selector, doc);
     else
     {
-        return FBL.Firebug.Selector(selector, FBL.Firebug.chrome.document)
+        return FBL.Firebug.Selector(selector, FBL.Firebug.chrome.document);
     }
 };
 
@@ -2018,13 +2018,13 @@ this.findPrevious = function(node, criteria, downOnly, maxRoot)
 
 this.getNextByClass = function(root, state)
 {
-    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); }
+    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); };
     return this.findNext(root, iter);
 };
 
 this.getPreviousByClass = function(root, state)
 {
-    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); }
+    var iter = function iter(node) { return node.nodeType == 1 && FBL.hasClass(node, state); };
     return this.findPrevious(root, iter);
 };
 
@@ -2307,7 +2307,7 @@ this.disableTextSelection = function(e)
         
     else // others
     {
-        e.style.cssText = "user-select: none; -khtml-user-select: none; -moz-user-select: none;"
+        e.style.cssText = "user-select: none; -khtml-user-select: none; -moz-user-select: none;";
         
         // canceling the event in FF will prevent the menu popups to close when clicking over 
         // text-disabled elements
@@ -2325,7 +2325,7 @@ this.restoreTextSelection = function(e)
         
     else // others
     {
-        e.style.cssText = "cursor: default;"
+        e.style.cssText = "cursor: default;";
             
         // canceling the event in FF will prevent the menu popups to close when clicking over 
         // text-disabled elements
@@ -2615,7 +2615,7 @@ this.getDataURLForContent = function(content, url)
 {
     // data:text/javascript;fileName=x%2Cy.js;baseLineNumber=10,<the-url-encoded-data>
     var uri = "data:text/html;";
-    uri += "fileName="+encodeURIComponent(url)+ ","
+    uri += "fileName="+encodeURIComponent(url)+ ",";
     uri += encodeURIComponent(content);
     return uri;
 },
@@ -2682,12 +2682,12 @@ this.normalizeURL = function(url)  // this gets called a lot, any performance im
     if (url.length < 255) // guard against monsters.
     {
         // Replace one or more characters that are not forward-slash followed by /.., by space.
-        url = url.replace(/[^/]+\/\.\.\//, "", "g");
+        url = url.replace(/[^\/]+\/\.\.\//, "", "g");
         // Issue 1496, avoid #
         url = url.replace(/#.*/,"");
         // For some reason, JSDS reports file URLs like "file:/" instead of "file:///", so they
         // don't match up with the URLs we get back from the DOM
-        url = url.replace(/file:\/([^/])/g, "file:///$1");
+        url = url.replace(/file:\/([^\/])/g, "file:///$1");
         if (url.indexOf('chrome:')==0)
         {
             var m = reChromeCase.exec(url);  // 1 is package name, 2 is path
@@ -2887,7 +2887,7 @@ this.parseJSONString = function(jsonString, originURL)
         ///jsonObject = Components.utils.evalInSandbox(jsonString, s);
         
         //jsonObject = Firebug.context.eval(jsonString);
-        jsonObject = Firebug.context.evaluate(jsonString, null, null, function(){return null});
+        jsonObject = Firebug.context.evaluate(jsonString, null, null, function(){return null;});
     }
     catch(e)
     {
@@ -3283,7 +3283,7 @@ var getDomMemberMap2 = function(name)
     
     return props;
     return extendArray(props, domMemberMap[name]);
-}
+};
 
 // xxxpedro experimental get DOM members
 this.getDOMMembers = function(object)
@@ -5423,7 +5423,7 @@ this.Ajax =
     {
         var r = [""], rl = 0;
         if (data) {
-            if (typeof data == "string")  r[rl++] = data
+            if (typeof data == "string")  r[rl++] = data;
               
             else if (data.innerHTML && data.elements) {
                 for (var i=0,el,l=(el=data.elements).length; i < l; i++)
@@ -5506,10 +5506,10 @@ this.Ajax =
     {
         var t = this.transport, type = options.dataType;
     
-        if      (t.status != 200) return t.statusText
-        else if (type == "text")  return t.responseText
-        else if (type == "html")  return t.responseText
-        else if (type == "xml")   return t.responseXML
+        if      (t.status != 200) return t.statusText;
+        else if (type == "text")  return t.responseText;
+        else if (type == "html")  return t.responseText;
+        else if (type == "xml")   return t.responseXML;
         else if (type == "json")  return eval("(" + t.responseText + ")");
     },
   

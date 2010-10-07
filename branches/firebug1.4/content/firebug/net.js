@@ -963,7 +963,7 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
             postData.params.push({
                 name: (m && m.length > 1) ? m[1] : "",
                 value: trim(part[1])
-            })
+            });
         }
 
         return postData;
@@ -976,7 +976,7 @@ var NetInfoPostData = Firebug.NetMonitor.NetInfoPostData;
 
 
 // TODO: xxxpedro net i18n
-var $STRP = function(a){return a};
+var $STRP = function(a){return a;};
 
 Firebug.NetMonitor.NetLimit = domplate(Firebug.Rep,
 {
