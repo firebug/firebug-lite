@@ -1,6 +1,6 @@
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns( /**@scope ns-selector*/ function() { with (FBL) {
 // ************************************************************************************************
 
 /*
@@ -25,6 +25,14 @@ var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^
     return 0;
 });
 
+/**
+ * @name Firebug.Selector 
+ * @namespace
+ */
+
+/**
+ * @exports Sizzle as Firebug.Selector
+ */ 
 var Sizzle = function(selector, context, results, seed) {
     results = results || [];
     var origContext = context = context || document;
@@ -274,6 +282,7 @@ Sizzle.filter = function(expr, set, inplace, not){
     return curLoop;
 };
 
+/**#@+ @ignore */
 var Expr = Sizzle.selectors = {
     order: [ "ID", "NAME", "TAG" ],
     match: {
@@ -1015,6 +1024,8 @@ var posProcess = function(selector, context){
 // EXPOSE
 
 Firebug.Selector = Sizzle;
+
+/**#@-*/
 
 // ************************************************************************************************
 }});
