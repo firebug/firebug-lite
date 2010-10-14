@@ -65,7 +65,9 @@ var XMLHttpRequestWrapper = function(activeXObject)
     var updateSelfPropertiesIgnore = {
         abort: 1,
         channel: 1,
+        getAllResponseHeaders: 1,
         getInterface: 1,
+        getResponseHeader: 1,
         mozBackgroundRequest: 1,
         multipart: 1,
         onreadystatechange: 1,
@@ -111,11 +113,11 @@ var XMLHttpRequestWrapper = function(activeXObject)
     {
         for (var propName in self)
         {
+            if (propName in updateXHRPropertiesIgnore)
+                continue;
+            
             try
             {
-                if (propName in updateXHRPropertiesIgnore)
-                    continue;
-            
                 var propValue = self[propName];
                 
                 if (propValue && !xhrRequest[propName])
@@ -187,7 +189,10 @@ var XMLHttpRequestWrapper = function(activeXObject)
             
         with({
             row: spy.logRow, 
-            status: xhrRequest.status + " " + xhrRequest.statusText, 
+            status: xhrRequest.status == 0 ? 
+                        // if xhrRequest.status == 0 then accessing xhrRequest.statusText
+                        // will cause an error, so we must handle this case (Issue 3504)
+                        "" : xhrRequest.status + " " + xhrRequest.statusText, 
             time: duration,
             success: success
         })
@@ -221,7 +226,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
     
     var handleStateChange = function()
     {
-        //Firebug.Console.log("onreadystatechange");
+        //Firebug.Console.log(["onreadystatechange", xhrRequest.readyState, xhrRequest.readyState == 4 && xhrRequest.status]);
         
         self.readyState = xhrRequest.readyState;
         
@@ -285,11 +290,17 @@ var XMLHttpRequestWrapper = function(activeXObject)
         if (!FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
         
-        // xhrRequest.open.apply not available in IE
-        if (supportsApply)
-            xhrRequest.open.apply(xhrRequest, arguments);
-        else
-            xhrRequest.open(method, url, async, user, password);
+        try
+        {
+            // xhrRequest.open.apply may not be available in IE
+            if (supportsApply)
+                xhrRequest.open.apply(xhrRequest, arguments);
+            else
+                xhrRequest.open(method, url, async, user, password);
+        }
+        catch(e)
+        {
+        }
         
         if (FBL.isIE && async)
             xhrRequest.onreadystatechange = handleStateChange;
@@ -348,7 +359,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
     };
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    /*
+    
     this.getResponseHeader = function(header)
     {
         return xhrRequest.getResponseHeader(header);
