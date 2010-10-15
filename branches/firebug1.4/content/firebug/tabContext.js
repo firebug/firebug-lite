@@ -5,12 +5,12 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Constants
 
-const throttleTimeWindow = 200;
-const throttleMessageLimit = 30;
-const throttleInterval = 30;
-const throttleFlushCount = 20;
+var throttleTimeWindow = 200;
+var throttleMessageLimit = 30;
+var throttleInterval = 30;
+var throttleFlushCount = 20;
 
-const refreshDelay = 300;
+var refreshDelay = 300;
 
 // ************************************************************************************************
 
@@ -20,7 +20,8 @@ Firebug.TabContext = function(win, browser, chrome, persistedState)
     this.browser = browser;
     this.persistedState = persistedState;
 
-    browser.__defineGetter__("chrome", function() { return Firebug.chrome; }); // backward compat
+    /// TODO: xxxpedro context
+    ///browser.__defineGetter__("chrome", function() { return Firebug.chrome; }); // backward compat
 
     this.name = normalizeURL(this.getWindowLocation().toString());
 
@@ -33,10 +34,12 @@ Firebug.TabContext = function(win, browser, chrome, persistedState)
     // to re-implement source-cache so, it solves the double-load problem.
     // Anyway, keep the previous cache implementation for backward compatibility
     // (with Firefox 3.0.3 and lower)
-    if (Components.interfaces.nsITraceableChannel)
-        this.sourceCache = new Firebug.TabCache(this);
-    else
-        this.sourceCache = new Firebug.SourceCache(this);
+    
+    /// TODO: xxxpedro context cache tabcache
+    ///if (Components.interfaces.nsITraceableChannel)
+    ///    this.sourceCache = new Firebug.TabCache(this);
+    ///else
+    ///    this.sourceCache = new Firebug.SourceCache(this);
 
     this.global = win;  // used by chromebug
 };
@@ -103,11 +106,12 @@ Firebug.TabContext.prototype =
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-    get chrome()  // backward compat
-    {
-        return Firebug.chrome;
-    },
-
+    /// TODO: xxxpedro context
+    ///get chrome()  // backward compat
+    ///{
+    ///    return Firebug.chrome;
+    ///},
+    
     reattach: function(oldChrome, newChrome)
     {
         for (var panelName in this.panelMap)

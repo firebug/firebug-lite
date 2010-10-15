@@ -34,6 +34,12 @@ window.FBDev =
         "firebug/chrome.js",
         "firebug/chromeSkin.js",
         
+    	// firebug1.4 experimental
+        //"firebug/chrome2.js",
+        "firebug/tabContext.js",
+        //"firebug/tabWatcher.js",
+        
+        
         // ****************************************************************************************
         // Application Classes
         
