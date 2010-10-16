@@ -4,7 +4,7 @@
 // ************************************************************************************************
 
 // ************************************************************************************************
-    
+
 var bookmarkletMode = true;
 
 var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // stable
@@ -37,7 +37,7 @@ window.FBDev =
     	// firebug1.4 experimental
         //"firebug/chrome2.js",
         "firebug/tabContext.js",
-        //"firebug/tabWatcher.js",
+        "firebug/tabWatcher.js",
         
         
         // ****************************************************************************************
@@ -72,11 +72,11 @@ window.FBDev =
         // ****************************************************************************************
         // Application Modules/Panels
         
-        //"firebug/html.js",
+        "firebug/html.js",
         
-        "firebug/insideOutBox.js", // HTML experimental        
-        "firebug/lib/htmlLib.js", // HTML experimental
-        "firebug/html3.js", // HTML experimental
+        //"firebug/insideOutBox.js", // HTML experimental        
+        //"firebug/lib/htmlLib.js", // HTML experimental
+        //"firebug/html3.js", // HTML experimental
         //"firebug/html2.js", // HTML experimental
         
         "firebug/infotip.js", // experimental

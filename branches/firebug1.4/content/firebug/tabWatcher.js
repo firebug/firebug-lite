@@ -5,33 +5,35 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Constants
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
-const nsIWebNavigation = Ci.nsIWebNavigation;
-const nsIWebProgressListener = Ci.nsIWebProgressListener;
-const nsIWebProgress = Ci.nsIWebProgress;
-const nsISupportsWeakReference = Ci.nsISupportsWeakReference;
-const nsISupports = Ci.nsISupports;
-const nsIURI = Ci.nsIURI;
+///const Cc = Components.classes;
+///const Ci = Components.interfaces;
+///const nsIWebNavigation = Ci.nsIWebNavigation;
+///const nsIWebProgressListener = Ci.nsIWebProgressListener;
+///const nsIWebProgress = Ci.nsIWebProgress;
+///const nsISupportsWeakReference = Ci.nsISupportsWeakReference;
+///const nsISupports = Ci.nsISupports;
+///const nsIURI = Ci.nsIURI;
 
-const NOTIFY_STATE_DOCUMENT = nsIWebProgress.NOTIFY_STATE_DOCUMENT;
+///const NOTIFY_STATE_DOCUMENT = nsIWebProgress.NOTIFY_STATE_DOCUMENT;
 
-const STATE_IS_WINDOW = nsIWebProgressListener.STATE_IS_WINDOW;
-const STATE_IS_DOCUMENT = nsIWebProgressListener.STATE_IS_DOCUMENT;
-const STATE_IS_REQUEST = nsIWebProgressListener.STATE_IS_REQUEST;
+///const STATE_IS_WINDOW = nsIWebProgressListener.STATE_IS_WINDOW;
+///const STATE_IS_DOCUMENT = nsIWebProgressListener.STATE_IS_DOCUMENT;
+///const STATE_IS_REQUEST = nsIWebProgressListener.STATE_IS_REQUEST;
 
-const STATE_START = nsIWebProgressListener.STATE_START;
-const STATE_STOP = nsIWebProgressListener.STATE_STOP;
-const STATE_TRANSFERRING = nsIWebProgressListener.STATE_TRANSFERRING;
+///const STATE_START = nsIWebProgressListener.STATE_START;
+///const STATE_STOP = nsIWebProgressListener.STATE_STOP;
+///const STATE_TRANSFERRING = nsIWebProgressListener.STATE_TRANSFERRING;
 
-const STOP_ALL = nsIWebNavigation.STOP_ALL;
+///const STOP_ALL = nsIWebNavigation.STOP_ALL;
 
-const dummyURI = "about:layout-dummy-request";
-const aboutBlank = "about:blank";
+var dummyURI = "about:layout-dummy-request";
+var aboutBlank = "about:blank";
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-const tabBrowser = $("content");
+/// TODO: xxxpedro tabWatcher - tabBrowser is a XUL element (where the "tabs" resides)
+var tabBrowser = null;
+///var tabBrowser = $("content");
 
 // ************************************************************************************************
 // Globals
@@ -53,8 +55,9 @@ top.TabWatcher = extend(new Firebug.Listener(),
         if (FBTrace.DBG_INITIALIZE)
             FBTrace.sysout("-> tabWatcher initialize "+tabBrowser);
 
-        if (tabBrowser)
-            tabBrowser.addProgressListener(TabProgressListener, NOTIFY_STATE_DOCUMENT);
+        /// TODO: xxxpedro tabWatcher - tabBrowser is a XUL element
+        ///if (tabBrowser)
+        ///    tabBrowser.addProgressListener(TabProgressListener, NOTIFY_STATE_DOCUMENT);
 
         httpObserver.addObserver(TabWatcherHttpObserver, "firebug-http-event", false);
     },
@@ -68,6 +71,8 @@ top.TabWatcher = extend(new Firebug.Listener(),
 
         httpObserver.removeObserver(TabWatcherHttpObserver, "firebug-http-event");
 
+        /// TODO: xxxpedro tabWatcher - tabBrowser is a XUL element
+        /*
         if (tabBrowser)
         {
             tabBrowser.removeProgressListener(TabProgressListener);
@@ -79,6 +84,7 @@ top.TabWatcher = extend(new Firebug.Listener(),
                 this.unwatchTopWindow(browser.contentWindow);
             }
         }
+        /**/
 
         if (Firebug.TraceModule)
             Firebug.TraceModule.removeListener(TraceListener);
@@ -582,7 +588,7 @@ top.TabWatcher = extend(new Firebug.Listener(),
             if (rc)
                 return rc;
         }
-    },
+    }
 });
 
 // ************************************************************************************************
@@ -649,6 +655,8 @@ var TabWatcherUnloader =
 
 // ************************************************************************************************
 
+/// TODO: xxxpedro tabWatcher - tabBrowser is a XUL element 
+/*
 var TabProgressListener = extend(BaseProgressListener,
 {
     onLocationChange: function(progress, request, uri)
@@ -693,9 +701,12 @@ var TabProgressListener = extend(BaseProgressListener,
         }
     }
 });
+/**/
 
 // ************************************************************************************************
 
+/// TODO: xxxpedro tabWatcher - BaseProgressListener relies on XPCOM component 
+/*
 var FrameProgressListener = extend(BaseProgressListener,
 {
     onStateChange: function(progress, request, flag, status)
@@ -760,6 +771,7 @@ function registerFrameListener(browser)
             safeGetWindowLocation(win)+", tab: "+Firebug.getTabIdForWindow(win)+"\n");
     }
 }
+/**/
 
 function getRefererHeader(request)
 {
