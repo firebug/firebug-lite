@@ -3101,9 +3101,13 @@ this.instanceOf = function(object, className)
         // find the correct window of the object
         var win = object.ownerDocument.defaultView || object.ownerDocument.parentWindow;
         
-        // if the class is acessible in the window, uses the native instanceof operator
-        if (className in win)
-            return object instanceof win[className];
+        // if the class is accessible in the window, uses the native instanceof operator
+        // if the instanceof evaluates to "true" we can assume it is a instance, but if it
+        // evaluates to "false" we must continue with the duck type detection below because
+        // the native object may be extended, thus breaking the instanceof result 
+        // See Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
+        if (className in win && object instanceof win[className])
+            return true;
     }
     // If the object doesn't have the ownerDocument property, we'll try to look at
     // the current context's window
@@ -3117,10 +3121,12 @@ this.instanceOf = function(object, className)
             return object instanceof win[className];
     }
     
+    // get the duck type model from the cache 
     var cache = instanceCheckMap[className];
     if (!cache)
         return false;
 
+    // starts the hacky duck type detection
     for(var n in cache)
     {
         var obj = cache[n];
@@ -3129,6 +3135,11 @@ this.instanceOf = function(object, className)
         
         for(var name in obj)
         {
+            // avoid problems with extended native objects
+            // See Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
+            if (!obj.hasOwnProperty(name))
+                continue;
+            
             var value = obj[name];
             
             if( n == "property" && !(value in object) ||
