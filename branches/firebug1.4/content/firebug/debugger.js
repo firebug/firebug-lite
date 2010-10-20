@@ -2065,7 +2065,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
     initialize: function()
     {
         Firebug.clientID = this.registerClient(Firebug);
-        this.nsICryptoHash = Components.interfaces["nsICryptoHash"];
+        ///this.nsICryptoHash = Components.interfaces["nsICryptoHash"];
 
         this.debuggerName =  window.location.href +"-@-"+FBL.getUniqueId();
         this.toString = function() { return this.debuggerName; };
@@ -2642,6 +2642,8 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
     	this.context = Firebug.browser;
     	
     	Firebug.SourceBoxPanel.create.apply(this, arguments);
+    	
+    	this.panelNode.innerHTML = "... under construction ...";
     },
     
     initialize: function(context, doc)
