@@ -9,25 +9,25 @@ var Firebug = null;
 // ************************************************************************************************
 // Constants
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
-const nsIWebNavigation = Ci.nsIWebNavigation;
+///const Cc = Components.classes;
+///const Ci = Components.interfaces;
+///const nsIWebNavigation = Ci.nsIWebNavigation;
 
-const observerService = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
-const wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+///const observerService = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+///const wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
 
-const LOAD_FLAGS_BYPASS_PROXY = nsIWebNavigation.LOAD_FLAGS_BYPASS_PROXY;
-const LOAD_FLAGS_BYPASS_CACHE = nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE;
-const LOAD_FLAGS_NONE = nsIWebNavigation.LOAD_FLAGS_NONE;
+///const LOAD_FLAGS_BYPASS_PROXY = nsIWebNavigation.LOAD_FLAGS_BYPASS_PROXY;
+///const LOAD_FLAGS_BYPASS_CACHE = nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE;
+///const LOAD_FLAGS_NONE = nsIWebNavigation.LOAD_FLAGS_NONE;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-const panelURL = "chrome://firebug/content/panel.html";
+///const panelURL = "chrome://firebug/content/panel.html";
 
-const statusCropSize = 20;
+var statusCropSize = 20;
 
-const positiveZoomFactors = [1, 1.1, 1.2, 1.3, 1.5, 2, 3];
-const negativeZoomFactors = [1, 0.95, 0.8, 0.7, 0.5, 0.2, 0.1];
+var positiveZoomFactors = [1, 1.1, 1.2, 1.3, 1.5, 2, 3];
+var negativeZoomFactors = [1, 0.95, 0.8, 0.7, 0.5, 0.2, 0.1];
 
 // ************************************************************************************************
 // Globals
@@ -660,7 +660,7 @@ top.FirebugChrome =
         return function getSelectedPanelFromCurrentContext()
         {
             return Firebug.chrome.getSelectedPanel();  // panels provide location, use the selected panel
-        }
+        };
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -680,10 +680,10 @@ top.FirebugChrome =
     hidePanel: function()
     {
         if (panelBar1.selectedPanel)
-            panelBar1.hideSelectedPanel()
+            panelBar1.hideSelectedPanel();
 
         if (panelBar2.selectedPanel)
-            panelBar2.hideSelectedPanel()
+            panelBar2.hideSelectedPanel();
     },
 
     syncPanel: function(panelName)
@@ -1352,7 +1352,7 @@ top.FirebugChrome =
 
         if (panel && panel.breakable)
             Firebug.Breakpoint.toggleBreakOnNext(panel);
-    },
+    }
 };
 
 // ************************************************************************************************
@@ -1398,7 +1398,7 @@ var FirstRunPage =
             }
         }, 500);
     }
-}
+};
 
 // ************************************************************************************************
 // Local Helpers
@@ -1409,7 +1409,7 @@ function panelSupportsObject(panelType, object, context)
     {
         try {
             // This tends to throw exceptions often because some objects are weird
-            return panelType.prototype.supportsObject(object, typeof object, context)
+            return panelType.prototype.supportsObject(object, typeof object, context);
         } catch (exc) {}
     }
 
@@ -1713,7 +1713,7 @@ function cloneArray(array, fn)
 function bindFixed()
 {
     var args = cloneArray(arguments), fn = args.shift(), object = args.shift();
-    return function() { return fn.apply(object, args); }
+    return function() { return fn.apply(object, args); };
 }
 
 })();
@@ -1735,7 +1735,7 @@ if (top.hasOwnProperty('TidyBrowser'))
         {
             prev.apply(self, args);
         });
-    }
+    };
 }
 
 // ************************************************************************************************
