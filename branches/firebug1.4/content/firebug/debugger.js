@@ -5,42 +5,59 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Constants
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
-const jsdIScript = Ci.jsdIScript;
-const jsdIStackFrame = Ci.jsdIStackFrame;
-const jsdIExecutionHook = Ci.jsdIExecutionHook;
-const nsISupports = Ci.nsISupports;
-const nsICryptoHash = Ci.nsICryptoHash;
-const nsIURI = Ci.nsIURI;
+///const Cc = Components.classes;
+///const Ci = Components.interfaces;
+///const jsdIScript = Ci.jsdIScript;
+///const jsdIStackFrame = Ci.jsdIStackFrame;
+///const jsdIExecutionHook = Ci.jsdIExecutionHook;
+///const nsISupports = Ci.nsISupports;
+///const nsICryptoHash = Ci.nsICryptoHash;
+///const nsIURI = Ci.nsIURI;
 
-const PCMAP_SOURCETEXT = jsdIScript.PCMAP_SOURCETEXT;
-const PCMAP_PRETTYPRINT = jsdIScript.PCMAP_PRETTYPRINT;
+///const PCMAP_SOURCETEXT = jsdIScript.PCMAP_SOURCETEXT;
+///const PCMAP_PRETTYPRINT = jsdIScript.PCMAP_PRETTYPRINT;
 
-const RETURN_VALUE = jsdIExecutionHook.RETURN_RET_WITH_VAL;
-const RETURN_THROW_WITH_VAL = jsdIExecutionHook.RETURN_THROW_WITH_VAL;
-const RETURN_CONTINUE = jsdIExecutionHook.RETURN_CONTINUE;
-const RETURN_CONTINUE_THROW = jsdIExecutionHook.RETURN_CONTINUE_THROW;
-const RETURN_ABORT = jsdIExecutionHook.RETURN_ABORT;
-const RETURN_HOOK_ERROR = jsdIExecutionHook.RETURN_HOOK_ERROR;
+///const RETURN_VALUE = jsdIExecutionHook.RETURN_RET_WITH_VAL;
+///const RETURN_THROW_WITH_VAL = jsdIExecutionHook.RETURN_THROW_WITH_VAL;
+///const RETURN_CONTINUE = jsdIExecutionHook.RETURN_CONTINUE;
+///const RETURN_CONTINUE_THROW = jsdIExecutionHook.RETURN_CONTINUE_THROW;
+///const RETURN_ABORT = jsdIExecutionHook.RETURN_ABORT;
+///const RETURN_HOOK_ERROR = jsdIExecutionHook.RETURN_HOOK_ERROR;
 
-const TYPE_THROW = jsdIExecutionHook.TYPE_THROW;
-const TYPE_DEBUGGER_KEYWORD = jsdIExecutionHook.TYPE_DEBUGGER_KEYWORD;
+///const TYPE_THROW = jsdIExecutionHook.TYPE_THROW;
+///const TYPE_DEBUGGER_KEYWORD = jsdIExecutionHook.TYPE_DEBUGGER_KEYWORD;
 
-const STEP_OVER = 1;
-const STEP_INTO = 2;
-const STEP_OUT = 3;
+	
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// TODO: xxxpedro debugger hack
+var fbs = {
+	registerClient: function(){},
+	unregisterClient: function(){},
+	unregisterDebugger: function(){}
+};
+
+FBL.getUniqueId = function(){};
+FBL.persistObjects = function(){};
+FBL.sourceFilesAsArray = function(){return [];};
+
+Firebug.ActivableModule.isAlwaysEnabled = function(){return true;};
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+var STEP_OVER = 1;
+var STEP_INTO = 2;
+var STEP_OUT = 3;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-const tooltipTimeout = 300;
+var tooltipTimeout = 300;
 
-const reLineNumber = /^[^\\]?#(\d*)$/;
+var reLineNumber = /^[^\\]?#(\d*)$/;
 
-const reEval =  /\s*eval\s*\(([^)]*)\)/m;        // eval ( $1 )
-const reHTM = /\.[hH][tT][mM]/;
-const reFunction = /\s*Function\s*\(([^)]*)\)/m;
-const reTooMuchRecursion = /too\smuch\srecursion/;
+var reEval =  /\s*eval\s*\(([^)]*)\)/m;        // eval ( $1 )
+var reHTM = /\.[hH][tT][mM]/;
+var reFunction = /\s*Function\s*\(([^)]*)\)/m;
+var reTooMuchRecursion = /too\smuch\srecursion/;
 
 // ************************************************************************************************
 
@@ -343,10 +360,10 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
             {
                 var str = "if (!window._firebug)window._firebug={};\n";
                 str += "window._firebug.rerunThis = this;\n";
-                str += "window._firebug.rerunArgs = [];\n"
-                str += "if (arguments && arguments.length) for (var i = 0; i < arguments.length; i++) window._firebug.rerunArgs.push(arguments[i]);\n"
-                str += "window._firebug.rerunFunctionName = "+fnName+";\n"
-                str +="window._firebug.rerunFunction = function _firebugRerun() { "+fnName+".apply(window._firebug.rerunThis, window._firebug.rerunArgs); }"
+                str += "window._firebug.rerunArgs = [];\n";
+                str += "if (arguments && arguments.length) for (var i = 0; i < arguments.length; i++) window._firebug.rerunArgs.push(arguments[i]);\n";
+                str += "window._firebug.rerunFunctionName = "+fnName+";\n";
+                str +="window._firebug.rerunFunction = function _firebugRerun() { "+fnName+".apply(window._firebug.rerunThis, window._firebug.rerunArgs); }";
                 return str;
             }
 
@@ -615,7 +632,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
                 okAction: function justGo()
                 {
                     Firebug.Debugger.resume(context);
-                },
+                }
         };
     },
 
@@ -1178,7 +1195,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
                 okAction: function justGo()
                 {
                     Firebug.Debugger.resume(context);
-                },
+                }
         };
     },
 
@@ -1337,7 +1354,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
                         okAction: function justGo()
                         {
                             Firebug.Debugger.resume(context);
-                        },
+                        }
                     };
                 }
             }
@@ -1851,7 +1868,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
     {
         var url = null;
         // Ignores any trailing whitespace in |source|
-        const reURIinComment = /\/\/@\ssourceURL=\s*(\S*?)\s*$/m;
+        var reURIinComment = /\/\/@\ssourceURL=\s*(\S*?)\s*$/m;
         var m = reURIinComment.exec(lines[lines.length - 1]);
         if (m)
         {
@@ -2051,14 +2068,14 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
         this.nsICryptoHash = Components.interfaces["nsICryptoHash"];
 
         this.debuggerName =  window.location.href +"-@-"+FBL.getUniqueId();
-        this.toString = function() { return this.debuggerName; }
+        this.toString = function() { return this.debuggerName; };
         if (FBTrace.DBG_INITIALIZE)
             FBTrace.sysout("debugger.initialize "+ this.debuggerName);
 
-        this.hash_service = CCSV("@mozilla.org/security/hash;1", "nsICryptoHash");
+        ///this.hash_service = CCSV("@mozilla.org/security/hash;1", "nsICryptoHash");
 
-        $("cmd_breakOnErrors").setAttribute("checked", Firebug.breakOnErrors);
-        $("cmd_decompileEvals").setAttribute("checked", Firebug.decompileEvals);
+        ///$("cmd_breakOnErrors").setAttribute("checked", Firebug.breakOnErrors);
+        ///$("cmd_decompileEvals").setAttribute("checked", Firebug.decompileEvals);
 
         this.wrappedJSObject = this;  // how we communicate with fbs
 
@@ -2067,7 +2084,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
         Firebug.broadcast = function encapsulateFBSBroadcast(message, args)
         {
             fbs.broadcast(message, args);
-        }
+        };
 
         this.onFunctionCall = bind(this.onFunctionCall, this);
 
@@ -2325,7 +2342,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
     onObserverChange: function(observer)
     {
         if (this.hasObservers())
-            this.activateDebugger()
+            this.activateDebugger();
         else
             this.deactivateDebugger();
     },
@@ -2466,7 +2483,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
         static: $STR("ScriptsFilterStatic"),
         evals: $STR("ScriptsFilterEval"),
         events: $STR("ScriptsFilterEvent"),
-        all: $STR("ScriptsFilterAll"),
+        all: $STR("ScriptsFilterAll")
     },
 
     menuShortLabel:
@@ -2474,7 +2491,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
         static: $STR("ScriptsFilterStaticShort"),
         evals: $STR("ScriptsFilterEvalShort"),
         events: $STR("ScriptsFilterEventShort"),
-        all: $STR("ScriptsFilterAllShort"),
+        all: $STR("ScriptsFilterAllShort")
     },
 
     onScriptFilterMenuPopupShowing: function(menu, context)
@@ -2517,7 +2534,7 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
         this.filterButton.setAttribute("value", value);
         if (FBTrace.DBG_OPTIONS)
             FBTrace.sysout("debugger.filterMenuUpdate value: "+value+" label:"+this.filterButton.label+'\n');
-    },
+    }
 });
 
 // ************************************************************************************************
@@ -2533,7 +2550,7 @@ Firebug.ScriptPanel.decorator = extend(new Firebug.SourceBoxDecorator,
     decorate: function(sourceBox, sourceFile)
     {
         this.markExecutableLines(sourceBox);
-        this.setLineBreakpoints(sourceBox.repObject, sourceBox)
+        this.setLineBreakpoints(sourceBox.repObject, sourceBox);
     },
 
     markExecutableLines: function(sourceBox)
@@ -2587,7 +2604,7 @@ Firebug.ScriptPanel.decorator = extend(new Firebug.SourceBoxDecorator,
             if (FBTrace.DBG_LINETABLE)
                 FBTrace.sysout("debugger.setLineBreakpoints found "+scriptRow+" for "+line+"@"+sourceFile.href+"\n");
         }});
-    },
+    }
 });
 
 // ************************************************************************************************
@@ -2620,6 +2637,13 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         return Firebug.ScriptPanel.decorator;
     },
 
+    create: function()
+    {
+    	this.context = Firebug.browser;
+    	
+    	Firebug.SourceBoxPanel.create.apply(this, arguments);
+    },
+    
     initialize: function(context, doc)
     {
         this.location = null;
@@ -2719,7 +2743,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         if (!sourceFile)
         {
             if (FBTrace.DBG_STACK) FBTrace.sysout("showStackFrame no sourceFile in context "+this.context.getName()+"for frame.script: "+frame.script.fileName);
-            this.showNoStackFrame()
+            this.showNoStackFrame();
             return;
         }
 
@@ -2961,7 +2985,9 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // extends Panel
 
-    name: "script",
+    name: "script2",
+    title: "New Script",
+    
     searchable: true,
     breakable: true,
     enableA11y: true,
@@ -2986,7 +3012,8 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         delete this.selection; // We want the location (sourcefile) to persist, not the selection (eg stackFrame).
         persistObjects(this, state);
 
-        state.location = this.location;
+        /// TODO: xxxpedro debugger persists
+        ///state.location = this.location;
 
         var sourceBox = this.selectedSourceBox;
         if (sourceBox)
@@ -3032,7 +3059,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
     {
         this.tooltip = this.document.createElement("div");
         setClass(this.tooltip, "scriptTooltip");
-        this.tooltip.setAttribute('aria-live', 'polite')
+        this.tooltip.setAttribute('aria-live', 'polite');
         obscure(this.tooltip, true);
         this.panelNode.appendChild(this.tooltip);
 
@@ -3090,7 +3117,8 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         return true;
     },
 
-    show: function(state)
+    /// TODO: xxxpedro debugger 
+    ishow: function(state)
     {
         var enabled = Firebug.Debugger.isAlwaysEnabled();
 
@@ -3149,7 +3177,8 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         this.sidePanelDeck.collapsed = !active;
     },
 
-    hide: function(state)
+    /// TODO: xxxpedro debugger 
+    ihide: function(state)
     {
         this.highlight(this.context.stopped);
 
@@ -3178,7 +3207,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
             var lineNo = parseInt(m[1]);
             if (!isNaN(lineNo) && (lineNo > 0) && (lineNo < sourceBox.lines.length) )
             {
-                this.scrollToLine(sourceBox.repObject.href, lineNo,  this.jumpHighlightFactory(lineNo, this.context))
+                this.scrollToLine(sourceBox.repObject.href, lineNo,  this.jumpHighlightFactory(lineNo, this.context));
                 return true;
             }
         }
@@ -3741,7 +3770,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
             Firebug.Debugger.addObserver(this);
         else
             Firebug.Debugger.removeObserver(this);
-    },
+    }
 });
 
 // ************************************************************************************************
@@ -3812,7 +3841,7 @@ Firebug.ScriptPanel.WarningRep = domplate(Firebug.Rep,
         var args = {
             pageTitle: $STR("script.warning.javascript_not_enabled"),
             suggestion: $STR("script.suggestion.javascript_not_enabled")
-        }
+        };
 
         var box = this.tag.replace(args, parentNode, this);
         this.enableScriptTag.append({}, box, this);
@@ -3834,7 +3863,7 @@ Firebug.ScriptPanel.WarningRep = domplate(Firebug.Rep,
         var args = {
             pageTitle: $STR("script.warning.no_javascript"),
             suggestion: $STR("script.suggestion.no_javascript")
-        }
+        };
         return this.tag.replace(args, parentNode, this);
     },
 
@@ -3843,7 +3872,7 @@ Firebug.ScriptPanel.WarningRep = domplate(Firebug.Rep,
         var args = {
             pageTitle: $STR("script.warning.debugger_active"),
             suggestion: $STR("script.suggestion.debugger_active")
-        }
+        };
 
         var box = this.tag.replace(args, parentNode, this);
         this.focusDebuggerTag.append({}, box, this);
@@ -3864,7 +3893,7 @@ Firebug.Debugger.Breakpoint = function(name, href, lineNumber, checked, sourceLi
     this.checked = checked;
     this.sourceLine = sourceLine;
     this.isFuture = isFuture;
-}
+};
 
 // ************************************************************************************************
 
@@ -3927,7 +3956,7 @@ Firebug.DebuggerListener =
 
     onFunctionConstructor: function(context, frame, ctor_script, url, sourceFile)
     {
-    },
+    }
 };
 
 // ************************************************************************************************
@@ -4027,11 +4056,11 @@ function ArrayEnumerator(array)
     this.hasMoreElements = function()
     {
         return (this.index < array.length);
-    }
+    };
     this.getNext = function()
     {
         return this.array[++this.index];
-    }
+    };
 }
 
 // ************************************************************************************************
