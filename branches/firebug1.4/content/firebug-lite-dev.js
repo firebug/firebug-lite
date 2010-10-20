@@ -83,6 +83,12 @@ window.FBDev =
         
         "firebug/css.js",
         "firebug/script.js",
+        
+        
+        "firebug/sourceBox.js", // experimental
+        "firebug/debugger.js", // experimental
+        
+        
         "firebug/dom.js",
         
         //"firebug/helloWorld.js",
