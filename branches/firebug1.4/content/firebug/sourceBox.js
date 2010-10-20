@@ -2,6 +2,13 @@
 
 FBL.ns(function() { with (FBL) {
 
+
+/// TODO: xxxpedro port to Firebug Lite
+Firebug.ActivableModule = Firebug.Module;
+Firebug.registerActivableModule = Firebug.registerModule;
+Firebug.ActivablePanel = Firebug.Panel;
+
+
 // ************************************************************************************************
 
 /**
@@ -9,7 +16,7 @@ FBL.ns(function() { with (FBL) {
  * Decorators are passed the source box on construction, called to create the HTML,
  * and called whenever the user scrolls the view.
  */
-Firebug.SourceBoxDecorator = function(sourceBox){}
+Firebug.SourceBoxDecorator = function(sourceBox){};
 
 Firebug.SourceBoxDecorator.sourceBoxCounter = 0;
 
@@ -61,8 +68,8 @@ Firebug.SourceBoxDecorator.prototype =
     getLineId: function(sourceBox, lineNo)
     {
         return 'sb' + sourceBox.uniqueId + '-L' + lineNo;
-    },
-}
+    }
+};
 
 // ************************************************************************************************
 
@@ -452,7 +459,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         if (this.context.scrollTimeout)
         {
             this.context.clearTimeout(this.context.scrollTimeout);
-            delete this.context.scrollTimeout
+            delete this.context.scrollTimeout;
         }
 
         if (href)
@@ -535,7 +542,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
             }
 
             return false; // not sticky
-        }
+        };
     },
 
     /*
