@@ -1562,7 +1562,9 @@ this.isColorKeyword = function(keyword)
             cssColorNames.push(systemColors[i].toLowerCase());
     }
 
-    return cssColorNames.indexOf(keyword.toLowerCase()) != -1;
+    return cssColorNames.indexOf ? // Array.indexOf is not available in IE
+            cssColorNames.indexOf(keyword.toLowerCase()) != -1 :
+            (" " + cssColorNames.join(" ") + " ").indexOf(" " + keyword.toLowerCase() + " ") != -1;
 };
 
 this.isImageRule = function(rule)
@@ -1580,7 +1582,9 @@ this.isImageRule = function(rule)
         }
     }
 
-    return imageRules.indexOf(rule.toLowerCase()) != -1;
+    return imageRules.indexOf ? // Array.indexOf is not available in IE
+            imageRules.indexOf(rule.toLowerCase()) != -1 :
+            (" " + imageRules.join(" ") + " ").indexOf(" " + rule.toLowerCase() + " ") != -1;
 };
 
 this.copyTextStyles = function(fromNode, toNode, style)
