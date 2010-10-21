@@ -795,7 +795,7 @@ append(ChromeBase,
                 Firebug.restorePrefs();
                 
                 if(Firebug.saveCookies)
-                    Firebug.savePrefs()
+                    Firebug.savePrefs();
                 else
                     Firebug.erasePrefs();
                 
@@ -1057,7 +1057,7 @@ append(ChromeBase,
                 // Prevent auto-scroll when middle-clicking a rep object
                 FBL.cancelEvent(event);
             }
-        }
+        };
         
         Firebug.getElementPanel = function(element)
         {
@@ -1103,7 +1103,7 @@ append(ChromeBase,
                     }
                 }
             }
-        }
+        };
         
         addEvent(Firebug.chrome.document, "keydown", onKeyCodeListen);
 
@@ -1402,7 +1402,7 @@ append(ChromeBase,
         {
             sideWidthValue = Math.max(sideWidthValue - 6, 0);
             
-            var sideWidth = sideWidthValue + "px"
+            var sideWidth = sideWidthValue + "px";
             
             fbPanelBox2Style.width = sideWidth;
             
@@ -1899,7 +1899,7 @@ var ChromePopupBase = extend(ChromeBase,
     {
         setClass(this.document.body, "FirebugPopup");
         
-        ChromeBase.initialize.call(this)
+        ChromeBase.initialize.call(this);
         
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
@@ -1980,7 +1980,7 @@ var ChromePopupBase = extend(ChromeBase,
                         var persistDelay = new Date().getTime() - persistTimeStart;
                 
                         var chrome = Firebug.chrome;
-                        addEvent(Firebug.browser.window, "unload", chrome.persist)
+                        addEvent(Firebug.browser.window, "unload", chrome.persist);
                 
                         FBL.cacheDocument();
                         Firebug.Inspector.create();
@@ -2094,8 +2094,8 @@ var onMiniIconClick = function onMiniIconClick(event)
 {
     Firebug.chrome.toggle(false, event.ctrlKey);
     cancelEvent(event, true);
-}
-    
+};
+
 
 // ************************************************************************************************
 // Horizontal Splitter Handling
