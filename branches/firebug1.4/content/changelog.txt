@@ -4,6 +4,7 @@
 
     - Issue 3504: Firebug lite: jQuery.ajax call fails in IE
     - Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
+    - infoTips for CSS properties such as color and image 
 
 
 ###################################################################################################

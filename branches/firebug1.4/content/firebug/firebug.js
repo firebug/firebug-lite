@@ -703,11 +703,24 @@ Firebug.Panel =
         
         // xxxpedro contextMenu
         addEvent(this.containerNode, "contextmenu", this.onContextMenu);
+        
+        
+        /// TODO: xxxpedro infoTip Hack
+        Firebug.chrome.currentPanel = 
+                Firebug.chrome.selectedPanel && Firebug.chrome.selectedPanel.sidePanelBar ?
+                Firebug.chrome.selectedPanel.sidePanelBar.selectedPanel : 
+                Firebug.chrome.selectedPanel;
+        
+        Firebug.showInfoTips = true;
+        Firebug.InfoTip.initializeBrowser(Firebug.chrome);
     },
     
     shutdown: function()
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
+        
+        /// TODO: xxxpedro infoTip Hack
+        Firebug.InfoTip.uninitializeBrowser(Firebug.chrome);
         
         if (Firebug.chrome.largeCommandLineVisible)
             Firebug.chrome.hideLargeCommandLine();

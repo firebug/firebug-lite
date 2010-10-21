@@ -67,12 +67,14 @@
 }
 
 .infoTipImageBox {
+	font-size: 11px;
     min-width: 100px;
     text-align: center;
 }
 
 .infoTipCaption {
-    font: message-box;
+	font-size: 11px;
+    font: Monaco, monospace;
 }
 
 .infoTipLoading > .infoTipImage,
