@@ -37,7 +37,10 @@ debugger.js changes
 ---------------------------------------------------------------------------------------------------
     - const --> var
     - addEventListener --> adEvent
+    - element.getElementsByClassName(name) --> FBL.getElementsByClass(element, name)
     - named functions --> variables
+    - target = event.target || event.srcElement
+    - Array.indexOf --> (" " + str + " ").indexOf trick
 
 
 ---------------------------------------------------------------------------------------------------
@@ -48,8 +51,11 @@ debugger.js Lite's missing pieces
 items to port (low to high-level modules)
 
     - Chrome
+    - browser (XUL-browser[1] abstraction)
+    
     - tabContext
     - tabWatcher
+    
     - sourceBox
     - sourceFile?
     - sourceCache?
@@ -57,20 +63,25 @@ items to port (low to high-level modules)
     - FBL.getUniqueId
     - FBL.persistObjects
     - FBL.sourceFilesAsArray
+    - FBL.appendInnerHTML
     
     - Firebug.registerActivableModule
     - Firebug.ActivableModule
     - Firebug.ActivablePanel
     
-    - infoTip
+    - GUI.ToolButton (panel buttons)
+    - GUI.OptionsMenu (panel options)
+    - GUI.ScrollableMenu (file selection)
+    - GUI.StatusBar (call stack)
     
-    - GUI.ToolButton
-    - GUI.OptionsMenu
-    - GUI.ScrollableMenu
+    - UI tabs on top*
+    - commandLine available at all panels*
 
 ...................................................................................................
 items to change
 
+    - infoTip
+    
     - Panel create/destroy methods
     - Panel initialize/shutdown methods
     - Panel show/hide methods
@@ -82,6 +93,7 @@ items to change
     
     - GUI.Menu
 
+[1] https://developer.mozilla.org/En/XUL/browser
 
 
 ###################################################################################################
@@ -99,51 +111,17 @@ Migration
 ---------------------------------------------------------------------------------------------------
 Organization
 ---------------------------------------------------------------------------------------------------
-    - move reps code to html module
-    
     - stop using old cache system at reps+html
     - remove old cache system from lib
     - move cache system (currently in css2) to lib
     
-    - remove obsolete modules from repository
+ OK - move reps code to html module
+ OK - remove obsolete modules from repository (moved new stuff to 1.4)
             - console
             - chrome.injected
             - css
             - maybe reps
             - maybe html2
-
----------------------------------------------------------------------------------------------------
-New issues
----------------------------------------------------------------------------------------------------
-    - content of "Script" and "Dev" panel does not show in Opera 9 
-      (it does on Opera 10). This is a CSS issue. The following changes
-      in the CSS rules fixes the problem: 
-          - ".sourceBox" to position relative
-          - "div.lineNo" to position absolute
-          
-      Need to investigate if these changes break the layout in other browsers.  
-    
-    - Opera 9 - inline editor does not show (hack is to change its z-index to 9).
-    
-    - Opera 9 and 10 - should ignore the tab event properly in the inline editor
-    
-    - editor.updateLayout() in IE, when element has a "auto" margin
-    
-    - missing firebuglite property in the console object
-    
-    - console panel scrollToBottom if was scrolledToBottom
-    
-    - click and onmousemove inspect at Style panel. it isn't highlighting
-      the box model of the element (as shown in the "inherited from" section)
-      
-    - nested groups. when you expand a group, all subgroups will be expanded
-      too, due to a bug in the CSS. IE6 does not support the CSS child 
-      operator, and the code relies on it. It was changed to descendants
-      operator, and that's the cause of the current bug.
-      
-    - ID conflicts. If you click in the console in a Firebug UI element,
-      it will lead you to a different element in a HTML panel, using the
-      same ID. The ID must be unique across all frames.
 
 ---------------------------------------------------------------------------------------------------
 Cache
@@ -174,13 +152,47 @@ Editor
     - onInput in Firefox - the behavior is different. Specially when autocompleting font-family
 
 ---------------------------------------------------------------------------------------------------
+New issues
+---------------------------------------------------------------------------------------------------
+    - editor.updateLayout() in IE, when element has a "auto" margin
+    
+    - console panel scrollToBottom if was scrolledToBottom
+    
+    - click and onmousemove inspect at Style panel. it isn't highlighting
+      the box model of the element (as shown in the "inherited from" section)
+      
+    - ID conflicts. If you click in the console in a Firebug UI element,
+      it will lead you to a different element in a HTML panel, using the
+      same ID. The ID must be unique across all frames.
+      
+    - content of "Script" and "Dev" panel does not show in Opera 9 
+      (it does on Opera 10). This is a CSS issue. The following changes
+      in the CSS rules fixes the problem: 
+          - ".sourceBox" to position relative
+          - "div.lineNo" to position absolute
+          
+      Need to investigate if these changes break the layout in other browsers.  
+    
+    - Opera 9 - inline editor does not show (hack is to change its z-index to 9).
+    
+    - Opera 9 and 10 - should ignore the tab event properly in the inline editor
+    
+ OK - missing firebuglite property in the console object
+    
+ OK - nested groups. when you expand a group, all subgroups will be expanded
+      too, due to a bug in the CSS. IE6 does not support the CSS child 
+      operator, and the code relies on it. It was changed to descendants
+      operator, and that's the cause of the current bug.
+      
+---------------------------------------------------------------------------------------------------
 Console
 ---------------------------------------------------------------------------------------------------
  ok - clickable object links
  ok - more robust ability to listen offline messages
  ok - ability to listen offline XHR messages
  ok - the offline handler should be compatible with the next generation console
-    
+
+
 ---------------------------------------------------------------------------------------------------
 Offline messages
 ---------------------------------------------------------------------------------------------------
@@ -632,33 +644,6 @@ CSS imported styles
         http://github.com/lsmith/javascript-stack-trace/blob/master/getStackTrace.js
         http://eriwen.com/javascript/js-stack-trace/
     
----------------------------------------------------------------------------------------------------
- Firebug Lite Future
----------------------------------------------------------------------------------------------------
-
-High level of portability
-    - Lib
-    - Domplate
-    - Reps
-    - InsideOutBox
-    - Inspector
-    - Infotip?
-
-Mid level of portability
-    - Console
-    - HTML
-    - DOM
-    - CSS?
-    - tabContext?
-    - tabWatcher?
-
-Low level of portability
-    - Script
-    
-    - Chrome
-    - Selector
-    - Trace
-
 
 ---------------------------------------------------------------------------------------------------
  Major changes between Firebug and Firebug Lite codebase
@@ -671,25 +656,6 @@ Low level of portability
     panel activation
     
     same application instance running across all tabs?
-
----------------------------------------------------------------------------------------------------
-
----------------------------------------------------------------------------------------------------
-
-    IE 6: gzip + ETag != If-None-Match
-    http://abstractfinal.blogspot.com/2007/05/ie-6-gzip-etag-if-none-match.html
-    
-    JavaScript + Frames + IE 6 + gzip + “no-cache” Header = Trouble
-    http://www.akmattie.net/blog/2007/11/10/javascript-frames-ie-6-gzip-no-cache-header-trouble/
-    
-    IE problems
-    http://www.julienlecomte.net/blog/2007/08/13/#comment-258
-    
-    
-    http://support.microsoft.com/kb/321722/EN-US/
-    http://support.microsoft.com/default.aspx?scid=kb;LN;Q312496
-    http://support.microsoft.com/default.aspx?scid=kb;en-us;823386&Product=ie600
-
 
 ###################################################################################################
  Firebug related
@@ -808,11 +774,6 @@ Cons
     More difficult to debug low level functions
     less stable?
 
-
----------------------------------------------------------------------------------------------------
-To organize
----------------------------------------------------------------------------------------------------
-
 ---------------------------------------------------------------------------------------------------
 DOMPLATE
 ---------------------------------------------------------------------------------------------------
@@ -919,107 +880,3 @@ function getXPath(node, path) {
 // Getting result
 document.evaluate("/html/body/div/ul/li[2]", document, null, XPathResult.ANY_TYPE, null ).iterateNext()
 
-
----------------------------------------------------------------------------------------------------
-Advanced CSS Features brainstorm
----------------------------------------------------------------------------------------------------
-
-
-styleCache = {};
-
-// First style to add to cache is the inline styles
-for(cid in documentCache)
-{
-    styleCache[cid] = [];
-    styleCache[cid].push();
-}
-
-// for each stylesheet 
-for(stylesheet in stylesheets)
-{
-    // look at each rule
-    for(rule in stylesheet)
-    {
-        // get the rule's selector, and find all elements in document
-        var els = Firebug.Selector(rule.selector);
-        
-        // for each element found
-        for(var i=0, el; el=els[i]; i++)
-        {
-            var cid = el[cacheID];
-            
-            // Add style info in the cache stack of styles of the element 
-            styleCache[cid].push({
-                stylesheet: stylesheet,
-                lineNumber: getLineNumber(rule, stylesheet),
-                fileName: getFileName(rule, stylesheet),
-                selector: rule.selector,
-                styles: rule.styles
-            });
-        }
-    }
-
-}
-
-
----------------------------------------------------------------------------------------------------
-Advanced CSS Features Implementation
----------------------------------------------------------------------------------------------------
-
-function getInlineStyles(el)
-{
-    var style = el.style;
-    var r = {}, l, prop;
-    
-    // Good browsers first
-    if (l = style.length)
-    {
-        for(var i=0; i<l; i++)
-        {
-            prop = style[i];
-            r[toCamelCase(prop)] = style.getPropertyValue(prop);
-        }
-    }
-    // Sad browsers last
-    else
-    {
-      for(var prop in style)
-        if (ignoreIEStyleProperties.indexOf(prop) == -1 && 
-            isIEInlineStyleProperty(el, prop))
-                r[prop] = style[prop];
-    }
-    
-    return r;
-}
-
-var ignoreIEStyleProperties = " cssText accelerator ";
-function isIEInlineStyleProperty(el, prop)
-{
-    var r = false;
-    
-    if (typeof el.style[prop] == "string")
-    {
-        r = !!el.style[prop];
-    }
-    
-    return r;
-}
-
-
-function toCamelCase(s)
-{
-    return s.replace(_selectorCaseMatch, _toCamelCaseReplaceFn);
-}
-
-function toSelectorCase(s)
-{
-  return s.replace(_camelCaseMatch, "-$1").toLowerCase();
-  
-}
-
-var _camelCaseMatch = /([A-Z])/g;
-var _selectorCaseMatch = /\-(.)/g; 
-function _toCamelCaseReplaceFn(m,g)
-{
-    return g.toUpperCase();
-}

@@ -1678,7 +1678,8 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                 }
                 else if (cssValue.type == "url")
                 {
-                    var propNameNode = target.parentNode.getElementsByClassName("cssPropName").item(0);
+                    ///var propNameNode = target.parentNode.getElementsByClassName("cssPropName").item(0);
+                    var propNameNode = getElementByClass(target.parentNode, "cssPropName");
                     if (propNameNode && isImageRule(propNameNode[textContent]))
                     {
                         var rule = Firebug.getRepObject(target);
@@ -1924,8 +1925,9 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
 
     getStylesheetURL: function(rule)
     {
-        // if the parentStyleSheet.href is null, CSS std says its inline style
-        if (rule && rule.parentStyleSheet.href)
+        // if the parentStyleSheet.href is null, CSS std says its inline style.
+        // TODO: xxxpedro IE doesn't have rule.parentStyleSheet so we must fall back to the doc.location
+        if (rule && rule.parentStyleSheet && rule.parentStyleSheet.href)
             return rule.parentStyleSheet.href;
         else
             return this.selection.ownerDocument.location.href;
