@@ -1,13 +1,22 @@
 /* See license.txt for terms of usage */
 
+/*
+
+Hack:
+Firebug.chrome.currentPanel = Firebug.chrome.selectedPanel; 
+Firebug.showInfoTips = true; 
+Firebug.InfoTip.initializeBrowser(Firebug.chrome);
+
+/**/
+
 FBL.ns(function() { with (FBL) {
 
 // ************************************************************************************************
 // Constants
 
-const maxWidth = 100, maxHeight = 80;
-const infoTipMargin = 10;
-const infoTipWindowPadding = 25;
+var maxWidth = 100, maxHeight = 80;
+var infoTipMargin = 10;
+var infoTipWindowPadding = 25;
 
 // ************************************************************************************************
 
@@ -29,6 +38,100 @@ Firebug.InfoTip = extend(Firebug.Module,
                 DIV({"class": "infoTipCaption"})
             ),
 
+        onLoadImage: function(event)
+        {
+            var img = event.currentTarget || event.srcElement;
+            ///var bgImg = img.nextSibling;
+            ///if (!bgImg)
+            ///    return; // Sometimes gets called after element is dead
+
+            ///var caption = bgImg.nextSibling;
+            var innerBox = img.parentNode;
+            
+            /// TODO: xxxpedro infoTip hack
+            var caption = getElementByClass(innerBox, "infoTipCaption");
+            var bgImg = getElementByClass(innerBox, "infoTipBgImage");
+            if (!bgImg)
+                return; // Sometimes gets called after element is dead
+            
+            // TODO: xxxpedro infoTip IE and timing issue
+            // TODO: use offline document to avoid flickering
+            if (isIE)
+                removeClass(innerBox, "infoTipLoading");
+            
+            var updateInfoTip = function(){
+            
+            var w = img.naturalWidth || img.width || 10, 
+                h = img.naturalHeight || img.height || 10;
+            
+            var repeat = img.getAttribute("repeat");
+
+            if (repeat == "repeat-x" || (w == 1 && h > 1))
+            {
+                collapse(img, true);
+                collapse(bgImg, false);
+                bgImg.style.background = "url(" + img.src + ") repeat-x";
+                bgImg.style.width = maxWidth + "px";
+                if (h > maxHeight)
+                    bgImg.style.height = maxHeight + "px";
+                else
+                    bgImg.style.height = h + "px";
+            }
+            else if (repeat == "repeat-y" || (h == 1 && w > 1))
+            {
+                collapse(img, true);
+                collapse(bgImg, false);
+                bgImg.style.background = "url(" + img.src + ") repeat-y";
+                bgImg.style.height = maxHeight + "px";
+                if (w > maxWidth)
+                    bgImg.style.width = maxWidth + "px";
+                else
+                    bgImg.style.width = w + "px";
+            }
+            else if (repeat == "repeat" || (w == 1 && h == 1))
+            {
+                collapse(img, true);
+                collapse(bgImg, false);
+                bgImg.style.background = "url(" + img.src + ") repeat";
+                bgImg.style.width = maxWidth + "px";
+                bgImg.style.height = maxHeight + "px";
+            }
+            else
+            {
+                if (w > maxWidth || h > maxHeight)
+                {
+                    if (w > h)
+                    {
+                        img.style.width = maxWidth + "px";
+                        img.style.height = Math.round((h / w) * maxWidth) + "px";
+                    }
+                    else
+                    {
+                        img.style.width = Math.round((w / h) * maxHeight) + "px";
+                        img.style.height = maxHeight + "px";
+                    }
+                }
+            }
+
+            //caption.innerHTML = $STRF("Dimensions", [w, h]);
+            caption.innerHTML = $STRF(w + " x " + h);
+            
+            
+            };
+            
+            if (isIE) 
+                setTimeout(updateInfoTip, 0);
+            else
+            {
+                updateInfoTip();
+                removeClass(innerBox, "infoTipLoading");
+            }
+
+            ///
+        }
+        
+        /*
+        /// onLoadImage original
         onLoadImage: function(event)
         {
             var img = event.currentTarget;
@@ -93,6 +196,8 @@ Firebug.InfoTip = extend(Firebug.Module,
 
             removeClass(innerBox, "infoTipLoading");
         }
+        /**/
+        
     }),
 
     initializeBrowser: function(browser)
@@ -100,14 +205,18 @@ Firebug.InfoTip = extend(Firebug.Module,
         browser.onInfoTipMouseOut = bind(this.onMouseOut, this, browser);
         browser.onInfoTipMouseMove = bind(this.onMouseMove, this, browser);
 
-        var doc = browser.contentDocument;
+        ///var doc = browser.contentDocument;
+        var doc = browser.document;
         if (!doc)
             return;
 
-        doc.addEventListener("mouseover", browser.onInfoTipMouseMove, true);
-        doc.addEventListener("mouseout", browser.onInfoTipMouseOut, true);
-        doc.addEventListener("mousemove", browser.onInfoTipMouseMove, true);
-
+        ///doc.addEventListener("mouseover", browser.onInfoTipMouseMove, true);
+        ///doc.addEventListener("mouseout", browser.onInfoTipMouseOut, true);
+        ///doc.addEventListener("mousemove", browser.onInfoTipMouseMove, true);
+        addEvent(doc, "mouseover", browser.onInfoTipMouseMove);
+        addEvent(doc, "mouseout", browser.onInfoTipMouseOut);
+        addEvent(doc, "mousemove", browser.onInfoTipMouseMove);
+        
         return browser.infoTip = this.tags.infoTipTag.append({}, getBody(doc));
     },
 
@@ -115,10 +224,14 @@ Firebug.InfoTip = extend(Firebug.Module,
     {
         if (browser.infoTip)
         {
-            var doc = browser.contentDocument;
-            doc.removeEventListener("mouseover", browser.onInfoTipMouseMove, true);
-            doc.removeEventListener("mouseout", browser.onInfoTipMouseOut, true);
-            doc.removeEventListener("mousemove", browser.onInfoTipMouseMove, true);
+            ///var doc = browser.contentDocument;
+            var doc = browser.document;
+            ///doc.removeEventListener("mouseover", browser.onInfoTipMouseMove, true);
+            ///doc.removeEventListener("mouseout", browser.onInfoTipMouseOut, true);
+            ///doc.removeEventListener("mousemove", browser.onInfoTipMouseMove, true);
+            removeEvent(doc, "mouseover", browser.onInfoTipMouseMove);
+            removeEvent(doc, "mouseout", browser.onInfoTipMouseOut);
+            removeEvent(doc, "mousemove", browser.onInfoTipMouseMove);
 
             browser.infoTip.parentNode.removeChild(browser.infoTip);
             delete browser.infoTip;
@@ -196,8 +309,8 @@ Firebug.InfoTip = extend(Firebug.Module,
 
         if (browser.currentPanel)
         {
-            var x = event.clientX, y = event.clientY;
-            this.showInfoTip(browser.infoTip, browser.currentPanel, event.target, x, y, event.rangeParent, event.rangeOffset);
+            var x = event.clientX, y = event.clientY, target = event.target || event.srcElement;
+            this.showInfoTip(browser.infoTip, browser.currentPanel, target, x, y, event.rangeParent, event.rangeOffset);
         }
         else
             this.hideInfoTip(browser.infoTip);
