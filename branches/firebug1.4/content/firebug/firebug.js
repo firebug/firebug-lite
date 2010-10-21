@@ -283,13 +283,13 @@ window.Firebug = FBL.Firebug =
                 if (type == "boolean" || type == "number")
                 {
                     json[++jl] = '":';
-                    json[++jl] = value 
+                    json[++jl] = value;
                     json[++jl] = ',';
                 }
                 else
                 {
                     json[++jl] = '":"';
-                    json[++jl] = value 
+                    json[++jl] = value;
                     json[++jl] = '",';
                 }
             }
@@ -346,7 +346,8 @@ Firebug.Listener = function()
     // It can't be created here since derived objects would share
     // the same array.
     this.fbListeners = null;
-}
+};
+
 Firebug.Listener.prototype =
 {
     addListener: function(listener)
@@ -812,7 +813,7 @@ Firebug.Panel =
             if (!this.context.browser) // XXXjjb this is bug. Somehow the panel context is not FirebugContext.
             {
                 if (FBTrace.DBG_ERRORS)
-                    FBTrace.sysout("firebug.Panel showToolbarButtons this.context has no browser, this:", this)
+                    FBTrace.sysout("firebug.Panel showToolbarButtons this.context has no browser, this:", this);
 
                 return;
             }
@@ -902,15 +903,213 @@ Firebug.Panel =
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-    getDefaultSelection: function(context)
+    search: function(text, reverse)
+    {
+    },
+
+    /**
+     * Retrieves the search options that this modules supports.
+     * This is used by the search UI to present the proper options.
+     */
+    getSearchOptionsMenuItems: function()
+    {
+        return [
+            Firebug.Search.searchOptionMenu("search.Case Sensitive", "searchCaseSensitive")
+        ];
+    },
+
+    /**
+     * Navigates to the next document whose match parameter returns true.
+     */
+    navigateToNextDocument: function(match, reverse)
+    {
+        // This is an approximation of the UI that is displayed by the location
+        // selector. This should be close enough, although it may be better
+        // to simply generate the sorted list within the module, rather than
+        // sorting within the UI.
+        var self = this;
+        function compare(a, b) {
+            var locA = self.getObjectDescription(a);
+            var locB = self.getObjectDescription(b);
+            if(locA.path > locB.path)
+                return 1;
+            if(locA.path < locB.path)
+                return -1;
+            if(locA.name > locB.name)
+                return 1;
+            if(locA.name < locB.name)
+                return -1;
+            return 0;
+        }
+        var allLocs = this.getLocationList().sort(compare);
+        for (var curPos = 0; curPos < allLocs.length && allLocs[curPos] != this.location; curPos++);
+
+        function transformIndex(index) {
+            if (reverse) {
+                // For the reverse case we need to implement wrap around.
+                var intermediate = curPos - index - 1;
+                return (intermediate < 0 ? allLocs.length : 0) + intermediate;
+            } else {
+                return (curPos + index + 1) % allLocs.length;
+            }
+        };
+
+        for (var next = 0; next < allLocs.length - 1; next++)
+        {
+            var object = allLocs[transformIndex(next)];
+
+            if (match(object))
+            {
+                this.navigate(object);
+                return object;
+            }
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    // Called when "Options" clicked. Return array of
+    // {label: 'name', nol10n: true,  type: "checkbox", checked: <value>, command:function to set <value>}
+    getOptionsMenuItems: function()
     {
         return null;
     },
-    
+
+    /*
+     * Called by chrome.onContextMenu to build the context menu when this panel has focus.
+     * See also FirebugRep for a similar function also called by onContextMenu
+     * Extensions may monkey patch and chain off this call
+     * @param object: the 'realObject', a model value, eg a DOM property
+     * @param target: the HTML element clicked on.
+     * @return an array of menu items.
+     */
+    getContextMenuItems: function(object, target)
+    {
+        return [];
+    },
+
+    getBreakOnMenuItems: function()
+    {
+        return [];
+    },
+
+    getEditor: function(target, value)
+    {
+    },
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-    search: function(text)
+    getDefaultSelection: function()
     {
+        return null;
+    },
+
+    browseObject: function(object)
+    {
+    },
+
+    getPopupObject: function(target)
+    {
+        return Firebug.getRepObject(target);
+    },
+
+    getTooltipObject: function(target)
+    {
+        return Firebug.getRepObject(target);
+    },
+
+    showInfoTip: function(infoTip, x, y)
+    {
+
+    },
+
+    getObjectPath: function(object)
+    {
+        return null;
+    },
+
+    // An array of objects that can be passed to getObjectLocation.
+    // The list of things a panel can show, eg sourceFiles.
+    // Only shown if panel.location defined and supportsObject true
+    getLocationList: function()
+    {
+        return null;
+    },
+
+    getDefaultLocation: function()
+    {
+        return null;
+    },
+
+    getObjectLocation: function(object)
+    {
+        return "";
+    },
+
+    // Text for the location list menu eg script panel source file list
+    // return.path: group/category label, return.name: item label
+    getObjectDescription: function(object)
+    {
+        var url = this.getObjectLocation(object);
+        return FBL.splitURLBase(url);
+    },
+
+    /*
+     *  UI signal that a tab needs attention, eg Script panel is currently stopped on a breakpoint
+     *  @param: show boolean, true turns on.
+     */
+    highlight: function(show)
+    {
+        var tab = this.getTab();
+        if (!tab)
+            return;
+
+        if (show)
+            tab.setAttribute("highlight", "true");
+        else
+            tab.removeAttribute("highlight");
+    },
+
+    getTab: function()
+    {
+        var chrome = Firebug.chrome;
+
+        var tab = chrome.$("fbPanelBar2").getTab(this.name);
+        if (!tab)
+            tab = chrome.$("fbPanelBar1").getTab(this.name);
+        return tab;
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // Support for Break On Next
+
+    /**
+     * Called by the framework when the user clicks on the Break On Next button.
+     * @param {Boolean} armed Set to true if the Break On Next feature is
+     * to be armed for action and set to false if the Break On Next should be disarmed.
+     * If 'armed' is true, then the next call to shouldBreakOnNext should be |true|.
+     */
+    breakOnNext: function(armed)
+    {
+    },
+
+    /**
+     * Called when a panel is selected/displayed. The method should return true
+     * if the Break On Next feature is currently armed for this panel.
+     */
+    shouldBreakOnNext: function()
+    {
+        return false;
+    },
+
+    /**
+     * Returns labels for Break On Next tooltip (one for enabled and one for disabled state).
+     * @param {Boolean} enabled Set to true if the Break On Next feature is
+     * currently activated for this panel.
+     */
+    getBreakOnNextTooltip: function(enabled)
+    {
+        return null;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
