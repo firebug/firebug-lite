@@ -17,6 +17,74 @@
 
 
 ###################################################################################################
+New Script Panel
+###################################################################################################
+
+---------------------------------------------------------------------------------------------------
+debugger.js dependencies
+---------------------------------------------------------------------------------------------------
+    - jsd
+    - Ci.jsdIScript;
+    - Ci.jsdIStackFrame;
+    - Ci.jsdIExecutionHook;
+    - Ci.nsISupports;
+    - Ci.nsICryptoHash;
+    - Ci.nsIURI
+    
+
+---------------------------------------------------------------------------------------------------
+debugger.js changes
+---------------------------------------------------------------------------------------------------
+    - const --> var
+    - addEventListener --> adEvent
+    - named functions --> variables
+
+
+---------------------------------------------------------------------------------------------------
+debugger.js Lite's missing pieces
+---------------------------------------------------------------------------------------------------
+
+...................................................................................................
+items to port (low to high-level modules)
+
+    - Chrome
+    - tabContext
+    - tabWatcher
+    - sourceBox
+    - sourceFile?
+    - sourceCache?
+    
+    - FBL.getUniqueId
+    - FBL.persistObjects
+    - FBL.sourceFilesAsArray
+    
+    - Firebug.registerActivableModule
+    - Firebug.ActivableModule
+    - Firebug.ActivablePanel
+    
+    - infoTip
+    
+    - GUI.ToolButton
+    - GUI.OptionsMenu
+    - GUI.ScrollableMenu
+
+...................................................................................................
+items to change
+
+    - Panel create/destroy methods
+    - Panel initialize/shutdown methods
+    - Panel show/hide methods
+    - Panel initializeUI method
+    
+    - Firebug getPref/setPref
+    
+    - SidePanel API
+    
+    - GUI.Menu
+
+
+
+###################################################################################################
  Important TODOs
 ###################################################################################################
 
