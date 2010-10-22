@@ -6,9 +6,6 @@ FBL.ns( /** @scope ns-firebug */ function() { with (FBL) {
 // ************************************************************************************************
 // Globals
 
-FBL.cacheID = "firebug" + new Date().getTime();
-FBL.documentCache = {};
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Internals
 
@@ -88,15 +85,8 @@ window.Firebug = FBL.Firebug =
             }
         }
         
-        for(var name in documentCache)
-        {
-            documentCache[name].removeAttribute(cacheID);
-            documentCache[name] = null;
-            delete documentCache[name];
-        }
-        
-        documentCache = null;
-        delete FBL.documentCache;
+        ElementCache.clear();
+        StyleSheetCache.clear();
         
         Firebug.browser = null;
         Firebug.context = null;
@@ -324,8 +314,7 @@ FBL.cacheDocument = function cacheDocument()
     for (var i=0, l=els.length, el; i<l; i++)
     {
         el = els[i];
-        el[cacheID] = i;
-        documentCache[i] = el;
+        ElementCache(el);
     }
 };
 

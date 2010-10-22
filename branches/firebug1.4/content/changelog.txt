@@ -5,6 +5,10 @@
     - Issue 3504: Firebug lite: jQuery.ajax call fails in IE
     - Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
     - infoTips for CSS properties such as color and image 
+    - Unifying Firebug Lite internal cache system (to be used in sourceCache). 
+      As a bonus, the unified model allows Firebug Lite to adapt its cache when 
+      new elements are inserted into the document, which means that now it will 
+      be easier to use the Inspector in dynamically created content.
 
 
 ###################################################################################################

@@ -98,76 +98,6 @@ var toCamelCaseReplaceFn = function toCamelCaseReplaceFn(m,g)
 
 
 
-var cacheUID = -1;
-
-var createCache = function()
-{
-    var map = {};
-    // TODO: xxxpedro unify the cache system, using a single expando property
-    var CID = cacheID+"b";
-    
-    var cacheFunction = function(element)
-    {
-        return cacheAPI.set(element);
-    };
-    
-    var cacheAPI =  
-    {
-        get: function(key)
-        {
-            return map.hasOwnProperty(key) ?
-                    map[key] :
-                    null;
-        },
-        
-        set: function(element)
-        {
-            var id = element[CID];
-            
-            if (!id)
-            {
-                id = ++cacheUID;
-                element[CID] = id;
-            }
-            
-            if (!map.hasOwnProperty(id))
-            {
-                map[id] = element;
-            }
-            
-            return id;
-        },
-        
-        key: function(element)
-        {
-            return element[CID];            
-        },
-        
-        has: function(element)
-        {
-            return map.hasOwnProperty(element[CID]);
-        },
-        
-        clear: function()
-        {
-            for (var name in map)
-            {
-                var element = map[name];
-                
-                element[CID] = null;
-                delete element[CID];
-                
-                map[name] = null;
-                delete map[name];
-            }
-        }
-    };
-    
-    append(cacheFunction, cacheAPI);
-    
-    return cacheFunction;
-};
-
 
 // ************************************************************************************************
 
@@ -284,9 +214,6 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
     }
 };
 
-// TODO: xxxpedro : check if we need really this on FBL scope
-var StyleSheetCache = FBL.StyleSheetCache = createCache();
-var ElementCache = FBL.ElementCache = createCache();
 
 var CSSRuleMap = {};
 var ElementCSSRulesMap = {};
@@ -2115,7 +2042,7 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
         Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
         
         // TODO: xxxpedro css2
-        var selection = documentCache[FirebugChrome.selectedHTMLElementId];
+        var selection = ElementCache.get(FirebugChrome.selectedHTMLElementId);
         if (selection)
             this.select(selection, true);
         
