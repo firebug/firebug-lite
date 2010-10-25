@@ -325,7 +325,8 @@ var XMLHttpRequestWrapper = function(activeXObject)
         }
         catch(e)
         {
-            throw e;
+            // TODO: xxxpedro XHR throws or not?
+            //throw e;
         }
         finally
         {
