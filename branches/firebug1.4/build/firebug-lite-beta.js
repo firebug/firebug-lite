@@ -10598,8 +10598,10 @@ var ChromeFrameBase = extend(ChromeBase,
             main.style.display = "block";
             
             var self = this;
-            setTimeout(function(){
+                /// TODO: xxxpedro FOUC
                 node.style.visibility = "visible";
+            setTimeout(function(){
+                ///node.style.visibility = "visible";
                 
                 //dispatch(Firebug.modules, "initialize", []);
                 self.initialize();
