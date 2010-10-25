@@ -1698,7 +1698,9 @@ var ChromeFrameBase = extend(ChromeBase,
                 if (noFixedPosition)
                     self.fixIEPosition();
                 
-                self.draw();
+                setTimeout(function(){
+                    self.draw();
+                },0);
         
             }, 10);
         }
