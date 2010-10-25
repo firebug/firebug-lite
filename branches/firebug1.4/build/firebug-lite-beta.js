@@ -5978,15 +5978,19 @@ window.Firebug = FBL.Firebug =
         
         FirebugChrome.initialize();
         
-        dispatch(modules, "initialize", []);
+        setTimeout(function(){
         
-        if (Env.onLoad)
-        {
-            var onLoad = Env.onLoad;
-            delete Env.onLoad;
+            dispatch(modules, "initialize", []);
             
-            setTimeout(onLoad, 200);
-        }
+            if (Env.onLoad)
+            {
+                var onLoad = Env.onLoad;
+                delete Env.onLoad;
+                
+                setTimeout(onLoad, 200);
+            }
+        
+        }, Env.useLocalSkin ? 200 : 0);
     },
   
     shutdown: function()
