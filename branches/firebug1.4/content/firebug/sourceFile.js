@@ -1,12 +1,15 @@
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL)
-{
-    const Cc = Components.classes;
-    const Ci = Components.interfaces;
+FBL.ns(function() { with (FBL) {
 
-    const PCMAP_SOURCETEXT = Ci.jsdIScript.PCMAP_SOURCETEXT;
-    const PCMAP_PRETTYPRINT = Ci.jsdIScript.PCMAP_PRETTYPRINT;
+///    const Cc = Components.classes;
+///    const Ci = Components.interfaces;
+
+///    const PCMAP_SOURCETEXT = Ci.jsdIScript.PCMAP_SOURCETEXT;
+///    const PCMAP_PRETTYPRINT = Ci.jsdIScript.PCMAP_PRETTYPRINT;
+
+var PCMAP_SOURCETEXT = -1;
+var PCMAP_PRETTYPRINT = -2;
 
 
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -23,7 +26,7 @@ FBL.ns(function() { with (FBL)
 Firebug.SourceFile = function (compilation_unit_type)
 {
     this.compilation_unit_type = compilation_unit_type; /*@explore*/
-}
+};
 
 Firebug.SourceFile.prototype =
 {
@@ -53,6 +56,7 @@ Firebug.SourceFile.prototype =
         return str;
     },
 
+    /*
     forEachScript: function(callback)
      {
          if (this.outerScript)
@@ -349,9 +353,10 @@ Firebug.SourceFile.prototype =
      getOuterScriptAnalyzer: function()
      {
          FBTrace.sysout("getOuterScriptAnalyzer not overridden for "+sourceFile, this);
-     },
+     }
+     /**/
 
-}
+};
 
 Firebug.SourceFile.summarizeSourceLineArray = function(sourceLines, size)
 {
@@ -370,7 +375,7 @@ Firebug.SourceFile.summarizeSourceLineArray = function(sourceLines, size)
 Firebug.SourceFile.NestedScriptAnalyzer = function(sourceFile)
 {
     this.sourceFile = sourceFile;
-}
+};
 
 Firebug.SourceFile.NestedScriptAnalyzer.prototype =
 {
@@ -415,7 +420,7 @@ Firebug.SourceFile.NestedScriptAnalyzer.prototype =
     {
         return script.baseLineNumber - (this.sourceFile.getBaseLineOffset() - 1);
     }
-}
+};
 
 Firebug.SourceFile.addScriptsToSourceFile = function(sourceFile, outerScript, innerScripts)
 {
@@ -427,7 +432,8 @@ Firebug.SourceFile.addScriptsToSourceFile = function(sourceFile, outerScript, in
      while (innerScripts.hasMoreElements())
      {
          var script = innerScripts.getNext();
-         if (!script || ( (script instanceof Ci.jsdIScript) && !script.tag) )
+         ///if (!script || ( (script instanceof Ci.jsdIScript) && !script.tag) )
+         if (!script)
          {
              if (FBTrace.DBG_SOURCEFILES)
                  FBTrace.sysout("addScriptsToSourceFile innerScripts.getNext FAILS "+sourceFile, script);
@@ -439,7 +445,7 @@ Firebug.SourceFile.addScriptsToSourceFile = function(sourceFile, outerScript, in
      }
      if (FBTrace.DBG_SOURCEFILES)
          FBTrace.sysout("addScriptsToSourceFile "+ total +" scripts, sourcefile="+sourceFile.toString(), sourceFile);
-}
+};
 
 //------------
 Firebug.EvalLevelSourceFile = function(url, script, eval_expr, source, mapType, innerScriptEnumerator) // ctor
@@ -491,14 +497,14 @@ Firebug.EvalLevelSourceFile.prototype =
     getOuterScriptAnalyzer: function()
     {
         return new Firebug.EvalLevelSourceFile.OuterScriptAnalyzer(this);
-    },
+    }
 
 });
 
 Firebug.EvalLevelSourceFile.OuterScriptAnalyzer = function(sourceFile)
 {
     this.sourceFile = sourceFile;
-}
+};
 
 Firebug.EvalLevelSourceFile.OuterScriptAnalyzer.prototype =
 {
@@ -516,7 +522,7 @@ Firebug.EvalLevelSourceFile.OuterScriptAnalyzer.prototype =
     {
         return new FBL.SourceLink(this.sourceFile.href, 1, "js");
     }
-}
+};
 
 //------------
 Firebug.EventSourceFile = function(url, script, title, source, innerScriptEnumerator)
@@ -557,14 +563,14 @@ Firebug.EventSourceFile.prototype =    descend(new Firebug.SourceFile("event"), 
     getOuterScriptAnalyzer: function()
     {
         return new Firebug.EventSourceFile.OuterScriptAnalyzer(this);
-    },
+    }
 
 });
 
 Firebug.EventSourceFile.OuterScriptAnalyzer = function(sourceFile)
 {
     this.sourceFile = sourceFile;
-}
+};
 
 Firebug.EventSourceFile.OuterScriptAnalyzer.prototype =
 {
@@ -585,7 +591,7 @@ Firebug.EventSourceFile.OuterScriptAnalyzer.prototype =
         }
         else
         {
-            var args = []
+            var args = [];
             var name = getFunctionName(script, context);
         }
         return {name: name, args: args};
@@ -594,7 +600,7 @@ Firebug.EventSourceFile.OuterScriptAnalyzer.prototype =
     {
         return new FBL.SourceLink(this.sourceFile.href, 1, "js");  // XXXjjb why do we need FBL.??
     }
-}
+};
 
 //------------
 Firebug.SourceFile.CommonBase =
@@ -609,9 +615,9 @@ Firebug.SourceFile.CommonBase =
     getOuterScriptAnalyzer: function()
     {
         return Firebug.TopLevelSourceFile.OuterScriptAnalyzer;
-    },
+    }
 
-}
+};
 //-----------
 Firebug.TopLevelSourceFile = function(url, outerScript, sourceLength, innerScriptEnumerator)
 {
@@ -621,7 +627,7 @@ Firebug.TopLevelSourceFile = function(url, outerScript, sourceLength, innerScrip
     this.pcmap_type = PCMAP_SOURCETEXT;
 
     Firebug.SourceFile.addScriptsToSourceFile(this, outerScript, innerScriptEnumerator);
-}
+};
 
 Firebug.TopLevelSourceFile.prototype = descend(new Firebug.SourceFile("top-level"), Firebug.SourceFile.CommonBase);
 
@@ -641,9 +647,9 @@ Firebug.TopLevelSourceFile.OuterScriptAnalyzer = {
     },
     getSourceLinkForScript: function (script)
     {
-        return FBL.SourceLink(FBL.normalizeURL(script.fileName), script.baseLineNumber, "js")
+        return FBL.SourceLink(FBL.normalizeURL(script.fileName), script.baseLineNumber, "js");
     }
-}
+};
 
 //-------
 
@@ -652,7 +658,7 @@ Firebug.EnumeratedSourceFile = function(url) // we don't have the outer script a
     this.href = new String(url);  // may not be outerScript file name, eg this could be an enumerated eval
     this.innerScripts = {};
     this.pcmap_type = PCMAP_SOURCETEXT;
-}
+};
 
 Firebug.EnumeratedSourceFile.prototype = descend(
         new Firebug.SourceFile("enumerated"),
@@ -663,7 +669,7 @@ Firebug.NoScriptSourceFile = function(context, url) // Somehow we got the URL, b
 {
     this.href = url;  // we know this much
     this.innerScripts = {};
-}
+};
 
 Firebug.NoScriptSourceFile.prototype = descend(
         new Firebug.SourceFile("URLOnly"),
@@ -677,7 +683,7 @@ Firebug.XULSourceFile = function(url, outerScript, innerScriptEnumerator)
     this.outerScript = outerScript;  // Beware may not be valid after we return!!
 
     Firebug.SourceFile.addScriptsToSourceFile(this, outerScript, innerScriptEnumerator);
-}
+};
 
 Firebug.XULSourceFile.prototype = descend(
         new Firebug.SourceFile("xul"),
@@ -692,7 +698,7 @@ Firebug.ScriptTagAppendSourceFile = function(url, outerScript, sourceLength, inn
     this.pcmap_type = PCMAP_SOURCETEXT;
 
     Firebug.SourceFile.addScriptsToSourceFile(this, outerScript, innerScriptEnumerator);
-}
+};
 
 Firebug.ScriptTagAppendSourceFile.prototype = descend(
         new Firebug.SourceFile("scriptTagAppend"),
@@ -707,7 +713,7 @@ Firebug.ScriptTagSourceFile = function(context, url, scriptTagNumber) // we don'
     this.scriptTagNumber = scriptTagNumber;
     this.innerScripts = {};
     this.pcmap_type = PCMAP_SOURCETEXT;
-}
+};
 
 Firebug.ScriptTagSourceFile.prototype = descend(
         new Firebug.SourceFile("scriptTag"),

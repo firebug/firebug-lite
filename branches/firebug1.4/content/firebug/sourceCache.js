@@ -5,24 +5,24 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Constants
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
-const nsIIOService = Ci.nsIIOService;
-const nsIRequest = Ci.nsIRequest;
-const nsICachingChannel = Ci.nsICachingChannel;
-const nsIScriptableInputStream = Ci.nsIScriptableInputStream;
-const nsIUploadChannel = Ci.nsIUploadChannel;
-const nsIHttpChannel = Ci.nsIHttpChannel;
+///const Cc = Components.classes;
+///const Ci = Components.interfaces;
+///const nsIIOService = Ci.nsIIOService;
+///const nsIRequest = Ci.nsIRequest;
+///const nsICachingChannel = Ci.nsICachingChannel;
+///const nsIScriptableInputStream = Ci.nsIScriptableInputStream;
+///const nsIUploadChannel = Ci.nsIUploadChannel;
+///const nsIHttpChannel = Ci.nsIHttpChannel;
 
-const IOService = Cc["@mozilla.org/network/io-service;1"];
-const ioService = IOService.getService(nsIIOService);
-const ScriptableInputStream = Cc["@mozilla.org/scriptableinputstream;1"];
-const chromeReg = CCSV("@mozilla.org/chrome/chrome-registry;1", "nsIToolkitChromeRegistry");
+///const IOService = Cc["@mozilla.org/network/io-service;1"];
+///const ioService = IOService.getService(nsIIOService);
+///const ScriptableInputStream = Cc["@mozilla.org/scriptableinputstream;1"];
+///const chromeReg = CCSV("@mozilla.org/chrome/chrome-registry;1", "nsIToolkitChromeRegistry");
 
-const LOAD_FROM_CACHE = nsIRequest.LOAD_FROM_CACHE;
-const LOAD_BYPASS_LOCAL_CACHE_IF_BUSY = nsICachingChannel.LOAD_BYPASS_LOCAL_CACHE_IF_BUSY;
+///const LOAD_FROM_CACHE = nsIRequest.LOAD_FROM_CACHE;
+///const LOAD_BYPASS_LOCAL_CACHE_IF_BUSY = nsICachingChannel.LOAD_BYPASS_LOCAL_CACHE_IF_BUSY;
 
-const NS_BINDING_ABORTED = 0x804b0002;
+///const NS_BINDING_ABORTED = 0x804b0002;
 
 // ************************************************************************************************
 
@@ -76,7 +76,7 @@ Firebug.SourceCache.prototype = extend(new Firebug.Listener(),
         {
             var src = d.encodedContent;
             var data = decodeURIComponent(src);
-            var lines = splitLines(data)
+            var lines = splitLines(data);
             this.cache[url] = lines;
 
             return lines;
@@ -178,6 +178,8 @@ Firebug.SourceCache.prototype = extend(new Firebug.Listener(),
         else
             var charset = "UTF-8";
 
+        /// TODO: xxxpedro XPCOM
+        /*
         var channel;
         try
         {
@@ -252,10 +254,12 @@ Firebug.SourceCache.prototype = extend(new Firebug.Listener(),
             }
             return ["sourceCache.load FAILS for url="+url, exc.toString()];
         }
+        /**/
 
         try
         {
-            var data = readFromStream(stream, charset);
+            ///var data = readFromStream(stream, charset);
+            var data = Firebug.Lite.Proxy.load(url);
             var lines = splitLines(data);
             this.cache[url] = lines;
             return lines;
@@ -268,7 +272,7 @@ Firebug.SourceCache.prototype = extend(new Firebug.Listener(),
         }
         finally
         {
-            stream.close();
+            ///stream.close();
         }
     },
 
@@ -304,6 +308,14 @@ Firebug.SourceCache.prototype = extend(new Firebug.Listener(),
     }
 });
 
+var readWithXHR = function(url)
+{
+    Ajax.request({url: url, async: false});
+    return Ajax.transport.responseText;
+};
+
+/// TODO: xxxpedro XPCOM
+/*
 // xxxHonza getPostText and readPostTextFromRequest are copied from
 // net.js. These functions should be removed when this cache is
 // refactored due to the double-load problem.
@@ -354,6 +366,7 @@ function getCacheKey(context)
      {
      }
 }
+/**/
 
 // ************************************************************************************************
 }});
