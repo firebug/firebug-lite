@@ -1689,7 +1689,7 @@ var ChromeFrameBase = extend(ChromeBase,
             main.style.display = "block";
             
             var self = this;
-            setTimeout(function(){
+            //setTimeout(function(){
                 node.style.visibility = "visible";
                 
                 //dispatch(Firebug.modules, "initialize", []);
@@ -1700,9 +1700,9 @@ var ChromeFrameBase = extend(ChromeBase,
                 
                 setTimeout(function(){
                     self.draw();
-                },100);
+                },0);
         
-            }, 10);
+            //}, 10);
         }
     },
     
