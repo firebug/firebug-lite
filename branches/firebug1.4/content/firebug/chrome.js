@@ -1700,7 +1700,7 @@ var ChromeFrameBase = extend(ChromeBase,
                 
                 setTimeout(function(){
                     self.draw();
-                },0);
+                },100);
         
             }, 10);
         }
