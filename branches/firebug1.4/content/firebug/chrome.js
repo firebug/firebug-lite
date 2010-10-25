@@ -373,7 +373,7 @@ var createChromeWindow = function(options)
                     // Prevent getting the wrong chrome height in FF when opening a popup 
                     setTimeout(function(){
                         onChromeLoad(chrome);
-                    },0);
+                    },100);
                 }
                 else
                     setTimeout(waitForWindow, waitDelay);
@@ -1689,7 +1689,7 @@ var ChromeFrameBase = extend(ChromeBase,
             main.style.display = "block";
             
             var self = this;
-            //setTimeout(function(){
+            setTimeout(function(){
                 node.style.visibility = "visible";
                 
                 //dispatch(Firebug.modules, "initialize", []);
@@ -1698,11 +1698,9 @@ var ChromeFrameBase = extend(ChromeBase,
                 if (noFixedPosition)
                     self.fixIEPosition();
                 
-                //setTimeout(function(){
-                    self.draw();
-                //},0);
+                self.draw();
         
-            //}, 10);
+            }, 10);
         }
     },
     
