@@ -41,6 +41,17 @@ window.FBDev =
         
         
         // ****************************************************************************************
+        // Lite
+        
+        "firebug/lite.js", // experimental
+        "firebug/lite/browser.js", // experimental
+        "firebug/lite/cache.js", // experimental
+        "firebug/lite/proxy.js", // experimental
+        "firebug/lite/script.js", // experimental
+        "firebug/lite/style.js", // experimental
+        
+        
+        // ****************************************************************************************
         // Application Classes
         
         "firebug/selector.js",
@@ -84,7 +95,8 @@ window.FBDev =
         "firebug/css.js",
         "firebug/script.js",
         
-        
+        "firebug/sourceCache.js", // experimental
+        "firebug/sourceFile.js", // experimental
         "firebug/sourceBox.js", // experimental
         "firebug/debugger.js", // experimental
         
