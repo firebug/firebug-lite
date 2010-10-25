@@ -100,7 +100,12 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
 
     initializeNode: function(panelNode)
     {
-        this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
+        // TODO: xxxpedro
+        // since in Firebug Lite each Panel does not have an unique window for its
+        // content, we must listen to the Firebug.chrome.window instead in order to
+        // handle the resizing of the Panel's UI
+        this.resizeEventTarget = Firebug.chrome.window;
+        ///this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
         this.resizeEventTarget.addEventListener("resize", this.onResize, true);
         this.attachToCache();
 
@@ -767,7 +772,10 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         var averageLineHeight = this.getAverageLineHeight(sourceBox);
         viewRange.firstLine = Math.floor(scrollTop / averageLineHeight + 1);
 
-        var panelHeight = this.panelNode.clientHeight;
+        /// TODO: xxxpedro
+        // In Firebug Lite the "scroll container" is not the panelNode, but its parent.
+        var panelHeight = this.panelNode.parentNode.clientHeight;
+        ///var panelHeight = this.panelNode.clientHeight;
         var viewableLines = Math.ceil((panelHeight / averageLineHeight) + 1);
         viewRange.lastLine = viewRange.firstLine + viewableLines;
         if (viewRange.lastLine > sourceBox.maximumLineNumber)

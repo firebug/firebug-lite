@@ -36,6 +36,7 @@ Firebug.TabContext = function(win, browser, chrome, persistedState)
     // (with Firefox 3.0.3 and lower)
     
     /// TODO: xxxpedro context cache tabcache
+    this.sourceCache = new Firebug.SourceCache(this);
     ///if (Components.interfaces.nsITraceableChannel)
     ///    this.sourceCache = new Firebug.TabCache(this);
     ///else

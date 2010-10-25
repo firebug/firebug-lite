@@ -2590,6 +2590,9 @@ Firebug.ScriptPanel.decorator = extend(new Firebug.SourceBoxDecorator,
 
     setLineBreakpoints: function(sourceFile, sourceBox)
     {
+        /// TODO: xxxpedro debugger.js
+        return;
+        
         fbs.enumerateBreakpoints(sourceFile.href, {call: function(url, line, props, scripts)
         {
             var scriptRow = sourceBox.getLineNode(line);
@@ -2639,11 +2642,17 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     create: function()
     {
-    	this.context = Firebug.browser;
+        /// TODO: xxxpedro hack
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        var doc = Firebug.chrome.document;
+        var styleSheet = createStyleSheet(doc, Env.Location.skinDir + "debugger.css");
+        addStyleSheet(doc, styleSheet);
+        
+        var tempContext = new Firebug.TabContext(window, Firebug.browser, Firebug.chrome, {});
+        this.context = extend(Firebug.browser, tempContext);
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     	
     	Firebug.SourceBoxPanel.create.apply(this, arguments);
-    	
-    	this.panelNode.innerHTML = "... under construction ...";
     },
     
     initialize: function(context, doc)
@@ -3007,6 +3016,25 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         this.sidePanelDeck = $("fbSidePanelDeck");
 
         Firebug.SourceBoxPanel.initialize.apply(this, arguments);
+        
+        
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // TODO: xxxpedro hack
+        //debugger;
+        this.panelNode.style.fontFamily = "monospace";
+        Firebug.chrome.$ = function(id){return $(id, Firebug.chrome.document); };
+        Firebug.uiListeners = [];
+        Firebug.ActivablePanel.initializeNode = function(){};
+        Firebug.Panel.initializeNode = function(){};
+        
+        this.document = Firebug.chrome.document;
+        this.initializeNode();
+        
+        var url = Env.Location.app;
+        var source = new Firebug.ScriptTagSourceFile(this.context, url, 0);
+        this.showSourceFile(source);
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
     },
 
     destroy: function(state)

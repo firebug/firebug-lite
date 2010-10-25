@@ -297,8 +297,12 @@ Firebug.SourceFile.prototype =
          return scripts;
      },
 
+     /**/
      isExecutableLine: function(lineNo)  // script may not be valid
      {
+        /// TODO: xxxpedro sourceFile
+        return false;
+        
          if (this.hasScriptAtLineNumber(lineNo, true))
             return true;
 
@@ -308,7 +312,7 @@ Firebug.SourceFile.prototype =
          return false;
      },
 
-     hasScript: function(script)
+     /*hasScript: function(script)
      {
          if (this.outerScript && (this.outerScript.tag == script.tag) )
              return true;
@@ -342,13 +346,14 @@ Firebug.SourceFile.prototype =
          return (this.compilation_unit_type == "event");
      },
 
+     /**/
      loadScriptLines: function(context)  // array of lines
      {
          if (this.source)
              return this.source;
          else
              return context.sourceCache.load(this.href);
-     },
+     }/*,
 
      getOuterScriptAnalyzer: function()
      {
@@ -447,6 +452,7 @@ Firebug.SourceFile.addScriptsToSourceFile = function(sourceFile, outerScript, in
          FBTrace.sysout("addScriptsToSourceFile "+ total +" scripts, sourcefile="+sourceFile.toString(), sourceFile);
 };
 
+/*
 //------------
 Firebug.EvalLevelSourceFile = function(url, script, eval_expr, source, mapType, innerScriptEnumerator) // ctor
 {
@@ -704,6 +710,7 @@ Firebug.ScriptTagAppendSourceFile.prototype = descend(
         new Firebug.SourceFile("scriptTagAppend"),
         Firebug.SourceFile.CommonBase);
 
+/**/
 //-------------------
 
 Firebug.ScriptTagSourceFile = function(context, url, scriptTagNumber) // we don't have the outer script and we delay source load
