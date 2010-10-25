@@ -93,7 +93,8 @@ window.FBDev =
         "firebug/infotip.js", // experimental
         
         "firebug/css.js",
-        "firebug/script.js",
+        
+        //"firebug/script.js",
         
         "firebug/sourceCache.js", // experimental
         "firebug/sourceFile.js", // experimental

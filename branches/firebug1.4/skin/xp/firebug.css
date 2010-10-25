@@ -12,6 +12,10 @@
 }
 /**/
 
+.obscured {
+    left: -999999px !important;
+}
+
 /* IE6 need a separated rule, otherwise it will not recognize it */
 .collapsed {
     display: none;

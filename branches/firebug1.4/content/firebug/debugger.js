@@ -2480,7 +2480,8 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
 
     menuFullLabel:
     {
-        static: $STR("ScriptsFilterStatic"),
+        /// TODO: xxxpedro should use quotes to avoid error when compressing with YUICompressor
+        "static": $STR("ScriptsFilterStatic"),
         evals: $STR("ScriptsFilterEval"),
         events: $STR("ScriptsFilterEvent"),
         all: $STR("ScriptsFilterAll")
@@ -2488,7 +2489,8 @@ Firebug.Debugger = extend(Firebug.ActivableModule,
 
     menuShortLabel:
     {
-        static: $STR("ScriptsFilterStaticShort"),
+        /// TODO: xxxpedro should use quotes to avoid error when compressing with YUICompressor
+        "static": $STR("ScriptsFilterStaticShort"),
         evals: $STR("ScriptsFilterEvalShort"),
         events: $STR("ScriptsFilterEventShort"),
         all: $STR("ScriptsFilterAllShort")
