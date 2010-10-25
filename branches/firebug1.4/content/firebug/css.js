@@ -101,6 +101,9 @@ var toCamelCaseReplaceFn = function toCamelCaseReplaceFn(m,g)
 
 // ************************************************************************************************
 
+var ElementCache = Firebug.Lite.Cache.Element;
+var StyleSheetCache = Firebug.Lite.Cache.StyleSheet;
+
 var globalCSSRuleIndex;
 
 var externalStyleSheetURLs = [];
@@ -112,6 +115,105 @@ var externalStyleSheetWarning = domplate(Firebug.Rep,
             A({"href": "$href", target:"_blank"}, "$link|STR")
         )
 });
+
+
+var processAllStyleSheetsTimeout = null;
+var loadExternalStylesheet = function(doc, styleSheetIterator, styleSheet)
+{
+    var url = styleSheet.href;
+    styleSheet.firebugIgnore = true;
+    
+    var source = Firebug.Lite.Proxy.load(url);
+    
+    // TODO: check for null and error responses
+    
+    
+    // remove comments
+    //var reMultiComment = /(\/\*([^\*]|\*(?!\/))*\*\/)/g;
+    //source = source.replace(reMultiComment, "");
+    
+    // convert relative addresses to absolute ones  
+    source = source.replace(/url\(([^\)]+)\)/g, function(a,name){
+    
+        var hasDomain = /\w+:\/\/./.test(name);
+        
+        if (!hasDomain)
+        {
+            name = name.replace(/^(["'])(.+)\1$/, "$2");
+            var first = name.charAt(0);
+            
+            // relative path, based on root
+            if (first == "/")
+            {
+                // TODO: xxxpedro move to lib or Firebug.Lite.something
+                // getURLRoot
+                var m = /^([^:]+:\/{1,3}[^\/]+)/.exec(url);
+                
+                return m ? 
+                    "url(" + m[1] + name + ")" :
+                    "url(" + name + ")";
+            }
+            // relative path, based on current location
+            else
+            {
+                // TODO: xxxpedro move to lib or Firebug.Lite.something
+                // getURLPath
+                var path = url.replace(/[^\/]+\.[\w\d]+(\?.+|#.+)?$/g, "");
+                
+                path = path + name;
+                
+                var reBack = /[^\/]+\/\.\.\//;
+                while(reBack.test(path))
+                {
+                    path = path.replace(reBack, "");
+                }
+                
+                //console.log("url(" + path + ")");
+                
+                return "url(" + path + ")";
+            }
+        }
+        
+        // if it is an absolute path, there is nothing to do
+        return a;
+    });
+    
+    var oldStyle = styleSheet.ownerNode;
+    
+    if (!oldStyle) return;
+    
+    if (!oldStyle.parentNode) return;
+    
+    var style = createGlobalElement("style");
+    style.setAttribute("charset","utf-8");
+    style.setAttribute("type", "text/css");
+    style.innerHTML = source;
+
+    //debugger;
+    oldStyle.parentNode.insertBefore(style, oldStyle.nextSibling);
+    oldStyle.parentNode.removeChild(oldStyle);
+    
+    
+    //doc.getElementsByTagName("head")[0].appendChild(style);
+    
+    doc.styleSheets[doc.styleSheets.length-1].externalURL = url;
+    
+    console.log(url, "call " + externalStyleSheetURLs.length, source);
+    
+    externalStyleSheetURLs.pop();
+    
+    if (processAllStyleSheetsTimeout)
+    {
+        clearTimeout(processAllStyleSheetsTimeout);
+    }
+    
+    processAllStyleSheetsTimeout = setTimeout(function(){
+        console.log("processing");
+        FBL.processAllStyleSheets(doc, styleSheetIterator);
+        processAllStyleSheetsTimeout = null;
+    },200);
+    
+};
 
 
 FBL.processAllStyleSheets = function(doc, styleSheetIterator)
@@ -132,6 +234,8 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
         {
             var styleSheet = styleSheets[i];
             
+            if ("firebugIgnore" in styleSheet) continue;
+            
             // we must read the length to make sure we have permission to read 
             // the stylesheet's content. If an error occurs here, we cannot 
             // read the stylesheet due to access restriction policy
@@ -143,6 +247,9 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
             externalStyleSheetURLs.push(styleSheet.href);
             styleSheet.restricted = true;
             var ssid = StyleSheetCache(styleSheet);
+            
+            /// TODO: xxxpedro external css
+            //loadExternalStylesheet(doc, styleSheetIterator, styleSheet);
         }
         
         // process internal and external styleSheets
@@ -1898,7 +2005,7 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
                 var ssid = ruleData.styleSheetId;
                 var parentStyleSheet = StyleSheetCache.get(ssid); 
 
-                var href = parentStyleSheet.href;  // Null means inline
+                var href = parentStyleSheet.externalURL ? parentStyleSheet.externalURL : parentStyleSheet.href;  // Null means inline
 
                 var instance = null;
                 //var instance = getInstanceForStyleSheet(rule.parentStyleSheet, element.ownerDocument);

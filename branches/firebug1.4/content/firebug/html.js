@@ -6,6 +6,9 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Globals
 
+var ElementCache = Firebug.Lite.Cache.Element;
+var cacheID = Firebug.Lite.Cache.ID;
+
 var ignoreHTMLProps =
 {
     // ignores the attributes injected by Sizzle, otherwise it will 
