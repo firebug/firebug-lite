@@ -10591,7 +10591,7 @@ var ChromeFrameBase = extend(ChromeBase,
                 node.style.display = "block";
             
             var main = $("fbChrome");
-            main.style.display = "block";
+            main.style.display = "table";
             
             var self = this;
                 /// TODO: xxxpedro FOUC
