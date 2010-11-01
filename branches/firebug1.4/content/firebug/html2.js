@@ -638,7 +638,7 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
         this.onKeyPress = bind(this.onKeyPress, this);        
         
         //var object = Firebug.browser.document.documentElement;
-        //Firebug.HTMLPanel.Element.tag.replace({object: object}, this.contentNode);
+        //Firebug.HTMLPanel.Element.tag.replace({object: object}, this.panelNode);
     },
     
     initialize: function(){
