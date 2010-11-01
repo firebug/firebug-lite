@@ -508,6 +508,34 @@ function loadModules() {
     var moduleURL, script;
     var scriptTags = [];
     
+    // new module loader
+    var length = FBDev.modules.length;
+    var loadModule = function(index){
+        if (index == length) return;
+    
+        var module = FBDev.modules[index];
+        var moduleURL = sourceURL + module + sufix;
+        var script = document.createElement("script");
+        script.src = moduleURL;
+        
+        script.onload = function() { 
+            if ( !script.onloadDone ) {
+                script.onloadDone = true; 
+                loadModule(index+1); 
+            }
+        };
+        script.onreadystatechange = function() { 
+            if ( ( "loaded" === script.readyState || "complete" === script.readyState ) && !script.onloadDone ) {
+                script.onloadDone = true; 
+                loadModule(index+1);
+            }
+        }
+        
+        document.getElementsByTagName("head")[0].appendChild(script);
+    };
+    loadModule(0);
+
+    /*
     for (var i=0, module; module=FBDev.modules[i]; i++)
     {
         var moduleURL = sourceURL + module + sufix;
@@ -530,6 +558,7 @@ function loadModules() {
     {
         document.write(scriptTags.join(""));
     }
+    /**/
     
     waitFirebugLoad();
 };
@@ -571,7 +600,7 @@ var loadDevPanel = function() { with(FBL) {
             out.id = "fbDevOutput";
             out.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; padding: 0;";
             
-            this.contentNode.appendChild(out);
+            this.panelNode.appendChild(out);
             this.outputNode = out;
             
             this.buildSourceButton = new Button({
@@ -603,7 +632,7 @@ var loadDevPanel = function() { with(FBL) {
             Firebug.Panel.initialize.apply(this, arguments);
             
             this.containerNode.style.overflow = "hidden";
-            this.outputNode = this.contentNode.firstChild;                
+            this.outputNode = this.panelNode.firstChild;                
             
             this.buildSourceButton.initialize();
             this.buildSkinButton.initialize();
