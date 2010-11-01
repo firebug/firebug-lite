@@ -1330,7 +1330,7 @@ append(ChromeBase,
             // TODO: xxxpedro innerHTML
             panel = newPanelMap[name]; 
             if (panel.options.innerHTMLSync)
-                panel.contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
+                panel.panelNode.innerHTML = oldPanelMap[name].panelNode.innerHTML;
         }
         
         Firebug.chrome = newChrome;
