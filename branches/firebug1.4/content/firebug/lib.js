@@ -1795,6 +1795,30 @@ this.getInstanceForStyleSheet = function(styleSheet, ownerDocument)
 
 this.hasClass = function(node, name) // className, className, ...
 {
+    // TODO: xxxpedro when lib.hasClass is called with more than 2 arguments?
+    // this function can be optimized a lot if assumed 2 arguments only,
+    // which seems to be what happens 99% of the time
+    if (arguments.length == 2)
+        return (' '+node.className+' ').indexOf(' '+name+' ') != -1;
+    
+    if (!node || node.nodeType != 1)
+        return false;
+    else
+    {
+        for (var i=1; i<arguments.length; ++i)
+        {
+            var name = arguments[i];
+            var re = new RegExp("(^|\\s)"+name+"($|\\s)");
+            if (!re.exec(node.className))
+                return false;
+        }
+
+        return true;
+    }
+};
+
+this.old_hasClass = function(node, name) // className, className, ...
+{
     if (!node || node.nodeType != 1)
         return false;
     else
@@ -1813,7 +1837,8 @@ this.hasClass = function(node, name) // className, className, ...
 
 this.setClass = function(node, name)
 {
-    if (node && !this.hasClass(node, name))
+    if (node && (' '+node.className+' ').indexOf(' '+name+' ') == -1)
+    ///if (node && !this.hasClass(node, name))
         node.className += " " + name;
 };
 
@@ -1839,7 +1864,8 @@ this.removeClass = function(node, name)
 
 this.toggleClass = function(elt, name)
 {
-    if (this.hasClass(elt, name))
+    if ((' '+elt.className+' ').indexOf(' '+name+' ') != -1)
+    ///if (this.hasClass(elt, name))
         this.removeClass(elt, name);
     else
         this.setClass(elt, name);
@@ -2115,6 +2141,9 @@ this.isElement = function(o)
 // ************************************************************************************************
 // DOM Modification
 
+// TODO: xxxpedro use doc fragments in Context API 
+var appendFragment = null;
+
 this.appendInnerHTML = function(element, html, referenceElement)
 {
     // if undefined, we must convert it to null otherwise it will throw an error in IE 
@@ -2135,13 +2164,18 @@ this.appendInnerHTML = function(element, html, referenceElement)
     }
     else
     {
+        if (!appendFragment || appendFragment.ownerDocument != doc)
+            appendFragment = doc.createDocumentFragment();
+        
         var div = doc.createElement("div");
         div.innerHTML = html;
         
         var firstChild = div.firstChild;
         while (div.firstChild)
-            element.appendChild(div.firstChild);
+            appendFragment.appendChild(div.firstChild);
 
+        element.insertBefore(appendFragment, referenceElement);
+        
         div = null;
     }
     
