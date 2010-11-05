@@ -538,7 +538,7 @@ function loadModules() {
     /**/
 
     // new module loader
-    /*
+    
     var length = FBDev.modules.length;
     var loadModule = function(index){
         if (index == length) return;
@@ -566,7 +566,7 @@ function loadModules() {
     loadModule(0);
     /**/
 
-    
+    /*
     for (var i=0, module; module=FBDev.modules[i]; i++)
     {
         var moduleURL = sourceURL + module + sufix;
