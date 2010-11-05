@@ -3,10 +3,14 @@
 FBL.ns(function() { with (FBL) {
 
 
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// TODO: xxxpedro debugger hack
 /// TODO: xxxpedro port to Firebug Lite
 Firebug.ActivableModule = Firebug.Module;
 Firebug.registerActivableModule = Firebug.registerModule;
+Firebug.Panel.isEnabled = function(){return true;};
 Firebug.ActivablePanel = Firebug.Panel;
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 // ************************************************************************************************
@@ -89,11 +93,28 @@ var SourceBoxPanelBase = extend(Firebug.MeasureBox, Firebug.ActivablePanel);
 Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
 /** @lends Firebug.SourceBoxPanel */
 {
-    initialize: function(context, doc)
+    ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /// TODO: xxxpedro debugger hack
+    /// need to refactor the Firebug Lite initialization create/destroy, intitialize/shutodown, initializeUI order of calls
+    create: function()
     {
+        /// TODO: xxxpedro
         this.onResize =  bind(this.resizer, this);
         this.sourceBoxes = {};
         this.decorator = this.getDecorator();
+        
+        Firebug.ActivablePanel.create.apply(this, arguments);
+        
+        /// TODO: xxxpedro containerNode is not part of Firebug API
+        this.scrollingElement = this.containerNode;
+    },
+    
+    initialize: function(context, doc)
+    {
+        /// TODO: xxxpedro - need to refactor the Firebug Lite initialization create/destroy, intitialize/shutodown, initializeUI order of calls
+        ///this.onResize =  bind(this.resizer, this);
+        ///this.sourceBoxes = {};
+        ///this.decorator = this.getDecorator();
 
         Firebug.ActivablePanel.initialize.apply(this, arguments);
     },
@@ -105,8 +126,9 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         // content, we must listen to the Firebug.chrome.window instead in order to
         // handle the resizing of the Panel's UI
         this.resizeEventTarget = Firebug.chrome.window;
+        addEvent(this.resizeEventTarget, "resize", this.onResize);
         ///this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
-        this.resizeEventTarget.addEventListener("resize", this.onResize, true);
+        ///this.resizeEventTarget.addEventListener("resize", this.onResize, true);
         this.attachToCache();
 
         Firebug.ActivablePanel.initializeNode.apply(this, arguments);
@@ -117,16 +139,21 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         var oldEventTarget = this.resizeEventTarget;
         oldEventTarget.removeEventListener("resize", this.onResize, true);
         Firebug.Panel.reattach.apply(this, arguments);
-        this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
-        this.resizeEventTarget.addEventListener("resize", this.onResize, true);
+        
+        // TODO: xxxpedro
+        this.resizeEventTarget = Firebug.chrome.window;
+        addEvent(this.resizeEventTarget, "resize", this.onResize);
+        ///this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
+        ///this.resizeEventTarget.addEventListener("resize", this.onResize, true);
         this.attachToCache();
     },
 
     destroyNode: function()
     {
         Firebug.ActivablePanel.destroyNode.apply(this, arguments);
-
-        this.resizeEventTarget.removeEventListener("resize", this.onResize, true);
+        
+        removeEvent(this.resizeEventTarget, "resize", this.onResize);
+        ///this.resizeEventTarget.removeEventListener("resize", this.onResize, true);
         this.detachFromCache();
     },
 
@@ -435,7 +462,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         if (FBTrace.DBG_SOURCEFILES)
         {
             FBTrace.sysout("setSourceBoxLineSizes size for lineNoCharsSpacer "+lineNoCharsSpacer, size);
-            FBTrace.sysout("firebug.setSourceBoxLineSizes, sourceBox.scrollTop "+sourceBox.scrollTop+ " sourceBox.lineHeight: "+sourceBox.lineHeight+" sourceBox.lineNoWidth:"+sourceBox.lineNoWidth+"\n");
+            FBTrace.sysout("firebug.setSourceBoxLineSizes, this.scrollingElement.scrollTop "+this.scrollingElement.scrollTop+ " sourceBox.lineHeight: "+sourceBox.lineHeight+" sourceBox.lineNoWidth:"+sourceBox.lineNoWidth+"\n");
         }
     },
 
@@ -566,7 +593,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         }
     },
 
-    reView: function(sourceBox, clearCache)  // called for all scroll events, including any time sourcebox.scrollTop is set
+    reView: function(sourceBox, clearCache)  // called for all scroll events, including any time this.scrollingElement.scrollTop is set
     {
         if (sourceBox.targetedLine)
         {
@@ -576,19 +603,19 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         }
         else
         {
-            var viewRange = this.getViewRangeFromScrollTop(sourceBox, sourceBox.scrollTop);
+            var viewRange = this.getViewRangeFromScrollTop(sourceBox, this.scrollingElement.scrollTop);
         }
 
         if (clearCache)
         {
             this.clearSourceBox(sourceBox);
         }
-        else if (sourceBox.scrollTop === sourceBox.lastScrollTop && sourceBox.clientHeight && sourceBox.clientHeight === sourceBox.lastClientHeight)
+        else if (this.scrollingElement.scrollTop === sourceBox.lastScrollTop && sourceBox.clientHeight && sourceBox.clientHeight === sourceBox.lastClientHeight)
         {
             if (sourceBox.firstRenderedLine <= viewRange.firstLine && sourceBox.lastRenderedLine >= viewRange.lastLine)
             {
                 if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("reView skipping sourceBox "+sourceBox.scrollTop+"=scrollTop="+sourceBox.lastScrollTop+", "+ sourceBox.clientHeight+"=clientHeight="+sourceBox.lastClientHeight, sourceBox);
+                    FBTrace.sysout("reView skipping sourceBox "+this.scrollingElement.scrollTop+"=scrollTop="+sourceBox.lastScrollTop+", "+ sourceBox.clientHeight+"=clientHeight="+sourceBox.lastClientHeight, sourceBox);
                 // skip work if nothing changes.
                 return;
             }
@@ -603,7 +630,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
             dispatch(Firebug.uiListeners, "onViewportChange", [link]);
         }
 
-        sourceBox.lastScrollTop = sourceBox.scrollTop;
+        sourceBox.lastScrollTop = this.scrollingElement.scrollTop;
         sourceBox.lastClientHeight = sourceBox.clientHeight;
     },
 
@@ -656,6 +683,52 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
      * @return true if viewRange overlaps first/lastRenderedLine
      */
     insertedLinesOverlapCache: function(sourceBox, viewRange)
+    {
+        var cacheHit = false;
+        
+        var linesBefore = []; // lines to be prepended
+        var linesAfter = []; // lines to be appended
+    
+        for (var line = viewRange.firstLine; line <= viewRange.lastLine; line++)
+        {
+            if (line >= sourceBox.firstRenderedLine && line <= sourceBox.lastRenderedLine )
+            {
+                cacheHit = true;
+                continue;
+            }
+
+            var lineHTML = this.getSourceLineHTML(sourceBox, line);
+
+            if (line < sourceBox.firstRenderedLine)
+            {
+                // if we are above the cache, queue lines to be prepended
+                linesBefore.push(lineHTML);
+            }
+            else
+            {
+                // if we are below the cache, queue lines to be appended
+                linesAfter.push(lineHTML);
+            }
+        }
+        
+        if (linesBefore.length > 0)
+        {
+            var topCacheLine = sourceBox.getLineNode(sourceBox.firstRenderedLine);
+            
+            // prepend all lines at once
+            appendInnerHTML(sourceBox.viewport, linesBefore.join(""), topCacheLine);
+        }
+        
+        if (linesAfter.length > 0)
+        {
+            // append all lines at once
+            appendInnerHTML(sourceBox.viewport, linesAfter.join(""), null);
+        }
+        
+        return cacheHit;
+    },
+
+    old_insertedLinesOverlapCache: function(sourceBox, viewRange)
     {
         var topCacheLine = null;
         var cacheHit = false;
@@ -885,14 +958,14 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         var firstRenderedLineOffset = firstRenderedLineElement.offsetTop;
         var firstViewRangeElement = sourceBox.getLineNode(viewRange.firstLine);
         var firstViewRangeOffset = firstViewRangeElement.offsetTop;
-        var topPadding = sourceBox.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset);
+        var topPadding = this.scrollingElement.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset);
         // Because of rounding when converting from pixels to lines, topPadding can be +/- lineHeight/2, round up
         var averageLineHeight = this.getAverageLineHeight(sourceBox);
         var linesOfPadding = Math.floor( (topPadding + averageLineHeight)/ averageLineHeight);
         var topPadding = (linesOfPadding - 1)* averageLineHeight;
 
         if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("setViewportPadding sourceBox.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset): "+sourceBox.scrollTop+"-"+"("+firstViewRangeOffset+"-"+firstRenderedLineOffset+")="+topPadding);
+            FBTrace.sysout("setViewportPadding this.scrollingElement.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset): "+this.scrollingElement.scrollTop+"-"+"("+firstViewRangeOffset+"-"+firstRenderedLineOffset+")="+topPadding);
         // we want the bottomPadding to take up the rest
         var totalPadding = this.getTotalPadding(sourceBox);
         if (totalPadding < 0)
@@ -907,7 +980,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         {
             FBTrace.sysout("setViewportPadding viewport.offsetHeight: "+sourceBox.viewport.offsetHeight+" viewport.clientHeight "+sourceBox.viewport.clientHeight);
             FBTrace.sysout("setViewportPadding sourceBox.offsetHeight: "+sourceBox.offsetHeight+" sourceBox.clientHeight "+sourceBox.clientHeight);
-            FBTrace.sysout("setViewportPadding scrollTop: "+sourceBox.scrollTop+" firstRenderedLine "+sourceBox.firstRenderedLine+" bottom: "+bottomPadding+" top: "+topPadding);
+            FBTrace.sysout("setViewportPadding scrollTop: "+this.scrollingElement.scrollTop+" firstRenderedLine "+sourceBox.firstRenderedLine+" bottom: "+bottomPadding+" top: "+topPadding);
         }
         var view = sourceBox.viewport;
 
