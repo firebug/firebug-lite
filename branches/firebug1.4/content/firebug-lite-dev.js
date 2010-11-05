@@ -14,7 +14,7 @@ var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/";
 
 // ************************************************************************************************
 
-//window.FBL = {}; // force exposure in IE global namespace
+window.FBL = {}; // force exposure in IE global namespace
 window.FBDev =
 {
     // ********************************************************************************************
