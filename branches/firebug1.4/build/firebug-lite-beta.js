@@ -691,7 +691,7 @@ this.createStyleSheet = function(doc, url)
 {
     //TODO: xxxpedro
     //var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
-    var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
+    var style = this.createElement("link");
     style.setAttribute("charset","utf-8");
     style.firebugIgnore = true;
     style.setAttribute("rel", "stylesheet");
@@ -1790,12 +1790,223 @@ this.getInstanceForStyleSheet = function(styleSheet, ownerDocument)
     return ret;
 };
 
+// ************************************************************************************************
+// HTML and XML Serialization
+
+
+var getElementType = this.getElementType = function(node)
+{
+    if (isElementXUL(node))
+        return 'xul';
+    else if (isElementSVG(node))
+        return 'svg';
+    else if (isElementMathML(node))
+        return 'mathml';
+    else if (isElementXHTML(node))
+        return 'xhtml';
+    else if (isElementHTML(node))
+        return 'html';
+}
+
+var getElementSimpleType = this.getElementSimpleType = function(node)
+{
+    if (isElementSVG(node))
+        return 'svg';
+    else if (isElementMathML(node))
+        return 'mathml';
+    else
+        return 'html';
+}
+
+var isElementHTML = this.isElementHTML = function(node)
+{
+    return node.nodeName == node.nodeName.toUpperCase();
+}
+
+var isElementXHTML = this.isElementXHTML = function(node)
+{
+    return node.nodeName == node.nodeName.toLowerCase();
+}
+
+var isElementMathML = this.isElementMathML = function(node)
+{
+    return node.namespaceURI == 'http://www.w3.org/1998/Math/MathML';
+}
+
+var isElementSVG = this.isElementSVG = function(node)
+{
+    return node.namespaceURI == 'http://www.w3.org/2000/svg';
+}
+
+var isElementXUL = this.isElementXUL = function(node)
+{
+    return node instanceof XULElement;
+}
+
+this.isSelfClosing = function(element)
+{
+    if (isElementSVG(element) || isElementMathML(element))
+        return true;
+    var tag = element.localName.toLowerCase();
+    return (this.selfClosingTags.hasOwnProperty(tag));
+};
+
+this.getElementHTML = function(element)
+{
+    var self=this;
+    function toHTML(elt)
+    {
+        if (elt.nodeType == Node.ELEMENT_NODE)
+        {
+            if (unwrapObject(elt).firebugIgnore)
+                return;
+
+            html.push('<', elt.nodeName.toLowerCase());
+
+            for (var i = 0; i < elt.attributes.length; ++i)
+            {
+                var attr = elt.attributes[i];
+
+                // Hide attributes set by Firebug
+                if (attr.localName.indexOf("firebug-") == 0)
+                    continue;
+
+                // MathML
+                if (attr.localName.indexOf("-moz-math") == 0)
+                {
+                    // just hide for now
+                    continue;
+                }
+
+                html.push(' ', attr.nodeName, '="', escapeForElementAttribute(attr.nodeValue),'"');
+            }
+
+            if (elt.firstChild)
+            {
+                html.push('>');
+
+                var pureText=true;
+                for (var child = element.firstChild; child; child = child.nextSibling)
+                    pureText=pureText && (child.nodeType == Node.TEXT_NODE);
+
+                if (pureText)
+                    html.push(escapeForHtmlEditor(elt.textContent));
+                else {
+                    for (var child = elt.firstChild; child; child = child.nextSibling)
+                        toHTML(child);
+                }
+
+                html.push('</', elt.nodeName.toLowerCase(), '>');
+            }
+            else if (isElementSVG(elt) || isElementMathML(elt))
+            {
+                html.push('/>');
+            }
+            else if (self.isSelfClosing(elt))
+            {
+                html.push((isElementXHTML(elt))?'/>':'>');
+            }
+            else
+            {
+                html.push('></', elt.nodeName.toLowerCase(), '>');
+            }
+        }
+        else if (elt.nodeType == Node.TEXT_NODE)
+            html.push(escapeForTextNode(elt.textContent));
+        else if (elt.nodeType == Node.CDATA_SECTION_NODE)
+            html.push('<![CDATA[', elt.nodeValue, ']]>');
+        else if (elt.nodeType == Node.COMMENT_NODE)
+            html.push('<!--', elt.nodeValue, '-->');
+    }
+
+    var html = [];
+    toHTML(element);
+    return html.join("");
+};
+
+this.getElementXML = function(element)
+{
+    function toXML(elt)
+    {
+        if (elt.nodeType == Node.ELEMENT_NODE)
+        {
+            if (unwrapObject(elt).firebugIgnore)
+                return;
+
+            xml.push('<', elt.nodeName.toLowerCase());
+
+            for (var i = 0; i < elt.attributes.length; ++i)
+            {
+                var attr = elt.attributes[i];
+
+                // Hide attributes set by Firebug
+                if (attr.localName.indexOf("firebug-") == 0)
+                    continue;
+
+                // MathML
+                if (attr.localName.indexOf("-moz-math") == 0)
+                {
+                    // just hide for now
+                    continue;
+                }
+
+                xml.push(' ', attr.nodeName, '="', escapeForElementAttribute(attr.nodeValue),'"');
+            }
+
+            if (elt.firstChild)
+            {
+                xml.push('>');
+
+                for (var child = elt.firstChild; child; child = child.nextSibling)
+                    toXML(child);
+
+                xml.push('</', elt.nodeName.toLowerCase(), '>');
+            }
+            else
+                xml.push('/>');
+        }
+        else if (elt.nodeType == Node.TEXT_NODE)
+            xml.push(elt.nodeValue);
+        else if (elt.nodeType == Node.CDATA_SECTION_NODE)
+            xml.push('<![CDATA[', elt.nodeValue, ']]>');
+        else if (elt.nodeType == Node.COMMENT_NODE)
+            xml.push('<!--', elt.nodeValue, '-->');
+    }
+
+    var xml = [];
+    toXML(element);
+    return xml.join("");
+};
 
 
 // ************************************************************************************************
 // CSS classes
 
 this.hasClass = function(node, name) // className, className, ...
+{
+    // TODO: xxxpedro when lib.hasClass is called with more than 2 arguments?
+    // this function can be optimized a lot if assumed 2 arguments only,
+    // which seems to be what happens 99% of the time
+    if (arguments.length == 2)
+        return (' '+node.className+' ').indexOf(' '+name+' ') != -1;
+    
+    if (!node || node.nodeType != 1)
+        return false;
+    else
+    {
+        for (var i=1; i<arguments.length; ++i)
+        {
+            var name = arguments[i];
+            var re = new RegExp("(^|\\s)"+name+"($|\\s)");
+            if (!re.exec(node.className))
+                return false;
+        }
+
+        return true;
+    }
+};
+
+this.old_hasClass = function(node, name) // className, className, ...
 {
     if (!node || node.nodeType != 1)
         return false;
@@ -1815,7 +2026,8 @@ this.hasClass = function(node, name) // className, className, ...
 
 this.setClass = function(node, name)
 {
-    if (node && !this.hasClass(node, name))
+    if (node && (' '+node.className+' ').indexOf(' '+name+' ') == -1)
+    ///if (node && !this.hasClass(node, name))
         node.className += " " + name;
 };
 
@@ -1841,7 +2053,8 @@ this.removeClass = function(node, name)
 
 this.toggleClass = function(elt, name)
 {
-    if (this.hasClass(elt, name))
+    if ((' '+elt.className+' ').indexOf(' '+name+' ') != -1)
+    ///if (this.hasClass(elt, name))
         this.removeClass(elt, name);
     else
         this.setClass(elt, name);
@@ -2117,15 +2330,44 @@ this.isElement = function(o)
 // ************************************************************************************************
 // DOM Modification
 
+// TODO: xxxpedro use doc fragments in Context API 
+var appendFragment = null;
+
 this.appendInnerHTML = function(element, html, referenceElement)
 {
+    // if undefined, we must convert it to null otherwise it will throw an error in IE 
+    // when executing element.insertBefore(firstChild, referenceElement)
+    referenceElement = referenceElement || null;
+    
     var doc = element.ownerDocument;
-    var range = doc.createRange();  // a helper object
-    range.selectNodeContents(element); // the environment to interpret the html
+    
+    // doc.createRange not available in IE
+    if (doc.createRange)
+    {
+        var range = doc.createRange();  // a helper object
+        range.selectNodeContents(element); // the environment to interpret the html
+    
+        var fragment = range.createContextualFragment(html);  // parse
+        var firstChild = fragment.firstChild;
+        element.insertBefore(fragment, referenceElement);
+    }
+    else
+    {
+        if (!appendFragment || appendFragment.ownerDocument != doc)
+            appendFragment = doc.createDocumentFragment();
+        
+        var div = doc.createElement("div");
+        div.innerHTML = html;
+        
+        var firstChild = div.firstChild;
+        while (div.firstChild)
+            appendFragment.appendChild(div.firstChild);
 
-    var fragment = range.createContextualFragment(html);  // parse
-    var firstChild = fragment.firstChild;
-    element.insertBefore(fragment, referenceElement);
+        element.insertBefore(appendFragment, referenceElement);
+        
+        div = null;
+    }
+    
     return firstChild;
 };
 
@@ -2277,20 +2519,20 @@ this.isShift = function(event)
     return event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
 };
 
-this.addEvent = function(object, name, handler)
+this.addEvent = function(object, name, handler, useCapture)
 {
     if (object.addEventListener)
-        object.addEventListener(name, handler, false);
+        object.addEventListener(name, handler, useCapture);
     else
         object.attachEvent("on"+name, handler);
 };
 
-this.removeEvent = function(object, name, handler)
+this.removeEvent = function(object, name, handler, useCapture)
 {
     try
     {
         if (object.removeEventListener)
-            object.removeEventListener(name, handler, false);
+            object.removeEventListener(name, handler, useCapture);
         else
             object.detachEvent("on"+name, handler);
     }
@@ -5320,6 +5562,21 @@ this.innerEditableTags =
     "body": 1
 };
 
+this.selfClosingTags =
+{ // End tags for void elements are forbidden http://wiki.whatwg.org/wiki/HTML_vs._XHTML
+    "meta": 1,
+    "link": 1,
+    "area": 1,
+    "base": 1,
+    "col": 1,
+    "input": 1,
+    "img": 1,
+    "br": 1,
+    "hr": 1,
+    "param":1,
+    "embed":1
+};
+
 var invisibleTags = this.invisibleTags =
 {
     "HTML": 1,
@@ -5331,6 +5588,8 @@ var invisibleTags = this.invisibleTags =
     "SCRIPT": 1,
     "NOSCRIPT": 1,
     "BR": 1,
+    "PARAM": 1,
+    "COL": 1,
 
     "html": 1,
     "head": 1,
@@ -5340,7 +5599,10 @@ var invisibleTags = this.invisibleTags =
     "style": 1,
     "script": 1,
     "noscript": 1,
-    "br": 1/*,
+    "br": 1,
+    "param": 1,
+    "col": 1,
+    /*
     "window": 1,
     "browser": 1,
     "frame": 1,
@@ -6084,6 +6346,8 @@ window.Firebug = FBL.Firebug =
                 {
                     FBTrace.sysout("firebug.getRep FAILS: ", exc.message || exc);
                     FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: Rep="+reps[i].className);
+                    // TODO: xxxpedro add trace to FBTrace logs like in Firebug
+                    //firebug.trace();
                 }
             }
         }
@@ -6521,9 +6785,6 @@ Firebug.Panel =
             // create SidePanel
         }
         
-        var contentNode = this.contentNode = createElement("div");
-        this.panelNode.appendChild(contentNode);
-        
         this.containerNode = this.panelNode.parentNode;
         
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.create", this.name);
@@ -6564,7 +6825,6 @@ Firebug.Panel =
         
         this.tabNode = null;
         this.panelNode = null;
-        this.contentNode = null;
         this.containerNode = null;
         
         this.toolButtonsNode = null;
@@ -10235,7 +10495,7 @@ append(ChromeBase,
             // TODO: xxxpedro innerHTML
             panel = newPanelMap[name]; 
             if (panel.options.innerHTMLSync)
-                panel.contentNode.innerHTML = oldPanelMap[name].contentNode.innerHTML;
+                panel.panelNode.innerHTML = oldPanelMap[name].panelNode.innerHTML;
         }
         
         Firebug.chrome = newChrome;
@@ -20249,6 +20509,7 @@ FBL.ns(function() { with (FBL) {
 //const Ci = Components.interfaces;
     
 var frameCounters = {};
+var traceRecursion = 0;
 
 Firebug.Console.injector =
 {
@@ -20659,6 +20920,14 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             
             return false;
         };
+        
+        traceRecursion++;
+        
+        if (traceRecursion > 1)
+        {
+            traceRecursion--;
+            return;
+        }
     
         var frames = [];
         
@@ -20814,10 +21083,12 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             }
             /**/
         }
-    
+        
         //console.log(stack);
         //console.dir(frames);
         Firebug.Console.log({frames: frames}, context, "stackTrace", FirebugReps.StackTrace);
+        
+        traceRecursion--;
     };
     
     this.trace_ok = function()
@@ -21881,9 +22152,6 @@ var XMLHttpRequestWrapper = function(activeXObject)
         spy.xhrRequest = xhrRequest;
         spy.urlParams = parseURLParamsArray(url);
         
-        if (!FBL.isIE && async)
-            xhrRequest.onreadystatechange = handleStateChange;
-        
         try
         {
             // xhrRequest.open.apply may not be available in IE
@@ -21896,8 +22164,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
         {
         }
         
-        if (FBL.isIE && async)
-            xhrRequest.onreadystatechange = handleStateChange;
+        xhrRequest.onreadystatechange = handleStateChange;
         
     };
     
@@ -21906,7 +22173,6 @@ var XMLHttpRequestWrapper = function(activeXObject)
     this.send = function(data)
     {
         //Firebug.Console.log("xhrRequest send");
-        
         spy.data = data;
         
         reqStartTS = new Date().getTime();
@@ -21930,7 +22196,15 @@ var XMLHttpRequestWrapper = function(activeXObject)
             {
                 self.readyState = xhrRequest.readyState;
                 
-                finishXHR();
+                // sometimes an error happens when calling finishXHR()
+                // Issue 3422: Firebug Lite breaks Google Instant Search
+                try
+                {
+                    finishXHR();
+                }
+                catch(E)
+                {
+                }
             }
         }
     };
@@ -24750,8 +25024,8 @@ Firebug.HTML = extend(Firebug.Module,
             
             var node = ElementCache.get(id).parentNode;
 
-            if (node && ElementCache.has(node))
-                id = ElementCache.key(node);
+            if (node)
+                id = ElementCache(node);
             else
                 break;
         }
@@ -24797,7 +25071,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.create.apply(this, arguments);
         
         this.panelNode.style.padding = "4px 3px 1px 15px";
-        this.contentNode.style.minWidth = "500px";
+        this.panelNode.style.minWidth = "500px";
         
         if (Env.Options.enablePersistent || Firebug.chrome.type != "popup")
             this.createUI();
@@ -24825,9 +25099,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         var html = [];
         Firebug.HTML.appendTreeNode(rootNode, html);
         
-        var d = this.contentNode;
-        d.innerHTML = html.join("");
-        this.panelNode.appendChild(d);
+        this.panelNode.innerHTML = html.join("");
     },
     
     initialize: function()
@@ -29705,10 +29977,14 @@ Firebug.SourceFile.guessEnclosingFunctionName = function(url, line, context)
 FBL.ns(function() { with (FBL) {
 
 
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// TODO: xxxpedro debugger hack
 /// TODO: xxxpedro port to Firebug Lite
 Firebug.ActivableModule = Firebug.Module;
 Firebug.registerActivableModule = Firebug.registerModule;
+Firebug.Panel.isEnabled = function(){return true;};
 Firebug.ActivablePanel = Firebug.Panel;
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 // ************************************************************************************************
@@ -29791,11 +30067,28 @@ var SourceBoxPanelBase = extend(Firebug.MeasureBox, Firebug.ActivablePanel);
 Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
 /** @lends Firebug.SourceBoxPanel */
 {
-    initialize: function(context, doc)
+    ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /// TODO: xxxpedro debugger hack
+    /// need to refactor the Firebug Lite initialization create/destroy, intitialize/shutodown, initializeUI order of calls
+    create: function()
     {
+        /// TODO: xxxpedro
         this.onResize =  bind(this.resizer, this);
         this.sourceBoxes = {};
         this.decorator = this.getDecorator();
+        
+        Firebug.ActivablePanel.create.apply(this, arguments);
+        
+        /// TODO: xxxpedro containerNode is not part of Firebug API
+        this.scrollingElement = this.containerNode;
+    },
+    
+    initialize: function(context, doc)
+    {
+        /// TODO: xxxpedro - need to refactor the Firebug Lite initialization create/destroy, intitialize/shutodown, initializeUI order of calls
+        ///this.onResize =  bind(this.resizer, this);
+        ///this.sourceBoxes = {};
+        ///this.decorator = this.getDecorator();
 
         Firebug.ActivablePanel.initialize.apply(this, arguments);
     },
@@ -29807,8 +30100,9 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         // content, we must listen to the Firebug.chrome.window instead in order to
         // handle the resizing of the Panel's UI
         this.resizeEventTarget = Firebug.chrome.window;
+        addEvent(this.resizeEventTarget, "resize", this.onResize);
         ///this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
-        this.resizeEventTarget.addEventListener("resize", this.onResize, true);
+        ///this.resizeEventTarget.addEventListener("resize", this.onResize, true);
         this.attachToCache();
 
         Firebug.ActivablePanel.initializeNode.apply(this, arguments);
@@ -29819,16 +30113,21 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         var oldEventTarget = this.resizeEventTarget;
         oldEventTarget.removeEventListener("resize", this.onResize, true);
         Firebug.Panel.reattach.apply(this, arguments);
-        this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
-        this.resizeEventTarget.addEventListener("resize", this.onResize, true);
+        
+        // TODO: xxxpedro
+        this.resizeEventTarget = Firebug.chrome.window;
+        addEvent(this.resizeEventTarget, "resize", this.onResize);
+        ///this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
+        ///this.resizeEventTarget.addEventListener("resize", this.onResize, true);
         this.attachToCache();
     },
 
     destroyNode: function()
     {
         Firebug.ActivablePanel.destroyNode.apply(this, arguments);
-
-        this.resizeEventTarget.removeEventListener("resize", this.onResize, true);
+        
+        removeEvent(this.resizeEventTarget, "resize", this.onResize);
+        ///this.resizeEventTarget.removeEventListener("resize", this.onResize, true);
         this.detachFromCache();
     },
 
@@ -30137,7 +30436,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         if (FBTrace.DBG_SOURCEFILES)
         {
             FBTrace.sysout("setSourceBoxLineSizes size for lineNoCharsSpacer "+lineNoCharsSpacer, size);
-            FBTrace.sysout("firebug.setSourceBoxLineSizes, sourceBox.scrollTop "+sourceBox.scrollTop+ " sourceBox.lineHeight: "+sourceBox.lineHeight+" sourceBox.lineNoWidth:"+sourceBox.lineNoWidth+"\n");
+            FBTrace.sysout("firebug.setSourceBoxLineSizes, this.scrollingElement.scrollTop "+this.scrollingElement.scrollTop+ " sourceBox.lineHeight: "+sourceBox.lineHeight+" sourceBox.lineNoWidth:"+sourceBox.lineNoWidth+"\n");
         }
     },
 
@@ -30268,7 +30567,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         }
     },
 
-    reView: function(sourceBox, clearCache)  // called for all scroll events, including any time sourcebox.scrollTop is set
+    reView: function(sourceBox, clearCache)  // called for all scroll events, including any time this.scrollingElement.scrollTop is set
     {
         if (sourceBox.targetedLine)
         {
@@ -30278,19 +30577,19 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         }
         else
         {
-            var viewRange = this.getViewRangeFromScrollTop(sourceBox, sourceBox.scrollTop);
+            var viewRange = this.getViewRangeFromScrollTop(sourceBox, this.scrollingElement.scrollTop);
         }
 
         if (clearCache)
         {
             this.clearSourceBox(sourceBox);
         }
-        else if (sourceBox.scrollTop === sourceBox.lastScrollTop && sourceBox.clientHeight && sourceBox.clientHeight === sourceBox.lastClientHeight)
+        else if (this.scrollingElement.scrollTop === sourceBox.lastScrollTop && sourceBox.clientHeight && sourceBox.clientHeight === sourceBox.lastClientHeight)
         {
             if (sourceBox.firstRenderedLine <= viewRange.firstLine && sourceBox.lastRenderedLine >= viewRange.lastLine)
             {
                 if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("reView skipping sourceBox "+sourceBox.scrollTop+"=scrollTop="+sourceBox.lastScrollTop+", "+ sourceBox.clientHeight+"=clientHeight="+sourceBox.lastClientHeight, sourceBox);
+                    FBTrace.sysout("reView skipping sourceBox "+this.scrollingElement.scrollTop+"=scrollTop="+sourceBox.lastScrollTop+", "+ sourceBox.clientHeight+"=clientHeight="+sourceBox.lastClientHeight, sourceBox);
                 // skip work if nothing changes.
                 return;
             }
@@ -30305,7 +30604,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
             dispatch(Firebug.uiListeners, "onViewportChange", [link]);
         }
 
-        sourceBox.lastScrollTop = sourceBox.scrollTop;
+        sourceBox.lastScrollTop = this.scrollingElement.scrollTop;
         sourceBox.lastClientHeight = sourceBox.clientHeight;
     },
 
@@ -30358,6 +30657,52 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
      * @return true if viewRange overlaps first/lastRenderedLine
      */
     insertedLinesOverlapCache: function(sourceBox, viewRange)
+    {
+        var cacheHit = false;
+        
+        var linesBefore = []; // lines to be prepended
+        var linesAfter = []; // lines to be appended
+    
+        for (var line = viewRange.firstLine; line <= viewRange.lastLine; line++)
+        {
+            if (line >= sourceBox.firstRenderedLine && line <= sourceBox.lastRenderedLine )
+            {
+                cacheHit = true;
+                continue;
+            }
+
+            var lineHTML = this.getSourceLineHTML(sourceBox, line);
+
+            if (line < sourceBox.firstRenderedLine)
+            {
+                // if we are above the cache, queue lines to be prepended
+                linesBefore.push(lineHTML);
+            }
+            else
+            {
+                // if we are below the cache, queue lines to be appended
+                linesAfter.push(lineHTML);
+            }
+        }
+        
+        if (linesBefore.length > 0)
+        {
+            var topCacheLine = sourceBox.getLineNode(sourceBox.firstRenderedLine);
+            
+            // prepend all lines at once
+            appendInnerHTML(sourceBox.viewport, linesBefore.join(""), topCacheLine);
+        }
+        
+        if (linesAfter.length > 0)
+        {
+            // append all lines at once
+            appendInnerHTML(sourceBox.viewport, linesAfter.join(""), null);
+        }
+        
+        return cacheHit;
+    },
+
+    old_insertedLinesOverlapCache: function(sourceBox, viewRange)
     {
         var topCacheLine = null;
         var cacheHit = false;
@@ -30587,14 +30932,14 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         var firstRenderedLineOffset = firstRenderedLineElement.offsetTop;
         var firstViewRangeElement = sourceBox.getLineNode(viewRange.firstLine);
         var firstViewRangeOffset = firstViewRangeElement.offsetTop;
-        var topPadding = sourceBox.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset);
+        var topPadding = this.scrollingElement.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset);
         // Because of rounding when converting from pixels to lines, topPadding can be +/- lineHeight/2, round up
         var averageLineHeight = this.getAverageLineHeight(sourceBox);
         var linesOfPadding = Math.floor( (topPadding + averageLineHeight)/ averageLineHeight);
         var topPadding = (linesOfPadding - 1)* averageLineHeight;
 
         if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("setViewportPadding sourceBox.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset): "+sourceBox.scrollTop+"-"+"("+firstViewRangeOffset+"-"+firstRenderedLineOffset+")="+topPadding);
+            FBTrace.sysout("setViewportPadding this.scrollingElement.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset): "+this.scrollingElement.scrollTop+"-"+"("+firstViewRangeOffset+"-"+firstRenderedLineOffset+")="+topPadding);
         // we want the bottomPadding to take up the rest
         var totalPadding = this.getTotalPadding(sourceBox);
         if (totalPadding < 0)
@@ -30609,7 +30954,7 @@ Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
         {
             FBTrace.sysout("setViewportPadding viewport.offsetHeight: "+sourceBox.viewport.offsetHeight+" viewport.clientHeight "+sourceBox.viewport.clientHeight);
             FBTrace.sysout("setViewportPadding sourceBox.offsetHeight: "+sourceBox.offsetHeight+" sourceBox.clientHeight "+sourceBox.clientHeight);
-            FBTrace.sysout("setViewportPadding scrollTop: "+sourceBox.scrollTop+" firstRenderedLine "+sourceBox.firstRenderedLine+" bottom: "+bottomPadding+" top: "+topPadding);
+            FBTrace.sysout("setViewportPadding scrollTop: "+this.scrollingElement.scrollTop+" firstRenderedLine "+sourceBox.firstRenderedLine+" bottom: "+bottomPadding+" top: "+topPadding);
         }
         var view = sourceBox.viewport;
 
@@ -30742,6 +31087,7 @@ FBL.persistObjects = function(){};
 FBL.sourceFilesAsArray = function(){return [];};
 
 Firebug.ActivableModule.isAlwaysEnabled = function(){return true;};
+Firebug.ActivablePanel.destroyNode = function(){};
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -33353,6 +33699,12 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         
         var tempContext = new Firebug.TabContext(window, Firebug.browser, Firebug.chrome, {});
         this.context = extend(Firebug.browser, tempContext);
+        
+        // TODO: xxxpedro IE portability of the following methods
+        this.context.setTimeout = Firebug.browser.setTimeout; 
+        this.context.clearTimeout = Firebug.browser.clearTimeout; 
+        this.context.setInterval = Firebug.browser.setInterval; 
+        this.context.clearInterval = Firebug.browser.clearInterval; 
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     	
     	Firebug.SourceBoxPanel.create.apply(this, arguments);
@@ -33629,11 +33981,12 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onMouseDown: function(event)
     {
+        var target = event.target || event.srcElement;
         // Don't interfere with clicks made into a notification editor.
-        if (getAncestorByClass(event.target, "breakNotification"))
+        if (getAncestorByClass(target, "breakNotification"))
             return;
 
-        var sourceLine = getAncestorByClass(event.target, "sourceLine");
+        var sourceLine = getAncestorByClass(target, "sourceLine");
         if (!sourceLine)
             return;
 
@@ -33654,7 +34007,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onContextMenu: function(event)
     {
-        var sourceLine = getAncestorByClass(event.target, "sourceLine");
+        var sourceLine = getAncestorByClass(event.target || event.srcElement, "sourceLine");
         if (!sourceLine)
             return;
 
@@ -33665,7 +34018,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onMouseOver: function(event)
     {
-        var sourceLine = getAncestorByClass(event.target, "sourceLine");
+        var sourceLine = getAncestorByClass(event.target || event.srcElement, "sourceLine");
         if (sourceLine)
         {
             if (this.hoveredLine)
@@ -33692,8 +34045,8 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onScroll: function(event)
     {
-        var scrollingElement = event.target;
-        this.reView(scrollingElement);
+        ///var scrollingElement = event.target || event.srcElement;
+        this.reView(this.selectedSourceBox);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -33726,7 +34079,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         //debugger;
         this.panelNode.style.fontFamily = "monospace";
         Firebug.chrome.$ = function(id){return $(id, Firebug.chrome.document); };
-        Firebug.uiListeners = [];
+        Firebug.uiListeners = Firebug.uiListeners || [];
         Firebug.ActivablePanel.initializeNode = function(){};
         Firebug.Panel.initializeNode = function(){};
         
@@ -33736,12 +34089,27 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         var url = Env.Location.app;
         var source = new Firebug.ScriptTagSourceFile(this.context, url, 0);
         this.showSourceFile(source);
+        //this.updateLocation(source);
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         
+    },
+    
+    /// TODO: xxxpedro refactor Firebug Lite initialization
+    shutdown: function()
+    {
+        if (this.selectedSourceBox)
+            this.clearSourceBox(this.selectedSourceBox);
+        
+        this.destroyNode();
+        
+        Firebug.SourceBoxPanel.shutdown.apply(this, arguments);
     },
 
     destroy: function(state)
     {
+        /// TODO: xxxpedro debugger persists
+        state = state || {};
+        
         delete this.selection; // We want the location (sourcefile) to persist, not the selection (eg stackFrame).
         persistObjects(this, state);
 
@@ -33796,12 +34164,18 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         obscure(this.tooltip, true);
         this.panelNode.appendChild(this.tooltip);
 
-        this.panelNode.addEventListener("mousedown", this.onMouseDown, true);
-        this.panelNode.addEventListener("contextmenu", this.onContextMenu, false);
-        this.panelNode.addEventListener("mouseover", this.onMouseOver, false);
-        this.panelNode.addEventListener("mouseout", this.onMouseOut, false);
-        this.panelNode.addEventListener("scroll", this.onScroll, true);
-
+        ///this.panelNode.addEventListener("mousedown", this.onMouseDown, true);
+        ///this.panelNode.addEventListener("contextmenu", this.onContextMenu, false);
+        ///this.panelNode.addEventListener("mouseover", this.onMouseOver, false);
+        ///this.panelNode.addEventListener("mouseout", this.onMouseOut, false);
+        ///this.panelNode.addEventListener("scroll", this.onScroll, true);
+        addEvent(this.panelNode, "mousedown", this.onMouseDown);
+        addEvent(this.panelNode, "contextmenu", this.onContextMenu);
+        addEvent(this.panelNode, "mouseover", this.onMouseOver);
+        addEvent(this.panelNode, "mouseout", this.onMouseOut);
+        //addEvent(this.panelNode, "scroll", this.onScroll, true);
+        addEvent(this.scrollingElement, "scroll", this.onScroll, true);
+        
         Firebug.SourceBoxPanel.initializeNode.apply(this, arguments);
     },
 
@@ -33810,11 +34184,16 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         if (this.tooltipTimeout)
             clearTimeout(this.tooltipTimeout);
 
-        this.panelNode.removeEventListener("mousedown", this.onMouseDown, true);
-        this.panelNode.removeEventListener("contextmenu", this.onContextMenu, false);
-        this.panelNode.removeEventListener("mouseover", this.onMouseOver, false);
-        this.panelNode.removeEventListener("mouseout", this.onMouseOut, false);
-        this.panelNode.removeEventListener("scroll", this.onScroll, true);
+        ///this.panelNode.removeEventListener("mousedown", this.onMouseDown, true);
+        ///this.panelNode.removeEventListener("contextmenu", this.onContextMenu, false);
+        ///this.panelNode.removeEventListener("mouseover", this.onMouseOver, false);
+        ///this.panelNode.removeEventListener("mouseout", this.onMouseOut, false);
+        ///this.panelNode.removeEventListener("scroll", this.onScroll, true);
+        removeEvent(this.panelNode, "mousedown", this.onMouseDown);
+        removeEvent(this.panelNode, "contextmenu", this.onContextMenu);
+        removeEvent(this.panelNode, "mouseover", this.onMouseOver);
+        removeEvent(this.panelNode, "mouseout", this.onMouseOut);
+        removeEvent(this.scrollingElement, "scroll", this.onScroll, true);
 
         Firebug.SourceBoxPanel.destroyNode.apply(this, arguments);
     },
@@ -36584,7 +36963,7 @@ this.logRow = function(message, className)
 {
     var panel = this.getPanel();
     
-    if (panel && panel.contentNode)
+    if (panel && panel.panelNode)
         this.writeMessage(message, className);
     else
     {
@@ -36608,13 +36987,13 @@ this.writeMessage = function(message, className)
 
 this.appendRow = function(row)
 {
-    var container = this.getPanel().contentNode;
+    var container = this.getPanel().panelNode;
     container.appendChild(row);
 };
 
 this.writeRow = function(message, className)
 {
-    var row = this.getPanel().contentNode.ownerDocument.createElement("div");
+    var row = this.getPanel().panelNode.ownerDocument.createElement("div");
     row.className = "logRow" + (className ? " logRow-"+className : "");
     row.innerHTML = message.join("");
     this.appendRow(row);
@@ -36694,7 +37073,7 @@ Firebug.Trace = extend(Firebug.Module,
     
     clear: function()
     {
-        this.getPanel().contentNode.innerHTML = "";
+        this.getPanel().panelNode.innerHTML = "";
     }
 });
 
@@ -36739,6 +37118,2206 @@ Firebug.registerPanel(TracePanel);
 
 // ************************************************************************************************
 }});
+
+// !!! DO NOT EDIT THIS FILE (GENERATED) !!!
+// this file was generated from codemirror subdirectory by `rake sandbox` task
+
+
+//  Copyright (c) 2007-2010 Marijn Haverbeke
+// 
+//  This software is provided 'as-is', without any express or implied
+//  warranty. In no event will the authors be held liable for any
+//  damages arising from the use of this software.
+// 
+//  Permission is granted to anyone to use this software for any
+//  purpose, including commercial applications, and to alter it and
+//  redistribute it freely, subject to the following restrictions:
+// 
+//  1. The origin of this software must not be misrepresented; you must
+//     not claim that you wrote the original software. If you use this
+//     software in a product, an acknowledgment in the product
+//     documentation would be appreciated but is not required.
+// 
+//  2. Altered source versions must be plainly marked as such, and must
+//     not be misrepresented as being the original software.
+// 
+//  3. This notice may not be removed or altered from any source
+//     distribution.
+// 
+//  Marijn Haverbeke
+//  marijnh@gmail.com
+
+
+var codemirror = (function() {
+var Editor = {};var indentUnit = 2;var window=this;
+/* A few useful utility functions. */
+
+// Capture a method on an object.
+function method(obj, name) {
+  return function() {obj[name].apply(obj, arguments);};
+}
+
+// The value used to signal the end of a sequence in iterators.
+this.StopIteration = {toString: function() {return "StopIteration"}};
+
+// Apply a function to each element in a sequence.
+this.forEach = function(iter, f) {
+  if (iter.next) {
+    try {while (true) f(iter.next());}
+    catch (e) {if (e != StopIteration) throw e;}
+  }
+  else {
+    for (var i = 0; i < iter.length; i++)
+      f(iter[i]);
+  }
+}
+
+// Map a function over a sequence, producing an array of results.
+function map(iter, f) {
+  var accum = [];
+  forEach(iter, function(val) {accum.push(f(val));});
+  return accum;
+}
+
+// Create a predicate function that tests a string againsts a given
+// regular expression. No longer used but might be used by 3rd party
+// parsers.
+function matcher(regexp){
+  return function(value){return regexp.test(value);};
+}
+
+// Test whether a DOM node has a certain CSS class. Much faster than
+// the MochiKit equivalent, for some reason.
+function hasClass(element, className){
+  var classes = element.className;
+  return classes && new RegExp("(^| )" + className + "($| )").test(classes);
+}
+
+// Insert a DOM node after another node.
+function insertAfter(newNode, oldNode) {
+  var parent = oldNode.parentNode;
+  parent.insertBefore(newNode, oldNode.nextSibling);
+  return newNode;
+}
+
+function removeElement(node) {
+  if (node.parentNode)
+    node.parentNode.removeChild(node);
+}
+
+function clearElement(node) {
+  while (node.firstChild)
+    node.removeChild(node.firstChild);
+}
+
+// Check whether a node is contained in another one.
+function isAncestor(node, child) {
+  while (child = child.parentNode) {
+    if (node == child)
+      return true;
+  }
+  return false;
+}
+
+// The non-breaking space character.
+var nbsp = "\u00a0";
+var matching = {"{": "}", "[": "]", "(": ")",
+                "}": "{", "]": "[", ")": "("};
+
+// Standardize a few unportable event properties.
+function normalizeEvent(event) {
+  if (!event.stopPropagation) {
+    event.stopPropagation = function() {this.cancelBubble = true;};
+    event.preventDefault = function() {this.returnValue = false;};
+  }
+  if (!event.stop) {
+    event.stop = function() {
+      this.stopPropagation();
+      this.preventDefault();
+    };
+  }
+
+  if (event.type == "keypress") {
+    event.code = (event.charCode == null) ? event.keyCode : event.charCode;
+    event.character = String.fromCharCode(event.code);
+  }
+  return event;
+}
+
+// Portably register event handlers.
+function addEventHandler(node, type, handler, removeFunc) {
+  function wrapHandler(event) {
+    handler(normalizeEvent(event || window.event));
+  }
+  if (typeof node.addEventListener == "function") {
+    node.addEventListener(type, wrapHandler, false);
+    if (removeFunc) return function() {node.removeEventListener(type, wrapHandler, false);};
+  }
+  else {
+    node.attachEvent("on" + type, wrapHandler);
+    if (removeFunc) return function() {node.detachEvent("on" + type, wrapHandler);};
+  }
+}
+
+function nodeText(node) {
+  return node.textContent || node.innerText || node.nodeValue || "";
+}
+
+function nodeTop(node) {
+  var top = 0;
+  while (node.offsetParent) {
+    top += node.offsetTop;
+    node = node.offsetParent;
+  }
+  return top;
+}
+
+function isBR(node) {
+  var nn = node.nodeName;
+  return nn == "BR" || nn == "br";
+}
+function isSpan(node) {
+  var nn = node.nodeName;
+  return nn == "SPAN" || nn == "span";
+}
+
+// A framework for simple tokenizers. Takes care of newlines and
+// white-space, and of getting the text from the source stream into
+// the token object. A state is a function of two arguments -- a
+// string stream and a setState function. The second can be used to
+// change the tokenizer's state, and can be ignored for stateless
+// tokenizers. This function should advance the stream over a token
+// and return a string or object containing information about the next
+// token, or null to pass and have the (new) state be called to finish
+// the token. When a string is given, it is wrapped in a {style, type}
+// object. In the resulting object, the characters consumed are stored
+// under the content property. Any whitespace following them is also
+// automatically consumed, and added to the value property. (Thus,
+// content is the actual meaningful part of the token, while value
+// contains all the text it spans.)
+
+function tokenizer(source, state) {
+  // Newlines are always a separate token.
+  function isWhiteSpace(ch) {
+    // The messy regexp is because IE's regexp matcher is of the
+    // opinion that non-breaking spaces are no whitespace.
+    return ch != "\n" && /^[\s\u00a0]*$/.test(ch);
+  }
+
+  var tokenizer = {
+    state: state,
+
+    take: function(type) {
+      if (typeof(type) == "string")
+        type = {style: type, type: type};
+
+      type.content = (type.content || "") + source.get();
+      if (!/\n$/.test(type.content))
+        source.nextWhile(isWhiteSpace);
+      type.value = type.content + source.get();
+      return type;
+    },
+
+    next: function () {
+      if (!source.more()) throw StopIteration;
+
+      var type;
+      if (source.equals("\n")) {
+        source.next();
+        return this.take("whitespace");
+      }
+      
+      if (source.applies(isWhiteSpace))
+        type = "whitespace";
+      else
+        while (!type)
+          type = this.state(source, function(s) {tokenizer.state = s;});
+
+      return this.take(type);
+    }
+  };
+  return tokenizer;
+}
+
+/* Tokenizer for JavaScript code */
+
+var tokenizeJavaScript = (function() {
+  // Advance the stream until the given character (not preceded by a
+  // backslash) is encountered, or the end of the line is reached.
+  function nextUntilUnescaped(source, end) {
+    var escaped = false;
+    while (!source.endOfLine()) {
+      var next = source.next();
+      if (next == end && !escaped)
+        return false;
+      escaped = !escaped && next == "\\";
+    }
+    return escaped;
+  }
+
+  // A map of JavaScript's keywords. The a/b/c keyword distinction is
+  // very rough, but it gives the parser enough information to parse
+  // correct code correctly (we don't care that much how we parse
+  // incorrect code). The style information included in these objects
+  // is used by the highlighter to pick the correct CSS style for a
+  // token.
+  var keywords = function(){
+    function result(type, style){
+      return {type: type, style: "js-" + style};
+    }
+    // keywords that take a parenthised expression, and then a
+    // statement (if)
+    var keywordA = result("keyword a", "keyword");
+    // keywords that take just a statement (else)
+    var keywordB = result("keyword b", "keyword");
+    // keywords that optionally take an expression, and form a
+    // statement (return)
+    var keywordC = result("keyword c", "keyword");
+    var operator = result("operator", "keyword");
+    var atom = result("atom", "atom");
+    return {
+      "if": keywordA, "while": keywordA, "with": keywordA,
+      "else": keywordB, "do": keywordB, "try": keywordB, "finally": keywordB,
+      "return": keywordC, "break": keywordC, "continue": keywordC, "new": keywordC, "delete": keywordC, "throw": keywordC,
+      "in": operator, "typeof": operator, "instanceof": operator,
+      "var": result("var", "keyword"), "function": result("function", "keyword"), "catch": result("catch", "keyword"),
+      "for": result("for", "keyword"), "switch": result("switch", "keyword"),
+      "case": result("case", "keyword"), "default": result("default", "keyword"),
+      "true": atom, "false": atom, "null": atom, "undefined": atom, "NaN": atom, "Infinity": atom
+    };
+  }();
+
+  // Some helper regexps
+  var isOperatorChar = /[+\-*&%=<>!?|]/;
+  var isHexDigit = /[0-9A-Fa-f]/;
+  var isWordChar = /[\w\$_]/;
+
+  // Wrapper around jsToken that helps maintain parser state (whether
+  // we are inside of a multi-line comment and whether the next token
+  // could be a regular expression).
+  function jsTokenState(inside, regexp) {
+    return function(source, setState) {
+      var newInside = inside;
+      var type = jsToken(inside, regexp, source, function(c) {newInside = c;});
+      var newRegexp = type.type == "operator" || type.type == "keyword c" || type.type.match(/^[\[{}\(,;:]$/);
+      if (newRegexp != regexp || newInside != inside)
+        setState(jsTokenState(newInside, newRegexp));
+      return type;
+    };
+  }
+
+  // The token reader, intended to be used by the tokenizer from
+  // tokenize.js (through jsTokenState). Advances the source stream
+  // over a token, and returns an object containing the type and style
+  // of that token.
+  function jsToken(inside, regexp, source, setInside) {
+    function readHexNumber(){
+      source.next(); // skip the 'x'
+      source.nextWhileMatches(isHexDigit);
+      return {type: "number", style: "js-atom"};
+    }
+
+    function readNumber() {
+      source.nextWhileMatches(/[0-9]/);
+      if (source.equals(".")){
+        source.next();
+        source.nextWhileMatches(/[0-9]/);
+      }
+      if (source.equals("e") || source.equals("E")){
+        source.next();
+        if (source.equals("-"))
+          source.next();
+        source.nextWhileMatches(/[0-9]/);
+      }
+      return {type: "number", style: "js-atom"};
+    }
+    // Read a word, look it up in keywords. If not found, it is a
+    // variable, otherwise it is a keyword of the type found.
+    function readWord() {
+      source.nextWhileMatches(isWordChar);
+      var word = source.get();
+      var known = keywords.hasOwnProperty(word) && keywords.propertyIsEnumerable(word) && keywords[word];
+      return known ? {type: known.type, style: known.style, content: word} :
+      {type: "variable", style: "js-variable", content: word};
+    }
+    function readRegexp() {
+      nextUntilUnescaped(source, "/");
+      source.nextWhileMatches(/[gi]/);
+      return {type: "regexp", style: "js-string"};
+    }
+    // Mutli-line comments are tricky. We want to return the newlines
+    // embedded in them as regular newline tokens, and then continue
+    // returning a comment token for every line of the comment. So
+    // some state has to be saved (inside) to indicate whether we are
+    // inside a /* */ sequence.
+    function readMultilineComment(start){
+      var newInside = "/*";
+      var maybeEnd = (start == "*");
+      while (true) {
+        if (source.endOfLine())
+          break;
+        var next = source.next();
+        if (next == "/" && maybeEnd){
+          newInside = null;
+          break;
+        }
+        maybeEnd = (next == "*");
+      }
+      setInside(newInside);
+      return {type: "comment", style: "js-comment"};
+    }
+    function readOperator() {
+      source.nextWhileMatches(isOperatorChar);
+      return {type: "operator", style: "js-operator"};
+    }
+    function readString(quote) {
+      var endBackSlash = nextUntilUnescaped(source, quote);
+      setInside(endBackSlash ? quote : null);
+      return {type: "string", style: "js-string"};
+    }
+
+    // Fetch the next token. Dispatches on first character in the
+    // stream, or first two characters when the first is a slash.
+    if (inside == "\"" || inside == "'")
+      return readString(inside);
+    var ch = source.next();
+    if (inside == "/*")
+      return readMultilineComment(ch);
+    else if (ch == "\"" || ch == "'")
+      return readString(ch);
+    // with punctuation, the type of the token is the symbol itself
+    else if (/[\[\]{}\(\),;\:\.]/.test(ch))
+      return {type: ch, style: "js-punctuation"};
+    else if (ch == "0" && (source.equals("x") || source.equals("X")))
+      return readHexNumber();
+    else if (/[0-9]/.test(ch))
+      return readNumber();
+    else if (ch == "/"){
+      if (source.equals("*"))
+      { source.next(); return readMultilineComment(ch); }
+      else if (source.equals("/"))
+      { nextUntilUnescaped(source, null); return {type: "comment", style: "js-comment"};}
+      else if (regexp)
+        return readRegexp();
+      else
+        return readOperator();
+    }
+    else if (isOperatorChar.test(ch))
+      return readOperator();
+    else
+      return readWord();
+  }
+
+  // The external interface to the tokenizer.
+  return function(source, startState) {
+    return tokenizer(source, startState || jsTokenState(false, true));
+  };
+})();
+
+/* Parse function for JavaScript. Makes use of the tokenizer from
+ * tokenizejavascript.js. Note that your parsers do not have to be
+ * this complicated -- if you don't want to recognize local variables,
+ * in many languages it is enough to just look for braces, semicolons,
+ * parentheses, etc, and know when you are inside a string or comment.
+ *
+ * See manual.html for more info about the parser interface.
+ */
+
+this.JSParser = Editor.Parser = (function() {
+  // Token types that can be considered to be atoms.
+  var atomicTypes = {"atom": true, "number": true, "variable": true, "string": true, "regexp": true};
+  // Setting that can be used to have JSON data indent properly.
+  var json = false;
+  // Constructor for the lexical context objects.
+  function JSLexical(indented, column, type, align, prev, info) {
+    // indentation at start of this line
+    this.indented = indented;
+    // column at which this scope was opened
+    this.column = column;
+    // type of scope ('vardef', 'stat' (statement), 'form' (special form), '[', '{', or '(')
+    this.type = type;
+    // '[', '{', or '(' blocks that have any text after their opening
+    // character are said to be 'aligned' -- any lines below are
+    // indented all the way to the opening character.
+    if (align != null)
+      this.align = align;
+    // Parent scope, if any.
+    this.prev = prev;
+    this.info = info;
+  }
+
+  // My favourite JavaScript indentation rules.
+  function indentJS(lexical) {
+    return function(firstChars) {
+      var firstChar = firstChars && firstChars.charAt(0), type = lexical.type;
+      var closing = firstChar == type;
+      if (type == "vardef")
+        return lexical.indented + 4;
+      else if (type == "form" && firstChar == "{")
+        return lexical.indented;
+      else if (type == "stat" || type == "form")
+        return lexical.indented + indentUnit;
+      else if (lexical.info == "switch" && !closing)
+        return lexical.indented + (/^(?:case|default)\b/.test(firstChars) ? indentUnit : 2 * indentUnit);
+      else if (lexical.align)
+        return lexical.column - (closing ? 1 : 0);
+      else
+        return lexical.indented + (closing ? 0 : indentUnit);
+    };
+  }
+
+  // The parser-iterator-producing function itself.
+  function parseJS(input, basecolumn) {
+    // Wrap the input in a token stream
+    var tokens = tokenizeJavaScript(input);
+    // The parser state. cc is a stack of actions that have to be
+    // performed to finish the current statement. For example we might
+    // know that we still need to find a closing parenthesis and a
+    // semicolon. Actions at the end of the stack go first. It is
+    // initialized with an infinitely looping action that consumes
+    // whole statements.
+    var cc = [json ? expressions : statements];
+    // Context contains information about the current local scope, the
+    // variables defined in that, and the scopes above it.
+    var context = null;
+    // The lexical scope, used mostly for indentation.
+    var lexical = new JSLexical((basecolumn || 0) - indentUnit, 0, "block", false);
+    // Current column, and the indentation at the start of the current
+    // line. Used to create lexical scope objects.
+    var column = 0;
+    var indented = 0;
+    // Variables which are used by the mark, cont, and pass functions
+    // below to communicate with the driver loop in the 'next'
+    // function.
+    var consume, marked;
+  
+    // The iterator object.
+    var parser = {next: next, copy: copy};
+
+    function next(){
+      // Start by performing any 'lexical' actions (adjusting the
+      // lexical variable), or the operations below will be working
+      // with the wrong lexical state.
+      while(cc[cc.length - 1].lex)
+        cc.pop()();
+
+      // Fetch a token.
+      var token = tokens.next();
+
+      // Adjust column and indented.
+      if (token.type == "whitespace" && column == 0)
+        indented = token.value.length;
+      column += token.value.length;
+      if (token.content == "\n"){
+        indented = column = 0;
+        // If the lexical scope's align property is still undefined at
+        // the end of the line, it is an un-aligned scope.
+        if (!("align" in lexical))
+          lexical.align = false;
+        // Newline tokens get an indentation function associated with
+        // them.
+        token.indentation = indentJS(lexical);
+      }
+      // No more processing for meaningless tokens.
+      if (token.type == "whitespace" || token.type == "comment")
+        return token;
+      // When a meaningful token is found and the lexical scope's
+      // align is undefined, it is an aligned scope.
+      if (!("align" in lexical))
+        lexical.align = true;
+
+      // Execute actions until one 'consumes' the token and we can
+      // return it.
+      while(true) {
+        consume = marked = false;
+        // Take and execute the topmost action.
+        cc.pop()(token.type, token.content);
+        if (consume){
+          // Marked is used to change the style of the current token.
+          if (marked)
+            token.style = marked;
+          // Here we differentiate between local and global variables.
+          else if (token.type == "variable" && inScope(token.content))
+            token.style = "js-localvariable";
+          return token;
+        }
+      }
+    }
+
+    // This makes a copy of the parser state. It stores all the
+    // stateful variables in a closure, and returns a function that
+    // will restore them when called with a new input stream. Note
+    // that the cc array has to be copied, because it is contantly
+    // being modified. Lexical objects are not mutated, and context
+    // objects are not mutated in a harmful way, so they can be shared
+    // between runs of the parser.
+    function copy(){
+      var _context = context, _lexical = lexical, _cc = cc.concat([]), _tokenState = tokens.state;
+  
+      return function copyParser(input){
+        context = _context;
+        lexical = _lexical;
+        cc = _cc.concat([]); // copies the array
+        column = indented = 0;
+        tokens = tokenizeJavaScript(input, _tokenState);
+        return parser;
+      };
+    }
+
+    // Helper function for pushing a number of actions onto the cc
+    // stack in reverse order.
+    function push(fs){
+      for (var i = fs.length - 1; i >= 0; i--)
+        cc.push(fs[i]);
+    }
+    // cont and pass are used by the action functions to add other
+    // actions to the stack. cont will cause the current token to be
+    // consumed, pass will leave it for the next action.
+    function cont(){
+      push(arguments);
+      consume = true;
+    }
+    function pass(){
+      push(arguments);
+      consume = false;
+    }
+    // Used to change the style of the current token.
+    function mark(style){
+      marked = style;
+    }
+
+    // Push a new scope. Will automatically link the current scope.
+    function pushcontext(){
+      context = {prev: context, vars: {"this": true, "arguments": true}};
+    }
+    // Pop off the current scope.
+    function popcontext(){
+      context = context.prev;
+    }
+    // Register a variable in the current scope.
+    function register(varname){
+      if (context){
+        mark("js-variabledef");
+        context.vars[varname] = true;
+      }
+    }
+    // Check whether a variable is defined in the current scope.
+    function inScope(varname){
+      var cursor = context;
+      while (cursor) {
+        if (cursor.vars[varname])
+          return true;
+        cursor = cursor.prev;
+      }
+      return false;
+    }
+  
+    // Push a new lexical context of the given type.
+    function pushlex(type, info) {
+      var result = function(){
+        lexical = new JSLexical(indented, column, type, null, lexical, info)
+      };
+      result.lex = true;
+      return result;
+    }
+    // Pop off the current lexical context.
+    function poplex(){
+      if (lexical.type == ")")
+        indented = lexical.indented;
+      lexical = lexical.prev;
+    }
+    poplex.lex = true;
+    // The 'lex' flag on these actions is used by the 'next' function
+    // to know they can (and have to) be ran before moving on to the
+    // next token.
+  
+    // Creates an action that discards tokens until it finds one of
+    // the given type.
+    function expect(wanted){
+      return function expecting(type){
+        if (type == wanted) cont();
+        else if (wanted == ";") pass();
+        else cont(arguments.callee);
+      };
+    }
+
+    // Looks for a statement, and then calls itself.
+    function statements(type){
+      return pass(statement, statements);
+    }
+    function expressions(type){
+      return pass(expression, expressions);
+    }
+    // Dispatches various types of statements based on the type of the
+    // current token.
+    function statement(type){
+      if (type == "var") cont(pushlex("vardef"), vardef1, expect(";"), poplex);
+      else if (type == "keyword a") cont(pushlex("form"), expression, statement, poplex);
+      else if (type == "keyword b") cont(pushlex("form"), statement, poplex);
+      else if (type == "{") cont(pushlex("}"), block, poplex);
+      else if (type == ";") cont();
+      else if (type == "function") cont(functiondef);
+      else if (type == "for") cont(pushlex("form"), expect("("), pushlex(")"), forspec1, expect(")"), poplex, statement, poplex);
+      else if (type == "variable") cont(pushlex("stat"), maybelabel);
+      else if (type == "switch") cont(pushlex("form"), expression, pushlex("}", "switch"), expect("{"), block, poplex, poplex);
+      else if (type == "case") cont(expression, expect(":"));
+      else if (type == "default") cont(expect(":"));
+      else if (type == "catch") cont(pushlex("form"), pushcontext, expect("("), funarg, expect(")"), statement, poplex, popcontext);
+      else pass(pushlex("stat"), expression, expect(";"), poplex);
+    }
+    // Dispatch expression types.
+    function expression(type){
+      if (atomicTypes.hasOwnProperty(type)) cont(maybeoperator);
+      else if (type == "function") cont(functiondef);
+      else if (type == "keyword c") cont(expression);
+      else if (type == "(") cont(pushlex(")"), expression, expect(")"), poplex, maybeoperator);
+      else if (type == "operator") cont(expression);
+      else if (type == "[") cont(pushlex("]"), commasep(expression, "]"), poplex, maybeoperator);
+      else if (type == "{") cont(pushlex("}"), commasep(objprop, "}"), poplex, maybeoperator);
+      else cont();
+    }
+    // Called for places where operators, function calls, or
+    // subscripts are valid. Will skip on to the next action if none
+    // is found.
+    function maybeoperator(type, value){
+      if (type == "operator" && /\+\+|--/.test(value)) cont(maybeoperator);
+      else if (type == "operator") cont(expression);
+      else if (type == ";") pass();
+      else if (type == "(") cont(pushlex(")"), commasep(expression, ")"), poplex, maybeoperator);
+      else if (type == ".") cont(property, maybeoperator);
+      else if (type == "[") cont(pushlex("]"), expression, expect("]"), poplex, maybeoperator);
+    }
+    // When a statement starts with a variable name, it might be a
+    // label. If no colon follows, it's a regular statement.
+    function maybelabel(type){
+      if (type == ":") cont(poplex, statement);
+      else pass(maybeoperator, expect(";"), poplex);
+    }
+    // Property names need to have their style adjusted -- the
+    // tokenizer thinks they are variables.
+    function property(type){
+      if (type == "variable") {mark("js-property"); cont();}
+    }
+    // This parses a property and its value in an object literal.
+    function objprop(type){
+      if (type == "variable") mark("js-property");
+      if (atomicTypes.hasOwnProperty(type)) cont(expect(":"), expression);
+    }
+    // Parses a comma-separated list of the things that are recognized
+    // by the 'what' argument.
+    function commasep(what, end){
+      function proceed(type) {
+        if (type == ",") cont(what, proceed);
+        else if (type == end) cont();
+        else cont(expect(end));
+      }
+      return function commaSeparated(type) {
+        if (type == end) cont();
+        else pass(what, proceed);
+      };
+    }
+    // Look for statements until a closing brace is found.
+    function block(type){
+      if (type == "}") cont();
+      else pass(statement, block);
+    }
+    // Variable definitions are split into two actions -- 1 looks for
+    // a name or the end of the definition, 2 looks for an '=' sign or
+    // a comma.
+    function vardef1(type, value){
+      if (type == "variable"){register(value); cont(vardef2);}
+      else cont();
+    }
+    function vardef2(type, value){
+      if (value == "=") cont(expression, vardef2);
+      else if (type == ",") cont(vardef1);
+    }
+    // For loops.
+    function forspec1(type){
+      if (type == "var") cont(vardef1, forspec2);
+      else if (type == ";") pass(forspec2);
+      else if (type == "variable") cont(formaybein);
+      else pass(forspec2);
+    }
+    function formaybein(type, value){
+      if (value == "in") cont(expression);
+      else cont(maybeoperator, forspec2);
+    }
+    function forspec2(type, value){
+      if (type == ";") cont(forspec3);
+      else if (value == "in") cont(expression);
+      else cont(expression, expect(";"), forspec3);
+    }
+    function forspec3(type) {
+      if (type == ")") pass();
+      else cont(expression);
+    }
+    // A function definition creates a new context, and the variables
+    // in its argument list have to be added to this context.
+    function functiondef(type, value){
+      if (type == "variable"){register(value); cont(functiondef);}
+      else if (type == "(") cont(pushcontext, commasep(funarg, ")"), statement, popcontext);
+    }
+    function funarg(type, value){
+      if (type == "variable"){register(value); cont();}
+    }
+  
+    return parser;
+  }
+
+  return {
+    make: parseJS,
+    electricChars: "{}:",
+    configure: function(obj) {
+      if (obj.json != null) json = obj.json;
+    }
+  };
+})();
+
+/* Simple parser for CSS */
+
+this.CSSParser = Editor.Parser = (function() {
+  var tokenizeCSS = (function() {
+    function normal(source, setState) {
+      var ch = source.next();
+      if (ch == "@") {
+        source.nextWhileMatches(/\w/);
+        return "css-at";
+      }
+      else if (ch == "/" && source.equals("*")) {
+        setState(inCComment);
+        return null;
+      }
+      else if (ch == "<" && source.equals("!")) {
+        setState(inSGMLComment);
+        return null;
+      }
+      else if (ch == "=") {
+        return "css-compare";
+      }
+      else if (source.equals("=") && (ch == "~" || ch == "|")) {
+        source.next();
+        return "css-compare";
+      }
+      else if (ch == "\"" || ch == "'") {
+        setState(inString(ch));
+        return null;
+      }
+      else if (ch == "#") {
+        source.nextWhileMatches(/\w/);
+        return "css-hash";
+      }
+      else if (ch == "!") {
+        source.nextWhileMatches(/[ \t]/);
+        source.nextWhileMatches(/\w/);
+        return "css-important";
+      }
+      else if (/\d/.test(ch)) {
+        source.nextWhileMatches(/[\w.%]/);
+        return "css-unit";
+      }
+      else if (/[,.+>*\/]/.test(ch)) {
+        return "css-select-op";
+      }
+      else if (/[;{}:\[\]]/.test(ch)) {
+        return "css-punctuation";
+      }
+      else {
+        source.nextWhileMatches(/[\w\\\-_]/);
+        return "css-identifier";
+      }
+    }
+
+    function inCComment(source, setState) {
+      var maybeEnd = false;
+      while (!source.endOfLine()) {
+        var ch = source.next();
+        if (maybeEnd && ch == "/") {
+          setState(normal);
+          break;
+        }
+        maybeEnd = (ch == "*");
+      }
+      return "css-comment";
+    }
+
+    function inSGMLComment(source, setState) {
+      var dashes = 0;
+      while (!source.endOfLine()) {
+        var ch = source.next();
+        if (dashes >= 2 && ch == ">") {
+          setState(normal);
+          break;
+        }
+        dashes = (ch == "-") ? dashes + 1 : 0;
+      }
+      return "css-comment";
+    }
+
+    function inString(quote) {
+      return function(source, setState) {
+        var escaped = false;
+        while (!source.endOfLine()) {
+          var ch = source.next();
+          if (ch == quote && !escaped)
+            break;
+          escaped = !escaped && ch == "\\";
+        }
+        if (!escaped)
+          setState(normal);
+        return "css-string";
+      };
+    }
+
+    return function(source, startState) {
+      return tokenizer(source, startState || normal);
+    };
+  })();
+
+  function indentCSS(inBraces, inRule, base) {
+    return function(nextChars) {
+      if (!inBraces || /^\}/.test(nextChars)) return base;
+      else if (inRule) return base + indentUnit * 2;
+      else return base + indentUnit;
+    };
+  }
+
+  // This is a very simplistic parser -- since CSS does not really
+  // nest, it works acceptably well, but some nicer colouroing could
+  // be provided with a more complicated parser.
+  function parseCSS(source, basecolumn) {
+    basecolumn = basecolumn || 0;
+    var tokens = tokenizeCSS(source);
+    var inBraces = false, inRule = false, inDecl = false;;
+
+    var iter = {
+      next: function() {
+        var token = tokens.next(), style = token.style, content = token.content;
+
+        if (style == "css-hash")
+          style = token.style =  inRule ? "css-colorcode" : "css-identifier";
+        if (style == "css-identifier") {
+          if (inRule) token.style = "css-value";
+          else if (!inBraces && !inDecl) token.style = "css-selector";
+        }
+
+        if (content == "\n")
+          token.indentation = indentCSS(inBraces, inRule, basecolumn);
+
+        if (content == "{" && inDecl == "@media")
+          inDecl = false;
+        else if (content == "{")
+          inBraces = true;
+        else if (content == "}")
+          inBraces = inRule = inDecl = false;
+        else if (content == ";")
+          inRule = inDecl = false;
+        else if (inBraces && style != "css-comment" && style != "whitespace")
+          inRule = true;
+        else if (!inBraces && style == "css-at")
+          inDecl = content;
+
+        return token;
+      },
+
+      copy: function() {
+        var _inBraces = inBraces, _inRule = inRule, _tokenState = tokens.state;
+        return function(source) {
+          tokens = tokenizeCSS(source, _tokenState);
+          inBraces = _inBraces;
+          inRule = _inRule;
+          return iter;
+        };
+      }
+    };
+    return iter;
+  }
+
+  return {make: parseCSS, electricChars: "}"};
+})();
+
+/* This file defines an XML parser, with a few kludges to make it
+ * useable for HTML. autoSelfClosers defines a set of tag names that
+ * are expected to not have a closing tag, and doNotIndent specifies
+ * the tags inside of which no indentation should happen (see Config
+ * object). These can be disabled by passing the editor an object like
+ * {useHTMLKludges: false} as parserConfig option.
+ */
+
+this.XMLParser = Editor.Parser = (function() {
+  var Kludges = {
+    autoSelfClosers: {"br": true, "img": true, "hr": true, "link": true, "input": true,
+                      "meta": true, "col": true, "frame": true, "base": true, "area": true},
+    doNotIndent: {"pre": true, "!cdata": true}
+  };
+  var NoKludges = {autoSelfClosers: {}, doNotIndent: {"!cdata": true}};
+  var UseKludges = Kludges;
+  var alignCDATA = false;
+
+  // Simple stateful tokenizer for XML documents. Returns a
+  // MochiKit-style iterator, with a state property that contains a
+  // function encapsulating the current state. See tokenize.js.
+  var tokenizeXML = (function() {
+    function inText(source, setState) {
+      var ch = source.next();
+      if (ch == "<") {
+        if (source.equals("!")) {
+          source.next();
+          if (source.equals("[")) {
+            if (source.lookAhead("[CDATA[", true)) {
+              setState(inBlock("xml-cdata", "]]>"));
+              return null;
+            }
+            else {
+              return "xml-text";
+            }
+          }
+          else if (source.lookAhead("--", true)) {
+            setState(inBlock("xml-comment", "-->"));
+            return null;
+          }
+          else if (source.lookAhead("DOCTYPE", true)) {
+            source.nextWhileMatches(/[\w\._\-]/);
+            setState(inBlock("xml-doctype", ">"));
+            return "xml-doctype";
+          }
+          else {
+            return "xml-text";
+          }
+        }
+        else if (source.equals("?")) {
+          source.next();
+          source.nextWhileMatches(/[\w\._\-]/);
+          setState(inBlock("xml-processing", "?>"));
+          return "xml-processing";
+        }
+        else {
+          if (source.equals("/")) source.next();
+          setState(inTag);
+          return "xml-punctuation";
+        }
+      }
+      else if (ch == "&") {
+        while (!source.endOfLine()) {
+          if (source.next() == ";")
+            break;
+        }
+        return "xml-entity";
+      }
+      else {
+        source.nextWhileMatches(/[^&<\n]/);
+        return "xml-text";
+      }
+    }
+
+    function inTag(source, setState) {
+      var ch = source.next();
+      if (ch == ">") {
+        setState(inText);
+        return "xml-punctuation";
+      }
+      else if (/[?\/]/.test(ch) && source.equals(">")) {
+        source.next();
+        setState(inText);
+        return "xml-punctuation";
+      }
+      else if (ch == "=") {
+        return "xml-punctuation";
+      }
+      else if (/[\'\"]/.test(ch)) {
+        setState(inAttribute(ch));
+        return null;
+      }
+      else {
+        source.nextWhileMatches(/[^\s\u00a0=<>\"\'\/?]/);
+        return "xml-name";
+      }
+    }
+
+    function inAttribute(quote) {
+      return function(source, setState) {
+        while (!source.endOfLine()) {
+          if (source.next() == quote) {
+            setState(inTag);
+            break;
+          }
+        }
+        return "xml-attribute";
+      };
+    }
+
+    function inBlock(style, terminator) {
+      return function(source, setState) {
+        while (!source.endOfLine()) {
+          if (source.lookAhead(terminator, true)) {
+            setState(inText);
+            break;
+          }
+          source.next();
+        }
+        return style;
+      };
+    }
+
+    return function(source, startState) {
+      return tokenizer(source, startState || inText);
+    };
+  })();
+
+  // The parser. The structure of this function largely follows that of
+  // parseJavaScript in parsejavascript.js (there is actually a bit more
+  // shared code than I'd like), but it is quite a bit simpler.
+  function parseXML(source) {
+    var tokens = tokenizeXML(source), token;
+    var cc = [base];
+    var tokenNr = 0, indented = 0;
+    var currentTag = null, context = null;
+    var consume;
+    
+    function push(fs) {
+      for (var i = fs.length - 1; i >= 0; i--)
+        cc.push(fs[i]);
+    }
+    function cont() {
+      push(arguments);
+      consume = true;
+    }
+    function pass() {
+      push(arguments);
+      consume = false;
+    }
+
+    function markErr() {
+      token.style += " xml-error";
+    }
+    function expect(text) {
+      return function(style, content) {
+        if (content == text) cont();
+        else {markErr(); cont(arguments.callee);}
+      };
+    }
+
+    function pushContext(tagname, startOfLine) {
+      var noIndent = UseKludges.doNotIndent.hasOwnProperty(tagname) || (context && context.noIndent);
+      context = {prev: context, name: tagname, indent: indented, startOfLine: startOfLine, noIndent: noIndent};
+    }
+    function popContext() {
+      context = context.prev;
+    }
+    function computeIndentation(baseContext) {
+      return function(nextChars, current) {
+        var context = baseContext;
+        if (context && context.noIndent)
+          return current;
+        if (alignCDATA && /<!\[CDATA\[/.test(nextChars))
+          return 0;
+        if (context && /^<\//.test(nextChars))
+          context = context.prev;
+        while (context && !context.startOfLine)
+          context = context.prev;
+        if (context)
+          return context.indent + indentUnit;
+        else
+          return 0;
+      };
+    }
+
+    function base() {
+      return pass(element, base);
+    }
+    var harmlessTokens = {"xml-text": true, "xml-entity": true, "xml-comment": true, "xml-processing": true, "xml-doctype": true};
+    function element(style, content) {
+      if (content == "<") cont(tagname, attributes, endtag(tokenNr == 1));
+      else if (content == "</") cont(closetagname, expect(">"));
+      else if (style == "xml-cdata") {
+        if (!context || context.name != "!cdata") pushContext("!cdata");
+        if (/\]\]>$/.test(content)) popContext();
+        cont();
+      }
+      else if (harmlessTokens.hasOwnProperty(style)) cont();
+      else {markErr(); cont();}
+    }
+    function tagname(style, content) {
+      if (style == "xml-name") {
+        currentTag = content.toLowerCase();
+        token.style = "xml-tagname";
+        cont();
+      }
+      else {
+        currentTag = null;
+        pass();
+      }
+    }
+    function closetagname(style, content) {
+      if (style == "xml-name") {
+        token.style = "xml-tagname";
+        if (context && content.toLowerCase() == context.name) popContext();
+        else markErr();
+      }
+      cont();
+    }
+    function endtag(startOfLine) {
+      return function(style, content) {
+        if (content == "/>" || (content == ">" && UseKludges.autoSelfClosers.hasOwnProperty(currentTag))) cont();
+        else if (content == ">") {pushContext(currentTag, startOfLine); cont();}
+        else {markErr(); cont(arguments.callee);}
+      };
+    }
+    function attributes(style) {
+      if (style == "xml-name") {token.style = "xml-attname"; cont(attribute, attributes);}
+      else pass();
+    }
+    function attribute(style, content) {
+      if (content == "=") cont(value);
+      else if (content == ">" || content == "/>") pass(endtag);
+      else pass();
+    }
+    function value(style) {
+      if (style == "xml-attribute") cont(value);
+      else pass();
+    }
+
+    return {
+      indentation: function() {return indented;},
+
+      next: function(){
+        token = tokens.next();
+        if (token.style == "whitespace" && tokenNr == 0)
+          indented = token.value.length;
+        else
+          tokenNr++;
+        if (token.content == "\n") {
+          indented = tokenNr = 0;
+          token.indentation = computeIndentation(context);
+        }
+
+        if (token.style == "whitespace" || token.type == "xml-comment")
+          return token;
+
+        while(true){
+          consume = false;
+          cc.pop()(token.style, token.content);
+          if (consume) return token;
+        }
+      },
+
+      copy: function(){
+        var _cc = cc.concat([]), _tokenState = tokens.state, _context = context;
+        var parser = this;
+        
+        return function(input){
+          cc = _cc.concat([]);
+          tokenNr = indented = 0;
+          context = _context;
+          tokens = tokenizeXML(input, _tokenState);
+          return parser;
+        };
+      }
+    };
+  }
+
+  return {
+    make: parseXML,
+    electricChars: "/",
+    configure: function(config) {
+      if (config.useHTMLKludges != null)
+        UseKludges = config.useHTMLKludges ? Kludges : NoKludges;
+      if (config.alignCDATA)
+        alignCDATA = config.alignCDATA;
+    }
+  };
+})();
+
+this.HTMLMixedParser = Editor.Parser = (function() {
+
+  // tags that trigger seperate parsers
+  var triggers = {
+    "script": "JSParser",
+    "style":  "CSSParser"
+  };
+
+  function checkDependencies() {
+    var parsers = ['XMLParser'];
+    for (var p in triggers) parsers.push(triggers[p]);
+    for (var i in parsers) {
+      if (!window[parsers[i]]) throw new Error(parsers[i] + " parser must be loaded for HTML mixed mode to work.");
+    }
+    XMLParser.configure({useHTMLKludges: true});
+  }
+
+  function parseMixed(stream) {
+    checkDependencies();
+    var htmlParser = XMLParser.make(stream), localParser = null, inTag = false;
+    var iter = {next: top, copy: copy};
+
+    function top() {
+      var token = htmlParser.next();
+      if (token.content == "<")
+        inTag = true;
+      else if (token.style == "xml-tagname" && inTag === true)
+        inTag = token.content.toLowerCase();
+      else if (token.content == ">") {
+        if (triggers[inTag]) {
+          var parser = window[triggers[inTag]];
+          iter.next = local(parser, "</" + inTag);
+        }
+        inTag = false;
+      }
+      return token;
+    }
+    function local(parser, tag) {
+      var baseIndent = htmlParser.indentation();
+      localParser = parser.make(stream, baseIndent + indentUnit);
+      return function() {
+        if (stream.lookAhead(tag, false, false, true)) {
+          localParser = null;
+          iter.next = top;
+          return top();
+        }
+
+        var token = localParser.next();
+        var lt = token.value.lastIndexOf("<"), sz = Math.min(token.value.length - lt, tag.length);
+        if (lt != -1 && token.value.slice(lt, lt + sz).toLowerCase() == tag.slice(0, sz) &&
+            stream.lookAhead(tag.slice(sz), false, false, true)) {
+          stream.push(token.value.slice(lt));
+          token.value = token.value.slice(0, lt);
+        }
+
+        if (token.indentation) {
+          var oldIndent = token.indentation;
+          token.indentation = function(chars) {
+            if (chars == "</")
+              return baseIndent;
+            else
+              return oldIndent(chars);
+          };
+        }
+
+        return token;
+      };
+    }
+
+    function copy() {
+      var _html = htmlParser.copy(), _local = localParser && localParser.copy(),
+          _next = iter.next, _inTag = inTag;
+      return function(_stream) {
+        stream = _stream;
+        htmlParser = _html(_stream);
+        localParser = _local && _local(_stream);
+        iter.next = _next;
+        inTag = _inTag;
+        return iter;
+      };
+    }
+    return iter;
+  }
+
+  return {
+    make: parseMixed,
+    electricChars: "{}/:",
+    configure: function(obj) {
+      if (obj.triggers) triggers = obj.triggers;
+    }
+  };
+
+})();
+
+/* String streams are the things fed to parsers (which can feed them
+ * to a tokenizer if they want). They provide peek and next methods
+ * for looking at the current character (next 'consumes' this
+ * character, peek does not), and a get method for retrieving all the
+ * text that was consumed since the last time get was called.
+ *
+ * An easy mistake to make is to let a StopIteration exception finish
+ * the token stream while there are still characters pending in the
+ * string stream (hitting the end of the buffer while parsing a
+ * token). To make it easier to detect such errors, the stringstreams
+ * throw an exception when this happens.
+ */
+
+// Make a stringstream stream out of an iterator that returns strings.
+// This is applied to the result of traverseDOM (see codemirror.js),
+// and the resulting stream is fed to the parser.
+this.stringStream = function(source){
+  // String that's currently being iterated over.
+  var current = "";
+  // Position in that string.
+  var pos = 0;
+  // Accumulator for strings that have been iterated over but not
+  // get()-ed yet.
+  var accum = "";
+  // Make sure there are more characters ready, or throw
+  // StopIteration.
+  function ensureChars() {
+    while (pos == current.length) {
+      accum += current;
+      current = ""; // In case source.next() throws
+      pos = 0;
+      try {current = source.next();}
+      catch (e) {
+        if (e != StopIteration) throw e;
+        else return false;
+      }
+    }
+    return true;
+  }
+
+  return {
+    // peek: -> character
+    // Return the next character in the stream.
+    peek: function() {
+      if (!ensureChars()) return null;
+      return current.charAt(pos);
+    },
+    // next: -> character
+    // Get the next character, throw StopIteration if at end, check
+    // for unused content.
+    next: function() {
+      if (!ensureChars()) {
+        if (accum.length > 0)
+          throw "End of stringstream reached without emptying buffer ('" + accum + "').";
+        else
+          throw StopIteration;
+      }
+      return current.charAt(pos++);
+    },
+    // get(): -> string
+    // Return the characters iterated over since the last call to
+    // .get().
+    get: function() {
+      var temp = accum;
+      accum = "";
+      if (pos > 0){
+        temp += current.slice(0, pos);
+        current = current.slice(pos);
+        pos = 0;
+      }
+      return temp;
+    },
+    // Push a string back into the stream.
+    push: function(str) {
+      current = current.slice(0, pos) + str + current.slice(pos);
+    },
+    lookAhead: function(str, consume, skipSpaces, caseInsensitive) {
+      function cased(str) {return caseInsensitive ? str.toLowerCase() : str;}
+      str = cased(str);
+      var found = false;
+
+      var _accum = accum, _pos = pos;
+      if (skipSpaces) this.nextWhileMatches(/[\s\u00a0]/);
+
+      while (true) {
+        var end = pos + str.length, left = current.length - pos;
+        if (end <= current.length) {
+          found = str == cased(current.slice(pos, end));
+          pos = end;
+          break;
+        }
+        else if (str.slice(0, left) == cased(current.slice(pos))) {
+          accum += current; current = "";
+          try {current = source.next();}
+          catch (e) {break;}
+          pos = 0;
+          str = str.slice(left);
+        }
+        else {
+          break;
+        }
+      }
+
+      if (!(found && consume)) {
+        current = accum.slice(_accum.length) + current;
+        pos = _pos;
+        accum = _accum;
+      }
+
+      return found;
+    },
+
+    // Utils built on top of the above
+    // more: -> boolean
+    // Produce true if the stream isn't empty.
+    more: function() {
+      return this.peek() !== null;
+    },
+    applies: function(test) {
+      var next = this.peek();
+      return (next !== null && test(next));
+    },
+    nextWhile: function(test) {
+      var next;
+      while ((next = this.peek()) !== null && test(next))
+        this.next();
+    },
+    matches: function(re) {
+      var next = this.peek();
+      return (next !== null && re.test(next));
+    },
+    nextWhileMatches: function(re) {
+      var next;
+      while ((next = this.peek()) !== null && re.test(next))
+        this.next();
+    },
+    equals: function(ch) {
+      return ch === this.peek();
+    },
+    endOfLine: function() {
+      var next = this.peek();
+      return next == null || next == "\n";
+    }
+  };
+};
+
+   return this;
+})();
+
+
+FBL.ns(function() {
+    with (FBL) {
+    
+Firebug.uiListeners = [];
+var extensions = [];
+append(Firebug, {
+    registerExtension: function()  // TODO remove
+    {
+        extensions.push.apply(extensions, arguments);
+
+        for (var i = 0; i < arguments.length; ++i)
+            TabWatcher.addListener(arguments[i]);
+
+        for (var j = 0; j < arguments.length; j++)
+            Firebug.uiListeners.push(arguments[j]);
+    },
+
+    unregisterExtension: function()  // TODO remove
+    {
+        for (var i = 0; i < arguments.length; ++i)
+        {
+            TabWatcher.removeListener(arguments[i]);
+            remove(Firebug.uiListeners, arguments[i]);
+            remove(extensions, arguments[i])
+        }
+    }
+});
+
+
+        // some people reported that rainbow was initialised twice
+        // see http://getsatisfaction.com/xrefresh/topics/too_many_recursions_problem_with_rainbow
+        // this is a hack how to prevent it
+        if (!FBL.rainbowInitialised) {
+            FBL.rainbowInitialised = true;
+            
+            var rainbowPrefService = {getService:function(){}};
+            var Components = {};
+            
+            var MAX_LINE_LENGTH = 500;
+
+            var Cc = {};
+            var Ci = {};
+
+            // test for feature added in r686 (http://code.google.com/p/fbug/source/detail?r=686)
+            // note: previous rainbow did break firebug without this test
+            var cssPanelAvailable = !!Firebug.CSSStyleSheetPanel;
+            if (!cssPanelAvailable) {
+                var consoleService = Cc['@mozilla.org/consoleservice;1'].getService(Components.interfaces.nsIConsoleService);
+                consoleService.logStringMessage("FireRainbow requires Firebug 1.3+ (your have "+Firebug.getVersion()+").");
+                consoleService.logStringMessage('Please update your Firebug extension to the latest version (http://getfirebug.com).');
+            } else {
+//                 const nsIPrefBranch = Ci.nsIPrefBranch;
+//                 const nsIPrefBranch2 = Ci.nsIPrefBranch2;
+// 
+//                 const rainbowPrefService = Cc["@mozilla.org/preferences-service;1"];
+//                 const rainbowPrefs = rainbowPrefService.getService(nsIPrefBranch2);
+// 
+//                 const rainbowWebsite = "http://firerainbow.binaryage.com";
+//                 const rainbowPrefDomain = "extensions.rainbow";
+
+                var currentCodeVersion = 2;
+
+                if (Firebug.TraceModule) {
+                    Firebug.TraceModule.DBG_FIRERAINBOW = false;
+                    var type = rainbowPrefs.getPrefType('extensions.firebug.DBG_FIRERAINBOW');
+                    if (type!=nsIPrefBranch.PREF_BOOL) try {
+                        rainbowPrefs.setBoolPref('extensions.firebug.DBG_FIRERAINBOW', false);
+                    } catch(e) {}
+                }
+
+                var dbg = function() {
+                    if (FBTrace && FBTrace.DBG_FIRERAINBOW) { 
+                        FBTrace.sysout.apply(this, arguments);
+                    }
+                };
+                
+                var buildToken = function(style, val) {
+                    return '<span class="' + style + '">' + escapeForSourceLine(val) + '</span>';
+                };
+                
+                var processTokenStream = function(stream) {
+                    // stream is array of pairs
+                    // apply coloring to the line
+                    var pieces = [];
+                    for(var i=0; i<stream.length; i++) {
+                        var token = stream[i];
+                        pieces.push(buildToken(token[0], token[1]));
+                    }
+                    
+                    var output = pieces.join('').replace(/\n/g, '');
+                    // if the pref says so, replace tabs by corresponding number of spaces.
+                    if (Firebug.replaceTabs > 0) {
+                        var space = new Array(Firebug.replaceTabs + 1).join(" ");
+                        output = output.replace(/\t/g, space);
+                    }
+                    
+                    return output;
+                };
+
+                ////////////////////////////////////////////////////////////////////////
+                // Firebug.FireRainbowExtension
+                //
+                Firebug.FireRainbowExtension = extend(Firebug.Extension, {
+                    // this is called whenever script viewport is about to be rendered
+                    onApplyDecorator: function(sourceBox) {
+                        // patch sourcebox render functionality
+                        if (!sourceBox.rainbowPatched) {
+                            sourceBox.rainbowPatched = true;
+                            
+                            if (sourceBox.getLineAsHTML) { // Firebug 1.3 and 1.4 path
+                                // 1. I use Firebug.Extension.onApplyDecorator mechanism to get called
+                                // for every sourceBox which is about be displayed
+                                // 2. first time a source box is seen, I patch sourceBox.getLineAsHTML
+                                // with my "slightly smarter" version
+                                // 3. for given sourceBox I trigger "daemon process", which starts
+                                // coloring off-screen buffer of all lines (not just visible ones) =>
+                                // sourceBox.colorizedLines
+                                // 
+                                // Every time Firebug needs to render lines, it calls getLineAsHTML on
+                                // sourceBox, so it calls my version of that function and I return
+                                // colorized line in case I have it ready.
+                                // 
+                                // Note: In the case daemon just crossed actual viewport, I'm trying to
+                                // force source panel to refresh it's content calling
+                                // scriptPanel.reView(sourceBox);.
+                                // This is tricky, because reView has implemented several layers of
+                                // caching, continuously being added with newer versions, which makes my
+                                // life harder :-)
+                                // If anyone knows better a function to call, I would be happy to make
+                                // this more robust.
+                                if (!sourceBox._rainbowOriginalGetLineAsHTML) {
+                                    sourceBox._rainbowOriginalGetLineAsHTML = sourceBox.getLineAsHTML;
+                                    sourceBox.getLineAsHTML = function(lineNo) {
+                                        if (this.colorizedLines) {
+                                            var line = this.colorizedLines[lineNo];
+                                            if (line!==undefined) return line;
+                                        }
+                                        return this._rainbowOriginalGetLineAsHTML(lineNo);
+                                    };
+                                }
+                            }
+                            
+                            if (sourceBox.decorator) { // Firebug 1.5 path
+                                // here I patch getLineHTML and using similar technique like for Firebug 1.3 and 1.4
+                                // when firebug needs to render lines it asks getLineHTML to provide HTML version of every line
+                                // this is quite fast and reasonably smooth when scrolling
+                                
+                                // Note: In Firebug 1.5 call to scriptPanel.reView(sourceBox, true) invalidates cache, so it is guaranteed to redraw the view
+                                if (!sourceBox.decorator._rainbowOriginalGetLineHTML) {
+                                    sourceBox.decorator._rainbowOriginalGetLineHTML = sourceBox.decorator.getLineHTML;
+                                    sourceBox.decorator.getLineHTML = function(sourceBox, lineNo) {
+                                        if (sourceBox.colorizedLines) {
+                                            var line = sourceBox.colorizedLines[lineNo-1];
+                                            if (line!==undefined) return line;
+                                        }
+                                        return this._rainbowOriginalGetLineHTML(sourceBox, lineNo);
+                                    };
+                                }
+                            }
+                        }
+                        // prevent recursion in case we call reView
+                        if (sourceBox.preventRainbowRecursion) {
+                            sourceBox.preventRainbowRecursion = undefined;
+                            return;
+                        }
+                        // start coloring (if not already in progress or done)
+                        Firebug.FireRainbowModule.colorizeSourceBox(sourceBox);
+                    }
+                });
+                
+                ////////////////////////////////////////////////////////////////////////
+                // Firebug.FireRainbowModule
+                //
+                Firebug.FireRainbowModule = extend(Firebug.Module, {
+                    valid: false,
+                    pings: 0,
+                    styleLibrary: {},
+                    defaultTheme: ".panelNode-script{background-color:#FFFFFF;color:black;font-family:Monaco,Monospace,Courier New !important;font-size:11px;} .sourceRow.hovered{background-color:#EEEEEE;} .sourceLine{background:#EEEEEE none no-repeat scroll 2px 0;border-bottom:1px solid #EEEEEE;border-right:1px solid #CCCCCC;color:#888888;} .sourceLine:hover{text-decoration:none;} .scriptTooltip{background:LightYellow none repeat scroll 0 0;border:1px solid #CBE087;color:#000000;} .sourceRow[exeline=\"true\"]{background-color:lightgoldenrodyellow;outline-color:#D9D9B6;outline-style:solid;outline-width:1px;} .xml-text{color:black;} .whitespace{color:black;} .xml-punctuation{color:gray;} .xml-tagname{color:blue;} .xml-attname{color:darkred;} .xml-attribute{color:darkgreen;} .css-at{color:darkred;} .css-string{color:red;} .css-punctuation{color:midnightblue;} .js-keyword{color:blue;} .js-variable{color:black;} .js-operator{color:black;} .js-punctuation{color:darkBlue;} .js-variabledef{color:darkslategray;} .js-localvariable{color:darkslateBlue;} .js-property{color:teal;} .js-string{color:darkgreen;} .js-atom{color:saddleBrown;} .xml-comment{color:gray;} .css-identifier{color:midnightBlue;} .css-select-op{color:cadetblue;} .css-unit{color:orangered;} .css-value{color:black;} .css-colorcode{color:magenta;} .js-comment{color:gray;} .js-regexp{color:magenta;} .xml-entity{color:darkgoldenrod;} .xml-error{color:orangered;} .css-comment{color:gray;}",
+
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    initialize: function() {
+                        
+                        this.actualScriptPanel = Firebug.chrome.getPanel("script2");
+                        
+                        /*
+                        var doc = Firebug.chrome.document;
+                        //var url = Env.Location.baseDir + "content/firerainbow/chrome/skin/rainbow.css";
+                        var url = Env.Location.baseDir + "content/firerainbow/themes/codemirror.css";
+                        var style = createStyleSheet(doc, url);
+                        addStyleSheet(doc, style);
+                        /**/
+                        
+                        var doc = Firebug.chrome.document;
+                        var style = createElement("style");
+                        var rules = document.createTextNode(this.defaultTheme);
+
+                        style.type = "text/css";
+                        if(style.styleSheet)
+                        {
+                            style.styleSheet.cssText = rules.nodeValue;
+                        }
+                        else
+                        {
+                            style.appendChild(rules);
+                        }
+                        addStyleSheet(doc, style);
+                        /**/
+                        
+                        return Firebug.Module.initialize.apply(this, arguments);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    showPanel: function(browser, panel) {
+                        if (!this.valid) return;
+                        dbg("Rainbow: showPanel", panel);
+                        var isScriptPanel = panel && panel.name == "script";
+                        this.actualScriptPanel = isScriptPanel?panel:undefined;
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    initContext: function(context) {
+                        dbg("Rainbow: initContext", context);
+                        Firebug.Module.initContext.apply(this, arguments);
+                        this.hookPanel(context);
+                        this.valid = true;
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    reattachContext: function(browser, context) {
+                        Firebug.Module.reattachContext.apply(this, arguments);
+                        this.hookPanel(context);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // convert old code to be compatible with current rainbow
+                    convertOldCode: function(code, version) {
+                        switch (version) {
+                            case 1: return code.replace(/\.(\w+)\s*\{/g, ".js-$1 {"); // conversion for mixed html coloring
+                        }
+                        return code;
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    getCodeVersion: function(code) {
+                        var vc = code.match(/\/\* version:(.*) \*\//);
+                        if (!vc) return 1;
+                        return parseInt(vc[1], 10);
+                    },
+                    colorizeSourceBox: function(sourceBox) {
+                        dbg("Rainbow: colorizeSourceBox", sourceBox);
+                        this.pingDaemon(sourceBox);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    hookPanel: function(context) {
+                        dbg("Rainbow: hookPanel", context);
+                        var chrome = context ? context.chrome : FirebugChrome;
+                        var code = this.getPref('coloring');
+                        var version = this.getCodeVersion(code);
+                        if (version<currentCodeVersion) {
+                            // backward compatibility with old rainbow versions
+                            code = this.convertOldCode(code, version);
+                            this.storeCode(code);
+                        }
+                        this.panelBar1 = chrome.$("fbPanelBar1");
+                        this.initSyntaxColoring(this.panelBar1);
+                        this.applySyntaxColoring(code, this.panelBar1);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    storeCode: function(code) {
+                        code = "/* version:"+currentCodeVersion+" */\n"+code;
+                        this.setPref('coloring', code);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    startDaemon: function(sourceBox) {
+                        dbg("Rainbow: startDaemon", sourceBox);
+                        //var webWorkersEnabled = !this.getPref('disableWebWorkers', false);
+                        var webWorkersEnabled = false;
+                        if (webWorkersEnabled && typeof Worker !== "undefined") {
+                            this.startDaemonAsWorkerThread(sourceBox);
+                        } else {
+                            this.startDaemonOnUIThread(sourceBox);
+                        }
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    stopDaemon: function() {
+                        dbg("Rainbow: stopDaemon");
+                        if (this.parserWorker) {
+                            dbg("Rainbow: stopDaemonAsWorkerThread");
+                            this.parserWorker.terminate();
+                            this.parserWorker = undefined;
+                        }
+                        if (this.daemonTimer) {
+                            dbg("Rainbow: stopDaemonOnUIThread");
+                            clearInterval(this.daemonTimer);
+                            this.daemonTimer = undefined;
+                            this.currentSourceBox = undefined;
+                        }
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    startDaemonAsWorkerThread: function(sourceBox) {
+                        // daemon is here to perform colorization in background
+                        // this is origianl daemon rewrite using web workers
+                        if (this.currentSourceBox===sourceBox) return;
+
+                        this.stopDaemon(); // never let run two or more daemons concruently!
+
+                        // find active source box - here we will keep daemon state (parser state)
+                        if (!sourceBox) return;
+                        if (!sourceBox.lines) return;
+                        if (sourceBox.colorized) return; // already colorized
+                        
+                        dbg("Rainbow: startDaemonAsWorkerThread", sourceBox);
+                        
+                        this.currentSourceBox = sourceBox;
+                        if (sourceBox.lineToBeColorized==undefined) sourceBox.lineToBeColorized = 0;
+                        if (!sourceBox.colorizedLines) sourceBox.colorizedLines = [];
+                        
+                        var refresh = function() {
+                            // do review to be sure actual view gets finaly colorized
+                            if (that.actualScriptPanel) {
+                                sourceBox.preventRainbowRecursion = true;
+                                dbg("Rainbow: reView!", sourceBox);
+                                that.actualScriptPanel.lastScrollTop = that.actualScriptPanel.lastScrollTop || 0;
+                                that.actualScriptPanel.lastScrollTop -= 1; // fight reView's "reView no change to scrollTop" optimization
+                                sourceBox.firstViewableLine = -1; // overcome another layer of reView optimization added in Firebug 1.4
+                                that.actualScriptPanel.reView(sourceBox, true);
+                            }
+                        };
+                        
+                        var that = this;
+                        var worker = new Worker('chrome://firerainbow/content/worker.js');
+                        worker.onmessage = function(e) {
+                            dbg("Rainbow: got worker message "+e.data.msg, e.data);
+                            switch (e.data.msg) {
+                                case 'progress':
+                                    sourceBox.colorizedLines[e.data.line] = processTokenStream(e.data.stream);
+                                    if (e.data.line==sourceBox.lastViewableLine) {
+                                        // just crossed actual view, force refresh!
+                                        refresh();
+                                    }
+                                    break;
+                                case 'done': 
+                                    that.parserWorker = undefined;
+                                    sourceBox.colorized = true;
+                                    that.styleLibrary = e.data.styleLibrary;
+                                    refresh();
+                                    break;
+                            }
+                        };
+                        worker.onerror = function(e) {
+                            dbg("Rainbow: worker error", e);
+                            // stop daemon in this exceptional case
+                            that.stopDaemon();
+                            sourceBox.colorized = true;
+                            sourceBox.colorizationFailed = true;
+                            return;
+                        };
+                        worker.postMessage({
+                            command: 'run',
+                            lines: sourceBox.lines
+                        });
+                        this.parserWorker = worker;
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    startDaemonOnUIThread: function(sourceBox) {
+                        // daemon is here to perform colorization in background
+                        // the goal is not to block Firebug functionality and don't hog CPU for too long
+                        // daemonInterval and tokensPerCall properties define how intensive this background process should be
+                        if (this.currentSourceBox===sourceBox) return;
+
+                        this.stopDaemon(); // never let run two or more daemons concruently!
+
+                        // find active source box - here we will keep daemon state (parser state)
+                        if (!sourceBox) return;
+                        if (!sourceBox.lines) return;
+                        if (sourceBox.colorized) return; // already colorized
+
+                        dbg("Rainbow: startDaemonOnUIThread", sourceBox);
+                        var that = this;
+                        
+                        this.currentSourceBox = sourceBox;
+                        if (sourceBox.lineToBeColorized==undefined) sourceBox.lineToBeColorized = 0;
+                        if (!sourceBox.colorizedLines) sourceBox.colorizedLines = [];
+
+                        // init daemon state
+                        var nextLine = null;
+
+                        if (!sourceBox.parser) {
+                            var firstLine = "";
+                            var lineNo = 0;
+                            while (lineNo<sourceBox.lines.length) {
+                                firstLine = sourceBox.lines[lineNo];
+                                firstLine = firstLine.replace(/^\s*|\s*$/g,"");
+                                if (firstLine!="") break;
+                                lineNo++;
+                            }
+                            // determine what parser to use
+                            var parser = codemirror.JSParser;
+                            // use HTML mixed parser if you encounter these substrings on first line
+                            if (firstLine.indexOf('<!DOCTYPE')!=-1 || firstLine.indexOf("<html")!=-1 || 
+                                firstLine.indexOf("<body")!=-1 || firstLine.indexOf("<head")!=-1) parser = codemirror.HTMLMixedParser;
+                            sourceBox.parser = parser.make(codemirror.stringStream({
+                                next: function() {
+                                    if (nextLine===null) throw codemirror.StopIteration;
+                                    var result = nextLine;
+                                    nextLine = null;
+                                    return result;
+                                }
+                            }));
+                        }
+
+                        var tokensPerCall = this.getPref('tokensPerCall', 500);
+                        var daemonInterval = this.getPref('daemonInterval', 100);
+                        
+                        var refresh = function() {
+                            // do review to be sure actual view gets finaly colorized
+                            if (that.actualScriptPanel) {
+                                sourceBox.preventRainbowRecursion = true;
+                                dbg("Rainbow: reView!", sourceBox);
+                                that.actualScriptPanel.lastScrollTop = that.actualScriptPanel.lastScrollTop || 0;
+                                that.actualScriptPanel.lastScrollTop -= 1; // fight reView's "reView no change to scrollTop" optimization
+                                sourceBox.firstViewableLine = -1; // overcome another layer of reView optimization added in Firebug 1.4
+                                that.actualScriptPanel.reView(sourceBox, true);
+                            }
+                        };
+
+                        var finish = function() {
+                            refresh();
+                            that.stopDaemon();
+                            sourceBox.colorized = true;
+                            // free up memory
+                            sourceBox.parser = undefined;
+                        };
+
+                        // run daemon
+                        this.daemonTimer = setInterval(
+                            function() {
+                                try {
+                                    var tokenQuota = tokensPerCall;
+                                    var startLine = sourceBox.lineToBeColorized;
+                                    while (true) {
+                                        if (!sourceBox.hasLine) {
+                                            // finish if no more lines
+                                            if (sourceBox.lineToBeColorized >= sourceBox.lines.length) {
+                                                return finish();
+                                            }
+                                            
+                                            // extract line code from node
+                                            // note: \n is important to simulate multi line text in stream (for example multi-line comments depend on this)
+                                            nextLine = sourceBox.lines[sourceBox.lineToBeColorized]+"\n";
+
+                                            sourceBox.parsedLine = [];
+                                            sourceBox.hasLine = true;
+                                        }
+                                        
+                                        codemirror.forEach(sourceBox.parser,
+                                            function(token) {
+                                                // colorize token
+                                                var val = token.value;
+                                                sourceBox.parsedLine.push([token.style, val]);
+                                                that.styleLibrary[token.style] = true;
+                                                if (--tokenQuota==0) {
+                                                    throw StopIteration;
+                                                }
+                                            }
+                                        );
+                                        
+                                        if (!tokenQuota) {
+                                            return;
+                                        }
+                                    
+                                        sourceBox.colorizedLines.push(processTokenStream(sourceBox.parsedLine));
+
+                                        if (sourceBox.lineToBeColorized==sourceBox.lastViewableLine) {
+                                            // just crossed actual view, force refresh!
+                                            refresh();
+                                            startLine = null;
+                                        }
+    
+                                        // move for next line
+                                        sourceBox.lineToBeColorized++;
+                                        sourceBox.hasLine = false;
+                                    }
+                                } catch (ex) {
+                                    dbg("Rainbow: exception", ex);
+                                    // stop daemon in this exceptional case
+                                    that.stopDaemon();
+                                    sourceBox.colorized = true;
+                                    sourceBox.colorizationFailed = true;
+                                    // free up memory
+                                    sourceBox.parser = undefined;
+                                    return;
+                                }
+                            },
+                        daemonInterval);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    pingDaemon: function(sourceBox) {
+                        this.valid = true;
+                        
+                        if (!this.valid) return;
+                        
+                        // trivial implementation of buffered deferred triggering of daemon
+                        this.pings++;
+                        var pingMarker = this.pings;
+                        var that = this;
+                        setTimeout(function(){
+                            if (that.pings!=pingMarker) return;
+                            that.startDaemon(sourceBox);
+                        }, 200);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // initializes syntax coloring helpers for panel
+                    initSyntaxColoring: function(panelBar) {
+                        // here we append <style id='rainbow-style-sheet' type='text/css'>/* Syntax coloring */</style> into head element
+                        // this style element we will use to apply coloring rules to all script boxes in the panel
+                        if (this.lookupStyleElement(panelBar)) return; // already done
+
+                        var browser = panelBar.browser;
+                        var doc = browser.contentDocument;
+
+                        var styleElement = doc.createElement("style");
+                        styleElement.setAttribute("id", "rainbow-style-sheet");
+                        styleElement.setAttribute("type", "text/css");
+                        styleElement.appendChild(doc.createTextNode('/* Syntax coloring */'));
+
+                        var headElement;
+                        var headElementList = doc.getElementsByTagName("head");
+                        if (headElementList.length) headElement = headElementList[0]; else headElement = doc.documentElement;
+                        headElement.appendChild(styleElement);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // returns our rainbow-style-sheet element from given panel
+                    lookupStyleElement: function(panelBar) {
+                        var browser = panelBar.browser;
+                        var doc = browser.contentDocument;
+                        var styleElement = doc.getElementById('rainbow-style-sheet');
+                        return styleElement;
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // applies new coloring rules to given panel
+                    applySyntaxColoring: function(code, panelBar) {
+                        var styleElement = this.lookupStyleElement(panelBar);
+                        if (!styleElement) return;
+                        styleElement.innerHTML = '';
+                        var browser = panelBar.browser;
+                        var doc = browser.contentDocument;
+                        styleElement.appendChild(doc.createTextNode(code));
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // serializes CSS rules and stores them into coloring property (save)
+                    saveSyntaxColoring: function(rules) {
+                        var code = rules;
+                        if (typeof code != 'string') {
+                            var s = [];
+                            for (var i=0; i<rules.length; i++) {
+                                var rule = rules[i];
+                                s.push(rule.selector);
+                                s.push('{');
+                                for (var j=0; j<rule.props.length; j++) {
+                                    var prop = rule.props[j];
+                                    if (prop.disabled) continue;
+                                    s.push(prop.name);
+                                    s.push(':');
+                                    s.push(prop.value);
+                                    if (prop.important) s.push(' !important');
+                                    s.push(';');
+                                }
+                                s.push('}');
+                            }
+                            code = s.join('');
+                        }
+                        this.storeCode(code);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // opens dialog to import color theme (color theme is just a piece of CSS)
+                    importTheme: function() {
+                        var params = {
+                            out:null
+                        };
+                        window.openDialog("chrome://firerainbow/content/import.xul", "", "chrome, dialog, modal, resizable=yes", params).focus();
+                        if (params.out) {
+                            var code = params.out.code;
+                            this.applySyntaxColoring(code, this.panelBar1);
+                            this.saveSyntaxColoring(code);
+                            this.invalidatePanels();
+                        }
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    generateCodeFromLibrary: function() {
+                        var niceColors = ["red", "blue", "magenta", "brown", "black", 
+                                          "darkgreen", "blueviolet", "cadetblue", "crimson", "darkgoldenrod",
+                                          "darkgrey", "darkslateblue", "firebrick", "midnightblue", "orangered", "navy"];
+                        var code = ".panelNode-script { font-family: Monaco, Monospace, Courier New !important; font-size: 11px; background-color: #fff; color: black; }";
+                        code += " .sourceRow.hovered { background-color: #EEEEEE; }";
+                        code += " .sourceLine { border-bottom: 1px solid #EEEEEE; border-right: 1px solid #CCCCCC; background: #EEEEEE no-repeat 2px 0px; color: #888888; }";
+                        code += " .sourceLine:hover { text-decoration: none; }";
+                        code += " .scriptTooltip { border: 1px solid #CBE087; background: LightYellow; color: #000000; }";
+                        code += " .sourceRow[exeLine=\"true\"] { outline: 1px solid #D9D9B6; background-color: lightgoldenrodyellow; }";
+
+                        for (var x in this.styleLibrary) {
+                            if (this.styleLibrary.hasOwnProperty(x)) {
+                                var color = niceColors[Math.floor(Math.random()*niceColors.length)];
+                                code += " ."+x+" { color: "+color+"; }";
+                            }
+                        }
+                        return code;
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // generates template color theme based on visited scripts
+                    randomizeTheme: function() {
+                        var code = this.generateCodeFromLibrary();
+                        this.applySyntaxColoring(code, this.panelBar1);
+                        this.saveSyntaxColoring(code);
+                        this.invalidatePanels();
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // resets to default rainbow coloring theme
+                    resetToDefaultTheme: function() {
+                        var code = this.defaultTheme;
+                        this.applySyntaxColoring(code, this.panelBar1);
+                        this.saveSyntaxColoring(code);
+                        this.invalidatePanels();
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    // opens rainbow website in a new tab
+                    visitWebsite: function() {
+                        openNewTab(rainbowWebsite);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    getPref: function(name, def) {
+                        return def || 0;
+                        var prefName = rainbowPrefDomain + "." + name;
+
+                        var type = rainbowPrefs.getPrefType(prefName);
+                        if (type == nsIPrefBranch.PREF_STRING)
+                            return rainbowPrefs.getCharPref(prefName);
+                        else if (type == nsIPrefBranch.PREF_INT)
+                            return rainbowPrefs.getIntPref(prefName);
+                        else if (type == nsIPrefBranch.PREF_BOOL)
+                            return rainbowPrefs.getBoolPref(prefName);
+                        return def;
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    setPref: function(name, value) {
+                        var prefName = rainbowPrefDomain + "." + name;
+
+                        var type = rainbowPrefs.getPrefType(prefName);
+                        if (type == nsIPrefBranch.PREF_STRING)
+                            rainbowPrefs.setCharPref(prefName, value);
+                        else if (type == nsIPrefBranch.PREF_INT)
+                            rainbowPrefs.setIntPref(prefName, value);
+                        else if (type == nsIPrefBranch.PREF_BOOL)
+                            rainbowPrefs.setBoolPref(prefName, value);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    clearPref: function(name) {
+                        var prefName = rainbowPrefDomain + "." + name;
+                        return rainbowPrefs.clearUserPref(prefName);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    invalidatePanels: function() {
+                        for (var i = 0; i < TabWatcher.contexts.length; ++i) {
+                            var panel = TabWatcher.contexts[i].getPanel("script", true);
+                            if (!panel) continue;
+                            panel.context.invalidatePanels("rainbow");
+                            panel.refresh();
+                        }
+                    }
+                });
+
+                /////////////////////////////////////////////////////////////////////////////////////////
+                /////////////////////////////////////////////////////////////////////////////////////////
+                /////////////////////////////////////////////////////////////////////////////////////////
+
+                Firebug.FireRainbowSyntaxColoringEditorPanel = function() {};
+                Firebug.FireRainbowSyntaxColoringEditorPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,{
+                    name: "rainbow",
+                    title: "Colors",
+                    parentPanel: "script",
+                    order: 1000,
+
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    initialize: function() {
+                        Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    destroy: function(state) {
+                        Firebug.CSSStyleSheetPanel.prototype.destroy.apply(this, arguments);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    lookupStyleSheet: function(browser) {
+                        var doc = browser.contentDocument;
+                        var styleElement = doc.getElementById('rainbow-style-sheet');
+                        if (!styleElement) return;
+                        return styleElement.sheet;
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    markChange: function() {
+                        Firebug.CSSStyleSheetPanel.prototype.markChange.apply(this, arguments);
+                        var that = this;
+                        setTimeout(function () {
+                            var browser = that.context.chrome.getPanelBrowser(that.parentPanel);
+                            var sheet = that.lookupStyleSheet(browser);
+                            if (!sheet) return;
+                            var rules = that.getStyleSheetRules(that.context, sheet);
+                            Firebug.FireRainbowModule.saveSyntaxColoring(rules);
+                        }, 1000);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    refresh: function() {
+                        this.show();
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    show: function() {
+                        var browser = this.context.chrome.getPanelBrowser(this.parentPanel);
+                        var sheet = this.lookupStyleSheet(browser);
+                        if (!sheet) return;
+                        this.updateLocation(sheet);
+                    },
+                    /////////////////////////////////////////////////////////////////////////////////////////
+                    getOptionsMenuItems: function() {
+                        return [
+                            {
+                                label: 'Import Color Theme ...',
+                                nol10n: true,
+                                command: bind(Firebug.FireRainbowModule.importTheme, Firebug.FireRainbowModule)
+                            },{
+                                label: 'Randomize Color Theme',
+                                nol10n: true,
+                                command: bind(Firebug.FireRainbowModule.randomizeTheme, Firebug.FireRainbowModule)
+                            },{
+                                label: 'Reset to default Color Theme',
+                                nol10n: true,
+                                command: bind(Firebug.FireRainbowModule.resetToDefaultTheme, Firebug.FireRainbowModule)
+                            },'-',{
+                                label: 'Visit FireRainbow Website ...',
+                                nol10n: true,
+                                command: bind(Firebug.FireRainbowModule.visitWebsite, Firebug.FireRainbowModule)
+                            }
+                        ];
+                    }
+                });
+
+                Firebug.registerModule(Firebug.FireRainbowModule);
+                Firebug.registerExtension(Firebug.FireRainbowExtension);
+                Firebug.registerPanel(Firebug.FireRainbowSyntaxColoringEditorPanel);
+            }
+        }
+    }
+});
 
 /* See license.txt for terms of usage */
 
@@ -36841,7 +39420,7 @@ FBL.ns(function() { with (FBL) {
 FirebugChrome.Skin = 
 {
     CSS: '.obscured{left:-999999px !important;}.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{font-size:11px;min-width:100px;text-align:center;}.infoTipCaption{font-size:11px;font:Monaco,monospace;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
-    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbWindowButtons"><a id="fbWindow_btDeactivate" class="fbSmallButton fbHover" title="Deactivate Firebug for this web page">&nbsp;</a><a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a><a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div><textarea id="fbLargeCommandLine" class="fbFitHeight"></textarea><div id="fbLargeCommandButtons"><a id="fbCommand_btRun" class="fbButton fbHover">Run</a><a id="fbCommand_btClear" class="fbButton fbHover">Clear</a><a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/><a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
+    HTML: 'undefined'
 };
 
 // ************************************************************************************************
