@@ -260,8 +260,8 @@ Firebug.HTML = extend(Firebug.Module,
             
             var node = ElementCache.get(id).parentNode;
 
-            if (node && ElementCache.has(node))
-                id = ElementCache.key(node);
+            if (node)
+                id = ElementCache(node);
             else
                 break;
         }
