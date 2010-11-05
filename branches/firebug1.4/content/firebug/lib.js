@@ -1788,6 +1788,193 @@ this.getInstanceForStyleSheet = function(styleSheet, ownerDocument)
     return ret;
 };
 
+// ************************************************************************************************
+// HTML and XML Serialization
+
+
+var getElementType = this.getElementType = function(node)
+{
+    if (isElementXUL(node))
+        return 'xul';
+    else if (isElementSVG(node))
+        return 'svg';
+    else if (isElementMathML(node))
+        return 'mathml';
+    else if (isElementXHTML(node))
+        return 'xhtml';
+    else if (isElementHTML(node))
+        return 'html';
+}
+
+var getElementSimpleType = this.getElementSimpleType = function(node)
+{
+    if (isElementSVG(node))
+        return 'svg';
+    else if (isElementMathML(node))
+        return 'mathml';
+    else
+        return 'html';
+}
+
+var isElementHTML = this.isElementHTML = function(node)
+{
+    return node.nodeName == node.nodeName.toUpperCase();
+}
+
+var isElementXHTML = this.isElementXHTML = function(node)
+{
+    return node.nodeName == node.nodeName.toLowerCase();
+}
+
+var isElementMathML = this.isElementMathML = function(node)
+{
+    return node.namespaceURI == 'http://www.w3.org/1998/Math/MathML';
+}
+
+var isElementSVG = this.isElementSVG = function(node)
+{
+    return node.namespaceURI == 'http://www.w3.org/2000/svg';
+}
+
+var isElementXUL = this.isElementXUL = function(node)
+{
+    return node instanceof XULElement;
+}
+
+this.isSelfClosing = function(element)
+{
+    if (isElementSVG(element) || isElementMathML(element))
+        return true;
+    var tag = element.localName.toLowerCase();
+    return (this.selfClosingTags.hasOwnProperty(tag));
+};
+
+this.getElementHTML = function(element)
+{
+    var self=this;
+    function toHTML(elt)
+    {
+        if (elt.nodeType == Node.ELEMENT_NODE)
+        {
+            if (unwrapObject(elt).firebugIgnore)
+                return;
+
+            html.push('<', elt.nodeName.toLowerCase());
+
+            for (var i = 0; i < elt.attributes.length; ++i)
+            {
+                var attr = elt.attributes[i];
+
+                // Hide attributes set by Firebug
+                if (attr.localName.indexOf("firebug-") == 0)
+                    continue;
+
+                // MathML
+                if (attr.localName.indexOf("-moz-math") == 0)
+                {
+                    // just hide for now
+                    continue;
+                }
+
+                html.push(' ', attr.nodeName, '="', escapeForElementAttribute(attr.nodeValue),'"');
+            }
+
+            if (elt.firstChild)
+            {
+                html.push('>');
+
+                var pureText=true;
+                for (var child = element.firstChild; child; child = child.nextSibling)
+                    pureText=pureText && (child.nodeType == Node.TEXT_NODE);
+
+                if (pureText)
+                    html.push(escapeForHtmlEditor(elt.textContent));
+                else {
+                    for (var child = elt.firstChild; child; child = child.nextSibling)
+                        toHTML(child);
+                }
+
+                html.push('</', elt.nodeName.toLowerCase(), '>');
+            }
+            else if (isElementSVG(elt) || isElementMathML(elt))
+            {
+                html.push('/>');
+            }
+            else if (self.isSelfClosing(elt))
+            {
+                html.push((isElementXHTML(elt))?'/>':'>');
+            }
+            else
+            {
+                html.push('></', elt.nodeName.toLowerCase(), '>');
+            }
+        }
+        else if (elt.nodeType == Node.TEXT_NODE)
+            html.push(escapeForTextNode(elt.textContent));
+        else if (elt.nodeType == Node.CDATA_SECTION_NODE)
+            html.push('<![CDATA[', elt.nodeValue, ']]>');
+        else if (elt.nodeType == Node.COMMENT_NODE)
+            html.push('<!--', elt.nodeValue, '-->');
+    }
+
+    var html = [];
+    toHTML(element);
+    return html.join("");
+};
+
+this.getElementXML = function(element)
+{
+    function toXML(elt)
+    {
+        if (elt.nodeType == Node.ELEMENT_NODE)
+        {
+            if (unwrapObject(elt).firebugIgnore)
+                return;
+
+            xml.push('<', elt.nodeName.toLowerCase());
+
+            for (var i = 0; i < elt.attributes.length; ++i)
+            {
+                var attr = elt.attributes[i];
+
+                // Hide attributes set by Firebug
+                if (attr.localName.indexOf("firebug-") == 0)
+                    continue;
+
+                // MathML
+                if (attr.localName.indexOf("-moz-math") == 0)
+                {
+                    // just hide for now
+                    continue;
+                }
+
+                xml.push(' ', attr.nodeName, '="', escapeForElementAttribute(attr.nodeValue),'"');
+            }
+
+            if (elt.firstChild)
+            {
+                xml.push('>');
+
+                for (var child = elt.firstChild; child; child = child.nextSibling)
+                    toXML(child);
+
+                xml.push('</', elt.nodeName.toLowerCase(), '>');
+            }
+            else
+                xml.push('/>');
+        }
+        else if (elt.nodeType == Node.TEXT_NODE)
+            xml.push(elt.nodeValue);
+        else if (elt.nodeType == Node.CDATA_SECTION_NODE)
+            xml.push('<![CDATA[', elt.nodeValue, ']]>');
+        else if (elt.nodeType == Node.COMMENT_NODE)
+            xml.push('<!--', elt.nodeValue, '-->');
+    }
+
+    var xml = [];
+    toXML(element);
+    return xml.join("");
+};
 
 
 // ************************************************************************************************
@@ -5373,6 +5560,21 @@ this.innerEditableTags =
     "body": 1
 };
 
+this.selfClosingTags =
+{ // End tags for void elements are forbidden http://wiki.whatwg.org/wiki/HTML_vs._XHTML
+    "meta": 1,
+    "link": 1,
+    "area": 1,
+    "base": 1,
+    "col": 1,
+    "input": 1,
+    "img": 1,
+    "br": 1,
+    "hr": 1,
+    "param":1,
+    "embed":1
+};
+
 var invisibleTags = this.invisibleTags =
 {
     "HTML": 1,
@@ -5384,6 +5586,8 @@ var invisibleTags = this.invisibleTags =
     "SCRIPT": 1,
     "NOSCRIPT": 1,
     "BR": 1,
+    "PARAM": 1,
+    "COL": 1,
 
     "html": 1,
     "head": 1,
@@ -5393,7 +5597,10 @@ var invisibleTags = this.invisibleTags =
     "style": 1,
     "script": 1,
     "noscript": 1,
-    "br": 1/*,
+    "br": 1,
+    "param": 1,
+    "col": 1,
+    /*
     "window": 1,
     "browser": 1,
     "frame": 1,
