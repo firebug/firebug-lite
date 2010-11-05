@@ -14,7 +14,7 @@ var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/";
 
 // ************************************************************************************************
 
-window.FBL = {}; // force exposure in IE global namespace
+//window.FBL = {}; // force exposure in IE global namespace
 window.FBDev =
 {
     // ********************************************************************************************
@@ -128,6 +128,14 @@ window.FBDev =
         "firediff/content/firediff/pages.js",
         "firediff/content/firediff/diffModule.js",
         "firediff/content/firediff/diffMonitor.js",
+        /**/
+        
+        // ****************************************************************************************
+        // FireRainbow
+        
+        
+        "firerainbow/chrome/content/codemirror.js",
+        "firerainbow/chrome/content/firerainbow.js",
         /**/
         
         // ****************************************************************************************
@@ -508,7 +516,28 @@ function loadModules() {
     var moduleURL, script;
     var scriptTags = [];
     
+    
+    if (top != window)
+    {
+        var xhr = getXHRObject();
+        var html = "";
+        for (var i=0, module; module=FBDev.modules[i]; i++)
+        {
+            var moduleURL = sourceURL + module + sufix;
+            
+            xhr.open("get", moduleURL, false);
+            xhr.send();
+            html = xhr.responseText;
+            
+            script = document.createElement("script");
+            script.text = html;
+            document.getElementsByTagName("head")[0].appendChild(script);
+        }
+        return;
+    }
+
     // new module loader
+    /*
     var length = FBDev.modules.length;
     var loadModule = function(index){
         if (index == length) return;
@@ -534,8 +563,9 @@ function loadModules() {
         document.getElementsByTagName("head")[0].appendChild(script);
     };
     loadModule(0);
+    /**/
 
-    /*
+    
     for (var i=0, module; module=FBDev.modules[i]; i++)
     {
         var moduleURL = sourceURL + module + sufix;
@@ -616,6 +646,23 @@ var loadDevPanel = function() { with(FBL) {
                 owner: FBDev,
                 onClick: FBDev.panelBuildSkin
             });
+            
+            this.selfDebugButton = new Button({
+                caption: "Self debug",
+                title: "Run Firebug Lite inside Firebug Lite",
+                owner: FBDev,
+                onClick: function()
+                {
+                    //Firebug.chrome.window.location = "javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','4','content/firebug-lite-dev.js','skin/xp/sprite.png','" +
+                    //    FBL.Env.Location.baseDir + "','#startOpened');";
+                    Firebug.chrome.eval( "(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','4','content/firebug-lite-dev.js','skin/xp/sprite.png','" +
+                        FBL.Env.Location.baseDir + "','#startOpened,startInNewWindow,showIconWhenHidden=false');" );
+                    
+                    Firebug.chrome.eval( "setTimeout(function(){console.info('Have fun!')},2000)" );
+                }
+            });
+            
+            
         },
         
         updateOutput: function(output)
@@ -636,6 +683,7 @@ var loadDevPanel = function() { with(FBL) {
             
             this.buildSourceButton.initialize();
             this.buildSkinButton.initialize();
+            this.selfDebugButton.initialize();
         },
         
         shutdown: function()
@@ -649,6 +697,40 @@ var loadDevPanel = function() { with(FBL) {
     
     Firebug.registerPanel(DevPanel);
 }};
+
+// ************************************************************************************************
+
+var getXHRObject = function()
+{
+    var xhrObj = false;
+    try
+    {
+        xhrObj = new XMLHttpRequest();
+    }
+    catch(e)
+    {
+        var progid = [
+                "MSXML2.XMLHTTP.5.0", "MSXML2.XMLHTTP.4.0", 
+                "MSXML2.XMLHTTP.3.0", "MSXML2.XMLHTTP", "Microsoft.XMLHTTP"
+            ];
+          
+        for ( var i=0; i < progid.length; ++i ) {
+            try
+            {
+                xhrObj = new ActiveXObject(progid[i]);
+            }
+            catch(e)
+            {
+                continue;
+            }
+            break;
+        }
+    }
+    finally
+    {
+        return xhrObj;
+    }
+};
 
 // ************************************************************************************************
 var publishedURL = "";
@@ -668,239 +750,4 @@ loadModules();
 
 
 // ************************************************************************************************
-// ************************************************************************************************
-// ************************************************************************************************
-var FTrace = function()
-{
-    var getFuncName = function getFuncName (f)
-    {
-        if (f.getName instanceof Function)
-            return f.getName();
-        if (f.name) // in FireFox, Function objects have a name property...
-            return f.name;
-        
-        var name = f.toString().match(/function\s*([_$\w\d]*)/)[1];
-        return name || "anonymous";
-    };
-    
-    var wasVisited = function(fn)
-    {
-        for (var i=0, l=stack.length; i<l; i++)
-        {
-            if (stack[i] == fn)
-                return true;
-        }
-        
-        return false;
-    };
-
-    var stack = [];
-    
-    var traceLabel = "Stack Trace";
-    
-    console.group(traceLabel);
-    
-    var xcount = 0;
-    
-    for (var fn = arguments.callee.caller; fn; fn = fn.caller)
-    {
-        if (wasVisited(fn)) break;
-        
-        stack.push(fn);
-        
-        var html = [ ""+ ++xcount +getFuncName(fn), "(" ];
-
-        for (var i = 0, l = fn.arguments.length; i < l; ++i)
-        {
-            if (i)
-                html.push(", ");
-            
-            Firebug.Reps.appendObject(fn.arguments[i], html);
-        }
-
-        html.push(")");
-        //Firebug.Console.logRow(html, "stackTrace");
-        Firebug.Console.log(html, Firebug.browser, "stackTrace");
-    }
-    
-    console.groupEnd(traceLabel);
-    
-    //return Firebug.Console.LOG_COMMAND;
-    
-    //############################################################################################
-    
-    try
-    {
-        (0)();
-    }
-    catch(e)
-    {
-        var result = e;
-        
-        //Firebug.Console.dir(result);
-        //Firebug.Console.log(result.type);
-        
-        var stack = 
-            result.stack || // Firefox / Google Chrome 
-            result.stacktrace || // Opera
-            "";
-        
-        //stack = stack.replace(/[\n]/g, "\n--------------------\n");
-        stack = stack.replace(/\n\r|\r\n/g, "\n"); // normalize line breaks
-        var items = stack.split(/[\n\r]/);
-        
-        // props are:
-        // ---------------
-        // function name
-        // function parameters (Firefox)
-        // function location? (Google Chrome, when file is unknown)
-        // file URL
-        // line number
-        // column number (Google Chrome)
-        
-        
-        // Google Chrome
-        if (FBL.isSafari)
-        {
-            //var reChromeStackItem = /^\s+at\s+([^\(]+)\s\((.*)\)$/;
-            //var reChromeStackItem = /^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
-            var reChromeStackItem = /^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
-            
-            var reChromeStackItemName = /\s*\($/;
-            var reChromeStackItemValue = /^(.+)\:(\d+\:\d+)\)?$/;
-            
-            var xcount = 0;
-            for (var i=3, length=items.length; i<length; i++)
-            {
-                var item = items[i];
-                var match = item.match(reChromeStackItem);
-                
-                Firebug.Console.log("["+ ++xcount +"]--------------------------");
-                Firebug.Console.log(item);
-                Firebug.Console.log("................");
-                
-                if (match)
-                {
-                    var name = match[1];
-                    if (name)
-                        name = name.replace(reChromeStackItemName, "");
-                    
-                    Firebug.Console.log("name: "+name);
-                    
-                    var value = match[2].match(reChromeStackItemValue);
-                    
-                    if (value)
-                    {
-                        Firebug.Console.log("url: "+value[1]);
-                        Firebug.Console.log("line: "+value[2]);
-                    }
-                    else
-                        Firebug.Console.log(match[2]);
-                    
-                }                
-            }
-        }
-        /**/
-        
-        else if (FBL.isFirefox)
-        {
-            // Firefox
-            var reFirefoxStackItem = /^(.*)@(.*)$/;
-            var reFirefoxStackItemValue = /^(.+)\:(\d+)$/;
-            
-            for (var i=0, length=items.length; i<length; i++)
-            {
-                var item = items[i];
-                var match = item.match(reFirefoxStackItem);
-                
-                if (match)
-                {
-                    Firebug.Console.logFormatted([match[1]]);
-                    
-                    var value = match[2].match(reFirefoxStackItemValue);
-                    
-                    if (value)
-                    {
-                        Firebug.Console.logFormatted([value[1]]);
-                        Firebug.Console.logFormatted([value[2]]);
-                    }
-                    else
-                        Firebug.Console.logFormatted([match[2]]);
-                    
-                    Firebug.Console.logFormatted(["--------------------------"]);
-                }                
-            }
-        }
-        /**/
-        
-        else if (FBL.isOpera)
-        {
-            // Opera
-            var reOperaStackItem = /^\s\s(?:\.\.\.\s\s)?Line\s(\d+)\sof\s(.+)$/;
-            var reOperaStackItemValue = /^linked\sscript\s(.+)$/;
-            
-            for (var i=0, length=items.length; i<length; i+=2)
-            {
-                var item = items[i];
-                
-                var match = item.match(reOperaStackItem);
-                
-                if (match)
-                {
-                    Firebug.Console.log(match[1]);
-                    
-                    var value = match[2].match(reOperaStackItemValue);
-                    
-                    if (value)
-                    {
-                        Firebug.Console.log(value[1]);
-                    }
-                    else
-                        Firebug.Console.log(match[2]);
-                    
-                    Firebug.Console.log("--------------------------");
-                }                
-            }
-        }
-        /**/
-        
-        Firebug.Console.log(result.stack);
-    }
-};
-// ************************************************************************************************
-// ************************************************************************************************
-// ************************************************************************************************
-
-// ************************************************************************************************
 })();
-
-/*
-setTimeout(function timeOut(){
-    
-    var namespace = 
-    {
-        fn: function fn()
-        {
-            namespace.callTrace();
-        },
-        
-        callTrace: function callTrace()
-        {
-            var extraCall = function extraCall(a,b) {
-                console.trace();
-            };
-            extraCall(1,3);
-        }
-    }
-    
-    var onClick = function onClick(){
-        namespace.fn();
-    };
-    
-    var obj = {};
-    onClick = FBL.bind(onClick, obj);
-    
-    FBL.addEvent(document.getElementById("build"), "click", onClick);
-    
-}, 2000)
-/**/
