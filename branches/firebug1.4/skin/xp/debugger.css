@@ -20,7 +20,8 @@
 /************************************************************************************************/
 
 .sourceBox {
-    overflow: scroll; /* see issue 1479 */
+    /* TODO: xxxpedro problem with sourceBox and scrolling elements */
+    /*overflow: scroll; /* see issue 1479 */
     position: absolute;
     left: 0;
     top: 0;
