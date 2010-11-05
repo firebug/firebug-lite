@@ -18,6 +18,9 @@ const BP_BREAKONREMOVE = 3;
 const BP_BREAKONTEXT = 4;
 /**/
 
+/// TODO: xxxpedro hack
+Firebug.A11yModel = {};
+
 var HTMLLib = Firebug.HTMLLib;
 
 // ************************************************************************************************
@@ -1795,8 +1798,9 @@ var getEmptyElementTag = function getEmptyElementTag(node)
 // xxxpedro HTML3
 var getNodeTag = function getNodeTag(node, expandAll)
 {
-    // xxxpedro html3 instanceof problem with different windows
-    if (node instanceof Element)
+    // TODO: xxxpedro html3 instanceof problem with different windows
+    //if (node instanceof Element)
+    if (instanceOf(node, "Element"))
     {
         if (node instanceof HTMLAppletElement)
             return getEmptyElementTag(node);
