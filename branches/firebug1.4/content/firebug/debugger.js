@@ -41,6 +41,7 @@ FBL.persistObjects = function(){};
 FBL.sourceFilesAsArray = function(){return [];};
 
 Firebug.ActivableModule.isAlwaysEnabled = function(){return true;};
+Firebug.ActivablePanel.destroyNode = function(){};
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -2652,6 +2653,12 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         
         var tempContext = new Firebug.TabContext(window, Firebug.browser, Firebug.chrome, {});
         this.context = extend(Firebug.browser, tempContext);
+        
+        // TODO: xxxpedro IE portability of the following methods
+        this.context.setTimeout = Firebug.browser.setTimeout; 
+        this.context.clearTimeout = Firebug.browser.clearTimeout; 
+        this.context.setInterval = Firebug.browser.setInterval; 
+        this.context.clearInterval = Firebug.browser.clearInterval; 
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     	
     	Firebug.SourceBoxPanel.create.apply(this, arguments);
@@ -2928,11 +2935,12 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onMouseDown: function(event)
     {
+        var target = event.target || event.srcElement;
         // Don't interfere with clicks made into a notification editor.
-        if (getAncestorByClass(event.target, "breakNotification"))
+        if (getAncestorByClass(target, "breakNotification"))
             return;
 
-        var sourceLine = getAncestorByClass(event.target, "sourceLine");
+        var sourceLine = getAncestorByClass(target, "sourceLine");
         if (!sourceLine)
             return;
 
@@ -2953,7 +2961,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onContextMenu: function(event)
     {
-        var sourceLine = getAncestorByClass(event.target, "sourceLine");
+        var sourceLine = getAncestorByClass(event.target || event.srcElement, "sourceLine");
         if (!sourceLine)
             return;
 
@@ -2964,7 +2972,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onMouseOver: function(event)
     {
-        var sourceLine = getAncestorByClass(event.target, "sourceLine");
+        var sourceLine = getAncestorByClass(event.target || event.srcElement, "sourceLine");
         if (sourceLine)
         {
             if (this.hoveredLine)
@@ -2991,8 +2999,8 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
 
     onScroll: function(event)
     {
-        var scrollingElement = event.target;
-        this.reView(scrollingElement);
+        ///var scrollingElement = event.target || event.srcElement;
+        this.reView(this.selectedSourceBox);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -3025,7 +3033,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         //debugger;
         this.panelNode.style.fontFamily = "monospace";
         Firebug.chrome.$ = function(id){return $(id, Firebug.chrome.document); };
-        Firebug.uiListeners = [];
+        Firebug.uiListeners = Firebug.uiListeners || [];
         Firebug.ActivablePanel.initializeNode = function(){};
         Firebug.Panel.initializeNode = function(){};
         
@@ -3035,12 +3043,27 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         var url = Env.Location.app;
         var source = new Firebug.ScriptTagSourceFile(this.context, url, 0);
         this.showSourceFile(source);
+        //this.updateLocation(source);
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         
+    },
+    
+    /// TODO: xxxpedro refactor Firebug Lite initialization
+    shutdown: function()
+    {
+        if (this.selectedSourceBox)
+            this.clearSourceBox(this.selectedSourceBox);
+        
+        this.destroyNode();
+        
+        Firebug.SourceBoxPanel.shutdown.apply(this, arguments);
     },
 
     destroy: function(state)
     {
+        /// TODO: xxxpedro debugger persists
+        state = state || {};
+        
         delete this.selection; // We want the location (sourcefile) to persist, not the selection (eg stackFrame).
         persistObjects(this, state);
 
@@ -3095,12 +3118,18 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         obscure(this.tooltip, true);
         this.panelNode.appendChild(this.tooltip);
 
-        this.panelNode.addEventListener("mousedown", this.onMouseDown, true);
-        this.panelNode.addEventListener("contextmenu", this.onContextMenu, false);
-        this.panelNode.addEventListener("mouseover", this.onMouseOver, false);
-        this.panelNode.addEventListener("mouseout", this.onMouseOut, false);
-        this.panelNode.addEventListener("scroll", this.onScroll, true);
-
+        ///this.panelNode.addEventListener("mousedown", this.onMouseDown, true);
+        ///this.panelNode.addEventListener("contextmenu", this.onContextMenu, false);
+        ///this.panelNode.addEventListener("mouseover", this.onMouseOver, false);
+        ///this.panelNode.addEventListener("mouseout", this.onMouseOut, false);
+        ///this.panelNode.addEventListener("scroll", this.onScroll, true);
+        addEvent(this.panelNode, "mousedown", this.onMouseDown);
+        addEvent(this.panelNode, "contextmenu", this.onContextMenu);
+        addEvent(this.panelNode, "mouseover", this.onMouseOver);
+        addEvent(this.panelNode, "mouseout", this.onMouseOut);
+        //addEvent(this.panelNode, "scroll", this.onScroll, true);
+        addEvent(this.scrollingElement, "scroll", this.onScroll, true);
+        
         Firebug.SourceBoxPanel.initializeNode.apply(this, arguments);
     },
 
@@ -3109,11 +3138,16 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         if (this.tooltipTimeout)
             clearTimeout(this.tooltipTimeout);
 
-        this.panelNode.removeEventListener("mousedown", this.onMouseDown, true);
-        this.panelNode.removeEventListener("contextmenu", this.onContextMenu, false);
-        this.panelNode.removeEventListener("mouseover", this.onMouseOver, false);
-        this.panelNode.removeEventListener("mouseout", this.onMouseOut, false);
-        this.panelNode.removeEventListener("scroll", this.onScroll, true);
+        ///this.panelNode.removeEventListener("mousedown", this.onMouseDown, true);
+        ///this.panelNode.removeEventListener("contextmenu", this.onContextMenu, false);
+        ///this.panelNode.removeEventListener("mouseover", this.onMouseOver, false);
+        ///this.panelNode.removeEventListener("mouseout", this.onMouseOut, false);
+        ///this.panelNode.removeEventListener("scroll", this.onScroll, true);
+        removeEvent(this.panelNode, "mousedown", this.onMouseDown);
+        removeEvent(this.panelNode, "contextmenu", this.onContextMenu);
+        removeEvent(this.panelNode, "mouseover", this.onMouseOver);
+        removeEvent(this.panelNode, "mouseout", this.onMouseOut);
+        removeEvent(this.scrollingElement, "scroll", this.onScroll, true);
 
         Firebug.SourceBoxPanel.destroyNode.apply(this, arguments);
     },
