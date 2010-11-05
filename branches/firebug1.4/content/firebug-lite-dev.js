@@ -516,7 +516,7 @@ function loadModules() {
     var moduleURL, script;
     var scriptTags = [];
     
-    
+    /*
     if (top != window)
     {
         var xhr = getXHRObject();
@@ -535,6 +535,7 @@ function loadModules() {
         }
         return;
     }
+    /**/
 
     // new module loader
     /*
