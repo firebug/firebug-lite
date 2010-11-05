@@ -14,7 +14,7 @@ var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/";
 
 // ************************************************************************************************
 
-window.FBL = {}; // force exposure in IE global namespace
+//window.FBL = {}; // force exposure in IE global namespace
 window.FBDev =
 {
     // ********************************************************************************************
@@ -516,7 +516,7 @@ function loadModules() {
     var moduleURL, script;
     var scriptTags = [];
     
-    /*
+    
     if (top != window)
     {
         var xhr = getXHRObject();
@@ -535,10 +535,9 @@ function loadModules() {
         }
         return;
     }
-    /**/
 
     // new module loader
-    
+    /*
     var length = FBDev.modules.length;
     var loadModule = function(index){
         if (index == length) return;
@@ -566,7 +565,7 @@ function loadModules() {
     loadModule(0);
     /**/
 
-    /*
+    
     for (var i=0, module; module=FBDev.modules[i]; i++)
     {
         var moduleURL = sourceURL + module + sufix;

@@ -5599,7 +5599,7 @@ var invisibleTags = this.invisibleTags =
     "noscript": 1,
     "br": 1,
     "param": 1,
-    "col": 1,
+    "col": 1
     /*
     "window": 1,
     "browser": 1,
