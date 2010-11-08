@@ -2597,7 +2597,7 @@ CSSRuleEditor.prototype = domplate(Firebug.InlineEditor.prototype,
         // changes.
         if (value)
         {
-            var cssText = [ value, "{", ];
+            var cssText = [ value, "{" ];
             var props = row.getElementsByClassName("cssProp");
             for (var i = 0; i < props.length; i++) {
                 var propEl = props[i];
