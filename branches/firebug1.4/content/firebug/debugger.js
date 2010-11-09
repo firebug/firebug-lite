@@ -3708,7 +3708,7 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
             serviceOptionMenu("ShowAllSourceFiles", "showAllSourceFiles"),
             // 1.2: always check last line; optionMenu("UseLastLineForEvalName", "useLastLineForEvalName"),
             // 1.2: always use MD5 optionMenu("UseMD5ForEvalName", "useMD5ForEvalName")
-            serviceOptionMenu("TrackThrowCatch", "trackThrowCatch"),
+            serviceOptionMenu("TrackThrowCatch", "trackThrowCatch")//,
             //"-",
             //1.2 option on toolbar this.optionMenu("DebuggerEnableAlways", enableAlwaysPref)
         ];
