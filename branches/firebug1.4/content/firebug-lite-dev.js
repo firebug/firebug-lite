@@ -3,6 +3,15 @@
 (function(){
 // ************************************************************************************************
 
+// TODO: plugin problem with Dev panel
+// TODO: Dev panel doesn't work in persistent mode
+// TODO: XHR listener breaks Firebug in Chrome when in persistent mode 
+
+// Firebug Lite is already running in persistent mode so we just quit
+// TODO: better detection
+if (window.Firebug)
+    return;
+
 // ************************************************************************************************
 
 var bookmarkletMode = true;
@@ -133,7 +142,7 @@ window.FBDev =
         // ****************************************************************************************
         // FireRainbow
         
-        
+        /*
         "firerainbow/chrome/content/codemirror.js",
         "firerainbow/chrome/content/firerainbow.js",
         /**/
@@ -516,7 +525,7 @@ function loadModules() {
     var moduleURL, script;
     var scriptTags = [];
     
-    
+    /*
     if (top != window)
     {
         var xhr = getXHRObject();
@@ -535,6 +544,7 @@ function loadModules() {
         }
         return;
     }
+    /**/
 
     // new module loader
     /*
@@ -597,7 +607,13 @@ var waitFirebugLoad = function()
 {
     if (window && "Firebug" in window)
     {
-        loadDevPanel();
+        try
+        {
+            loadDevPanel();
+        }
+        catch (E)
+        {
+        }
     }
     else
         setTimeout(waitFirebugLoad, 0);
@@ -694,7 +710,6 @@ var loadDevPanel = function() { with(FBL) {
     });
     
     // ********************************************************************************************
-    
     Firebug.registerPanel(DevPanel);
 }};
 
