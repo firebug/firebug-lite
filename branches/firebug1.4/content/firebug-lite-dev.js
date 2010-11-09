@@ -142,7 +142,7 @@ window.FBDev =
         // ****************************************************************************************
         // FireRainbow
         
-        /*
+        
         "firerainbow/chrome/content/codemirror.js",
         "firerainbow/chrome/content/firerainbow.js",
         /**/
