@@ -1,7 +1,10 @@
 /* See license.txt for terms of usage */
 
-(function() { with (FBL) {
+FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
+
+if (Env.Options.disableXHRListener)
+    return;
 
 // ************************************************************************************************
 // XHRSpy
@@ -78,21 +81,35 @@ var XMLHttpRequestWrapper = function(activeXObject)
     
     var updateSelfProperties = function()
     {
-        for (var propName in xhrRequest)
+        if (supportsXHRIterator)
         {
-            if (propName in updateSelfPropertiesIgnore)
-                continue;
-            
-            try
+            for (var propName in xhrRequest)
             {
-                var propValue = xhrRequest[propName];
+                if (propName in updateSelfPropertiesIgnore)
+                    continue;
                 
-                if (propValue && !isFunction(propValue))
-                    self[propName] = propValue;
+                try
+                {
+                    var propValue = xhrRequest[propName];
+                    
+                    if (propValue && !isFunction(propValue))
+                        self[propName] = propValue;
+                }
+                catch(E)
+                {
+                    //console.log(propName, E.message);
+                }
             }
-            catch(E)
+        }
+        else
+        {
+            // will fail to read these xhrRequest properties if the request is not completed
+            if (xhrRequest.readyState == 4)
             {
-                //console.log(propName, E.message);
+                self.status = xhrRequest.status;
+                self.statusText = xhrRequest.statusText;
+                self.responseText = xhrRequest.responseText;
+                self.responseXML = xhrRequest.responseXML;
             }
         }
     };
@@ -387,8 +404,11 @@ var XMLHttpRequestWrapper = function(activeXObject)
             xhrRequest.open && 
             typeof xhrRequest.open.apply != "undefined";
     
+    var numberOfXHRProperties = 0;
     for (var propName in xhrRequest)
     {
+        numberOfXHRProperties++;
+        
         if (propName in updateSelfPropertiesIgnore)
             continue;
         
@@ -425,6 +445,10 @@ var XMLHttpRequestWrapper = function(activeXObject)
             //console.log(propName, E.message);
         }
     }
+    
+    // IE6 does not support for (var prop in XHR)
+    var supportsXHRIterator = numberOfXHRProperties > 0;
+    
     /**/
     
     return this;
@@ -482,4 +506,4 @@ if (!isIE6)
 }
 
 // ************************************************************************************************
-}})();
+}});
