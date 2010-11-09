@@ -728,7 +728,6 @@ append(ChromeBase,
                         checked: Firebug.showIconWhenHidden,
                         disabled: cookiesDisabled
                     },
-                    "-",
                     {
                         label: "Override Console Object",
                         type: "checkbox",
@@ -750,7 +749,13 @@ append(ChromeBase,
                         checked: Firebug.disableWhenFirebugActive,
                         disabled: cookiesDisabled
                     },
-                    "-",
+                    {
+                        label: "Disable XHR Listener",
+                        type: "checkbox",
+                        value: "disableXHRListener",
+                        checked: Firebug.disableXHRListener,
+                        disabled: cookiesDisabled
+                    },
                     {
                         label: "Enable Trace Mode",
                         type: "checkbox",
@@ -767,7 +772,7 @@ append(ChromeBase,
                     },
                     "-",
                     {
-                        label: "Restore Options",
+                        label: "Reset All Firebug Options",
                         command: "restorePrefs",
                         disabled: cookiesDisabled
                     }
@@ -1686,7 +1691,10 @@ var ChromeFrameBase = extend(ChromeBase,
                 node.style.display = "block";
             
             var main = $("fbChrome");
-            main.style.display = "table";
+            
+            // IE6 throws an error when setting this property! why?
+            //main.style.display = "table";
+            main.style.display = "";
             
             var self = this;
                 /// TODO: xxxpedro FOUC
@@ -1968,6 +1976,12 @@ var ChromePopupBase = extend(ChromeBase,
                     
                     try
                     {
+                        // exposes the FBL to the global namespace when in debug mode
+                        if (Env.isDebugMode)
+                        {
+                            window.FBL = FBL;
+                        }
+                        
                         window.Firebug = Firebug;
                         window.opener.Firebug = Firebug;
                 
