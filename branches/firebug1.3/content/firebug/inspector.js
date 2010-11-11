@@ -116,14 +116,14 @@ Firebug.Inspector =
             //Firebug.Console.log(e.clientX, e.clientY, targ);
             Firebug.Inspector.drawOutline(targ);
             
-            if (targ[cacheID])
+            if (ElementCache(targ))
             {
-                var target = ""+targ[cacheID];
+                var target = ""+ElementCache.key(targ);
                 var lazySelect = function()
                 {
                     inspectorTS = new Date().getTime();
                     
-                    Firebug.HTML.selectTreeNode(""+targ[cacheID])
+                    Firebug.HTML.selectTreeNode(""+ElementCache.key(targ))
                 };
                 
                 if (inspectorTimer)
@@ -162,8 +162,8 @@ Firebug.Inspector =
             //Firebug.Console.log(e.clientX, e.clientY, targ);
             Firebug.Inspector.drawOutline(targ);
             
-            if (targ[cacheID])
-                FBL.Firebug.HTML.selectTreeNode(""+targ[cacheID])
+            if (ElementCache.has(targ))
+                FBL.Firebug.HTML.selectTreeNode(""+ElementCache.key(targ));
             
             lastInspecting = new Date().getTime();
         }

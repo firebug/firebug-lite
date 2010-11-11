@@ -16,8 +16,6 @@ var ignoreHTMLProps =
 
 // ignores also the cache property injected by firebug
 ignoreHTMLProps[cacheID] = 1;
-// TODO: xxxpedro cache remove this expando property
-ignoreHTMLProps[cacheID+"b"] = 1;
 
 
 // ************************************************************************************************
@@ -37,7 +35,7 @@ Firebug.HTML = extend(Firebug.Module,
             {
                 if (Firebug.ignoreFirebugElements && node.firebugIgnore) continue;
                 
-                var uid = node[cacheID];
+                var uid = ElementCache(node);
                 var child = node.childNodes;
                 var childLength = child.length;
                 
@@ -196,7 +194,7 @@ Firebug.HTML = extend(Firebug.Module,
     {
         var doc = Firebug.chrome.document;
         var uid = treeNode.id;
-        var parentNode = documentCache[uid];
+        var parentNode = ElementCache.get(uid);
         
         if (parentNode.childNodes.length == 0) return;
         
@@ -244,7 +242,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     select: function(el)
     {
-        var id = el && el[cacheID];
+        var id = el && ElementCache(el);
         if (id)
             this.selectTreeNode(id);
     },
@@ -257,10 +255,10 @@ Firebug.HTML = extend(Firebug.Module,
         {
             stack.push(id);
             
-            var node = documentCache[id].parentNode;
+            var node = ElementCache.get(id).parentNode;
 
-            if (node && typeof node[cacheID] != "undefined")
-                id = ""+node[cacheID];
+            if (node && ElementCache.has(node))
+                id = ElementCache.key(node);
             else
                 break;
         }
@@ -272,7 +270,7 @@ Firebug.HTML = extend(Firebug.Module,
             id = stack.pop();
             node = $(id);
             
-            if (stack.length > 0 && documentCache[id].childNodes.length > 0)
+            if (stack.length > 0 && ElementCache.get(id).childNodes.length > 0)
               this.appendTreeChildren(node);
         }
         
@@ -348,7 +346,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if(!selectedElement)
         {
-            Firebug.HTML.selectTreeNode(Firebug.browser.document.body[cacheID]);
+            Firebug.HTML.selectTreeNode(ElementCache(Firebug.browser.document.body));
         }
         
         // TODO: xxxpedro
@@ -380,7 +378,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     
     updateSelection: function(object)
     {
-        var id = object[cacheID];
+        var id = ElementCache(object);
         
         if (id)
         {
@@ -429,7 +427,7 @@ var selectElement= function selectElement(e)
         
         FirebugChrome.selectedHTMLElementId = e.id;
         
-        var target = documentCache[e.id];
+        var target = ElementCache.get(e.id);
         var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
         
         var stack = FirebugChrome.htmlSelectionStack;
@@ -565,18 +563,18 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
         }
         
         /*
-        if (typeof targ.attributes[FBL.cacheID] == 'undefined') return;
+        if (typeof targ.attributes[cacheID] == 'undefined') return;
         
-        var uid = targ.attributes[FBL.cacheID];
+        var uid = targ.attributes[cacheID];
         if (!uid) return;
         /**/
         
-        if (typeof targ.attributes[FBL.cacheID] == 'undefined') return;
+        if (typeof targ.attributes[cacheID] == 'undefined') return;
         
-        var uid = targ.attributes[FBL.cacheID];
+        var uid = targ.attributes[cacheID];
         if (!uid) return;
         
-        var el = FBL.documentCache[uid.value];
+        var el = ElementCache.get(uid.value);
         
         var nodeName = el.nodeName.toLowerCase();
     
@@ -696,7 +694,7 @@ Firebug.Reps = {
     
     appendSelector: function(object, html)
     {
-        var uid = object[cacheID];
+        var uid = ElementCache(object);
         var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";
         
         html.push('<span class="objectBox-selector"', uidString, '>');
@@ -714,7 +712,7 @@ Firebug.Reps = {
     {
         if (node.nodeType == 1)
         {
-            var uid = node[cacheID];
+            var uid = ElementCache(node);
             var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";                
             
             html.push(

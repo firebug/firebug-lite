@@ -1583,9 +1583,9 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
 
         var object = target.repObject;
         
-        if (instanceOf(object, "Element") && object[cacheID])
+        if (instanceOf(object, "Element"))
         {
-            Firebug.HTML.selectTreeNode(object[cacheID]);
+            Firebug.HTML.selectTreeNode(ElementCache(object));
         }
         else
         {
@@ -1606,9 +1606,9 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         
         if(!object) return;
         
-        if (instanceOf(object, "Element") && object[cacheID])
+        if (instanceOf(object, "Element"))
         {
-            Firebug.HTML.selectTreeNode(object[cacheID]);
+            Firebug.HTML.selectTreeNode(ElementCache(object));
         }
         else
         {
@@ -1658,7 +1658,7 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         addEvent(this.panelNode, "click", this.onClick);
         
         // TODO: xxxpedro css2
-        var selection = documentCache[FirebugChrome.selectedHTMLElementId];
+        var selection = ElementCache.get(FirebugChrome.selectedHTMLElementId);
         if (selection)
             this.select(selection, true);
     },
