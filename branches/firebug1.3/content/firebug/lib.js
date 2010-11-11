@@ -78,6 +78,10 @@ var FBTrace = null;
 
 this.initialize = function()
 {
+    // Firebug Lite is already running in persistent mode so we just quit
+    if (window.firebug && firebug.firebuglite || window.console && console.firebuglite)
+        return;
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // initialize environment
 
@@ -123,6 +127,7 @@ this.initialize = function()
             FBL.Env.Options.startOpened = prefs.startOpened;
             FBL.Env.Options.enableTrace = prefs.enableTrace;
             FBL.Env.Options.enablePersistent = prefs.enablePersistent;
+            FBL.Env.Options.disableXHRListener = prefs.disableXHRListener;
         }
         
         if (FBL.isFirefox && 
@@ -283,6 +288,8 @@ this.Env =
         overrideConsole: true,
         ignoreFirebugElements: true,
         disableWhenFirebugActive: true,
+        
+        disableXHRListener: false,
         
         enableTrace: false,
         enablePersistent: false
@@ -4288,7 +4295,7 @@ domMemberMap.HTMLImageElement = extendArray(domMemberMap.Element,
     "hspace",
     "vspace",
     "isMap",
-    "useMap",
+    "useMap"
 ]);
 
 domMemberMap.HTMLAnchorElement = extendArray(domMemberMap.Element,

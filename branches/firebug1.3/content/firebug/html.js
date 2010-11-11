@@ -279,7 +279,9 @@ Firebug.HTML = extend(Firebug.Module,
         
         selectElement(node);
         
-        fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+        // TODO: xxxpedro
+        if (fbPanel1)
+            fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
     }
     
 });
