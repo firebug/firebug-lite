@@ -192,32 +192,8 @@ this.initialize = function()
     }
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // chromeExtensionDispatch
-    
-    if (FBL.Env.isChromeExtension)
-    {
-        var doc = FBL.Env.browser.document;
-        
-        if (!doc.getElementById("FirebugChannel"))
-        {
-            var channel = doc.createElement("div");
-            channel.id = "FirebugChannel";
-            channel.firebugIgnore = true;
-            channel.style.display = "none";
-            doc.documentElement.insertBefore(channel, doc.documentElement.firstChild);
-        }
-        
-        var channelEvent = document.createEvent("Event");
-        channelEvent.initEvent("FirebugChannelEvent", true, true);
-            
-        this.chromeExtensionDispatch = function(data)
-        {
-            channel.innerText = data;
-            channel.dispatchEvent(channelEvent);
-        };
-    }
-    
     // wait document load
+    
     waitForDocument();
 };
 

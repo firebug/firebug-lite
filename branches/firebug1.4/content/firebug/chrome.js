@@ -1757,7 +1757,7 @@ var ChromeFrameBase = extend(ChromeBase,
         if (Env.isChromeExtension)
         {
             localStorage.removeItem("Firebug");
-            chromeExtensionDispatch("FB_deactivate");
+            Firebug.GoogleChrome.dispatch("FB_deactivate");
         }
     },
     

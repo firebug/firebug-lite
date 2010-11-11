@@ -188,6 +188,8 @@ Firebug.Console = Firebug.Console = extend(ActivableConsole,
     
     flush: function()
     {
+        dispatch(this.fbListeners,"flush",[]);
+        
         for (var i=0, length=consoleQueue.length; i<length; i++)
         {
             var args = consoleQueue[i];
