@@ -2111,6 +2111,22 @@ this.isElement = function(o)
 
 
 // ************************************************************************************************
+// DOM Modification
+
+this.appendInnerHTML = function(element, html, referenceElement)
+{
+    var doc = element.ownerDocument;
+    var range = doc.createRange();  // a helper object
+    range.selectNodeContents(element); // the environment to interpret the html
+
+    var fragment = range.createContextualFragment(html);  // parse
+    var firstChild = fragment.firstChild;
+    element.insertBefore(fragment, referenceElement);
+    return firstChild;
+};
+
+
+// ************************************************************************************************
 // DOM creation
 
 this.createElement = function(tagName, properties)
