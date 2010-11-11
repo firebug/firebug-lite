@@ -689,7 +689,7 @@ this.createStyleSheet = function(doc, url)
 {
     //TODO: xxxpedro
     //var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
-    var style = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
+    var style = this.createElement("link");
     style.setAttribute("charset","utf-8");
     style.firebugIgnore = true;
     style.setAttribute("rel", "stylesheet");
@@ -2117,13 +2117,34 @@ this.isElement = function(o)
 
 this.appendInnerHTML = function(element, html, referenceElement)
 {
+    // if undefined, we must convert it to null otherwise it will throw an error in IE 
+    // when executing element.insertBefore(firstChild, referenceElement)
+    referenceElement = referenceElement || null;
+    
     var doc = element.ownerDocument;
-    var range = doc.createRange();  // a helper object
-    range.selectNodeContents(element); // the environment to interpret the html
+    
+    // doc.createRange not available in IE
+    if (doc.createRange)
+    {
+        var range = doc.createRange();  // a helper object
+        range.selectNodeContents(element); // the environment to interpret the html
+    
+        var fragment = range.createContextualFragment(html);  // parse
+        var firstChild = fragment.firstChild;
+        element.insertBefore(fragment, referenceElement);
+    }
+    else
+    {
+        var div = doc.createElement("div");
+        div.innerHTML = html;
+        
+        var firstChild = div.firstChild;
+        while (div.firstChild)
+            element.appendChild(div.firstChild);
 
-    var fragment = range.createContextualFragment(html);  // parse
-    var firstChild = fragment.firstChild;
-    element.insertBefore(fragment, referenceElement);
+        div = null;
+    }
+    
     return firstChild;
 };
 
@@ -2275,20 +2296,20 @@ this.isShift = function(event)
     return event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
 };
 
-this.addEvent = function(object, name, handler)
+this.addEvent = function(object, name, handler, useCapture)
 {
     if (object.addEventListener)
-        object.addEventListener(name, handler, false);
+        object.addEventListener(name, handler, useCapture);
     else
         object.attachEvent("on"+name, handler);
 };
 
-this.removeEvent = function(object, name, handler)
+this.removeEvent = function(object, name, handler, useCapture)
 {
     try
     {
         if (object.removeEventListener)
-            object.removeEventListener(name, handler, false);
+            object.removeEventListener(name, handler, useCapture);
         else
             object.detachEvent("on"+name, handler);
     }

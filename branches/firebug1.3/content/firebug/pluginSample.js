@@ -16,7 +16,7 @@ Firebug.Plugin = extend(Firebug.Module,
     clear: function()
     {
         alert("clear button clicked");
-        this.getPanel().contentNode.innerHTML = "";
+        this.getPanel().panelNode.innerHTML = "";
     }
 });
 

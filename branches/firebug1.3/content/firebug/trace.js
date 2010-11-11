@@ -89,7 +89,7 @@ this.logRow = function(message, className)
 {
     var panel = this.getPanel();
     
-    if (panel && panel.contentNode)
+    if (panel && panel.panelNode)
         this.writeMessage(message, className);
     else
     {
@@ -113,13 +113,13 @@ this.writeMessage = function(message, className)
 
 this.appendRow = function(row)
 {
-    var container = this.getPanel().contentNode;
+    var container = this.getPanel().panelNode;
     container.appendChild(row);
 };
 
 this.writeRow = function(message, className)
 {
-    var row = this.getPanel().contentNode.ownerDocument.createElement("div");
+    var row = this.getPanel().panelNode.ownerDocument.createElement("div");
     row.className = "logRow" + (className ? " logRow-"+className : "");
     row.innerHTML = message.join("");
     this.appendRow(row);

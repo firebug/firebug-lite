@@ -163,6 +163,8 @@ window.Firebug = FBL.Firebug =
                 {
                     FBTrace.sysout("firebug.getRep FAILS: ", exc.message || exc);
                     FBTrace.sysout("firebug.getRep reps["+i+"/"+reps.length+"]: Rep="+reps[i].className);
+                    // TODO: xxxpedro add trace to FBTrace logs like in Firebug
+                    //firebug.trace();
                 }
             }
         }
@@ -600,9 +602,6 @@ Firebug.Panel =
             // create SidePanel
         }
         
-        var contentNode = this.contentNode = createElement("div");
-        this.panelNode.appendChild(contentNode);
-        
         this.containerNode = this.panelNode.parentNode;
         
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.create", this.name);
@@ -643,7 +642,6 @@ Firebug.Panel =
         
         this.tabNode = null;
         this.panelNode = null;
-        this.contentNode = null;
         this.containerNode = null;
         
         this.toolButtonsNode = null;

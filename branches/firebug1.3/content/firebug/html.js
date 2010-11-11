@@ -307,7 +307,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.create.apply(this, arguments);
         
         this.panelNode.style.padding = "4px 3px 1px 15px";
-        this.contentNode.style.minWidth = "500px";
+        this.panelNode.style.minWidth = "500px";
         
         if (Env.Options.enablePersistent || Firebug.chrome.type != "popup")
             this.createUI();
@@ -335,9 +335,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         var html = [];
         Firebug.HTML.appendTreeNode(rootNode, html);
         
-        var d = this.contentNode;
-        d.innerHTML = html.join("");
-        this.panelNode.appendChild(d);
+        this.panelNode.innerHTML = html.join("");
     },
     
     initialize: function()
