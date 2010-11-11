@@ -5,6 +5,7 @@
     - Issue 3504: Firebug lite: jQuery.ajax call fails in IE
     - Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
     - Issue 3554: Firebug Lite should use local images when loaded locally
+    - Issue 3422: Firebug Lite breaks Google Instant Search
     - infoTips for CSS properties such as color and image 
     - Unifying Firebug Lite internal cache system (to be used in sourceCache). 
       As a bonus, the unified model allows Firebug Lite to adapt its cache when 
