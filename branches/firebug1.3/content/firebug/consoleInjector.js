@@ -9,6 +9,7 @@ FBL.ns(function() { with (FBL) {
 //const Ci = Components.interfaces;
     
 var frameCounters = {};
+var traceRecursion = 0;
 
 Firebug.Console.injector =
 {
@@ -424,6 +425,14 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             
             return false;
         };
+        
+        traceRecursion++;
+        
+        if (traceRecursion > 1)
+        {
+            traceRecursion--;
+            return;
+        }
     
         var frames = [];
         
@@ -579,10 +588,12 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             }
             /**/
         }
-    
+        
         //console.log(stack);
         //console.dir(frames);
         Firebug.Console.log({frames: frames}, context, "stackTrace", FirebugReps.StackTrace);
+        
+        traceRecursion--;
     };
     
     this.trace_ok = function()

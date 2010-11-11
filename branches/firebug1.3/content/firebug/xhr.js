@@ -287,9 +287,6 @@ var XMLHttpRequestWrapper = function(activeXObject)
         spy.xhrRequest = xhrRequest;
         spy.urlParams = parseURLParamsArray(url);
         
-        if (!FBL.isIE && async)
-            xhrRequest.onreadystatechange = handleStateChange;
-        
         try
         {
             // xhrRequest.open.apply may not be available in IE
@@ -302,8 +299,7 @@ var XMLHttpRequestWrapper = function(activeXObject)
         {
         }
         
-        if (FBL.isIE && async)
-            xhrRequest.onreadystatechange = handleStateChange;
+        xhrRequest.onreadystatechange = handleStateChange;
         
     };
     
@@ -312,7 +308,6 @@ var XMLHttpRequestWrapper = function(activeXObject)
     this.send = function(data)
     {
         //Firebug.Console.log("xhrRequest send");
-        
         spy.data = data;
         
         reqStartTS = new Date().getTime();
@@ -336,7 +331,15 @@ var XMLHttpRequestWrapper = function(activeXObject)
             {
                 self.readyState = xhrRequest.readyState;
                 
-                finishXHR();
+                // sometimes an error happens when calling finishXHR()
+                // Issue 3422: Firebug Lite breaks Google Instant Search
+                try
+                {
+                    finishXHR();
+                }
+                catch(E)
+                {
+                }
             }
         }
     };
