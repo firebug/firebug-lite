@@ -36,6 +36,11 @@ var bookmarkletVersion = 4;
 var reNotWhitespace = /[^\s]/;
 var reSplitFile = /:\/{1,3}(.*?)\/([^\/]*?)\/?($|\?.*)/;
 
+// Globals
+this.reJavascript = /\s*javascript:\s*(.*)/;
+this.reChrome = /chrome:\/\/([^\/]*)\//;
+this.reFile = /file:\/\/([^\/]*)\//;
+
 
 // ************************************************************************************************
 // properties
@@ -558,6 +563,16 @@ this.extend = function(l, r)
     return newOb;
 };
 
+this.descend = function(prototypeParent, childProperties)
+{
+    function protoSetter() {};
+    protoSetter.prototype = prototypeParent;
+    var newOb = new protoSetter();
+    for (var n in childProperties)
+        newOb[n] = childProperties[n];
+    return newOb;
+};
+
 this.append = function(l, r)
 {
     for (var n in r)
@@ -692,6 +707,38 @@ this.addStyleSheet = function(doc, style)
     else
         doc.documentElement.appendChild(style);
 };
+
+this.appendStylesheet = function(doc, uri)
+{
+    // Make sure the stylesheet is not appended twice.
+    if (this.$(uri, doc))
+        return;
+
+    var styleSheet = this.createStyleSheet(doc, uri);
+    styleSheet.setAttribute("id", uri);
+    this.addStyleSheet(doc, styleSheet);
+};
+
+this.addScript = function(doc, id, src)
+{
+    var element = doc.createElementNS("http://www.w3.org/1999/xhtml", "html:script");
+    element.setAttribute("type", "text/javascript");
+    element.setAttribute("id", id);
+    if (!FBTrace.DBG_CONSOLE)
+        FBL.unwrapObject(element).firebugIgnore = true;
+
+    element.innerHTML = src;
+    if (doc.documentElement)
+        doc.documentElement.appendChild(element);
+    else
+    {
+        // See issue 1079, the svg test case gives this error
+        if (FBTrace.DBG_ERRORS)
+            FBTrace.sysout("lib.addScript doc has no documentElement:", doc);
+    }
+    return element;
+};
+
 
 // ************************************************************************************************
 
@@ -1055,6 +1102,23 @@ this.cropString = function(text, limit)
 this.isWhitespace = function(text)
 {
     return !reNotWhitespace.exec(text);
+};
+
+this.splitLines = function(text)
+{
+    var reSplitLines2 = /.*(:?\r\n|\n|\r)?/mg;
+    var lines;
+    if (text.match)
+    {
+        lines = text.match(reSplitLines2);
+    }
+    else
+    {
+        var str = text+"";
+        lines = str.match(reSplitLines2);
+    }
+    lines.pop();
+    return lines;
 };
 
 
@@ -2543,6 +2607,15 @@ this.splitURLTrue = function(url)
 
 this.getFileExtension = function(url)
 {
+    if (!url)
+        return null;
+
+    // Remove query string from the URL if any.
+    var queryString = url.indexOf("?");
+    if (queryString != -1)
+        url = url.substr(0, queryString);
+
+    // Now get the file extension.
     var lastDot = url.lastIndexOf(".");
     return url.substr(lastDot+1);
 };
@@ -5433,32 +5506,36 @@ this.Ajax =
     
     
     /**
-     * Realiza uma requisiÃ§Ã£o ajax.
+     * Create a AJAX request.
      * 
      * @name request
-     * @param {Object}   options               Request options
+     * @param {Object}   options               request options
      * @param {String}   options.url           URL to be requested
      * @param {String}   options.type          Request type ("get" ou "post"). Default is "get".
-     * @param {Boolean}  options.async         Indica se a requisiÃ§Ã£o ÃŠ assÃ­ncrona. O padrÃ£o ÃŠ "true".   
-     * @param {String}   options.dataType      Dado requisitado ("text", "html", "xml" ou "json"). O padrÃ£o ÃŠ "text".
-     * @param {String}   options.contentType   ContentType a ser usado. O padrÃ£o ÃŠ "application/x-www-form-urlencoded".  
-     * @param {Function} options.onLoading     FunÃ§Ã£o a ser executada antes da requisiÃ§Ã£o ser enviada.
-     * @param {Function} options.onLoaded      FunÃ§Ã£o a ser executada logo que a requisiÃ§Ã£o for enviada.
-     * @param {Function} options.onInteractive FunÃ§Ã£o a ser executada durante o recebimento da requisiÃ§Ã£o.
-     * @param {Function} options.onComplete    FunÃ§Ã£o a ser executada ao completar a requisiÃ§Ã£o.
-     * @param {Function} options.onUpdate      FunÃ§Ã£o a ser executada apÃ³s completar a requisiÃ§Ã£o.
-     * @param {Function} options.onSuccess     FunÃ§Ã£o a ser executada ao completar a requisiÃ§Ã£o com sucesso.
-     * @param {Function} options.onFailure     FunÃ§Ã£o a ser executada ao completar a requisiÃ§Ã£o com erro.
+     * @param {Boolean}  options.async         Asynchronous flag. Default is "true".   
+     * @param {String}   options.dataType      Data type ("text", "html", "xml" or "json"). Default is "text".
+     * @param {String}   options.contentType   Content-type of the data being sent. Default is "application/x-www-form-urlencoded".  
+     * @param {Function} options.onLoading     onLoading callback
+     * @param {Function} options.onLoaded      onLoaded callback
+     * @param {Function} options.onInteractive onInteractive callback
+     * @param {Function} options.onComplete    onComplete callback
+     * @param {Function} options.onUpdate      onUpdate callback
+     * @param {Function} options.onSuccess     onSuccess callback
+     * @param {Function} options.onFailure     onFailure callback
      */      
     request: function(options)
     {
-        var o = options || {};
-    
-        // Configura as opÃ§Ã¾es que nÃ£o foram definidas para o seu valor padrÃ£o
-        o.type = o.type && o.type.toLowerCase() || "get";
-        o.async = o.async || true;
-        o.dataType = o.dataType || "text"; 
-        o.contentType = o.contentType || "application/x-www-form-urlencoded";
+        // process options
+        var o = FBL.extend(
+                {
+                    // default values
+                    type: "get",
+                    async: true,
+                    dataType: "text",
+                    contentType: "application/x-www-form-urlencoded"
+                }, 
+                options || {}
+            );
     
         this.requests.push(o);
     
@@ -5497,31 +5574,31 @@ this.Ajax =
     {
         var t = FBL.Ajax.transport, r = FBL.Ajax.requests.shift(), data;
     
-        // Abre o objeto XMLHttpRequest
+        // open XHR object
         t.open(r.type, r.url, r.async);
     
         //setRequestHeaders();
     
-        // Registra o objeto para que o servidor saiba que ÃŠ uma requisiÃ§Ã£o AJAX
+        // indicates that it is a XHR request to the server
         t.setRequestHeader("X-Requested-With", "XMLHttpRequest");
     
-        // Caso tenha sido informado algum dado
+        // if data is being sent, sets the appropriate content-type
         if (data = FBL.Ajax.serialize(r.data))
             t.setRequestHeader("Content-Type", r.contentType);
     
         /** @ignore */
-        // Tratamento de evento de mudanÃ§a de estado
+        // onreadystatechange handler
         t.onreadystatechange = function()
         { 
             FBL.Ajax.onStateChange(r); 
         }; 
     
-        // Envia a requisiÃ§Ã£o
+        // send the request
         t.send(data);
     },
   
     /**
-     * FunÃ§Ã£o de tratamento da mudanÃ§a de estado da requisiÃ§Ã£o ajax.
+     * Handles the state change
      */     
     onStateChange: function(options)
     {
@@ -5548,8 +5625,8 @@ this.Ajax =
     },
   
     /**
-     * Retorna a resposta de acordo com o tipo de dado requisitado.
-     */  
+     * gets the appropriate response value according the type
+     */
     getResponse: function(options)
     {
         var t = this.transport, type = options.dataType;
@@ -5562,7 +5639,7 @@ this.Ajax =
     },
   
     /**
-     * Retorna o atual estado da requisiÃ§Ã£o ajax.
+     * returns the current state of the XHR object
      */     
     getState: function()
     {
@@ -5690,95 +5767,6 @@ this.SourceText.getLineAsHTML = function(lineNo)
 {
     return escapeForSourceLine(this.lines[lineNo-1]);
 };
-
-
-// ************************************************************************************************
-// Cache
-
-this.cacheID = "firebug" + new Date().getTime();
-
-var cacheUID = 0;
-var createCache = function()
-{
-    var map = {};
-    var CID = FBL.cacheID;
-    
-    var cacheFunction = function(element)
-    {
-        return cacheAPI.set(element);
-    };
-    
-    var cacheAPI =  
-    {
-        get: function(key)
-        {
-            return map.hasOwnProperty(key) ?
-                    map[key] :
-                    null;
-        },
-        
-        set: function(element)
-        {
-            var id = element[CID];
-            
-            if (!id)
-            {
-                id = ++cacheUID;
-                element[CID] = id;
-            }
-            
-            if (!map.hasOwnProperty(id))
-            {
-                map[id] = element;
-            }
-            
-            return id;
-        },
-        
-        unset: function(element)
-        {
-            var id = element[CID];
-            
-            element[CID] = null;
-            delete element[CID];
-            
-            map[id] = null;
-            delete map[id];
-        },
-        
-        key: function(element)
-        {
-            return element[CID];
-        },
-        
-        has: function(element)
-        {
-            return map.hasOwnProperty(element[CID]);
-        },
-        
-        clear: function()
-        {
-            for (var id in map)
-            {
-                var element = map[id];
-                
-                element[CID] = null;
-                delete element[CID];
-                
-                map[id] = null;
-                delete map[id];
-            }
-        }
-    };
-    
-    FBL.append(cacheFunction, cacheAPI);
-    
-    return cacheFunction;
-};
-
-// TODO: xxxpedro : check if we need really this on FBL scope
-this.StyleSheetCache = createCache();
-this.ElementCache = createCache();
 
 
 // ************************************************************************************************

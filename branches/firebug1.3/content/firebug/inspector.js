@@ -6,6 +6,8 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Inspector Module
 
+var ElementCache = Firebug.Lite.Cache.Element;
+
 var inspectorTS, inspectorTimer, isInspecting;
 
 Firebug.Inspector =

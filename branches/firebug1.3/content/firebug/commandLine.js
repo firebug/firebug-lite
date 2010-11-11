@@ -380,17 +380,17 @@ Firebug.CommandLine = extend(Firebug.Module,
     
     onError: function(msg, href, lineNo)
     {
-        var html = [];
+        href = href || "";
         
         var lastSlash = href.lastIndexOf("/");
         var fileName = lastSlash == -1 ? href : href.substr(lastSlash+1);
-        
-        html.push(
+        var html = [
             '<span class="errorMessage">', msg, '</span>', 
             '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
-          );
+          ];
         
-        Firebug.Console.writeRow(html, "error");
+        // TODO: xxxpedro ajust to Console2
+        //Firebug.Console.writeRow(html, "error");
     },
     
     onKeyDown: function(e)

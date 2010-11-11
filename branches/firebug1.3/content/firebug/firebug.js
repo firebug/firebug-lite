@@ -85,8 +85,8 @@ window.Firebug = FBL.Firebug =
             }
         }
         
-        ElementCache.clear();
-        StyleSheetCache.clear();
+        Firebug.Lite.Cache.Element.clear();
+        Firebug.Lite.Cache.StyleSheet.clear();
         
         Firebug.browser = null;
         Firebug.context = null;
@@ -310,6 +310,7 @@ if (!Env.Options.enablePersistent ||
 
 FBL.cacheDocument = function cacheDocument()
 {
+    var ElementCache = Firebug.Lite.Cache.Element;
     var els = Firebug.browser.document.getElementsByTagName("*");
     for (var i=0, l=els.length, el; i<l; i++)
     {

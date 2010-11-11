@@ -5,6 +5,8 @@ FBL.ns(function() { with (FBL) {
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+var ElementCache = Firebug.Lite.Cache.Element;
+
 var insertSliceSize = 18;
 var insertInterval = 40;
 
@@ -29,7 +31,7 @@ var ignoreVars =
 };
 
 if (Firebug.ignoreFirebugElements)
-    ignoreVars[cacheID] = 1;
+    ignoreVars[Firebug.Lite.Cache.ID] = 1;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
