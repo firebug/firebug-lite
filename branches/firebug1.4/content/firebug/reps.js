@@ -315,7 +315,7 @@ this.Obj = domplate(Firebug.Rep,
     propIterator: function (object)
     {
         ///Firebug.ObjectShortIteratorMax;
-        maxLength = 55; // default max length for long representation
+        var maxLength = 55; // default max length for long representation
         
         if (!object)
             return [];
