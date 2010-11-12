@@ -43,6 +43,18 @@ window.FBDev =
         "firebug/chrome.js",
         "firebug/chromeSkin.js",
         
+        
+        // ****************************************************************************************
+        // Lite
+        
+        "firebug/lite.js", // experimental
+        "firebug/lite/browser.js", // experimental
+        "firebug/lite/cache.js", // experimental
+        "firebug/lite/proxy.js", // experimental
+        "firebug/lite/script.js", // experimental
+        "firebug/lite/style.js", // experimental
+        
+        
         // ****************************************************************************************
         // Application Classes
         
