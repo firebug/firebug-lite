@@ -55,8 +55,15 @@ TracePanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         
         this.clearButton.initialize();
+    },
+
+    shutdown: function()
+    {
+        this.clearButton.shutdown();
+
+        Firebug.Panel.shutdown.apply(this, arguments);
     }
-    
+
 });
 
 Firebug.registerPanel(TracePanel);
