@@ -10,7 +10,6 @@ if (!Env.isChromeExtension) return;
 
 var channel;
 var channelEvent;
-var contextMenuElement;
 
 // ************************************************************************************************
 // GoogleChrome Module
@@ -34,9 +33,6 @@ Firebug.GoogleChrome = extend(Firebug.Module,
             
             channel.addEventListener("FirebugChannelEvent", onFirebugChannelEvent);
         }
-        
-        // TODO: remove event listener at window onunload
-        Firebug.context.window.addEventListener("contextmenu", onContextMenu);
     },
 
     dispatch: function(message)
@@ -49,22 +45,57 @@ Firebug.GoogleChrome = extend(Firebug.Module,
 // ************************************************************************************************
 // internals
 
-var onContextMenu = function(event)
-{
-    contextMenuElement = event.target;
-};
-
 var onFirebugChannelEvent = function()
 {
     var name = channel.innerText;
     
-    if (name == "FB_contextMenuClick")
+    if (name.indexOf("FB_contextMenuClick") == 0)
     {
-        // TODO: if not open, open it first
+        var doc = FBL.Env.browser.document;
+        var contextMenuElementXPath = name.split(",")[1];
+        var contextMenuElement = getElementsByXPath(doc, contextMenuElementXPath)[0];
+
+        // If not open, open it first
+        Firebug.chrome.toggle(true);
         
-        Firebug.chrome.selectPanel("HTML");
-        Firebug.HTML.select(contextMenuElement);
+        setTimeout(function(){
+
+            // Select the HTML panel
+            Firebug.chrome.selectPanel("HTML");
+
+            // Select the clicked element in the HTML tree
+            Firebug.HTML.select(contextMenuElement);
+        
+        },50);
     }
+    else if (name == "FB_toggle")
+    {
+        Firebug.chrome.toggle();
+    }
+    else if (name == "FB_openInNewWindow")
+    {
+        setTimeout(function(){
+            Firebug.chrome.toggle(true, true);
+        },0);
+    }
+};
+
+var getElementsByXPath = function(doc, xpath)
+{
+    var nodes = [];
+
+    try {
+        var result = doc.evaluate(xpath, doc, null, XPathResult.ANY_TYPE, null);
+        for (var item = result.iterateNext(); item; item = result.iterateNext())
+            nodes.push(item);
+    }
+    catch (exc)
+    {
+        // Invalid xpath expressions make their way here sometimes.  If that happens,
+        // we still want to return an empty set without an exception.
+    }
+
+    return nodes;
 };
 
 // ************************************************************************************************
