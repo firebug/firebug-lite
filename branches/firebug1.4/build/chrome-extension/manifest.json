@@ -19,7 +19,7 @@
   [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["firebug.js"],
+      "js": ["contentScript.js"],
       "run_at": "document_start"
     }
   ],
