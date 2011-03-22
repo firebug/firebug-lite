@@ -1,16 +1,54 @@
 ###################################################################################################
- 1.3.2b1 - 2010-xx-xx - Revision: xxxx
+ 1.3.2 - 2011-03-22 - Revision: 9760
 ###################################################################################################
 
+Overview:
+    - Issue 3422: Firebug Lite breaks Google Instant Search
     - Issue 3504: Firebug lite: jQuery.ajax call fails in IE
     - Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
     - Issue 3554: Firebug Lite should use local images when loaded locally
+    - Issue 3166: Listen to F12 key in for Google Chrome when inactive
+    - Issue 3579: Use context menu to Inspect Element in Firebug Lite Chrome Extension
+    - infoTips for CSS properties such as color and image
+
+-------------------------------------------------------------------------------
+Addition
+-------------------------------------------------------------------------------
+    - infoTips for CSS properties such as color and image
+
+-------------------------------------------------------------------------------
+Bugfixes
+-------------------------------------------------------------------------------
     - Issue 3422: Firebug Lite breaks Google Instant Search
-    - infoTips for CSS properties such as color and image 
-    - Unifying Firebug Lite internal cache system (to be used in sourceCache). 
-      As a bonus, the unified model allows Firebug Lite to adapt its cache when 
-      new elements are inserted into the document, which means that now it will 
+    - Issue 3504: Firebug lite: jQuery.ajax call fails in IE
+    - Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
+    - Issue 3554: Firebug Lite should use local images when loaded locally
+
+-------------------------------------------------------------------------------
+Core
+-------------------------------------------------------------------------------
+    - Isolated most of Lite-specific code (not part/adaptation of Firebug's
+      original source) into a single directory (/content/firebug/lite/).
+    - Created a simple server-side proxy plugin to be used in conjunction with
+      Firebug Lite in order to overcome the cross-domain limitations of JavaScript
+    - Unifying Firebug Lite internal cache system (to be used in sourceCache).
+      As a bonus, the unified model allows Firebug Lite to adapt its cache when
+      new elements are inserted into the document, which means that now it will
       be easier to use the Inspector in dynamically created content.
+
+-------------------------------------------------------------------------------
+Chrome extension improvements
+-------------------------------------------------------------------------------
+    - Issue 3166: Listen to F12 key in for Google Chrome when inactive
+    - Issue 3579: Use context menu to Inspect Element in Firebug Lite Chrome Extension
+    - Code refactored (chrome extension specific code isolated in a single file/module)
+    - Better message handling (two-way communication between the application/page,
+      content script and background page)
+    - Activation refactoring. The application is loaded how assynchronously during
+      activation and the activation can be started now by the BrowserAction/Icon,
+      the F12/ctrl+F12 key, or the context meny "Inspect with Firebug Lite" option.
+      It is possible also to activate-deactivate-reactivate without reloading
+      the page now.
 
 
 ###################################################################################################
