@@ -1750,14 +1750,21 @@ var ChromeFrameBase = extend(ChromeBase,
     
     deactivate: function()
     {
-        Firebug.shutdown();
-        
-        // if it is running as a Chrome extension, dispatch a message to the extension signaling 
+        // if it is running as a Chrome extension, dispatch a message to the extension signaling
         // that Firebug should be deactivated for the current tab
         if (Env.isChromeExtension)
         {
             localStorage.removeItem("Firebug");
             Firebug.GoogleChrome.dispatch("FB_deactivate");
+
+            // xxxpedro problem here regarding Chrome extension. We can't deactivate the whole
+            // app, otherwise it won't be able to be reactivated without reloading the page.
+            // but we need to stop listening global keys, otherwise the key activation won't work.
+            Firebug.chrome.close();
+        }
+        else
+        {
+            Firebug.shutdown();
         }
     },
     
@@ -2093,6 +2100,13 @@ var onGlobalKeyDown = function onGlobalKeyDown(event)
     {
         Firebug.chrome.toggle(false, ctrlKey);
         cancelEvent(event, true);
+
+        // TODO: xxxpedro replace with a better solution. we're doing this
+        // to allow reactivating with the F12 key after being deactivated
+        if (Env.isChromeExtension)
+        {
+            Firebug.GoogleChrome.dispatch("FB_enableIcon");
+        }
     }
     else if (keyCode == 67 /* C */ && ctrlKey && shiftKey)
     {
