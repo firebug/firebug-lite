@@ -39,7 +39,7 @@ function handleIconClick(tab)
             }
         }
     );
-    
+    /*
     setTimeout(function(){
     
         if (!isContentScriptActive)
@@ -57,7 +57,7 @@ function handleIconClick(tab)
             }
         }
         
-    },500)
+    },500);/**/
 };
 
 chrome.browserAction.onClicked.addListener(handleIconClick);
@@ -136,6 +136,8 @@ chrome.extension.onRequest.addListener
             disableBrowserActionIcon();
             chrome.tabs.getSelected(null, function(tab){
                 unsetActivationStorage(tab);
+                
+                chrome.tabs.sendRequest(tab.id, {name: "FB_deactivate"});
             });
         }
 
