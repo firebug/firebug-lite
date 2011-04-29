@@ -1,0 +1,8 @@
+.gitignore
+_layouts
+shared
+build
+tmp
+.DS_Store
+Thumbs.db
+_site
