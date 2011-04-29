@@ -38,10 +38,10 @@ window.FBDev =
 
         "firebug/firebug.js",
 
-        "firebug/gui.js",
+        "lite/gui.js",
         "firebug/context.js",
         "firebug/chrome.js",
-        "firebug/chromeSkin.js",
+        "lite/chromeSkin.js",
 
         // firebug1.4 experimental
         //"firebug/chrome2.js",
@@ -52,7 +52,7 @@ window.FBDev =
         // ****************************************************************************************
         // Lite
 
-        "firebug/lite.js", // experimental
+        "lite/lite.js", // experimental
         "lite/browser.js", // experimental
         "lite/cache.js", // experimental
         "lite/proxy.js", // experimental
@@ -63,7 +63,7 @@ window.FBDev =
         // ****************************************************************************************
         // Application Classes
 
-        "firebug/selector.js",
+        "lite/selector.js",
 
         "firebug/domplate.js",
         "firebug/reps.js",
@@ -82,7 +82,7 @@ window.FBDev =
         // ****************************************************************************************
         // XHR Watcher
 
-        "firebug/xhr.js",
+        "lite/xhr.js",
         "firebug/net.js",
         "firebug/spy.js",
 
@@ -150,11 +150,11 @@ window.FBDev =
         // ****************************************************************************************
         // Plugin
 
-        "firebug/plugin.js", // must be the last module loaded
+        "lite/plugin.js", // must be the last module loaded
 
         // ****************************************************************************************
         // Bootstrap
-        "firebug/boot.js"
+        "lite/boot.js"
     ],
     // ********************************************************************************************
 
