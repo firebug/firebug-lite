@@ -32,21 +32,21 @@ window.FBDev =
         // ****************************************************************************************
         // Application Core
 
-        "firebug/lib.js",
+        "firebug1.4/lib.js",
 
-        "firebug/i18n.js",
+        "firebug1.4/i18n.js",
 
-        "firebug/firebug.js",
+        "firebug1.4/firebug.js",
 
         "lite/gui.js",
-        "firebug/context.js",
-        "firebug/chrome.js",
+        "firebug1.4/context.js",
+        "firebug1.4/chrome.js",
         "lite/chromeSkin.js",
 
         // firebug1.4 experimental
-        //"firebug/chrome2.js",
-        "firebug/tabContext.js",
-        "firebug/tabWatcher.js",
+        //"firebug1.4/chrome2.js",
+        "firebug1.4/tabContext.js",
+        "firebug1.4/tabWatcher.js",
 
 
         // ****************************************************************************************
@@ -65,61 +65,61 @@ window.FBDev =
 
         "lite/selector.js",
 
-        "firebug/domplate.js",
-        "firebug/reps.js",
+        "firebug1.4/domplate.js",
+        "firebug1.4/reps.js",
 
-        "firebug/editor.js",
-        "firebug/inspector.js",
+        "firebug1.4/editor.js",
+        "firebug1.4/inspector.js",
 
         // ****************************************************************************************
         // Console / CommandLine core
 
-        "firebug/console.js",
-        "firebug/consoleInjector.js",
+        "firebug1.4/console.js",
+        "firebug1.4/consoleInjector.js",
 
-        "firebug/commandLine.js",
+        "firebug1.4/commandLine.js",
 
         // ****************************************************************************************
         // XHR Watcher
 
         "lite/xhr.js",
-        "firebug/net.js",
-        "firebug/spy.js",
+        "firebug1.4/net.js",
+        "firebug1.4/spy.js",
 
-        "firebug/jsonViewer.js",
-        "firebug/xmlViewer.js",
+        "firebug1.4/jsonViewer.js",
+        "firebug1.4/xmlViewer.js",
 
         // ****************************************************************************************
         // Application Modules/Panels
 
-        "firebug/html.js",
+        "firebug1.4/html.js",
 
-        //"firebug/insideOutBox.js", // HTML experimental
-        //"firebug/lib/htmlLib.js", // HTML experimental
-        //"firebug/html3.js", // HTML experimental
-        //"firebug/html2.js", // HTML experimental
+        //"firebug1.4/insideOutBox.js", // HTML experimental
+        //"firebug1.4/lib/htmlLib.js", // HTML experimental
+        //"firebug1.4/html3.js", // HTML experimental
+        //"firebug1.4/html2.js", // HTML experimental
 
-        "firebug/infotip.js", // experimental
+        "firebug1.4/infotip.js", // experimental
 
-        "firebug/css.js",
+        "firebug1.4/css.js",
 
-        //"firebug/script.js",
+        //"firebug1.4/script.js",
 
-        "firebug/sourceCache.js", // experimental
-        "firebug/sourceFile.js", // experimental
-        "firebug/sourceBox.js", // experimental
-        "firebug/debugger.js", // experimental
+        "firebug1.4/sourceCache.js", // experimental
+        "firebug1.4/sourceFile.js", // experimental
+        "firebug1.4/sourceBox.js", // experimental
+        "firebug1.4/debugger.js", // experimental
 
 
-        "firebug/dom.js",
+        "firebug1.4/dom.js",
 
-        //"firebug/helloWorld.js",
+        //"firebug1.4/helloWorld.js",
 
         // ****************************************************************************************
         // Trace Module/Panel
 
-        "firebug/trace.js",
-        "firebug/tracePanel.js",
+        "firebug1.4/trace.js",
+        "firebug1.4/tracePanel.js",
 
         // ****************************************************************************************
         // Firediff
