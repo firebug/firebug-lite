@@ -1,0 +1,50 @@
+Hi there,
+
+Sorry for not responding to this earlier. I was quite busy since my last post, and also I needed a couple of time in order to understand how editor.js works internally.
+
+Not all optimizations I used at Firebug's SourceBox can be applied to Orion's editor due to the read-only of SourceBox implementation. But there is room for improvement in Orion's editor and I estimate that we could improve the overall rendering performance by 15% to 30%. Some changes are relatively easy to apply and others would require some harder code refactoring. I divided this message in two parts: 1) Changes that do not require complex code refactoring; and 2) Changes that require more complex code refactoring.
+
+I implemented a prototype in order to test the impact of #1. This prototype will only work on Firefox because I had to hardcode the following browser detection variables (and it requires console.log function):
+    var isPad = false;
+    var isIE = 0;
+    var isWebkit = 0;
+
+The prototype is attached to this message, and here are the steps to reproduce it:
+  a) Open the orion.html page in Firefox
+  b) Enable and open Firebug in another window (so the editor covers the whole browser's window)
+  c) Press "Test Line Down" buttom
+  d) See the time spent to proccess the test at the Console Panel
+  e) Press "New _updatePage" buttom (it will replace the _updatePage with the prototype function)
+  f) Press "Test Line Down" buttom again
+  g) See the time spent to proccess the test at the Console Panel
+
+
+-------------------------------------------------------
+1) Changes that do not require complex code refactoring
+-------------------------------------------------------
+
+The most expensive thing is reading and writing to the DOM. Not only adding nodes to the DOM tree is expensive but also traversing the DOM tree. Also, reading properties such as element.offsetHeight or element.clientWidth have a considerable impact on performance once it triggers a reflow of the page.
+
+The performance bottleneck is located at the _updatePage() function. The main problem here is that this function is responsible for doing two different things: 1) resizing the editor elements and 2) updating the visible lines. Most of the time we only need to update the lines, so we could improve the performance by 15% to 20% by dividing the _updatePage() into two different functions (the names used here are only illustrative):
+
+1) _resizePage() - this function would only resize the editor elements but would not alter the lines. This function would be called when the editor is resized, but also when the model is changed (when text is added to or removed from the model)
+
+2) _updateLines() - this function would only update the lines and would be called when scrolling the editor, moving the cursor (carret) or changing the selection.
+
+Also, the calculation of the line width and height could be improved. Once the editor uses a fixed-size character, we could calculate the character width and height during the editor initialization. Then the line height would always be the same as the character height, and the line width would be number-of-characters * character-width. This would have a considerable impact because calling the _getLineBoundingClientRect() for each line is very expensive.
+
+Finally, what is the purpose of _overlayDiv? It is only being used in Firefox and I could not find a reason for it. Can we get rid of it? This would save some DOM manipulation.
+
+-------------------------------------------------------
+2) Changes that require more complex code refactoring
+-------------------------------------------------------
+
+The fastest way to generate several DOM nodes at once is using the innerHTML property. Is it possible to refactor the line generation code so all lines are generated as strings and appended to the editor at once using innerHTML? This would improve the rendering performance even more.
+
+Instead of iterating over each line using DOM methods (via "child.nextSibling" or "_getLineNext()"), we could have an unique ID for each line and have a list of IDs of lines to be updated. The ID could be something like "editorUniqueID_lineNumber" so we can easily translate from line number to line ID. This way of iterating the lines is being used three times during _updatePage(), when removing lines, when creating lines, and when calculating the maximum length. If we use getElementById(lineID) we would save a lot of DOM access.
+
+I tried to cover all aspects here and the prototype's code has some informative comments, but feel free to ask me questions if something isn't clear in my message and/or code.
+
+my best regards,
+
+Pedro Simonetti.

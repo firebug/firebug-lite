@@ -1,0 +1,7 @@
+content  hellomodule  content/
+skin     hellomodule  classsic/1.0   skin/classic/
+
+resource hellomodule  modules/
+
+overlay  chrome://firebug/content/start-button/startButtonOverlay.xul  chrome://hellomodule/content/helloModule.xul
+

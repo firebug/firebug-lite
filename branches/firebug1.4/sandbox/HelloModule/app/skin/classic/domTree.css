@@ -1,0 +1,49 @@
+/* See license.txt for terms of usage */
+
+.hmDomTable {
+    font-family: Lucida Grande, Tahoma, sans-serif;
+    font-size: 13px;
+}
+
+.hmMemberLabelCell {
+    padding: 2px 50px 2px 0;
+    vertical-align: top;
+}
+
+.hmMemberValueCell {
+    padding: 1px 0 1px 5px;
+    display: block;
+    overflow: hidden;
+    color: gray;
+}
+
+.hmMemberLabel {
+    cursor: default;
+    -moz-user-select:  none;
+    overflow: hidden;
+    padding-left: 18px;
+    white-space: nowrap;
+    background-color: #FFFFFF;
+}
+
+.hmMemberRow.hasChildren.opened > .hmMemberLabelCell > .hmMemberLabel {
+    background-image: url(images/twistyOpen.png);
+    /*background-image: url(chrome://firebug/skin/win/twistyOpen.png);*/
+}
+
+.hmMemberRow.hasChildren > .hmMemberLabelCell > .hmMemberLabel:hover {
+    cursor: pointer;
+    color: blue;
+    text-decoration: underline;
+}
+
+.hmMemberRow.hasChildren > .hmMemberLabelCell > .hmMemberLabel {
+    background-image: url(images/twistyClosed.png);
+    /*background-image: url(chrome://firebug/skin/win/twistyClosed.png);*/
+    background-repeat: no-repeat;
+    background-position: 2px 3px;
+}
+
+.hmMemberRow.hasChildren > .hmMemberLabelCell > .hmMemberLabel {
+    background-position: 2px 3px;
+}
