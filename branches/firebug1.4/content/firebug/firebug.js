@@ -1,6 +1,6 @@
 /* See license.txt for terms of usage */
 
-FBL.ns( /** @scope ns-firebug */ function() { with (FBL) {
+FBL.ns( /** @scope s_firebug */ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -22,9 +22,9 @@ var parentPanelMap = {};
 
 /**
  * @namespace describe Firebug
- * @exports window.Firebug as Firebug 
+ * @exports FBL.Firebug as Firebug
  */
-window.Firebug = FBL.Firebug =  
+FBL.Firebug = 
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version:  "Firebug Lite 1.4.0a1",
@@ -81,7 +81,14 @@ window.Firebug = FBL.Firebug =
         {
             if (chromeMap.hasOwnProperty(name))
             {
-                chromeMap[name].destroy();
+                try
+                {
+                    chromeMap[name].destroy();
+                }
+                catch(E)
+                {
+                    if (FBTrace.DBG_ERRORS) FBTrace.sysout("chrome.destroy() failed to: " + name);
+                }
             }
         }
         
@@ -301,7 +308,10 @@ window.Firebug = FBL.Firebug =
 
 Firebug.restorePrefs();
 
-if (!Env.Options.enablePersistent || 
+// xxxpedro should we remove this?
+window.Firebug = FBL.Firebug;
+
+if (!Env.Options.enablePersistent ||
      Env.Options.enablePersistent && Env.isChromeContext || 
      Env.isDebugMode)
         Env.browser.window.Firebug = FBL.Firebug; 

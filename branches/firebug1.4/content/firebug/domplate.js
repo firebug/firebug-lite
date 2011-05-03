@@ -9,28 +9,43 @@
 
 /* See license.txt for terms of usage */
 
+( /** @scope s_domplate */ function() {
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-function DomplateTag(tagName)
+/** @class */
+FBL.DomplateTag = function DomplateTag(tagName)
 {
     this.tagName = tagName;
-}
+};
 
-function DomplateEmbed()
+/**
+ * @class
+ * @extends FBL.DomplateTag
+ */
+FBL.DomplateEmbed = function DomplateEmbed()
 {
-}
+};
 
-function DomplateLoop()
+/**
+ * @class
+ * @extends FBL.DomplateTag
+ */
+FBL.DomplateLoop = function DomplateLoop()
 {
-}
+};
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-( /** @scope ns-domplate */ function() {
+var DomplateTag = FBL.DomplateTag;
+var DomplateEmbed = FBL.DomplateEmbed;
+var DomplateLoop = FBL.DomplateLoop;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var womb = null;
 
-var domplate = FBL.domplate = function()
+FBL.domplate = function()
 {
     var lastSubject;
     for (var i = 0; i < arguments.length; ++i)
@@ -46,7 +61,9 @@ var domplate = FBL.domplate = function()
     return lastSubject;
 };
 
-domplate.context = function(context, fn)
+var domplate = FBL.domplate;
+
+FBL.domplate.context = function(context, fn)
 {
     var lastContext = domplate.lastContext;
     domplate.topContext = context;
@@ -66,7 +83,7 @@ FBL.FOR = function()
     return loop.merge(arguments);
 };
 
-DomplateTag.prototype =
+FBL.DomplateTag.prototype =
 {
     merge: function(args, oldTag)
     {
@@ -515,7 +532,8 @@ DomplateTag.prototype =
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-DomplateEmbed.prototype = copyObject(DomplateTag.prototype,
+FBL.DomplateEmbed.prototype = copyObject(FBL.DomplateTag.prototype,
+/** @lends FBL.DomplateEmbed.prototype */
 {
     merge: function(args, oldTag)
     {
@@ -583,7 +601,8 @@ DomplateEmbed.prototype = copyObject(DomplateTag.prototype,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-DomplateLoop.prototype = copyObject(DomplateTag.prototype,
+FBL.DomplateLoop.prototype = copyObject(FBL.DomplateTag.prototype,
+/** @lends FBL.DomplateLoop.prototype */
 {
     merge: function(args, oldTag)
     {
@@ -677,12 +696,14 @@ DomplateLoop.prototype = copyObject(DomplateTag.prototype,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+/** @class */
 function Variable(name, format)
 {
     this.name = name;
     this.format = format;
 }
 
+/** @class */
 function Parts(parts)
 {
     this.parts = parts;
@@ -872,6 +893,7 @@ function addEvent(object, name, handler)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+/** @class */
 function ArrayIterator(array)
 {
     var index = -1;
@@ -885,6 +907,7 @@ function ArrayIterator(array)
     };
 }
 
+/** @class */
 function StopIteration() {}
 
 FBL.$break = function()
@@ -894,6 +917,7 @@ FBL.$break = function()
 
 // ************************************************************************************************
 
+/** @namespace */
 var Renderer =
 {
     renderHTML: function(args, outputs, self)

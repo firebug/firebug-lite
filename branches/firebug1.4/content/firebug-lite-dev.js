@@ -19,6 +19,7 @@ var bookmarkletMode = true;
 var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // stable
 //var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
 //var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
+//var bookmarkletSkinURL = "chrome-extension://bmagokdooijbeehmkpknfglimnifench/skin/xp/"; // chrome extension
 
 
 // ************************************************************************************************
@@ -45,8 +46,8 @@ window.FBDev =
         
     	// firebug1.4 experimental
         //"firebug/chrome2.js",
-        "firebug/tabContext.js",
-        "firebug/tabWatcher.js",
+        //"firebug/tabContext.js",
+        //"firebug/tabWatcher.js",
         
         
         // ****************************************************************************************
@@ -103,14 +104,15 @@ window.FBDev =
         
         "firebug/css.js",
         
-        //"firebug/script.js",
+        "firebug/script.js",
         
-        "firebug/sourceCache.js", // experimental
-        "firebug/sourceFile.js", // experimental
-        "firebug/sourceBox.js", // experimental
-        "firebug/debugger.js", // experimental
+        //"firebug/sourceCache.js", // experimental
+        //"firebug/sourceFile.js", // experimental
+        //"firebug/sourceBox.js", // experimental
+        //"firebug/debugger.js", // experimental
         
-        
+        //"firebug/eventDelegator.js", // experimental
+
         "firebug/dom.js",
         
         //"firebug/helloWorld.js",
@@ -137,15 +139,15 @@ window.FBDev =
         "firediff/content/firediff/pages.js",
         "firediff/content/firediff/diffModule.js",
         "firediff/content/firediff/diffMonitor.js",
-        /**/
+        */
         
         // ****************************************************************************************
         // FireRainbow
         
-        
+        /*
         "firerainbow/chrome/content/codemirror.js",
         "firerainbow/chrome/content/firerainbow.js",
-        /**/
+        */
         
         // ****************************************************************************************
         // Plugin
@@ -246,7 +248,10 @@ window.FBDev =
                     "// ************************************************************************************************\n" +
                     "}});\n\n" +
                     "// ************************************************************************************************\n" +
+                    
+                    // this is the bootstrap.js file
                     "FBL.initialize();\n" +
+                    
                     "// ************************************************************************************************\n";
             }
         });
@@ -519,8 +524,9 @@ function loadModules() {
     
     var sufix = isApplicationContext ? "#app" : "";
     
-    var useDocWrite = isIE || isSafari;
-    //var useDocWrite = isIE;
+    // FF4 will also load it asynchronously
+    var useDocWrite = true;
+    //var useDocWrite = isIE || isSafari;
     
     var moduleURL, script;
     var scriptTags = [];

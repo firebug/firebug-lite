@@ -1,6 +1,6 @@
 /* See license.txt for terms of usage */
 
-FBL.ns( /**@scope ns-selector*/ function() { with (FBL) {
+FBL.ns( /**@scope s_selector*/ function() { with (FBL) {
 // ************************************************************************************************
 
 /*

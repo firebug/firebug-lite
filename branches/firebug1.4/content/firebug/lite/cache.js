@@ -5,7 +5,7 @@ FBL.ns(function() { with (FBL) {
 
 Firebug.Lite.Cache = 
 {
-    ID: "firebug" + new Date().getTime()
+    ID: "firebug-" + new Date().getTime()
 };
 
 // ************************************************************************************************
@@ -23,6 +23,8 @@ var cacheUID = 0;
 var createCache = function()
 {
     var map = {};
+    var data = {};
+    
     var CID = Firebug.Lite.Cache.ID;
     
     // better detection
@@ -44,7 +46,7 @@ var createCache = function()
         
         set: function(element)
         {
-            var id = element[CID];
+            var id = getValidatedKey(element);
             
             if (!id)
             {
@@ -55,6 +57,7 @@ var createCache = function()
             if (!map.hasOwnProperty(id))
             {
                 map[id] = element;
+                data[id] = {};
             }
             
             return id;
@@ -62,29 +65,66 @@ var createCache = function()
         
         unset: function(element)
         {
-            var id = element[CID];
+            var id = getValidatedKey(element);
             
-			if (supportsDeleteExpando)
+            if (!id) return;
+            
+            if (supportsDeleteExpando)
             {
-				delete element[CID];
-			}
+                delete element[CID];
+            }
             else if (element.removeAttribute)
             {
-				element.removeAttribute(CID);
-			}
+                element.removeAttribute(CID);
+            }
 
             delete map[id];
+            delete data[id];
             
         },
         
         key: function(element)
         {
-            return element[CID];
+            return getValidatedKey(element);
         },
         
         has: function(element)
         {
-            return map.hasOwnProperty(element[CID]);
+            var id = getValidatedKey(element);
+            return id && map.hasOwnProperty(id);
+        },
+        
+        each: function(callback)
+        {
+            for (var key in map)
+            {
+                if (map.hasOwnProperty(key))
+                {
+                    callback(key, map[key]);
+                }
+            }
+        },
+        
+        data: function(element, name, value)
+        {
+            // set data
+            if (value)
+            {
+                if (!name) return null;
+                
+                var id = cacheAPI.set(element);
+                
+                return data[id][name] = value;
+            }
+            // get data
+            else
+            {
+                var id = cacheAPI.key(element);
+
+                return data.hasOwnProperty(id) && data[id].hasOwnProperty(name) ?
+                        data[id][name] :
+                        null;
+            }
         },
         
         clear: function()
@@ -97,6 +137,30 @@ var createCache = function()
         }
     };
     
+    var getValidatedKey = function(element)
+    {
+        var id = element[CID];
+        
+        // If a cached element is cloned in IE, the expando property CID will be also 
+        // cloned (differently than other browsers) resulting in a bug: Firebug Lite 
+        // will think the new cloned node is the old one. To prevent this problem we're 
+        // checking if the cached element matches the given element.
+        if (
+            !supportsDeleteExpando &&   // the problem happens when supportsDeleteExpando is false
+            id &&                       // the element has the expando property 
+            map.hasOwnProperty(id) &&   // there is a cached element with the same id
+            map[id] != element          // but it is a different element than the current one
+            )
+        {
+            // remove the problematic property
+            element.removeAttribute(CID);
+
+            id = null;
+        }
+        
+        return id;
+    }
+    
     FBL.append(cacheFunction, cacheAPI);
     
     return cacheFunction;
@@ -107,6 +171,10 @@ var createCache = function()
 // TODO: xxxpedro : check if we need really this on FBL scope
 Firebug.Lite.Cache.StyleSheet = createCache();
 Firebug.Lite.Cache.Element = createCache();
+
+// TODO: xxxpedro
+Firebug.Lite.Cache.Event = createCache();
+
 
 // ************************************************************************************************
 }});

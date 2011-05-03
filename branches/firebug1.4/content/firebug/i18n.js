@@ -1,6 +1,6 @@
 /* See license.txt for terms of usage */
 
-FBL.ns( /** @scope ns-i18n */ function() { with (FBL) {
+FBL.ns( /** @scope s_i18n */ function() { with (FBL) {
 // ************************************************************************************************
 
 // TODO: xxxpedro localization

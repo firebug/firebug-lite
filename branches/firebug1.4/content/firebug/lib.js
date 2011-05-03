@@ -20,9 +20,7 @@
 /** @namespace describe lib */ 
 var FBL = {};
 
-/** @name ns @namespace */
-
-( /** @scope ns-lib @this FBL */ function() {
+( /** @scope s_lib @this FBL */ function() {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -1263,22 +1261,28 @@ this.getClientOffset = function(elt)
     {
         var p = elt.offsetParent;
 
-        var style = isIE ? elt.currentStyle : view.getComputedStyle(elt, "");
-
+        ///var style = isIE ? elt.currentStyle : view.getComputedStyle(elt, "");
+        var chrome = Firebug.chrome;
+        
         if (elt.offsetLeft)
-            coords.x += elt.offsetLeft + parseInt(style.borderLeftWidth);
+            ///coords.x += elt.offsetLeft + parseInt(style.borderLeftWidth);
+            coords.x += elt.offsetLeft + chrome.getMeasurementInPixels(elt, "borderLeft");
         if (elt.offsetTop)
-            coords.y += elt.offsetTop + parseInt(style.borderTopWidth);
+            ///coords.y += elt.offsetTop + parseInt(style.borderTopWidth);
+            coords.y += elt.offsetTop + chrome.getMeasurementInPixels(elt, "borderTop");
 
         if (p)
         {
             if (p.nodeType == 1)
                 addOffset(p, coords, view);
         }
-        else 
+        else
         {
             var otherView = isIE ? elt.ownerDocument.parentWindow : elt.ownerDocument.defaultView;
-            if (otherView.frameElement)
+            // IE will fail when reading the frameElement property of a popup window.
+            // We don't need it anyway once it is outside the (popup) viewport, so we're
+            // ignoring the frameElement check when the window is a popup
+            if (!otherView.opener && otherView.frameElement)
                 addOffset(otherView.frameElement, coords, otherView);
         }
     };

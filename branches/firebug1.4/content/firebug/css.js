@@ -24,9 +24,13 @@ this.getElementTreeXPath = function(element)
     for (; element && element.nodeType == 1; element = element.parentNode)
     {
         var index = 0;
+        var nodeName = element.nodeName;
+        
         for (var sibling = element.previousSibling; sibling; sibling = sibling.previousSibling)
         {
-            if (sibling.nodeName == element.nodeName)
+            if (sibling.nodeType != 1) continue;
+            
+            if (sibling.nodeName == nodeName)
                 ++index;
         }
 
