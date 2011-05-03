@@ -1,0 +1,301 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+  <meta http-equiv="content-type" content="text/html; charset=windows-1250">
+  <meta name="generator" content="PSPad editor, www.pspad.com">
+  <title></title>
+  <script src="js/model.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="samples/rulers.js"></script>
+  <script src="samples/styler.js"></script>
+  <script src="js-tests/test-performance.js"></script>
+  <script>
+
+var editor;
+var tester = new PerformanceTest();
+
+function _updatePage_new () {
+    var isPad = false;
+    var isIE = 0;
+    var isWebkit = 0;
+    
+	if (this._updateTimer) {
+		clearTimeout(this._updateTimer);
+		this._updateTimer = null;
+	}
+	var document = this._frameDocument;
+	///var frameWidth = this._getFrameWidth();
+	///var frameHeight = this._getFrameHeight();
+	/// pedro: I guess this has no effect
+	///document.body.style.width = frameWidth + "px";
+	///document.body.style.height = frameHeight + "px";
+
+	var editorDiv = this._editorDiv;
+	var clientDiv = this._clientDiv;
+	///var editorPad = this._getEditorPadding();
+	/// pedro: why not removing the editor padding? this way we could avoid calculating
+	/// the padding each time _updatePage is called. If this is not possible or
+	/// desirable why not having the padding hardcoded depeding on a static
+	/// preference?
+	var editorPad = {top:1, bottom:1, left: 2, right: 2};
+
+	/* Update editor height in order to have client height computed */
+	///editorDiv.style.height = Math.max(0, (frameHeight - editorPad.top - editorPad.bottom)) + "px";
+
+	var model = this._model;
+	///var lineHeight = this._getLineHeight();
+	/// pedro: calculate the char height and width statically during initialization
+    var lineHeight = this._staticLineHeight;
+	///var scrollY = this._getScroll().y;
+	/// pedro: get scroll values directly from editorDiv
+	var scrollY = editorDiv.scrollTop;
+	var scrollX = editorDiv.scrollLeft;
+	var firstLine = Math.max(0, scrollY) / lineHeight;
+	var topIndex = Math.floor(firstLine);
+	var lineStart = Math.max(0, topIndex - 1);
+	var top = Math.round((firstLine - lineStart) * lineHeight);
+	var lineCount = model.getLineCount();
+	///var clientHeight = this._getClientHeight();
+	/// pedro: calculate client height statically during initialization (should be
+    /// updated when the viewport is resized)
+	var clientHeight = this._staticClientHeight;
+	var partialY = Math.round((firstLine - topIndex) * lineHeight);
+	var linesPerPage = Math.floor((clientHeight + partialY) / lineHeight);
+	var bottomIndex = Math.min(topIndex + linesPerPage, lineCount - 1);
+	var lineEnd = Math.min(bottomIndex + 1, lineCount - 1);
+	this._partialY = partialY;
+
+	var lineIndex, lineWidth;
+	var child = clientDiv.firstChild;
+	while (child) {
+		lineIndex = child.lineIndex;
+		var nextChild = child.nextSibling;
+		if (!(lineStart <= lineIndex && lineIndex <= lineEnd) || child.lineChanged || child.lineIndex === -1) {
+			if (this._mouseWheelLine === child) {
+				child.style.display = "none";
+				child.lineIndex = -1;
+			} else {
+				clientDiv.removeChild(child);
+			}
+		}
+		child = nextChild;
+	}
+	// Webkit still wraps even if pre is used
+	/// pedro: do we really need this?
+	///clientDiv.style.width = (0x7FFFF).toString() + "px";
+
+	child = this._getLineNext();
+	var frag = document.createDocumentFragment();
+	for (lineIndex=lineStart; lineIndex<=lineEnd; lineIndex++) {
+		if (!child || child.lineIndex > lineIndex) {
+			this._createLine(frag, null, document, lineIndex, model);
+		} else {
+			if (frag.firstChild) {
+				clientDiv.insertBefore(frag, child);
+				/// pedro: no need to create fragment here, it will always have
+				/// zero childNodes at this point
+				///frag = document.createDocumentFragment();
+			}
+			child = this._getLineNext(child);
+		}
+	}
+	if (frag.firstChild) { clientDiv.insertBefore(frag, child); }
+
+	child = this._getLineNext();
+	while (child) {
+        /*
+		lineWidth = child.lineWidth;
+		if (lineWidth === undefined) {
+			var rect = this._getLineBoundingClientRect(child);
+			lineWidth = child.lineWidth = rect.right - rect.left;
+		}
+		if (lineWidth >= this._maxLineWidth) {
+			this._maxLineWidth = lineWidth;
+			this._maxLineIndex = child.lineIndex;
+		}
+		*/
+		if (child.lineIndex === topIndex) { this._topChild = child; }
+		if (child.lineIndex === bottomIndex) { this._bottomChild = child; }
+		child = this._getLineNext(child);
+	}
+
+	// Update rulers
+	this._updateRuler(this._leftDiv, topIndex, bottomIndex);
+	this._updateRuler(this._rightDiv, topIndex, bottomIndex);
+
+	var leftWidth = this._leftDiv ? this._leftDiv.scrollWidth : 0;
+	///var rightWidth = this._rightDiv ? this._rightDiv.scrollWidth : 0;
+	/*
+	editorDiv.style.left = leftWidth + "px";
+	editorDiv.style.width = Math.max(0, frameWidth - leftWidth - rightWidth - editorPad.left - editorPad.right) + "px";
+	if (this._rightDiv) {
+		this._rightDiv.style.left = (frameWidth - rightWidth) + "px";
+	}*/
+
+	var scrollDiv = this._scrollDiv;
+	/* Need to set the height first in order for the width to consider the vertical scrollbar */
+	var scrollHeight = lineCount * lineHeight;
+	//scrollDiv.style.height = scrollHeight + "px";
+	///var clientWidth = this._getClientWidth();
+	/// pedro: calculate client width statically during initialization (should be
+    /// updated when the viewport is resized)
+	var clientWidth = this._staticClientWidth;
+	var width = Math.max(this._maxLineWidth, clientWidth);
+	/*
+	* Except by IE 8 and earlier, all other browsers are not allocating enough space for the right padding
+	* in the scrollbar. It is possible this a bug since all other paddings are considered.
+	*/
+	var scrollWidth = width;
+	if (!isIE || isIE >= 9) { width += editorPad.right; }
+	//scrollDiv.style.width = width + "px";
+
+	/*
+	* Get client height after both scrollbars are visible and updatePage again to recalculate top and bottom indices.
+	*
+	* Note that updateDOMSelection() has to be called on IE before getting the new client height because it
+	* forces the client area to be recomputed.
+	*/
+	if (!isPad) {
+		this._updateDOMSelection();
+	}
+	/*
+	if (clientHeight !== this._getClientHeight()) {
+		this._updatePage();
+		return;
+	}*/
+	// Get the left scroll after setting the width of the scrollDiv as this can change the horizontal scroll offset.
+	///var scroll = this._getScroll();
+	///var left = scroll.x;
+	/// pedro: we are not resizing the scrollDiv so we can safely use the value computed earlier
+	var left = scrollX;
+	var clipLeft = left;
+	var clipTop = top;
+	var clipRight = left + clientWidth;
+	var clipBottom = top + clientHeight;
+	if (clipLeft === 0) { clipLeft -= editorPad.left; }
+	if (clipTop === 0) { clipTop -= editorPad.top; }
+	if (clipRight === scrollWidth) { clipRight += editorPad.right; }
+	///if (scroll.y + clientHeight === scrollHeight) { clipBottom += editorPad.bottom; }
+	if (scrollY + clientHeight === scrollHeight) { clipBottom += editorPad.bottom; }
+	clientDiv.style.clip = "rect(" + clipTop + "px," + clipRight + "px," + clipBottom + "px," + clipLeft + "px)";
+	clientDiv.style.left = (-left + leftWidth + editorPad.left) + "px";
+	clientDiv.style.top = (-top + editorPad.top) + "px";
+	clientDiv.style.width = (isWebkit ? scrollWidth : clientWidth + left) + "px";
+	clientDiv.style.height = (clientHeight + top) + "px";
+
+	var overlayDiv = this._overlayDiv;
+	if (overlayDiv) {
+		overlayDiv.style.clip = clientDiv.style.clip;
+		overlayDiv.style.left = clientDiv.style.left;
+		overlayDiv.style.top = clientDiv.style.top;
+		overlayDiv.style.width = clientDiv.style.width;
+		overlayDiv.style.height = clientDiv.style.height;
+	}
+
+	/*
+	function _updateRulerSize(divRuler) {
+		if (!divRuler) { return; }
+		var rulerHeight = clientHeight + editorPad.top + editorPad.bottom;
+		var cells = divRuler.firstChild.rows[0].cells;
+		for (var i = 0; i < cells.length; i++) {
+			var div = cells[i].firstChild;
+			var offset = lineHeight;
+			if (div._ruler.getOverview() === "page") { offset += partialY; }
+			div.style.top = -offset + "px";
+			div.style.height = (rulerHeight + offset) + "px";
+			div = div.nextSibling;
+		}
+		divRuler.style.height = rulerHeight + "px";
+	}*/
+	//_updateRulerSize(this._leftDiv);
+	//_updateRulerSize(this._rightDiv);
+	if (isPad) {
+		this._updateDOMSelection();
+		var self = this;
+		setTimeout(function() {self._resizeTouchDiv();}, 0);
+	}
+}
+
+function createEditor() {
+
+    // get source sample text
+    var text;
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function(){
+        if (xhr.readyState == 4 && xhr.status == 200)
+        {
+            text = xhr.responseText;
+        }
+    };
+    xhr.open("get", "./js/editor.js", false);
+    xhr.send();
+    
+    // create editor
+    var parentNode = document.getElementById("orion");
+    tester.editor = editor = new eclipse.Editor({
+        parent: parentNode,
+        readonly: false,
+        stylesheet: "editor.css"
+    });
+
+    // use javascript styler for now, there is no html/xml syntax highlighting yet
+    var styler = new eclipse.TextStyler(editor, "js");
+
+    // add a ruler with line numbers to the left side
+    var lines = new eclipse.LineNumberRuler("left", {
+        styleClass: "ruler_lines"
+    }, {
+        styleClass: "ruler_lines_odd"
+    }, {
+        styleClass: "ruler_lines_even"
+    });
+    
+    editor.setText(text);
+    editor.addRuler(lines);
+
+    // fix the height of the containing div
+    parentNode.style.height = (editor.getLineHeight() * (editor.getModel().getLineCount() + 1)) + 2 + 'px';
+
+    editor._staticLineHeight = editor.getLineHeight();
+    editor._staticClientWidth = editor._getClientWidth();
+    editor._staticClientHeight = editor._getClientHeight();
+}
+
+function newUpdatePage() {
+    editor._updatePage = _updatePage_new;
+    editor._staticLineHeight = editor.getLineHeight();
+    editor._staticClientWidth = editor._getClientWidth();
+    editor._staticClientHeight = editor._getClientHeight();
+}
+
+function log() {
+    console.log.apply(console, arguments);
+}
+  </script>
+  <style>
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+  #orion {
+    width: 100%;
+    height: 100% !important;
+  }
+  #test {
+    position: absolute;
+    top: 0;
+    right: 18px;
+    text-align: right;
+  }
+  </style>
+  </head>
+  <body onload="createEditor()">
+    <div id="orion">
+    </div>
+    <div id="test">
+        <input type="button" value="Test Line Up" onclick="tester.test_lineUp()"><br />
+        <input type="button" value="Test Line Down" onclick="tester.test_lineDown()"><br />
+        <input type="button" value="New _updatePage" onclick="newUpdatePage()">
+    </div>
+  </body>
+</html>
