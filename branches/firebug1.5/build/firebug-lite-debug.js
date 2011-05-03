@@ -3,33 +3,31 @@
 /*!*************************************************************
  *
  *    Firebug Lite 1.4.0a1
- * 
+ *
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
  *      More information: http://getfirebug.com/firebuglite
- *  
+ *
  **************************************************************/
 
 /*!
  * CSS selectors powered by:
- * 
+ *
  * Sizzle CSS Selector Engine - v1.0
  *  Copyright 2009, The Dojo Foundation
  *  Released under the MIT, BSD, and GPL Licenses.
  *  More information: http://sizzlejs.com/
  */
 
-/** @namespace describe lib */ 
+/** @namespace describe lib */
 var FBL = {};
 
-/** @name ns @namespace */
-
-( /** @scope ns-lib @this FBL */ function() {
+( /** @scope s_lib @this FBL */ function() {
 // ************************************************************************************************
 
 // ************************************************************************************************
 // Constants
-    
+
 var productionDir = "http://getfirebug.com/releases/lite/";
 var bookmarkletVersion = 4;
 
@@ -54,7 +52,7 @@ this.isSafari  = /webkit/.test(userAgent);
 this.isIE      = /msie/.test(userAgent) && !/opera/.test(userAgent);
 this.isIE6     = /msie 6/i.test(navigator.appVersion);
 this.browserVersion = (userAgent.match( /.+(?:rv|it|ra|ie)[\/: ]([\d.]+)/ ) || [0,'0'])[1];
-this.isIElt8   = this.isIE && (this.browserVersion-0 < 8); 
+this.isIElt8   = this.isIE && (this.browserVersion-0 < 8);
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -80,7 +78,11 @@ var FBTrace = null;
 
 this.initialize = function()
 {
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // Firebug Lite is already running in persistent mode so we just quit
+    if (window.firebug && firebug.firebuglite || window.console && console.firebuglite)
+        return;
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // initialize environment
 
     // point the FBTrace object to the local variable
@@ -88,19 +90,19 @@ this.initialize = function()
         FBTrace = FBL.FBTrace;
     else
         FBTrace = FBL.FBTrace = {};
-    
+
     FBL.Ajax.initialize();
-    
+
     // check if the actual window is a persisted chrome context
     var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
-    
+
     // chrome context of the persistent application
     if (isChromeContext)
     {
         // TODO: xxxpedro persist - make a better synchronization
         sharedEnv = window.Firebug.SharedEnv;
         delete window.Firebug.SharedEnv;
-        
+
         FBL.Env = sharedEnv;
         FBL.Env.isChromeContext = true;
         FBTrace.messageQueue = FBL.Env.traceMessageQueue;
@@ -117,7 +119,7 @@ this.initialize = function()
 
         // find the URL location of the loaded application
         findLocation();
-        
+
         // TODO: get preferences here...
         var prefs = eval("(" + FBL.readCookie("FirebugLite") + ")");
         if (prefs)
@@ -125,55 +127,56 @@ this.initialize = function()
             FBL.Env.Options.startOpened = prefs.startOpened;
             FBL.Env.Options.enableTrace = prefs.enableTrace;
             FBL.Env.Options.enablePersistent = prefs.enablePersistent;
+            FBL.Env.Options.disableXHRListener = prefs.disableXHRListener;
         }
-        
-        if (FBL.isFirefox && 
-            typeof FBL.Env.browser.console == "object" && 
+
+        if (FBL.isFirefox &&
+            typeof FBL.Env.browser.console == "object" &&
             FBL.Env.browser.console.firebug &&
             FBL.Env.Options.disableWhenFirebugActive)
                 return;
     }
-    
+
     // exposes the FBL to the global namespace when in debug mode
     if (FBL.Env.isDebugMode)
     {
         FBL.Env.browser.FBL = FBL;
     }
-    
+
     // check browser compatibilities
     this.isQuiksMode = FBL.Env.browser.document.compatMode == "BackCompat";
     this.isIEQuiksMode = this.isIE && this.isQuiksMode;
     this.isIEStantandMode = this.isIE && !this.isQuiksMode;
-    
+
     this.noFixedPosition = this.isIE6 || this.isIEQuiksMode;
-    
+
     // after creating/synchronizing the environment, initialize the FBTrace module
     if (FBL.Env.Options.enableTrace) FBTrace.initialize();
-    
+
     if (FBTrace.DBG_INITIALIZE && isChromeContext) FBTrace.sysout("FBL.initialize - persistent application", "initialize chrome context");
-        
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // initialize namespaces
 
     if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces BEGIN");
-    
+
     for (var i = 0; i < namespaces.length; i += 2)
     {
         var fn = namespaces[i];
         var ns = namespaces[i+1];
         fn.apply(ns);
     }
-    
+
     if (FBTrace.DBG_INITIALIZE) {
         FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces END");
         FBTrace.sysout("FBL waitForDocument", "waiting document load");
     }
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // finish environment initialization
 
     FBL.Firebug.loadPrefs(prefs);
-    
+
     if (FBL.Env.Options.enablePersistent)
     {
         // TODO: xxxpedro persist - make a better synchronization
@@ -187,34 +190,10 @@ this.initialize = function()
             FBL.Env.traceMessageQueue = FBTrace.messageQueue;
         }
     }
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-    // chromeExtensionDispatch
-    
-    if (FBL.Env.isChromeExtension)
-    {
-        var doc = FBL.Env.browser.document;
-        
-        if (!doc.getElementById("FirebugChannel"))
-        {
-            var channel = doc.createElement("div");
-            channel.id = "FirebugChannel";
-            channel.firebugIgnore = true;
-            channel.style.display = "none";
-            doc.documentElement.insertBefore(channel, doc.documentElement.firstChild);
-        }
-        
-        var channelEvent = document.createEvent("Event");
-        channelEvent.initEvent("FirebugChannelEvent", true, true);
-            
-        this.chromeExtensionDispatch = function(data)
-        {
-            channel.innerText = data;
-            channel.dispatchEvent(channelEvent);
-        };
-    }
-    
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // wait document load
+
     waitForDocument();
 };
 
@@ -223,7 +202,7 @@ var waitForDocument = function waitForDocument()
     // document.body not available in XML+XSL documents in Firefox
     var doc = FBL.Env.browser.document;
     var body = doc.getElementsByTagName("body")[0];
-    
+
     if (body)
     {
         calculatePixelsPerInch(doc, body);
@@ -236,17 +215,17 @@ var waitForDocument = function waitForDocument()
 var onDocumentLoad = function onDocumentLoad()
 {
     if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FBL onDocumentLoad", "document loaded");
-    
-    // fix IE6 problem with cache of background images, causing a lot of flickering 
+
+    // fix IE6 problem with cache of background images, causing a lot of flickering
     if (FBL.isIE6)
         fixIE6BackgroundImageCache();
-        
+
     // chrome context of the persistent application
     if (FBL.Env.Options.enablePersistent && FBL.Env.isChromeContext)
     {
         // finally, start the application in the chrome context
         FBL.Firebug.initialize();
-        
+
         // if is not development mode, remove the shared environment cache object
         // used to synchronize the both persistent contexts
         if (!FBL.Env.isDevelopmentMode)
@@ -259,7 +238,7 @@ var onDocumentLoad = function onDocumentLoad()
     else
     {
         FBL.FirebugChrome.create();
-    }    
+    }
 };
 
 // ************************************************************************************************
@@ -269,29 +248,31 @@ var sharedEnv;
 
 this.Env =
 {
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Env Options (will be transported to Firebug options)
     Options:
     {
         saveCookies: false,
-    
+
         saveWindowPosition: false,
         saveCommandLineHistory: false,
-        
+
         startOpened: false,
         startInNewWindow: false,
         showIconWhenHidden: true,
-        
+
         overrideConsole: true,
         ignoreFirebugElements: true,
         disableWhenFirebugActive: true,
-        
+
+        disableXHRListener: false,
+
         enableTrace: false,
         enablePersistent: false
-        
+
     },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Library location
     Location:
     {
@@ -304,14 +285,14 @@ this.Env =
 
     skin: "xp",
     useLocalSkin: false,
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Env states
     isDevelopmentMode: false,
     isDebugMode: false,
     isChromeContext: false,
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Env references
     browser: null,
     chrome: null
@@ -330,25 +311,25 @@ var destroyEnvironment = function destroyEnvironment()
 // ************************************************************************************************
 // Library location
 
-var findLocation =  function findLocation() 
+var findLocation =  function findLocation()
 {
     var reFirebugFile = /(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
-    
+
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
     var path = null;
     var doc = document;
-    
+
     // Firebug Lite 1.3.0 bookmarklet identification
     var script = doc.getElementById("FirebugLite");
-    
+
     if (script)
     {
         file = reFirebugFile.exec(script.src);
-        
+
         var version = script.getAttribute("FirebugLite");
-        var number = version ? parseInt(version) : 0; 
-        
+        var number = version ? parseInt(version) : 0;
+
         if (!version || !number || number < bookmarkletVersion)
         {
             FBL.Env.bookmarkletOutdated = true;
@@ -369,16 +350,16 @@ var findLocation =  function findLocation()
 
     if (script)
         script.firebugIgnore = true;
-    
+
     if (file)
     {
         var fileName = file[1];
         var fileOptions = file[2];
-        
+
         // absolute path
         if (reProtocol.test(script.src)) {
             path = rePath.exec(script.src)[1];
-          
+
         }
         // relative path
         else
@@ -388,7 +369,7 @@ var findLocation =  function findLocation()
             var backDir = /^((?:\.\.\/)+)(.*)/.exec(src);
             var reLastDir = /^(.*\/)[^\/]+\/$/;
             path = rePath.exec(location.href)[1];
-            
+
             // "../some/path"
             if (backDir)
             {
@@ -399,7 +380,7 @@ var findLocation =  function findLocation()
 
                 path += backDir[2];
             }
-            
+
             else if(src.indexOf("/") != -1)
             {
                 // "./some/path"
@@ -421,25 +402,25 @@ var findLocation =  function findLocation()
             }
         }
     }
-    
-    FBL.Env.isChromeExtension = script && script.getAttribute("extension") == "Chrome"; 
+
+    FBL.Env.isChromeExtension = script && script.getAttribute("extension") == "Chrome";
     if (FBL.Env.isChromeExtension)
     {
         path = productionDir;
         FBL.Env.bookmarkletOutdated = false;
         script = {innerHTML: "{showIconWhenHidden:false}"};
     }
-    
+
     var m = path && path.match(/([^\/]+)\/$/) || null;
-    
+
     if (path && m)
     {
         var Env = FBL.Env;
-        
+
         // Always use the local skin when running in the same domain
         // See Issue 3554: Firebug Lite should use local images when loaded locally
         Env.useLocalSkin = path.indexOf(location.protocol + "//" + location.host + "/") == 0;
-        
+
         // detecting development and debug modes via file name
         if (fileName == "firebug-lite-dev.js")
         {
@@ -450,23 +431,23 @@ var findLocation =  function findLocation()
         {
             Env.isDebugMode = true;
         }
-        
+
         // process the <html debug="true">
         if (Env.browser.document.documentElement.getAttribute("debug") == "true")
         {
             Env.Options.startOpened = true;
         }
-        
+
         // process the Script URL Options
         if (fileOptions)
         {
             var options = fileOptions.split(",");
-            
+
             for (var i = 0, length = options.length; i < length; i++)
             {
                 var option = options[i];
                 var name, value;
-                
+
                 if (option.indexOf("=") != -1)
                 {
                     var parts = option.split("=");
@@ -478,7 +459,7 @@ var findLocation =  function findLocation()
                     name = option;
                     value = true;
                 }
-                
+
                 if (name == "debug")
                 {
                     Env.isDebugMode = !!value;
@@ -493,17 +474,17 @@ var findLocation =  function findLocation()
                 }
             }
         }
-        
+
         // process the Script JSON Options
         var innerOptions = FBL.trim(script.innerHTML);
         if (innerOptions)
         {
             var innerOptionsObject = eval("(" + innerOptions + ")");
-            
+
             for (var name in innerOptionsObject)
             {
                 var value = innerOptionsObject[name];
-                
+
                 if (name == "debug")
                 {
                     Env.isDebugMode = !!value;
@@ -518,7 +499,7 @@ var findLocation =  function findLocation()
                 }
             }
         }
-        
+
         // process the Debug Mode
         if (Env.isDebugMode)
         {
@@ -526,13 +507,13 @@ var findLocation =  function findLocation()
             Env.Options.enableTrace = true;
             Env.Options.disableWhenFirebugActive = false;
         }
-        
+
         var loc = Env.Location;
         var isProductionRelease = path.indexOf(productionDir) != -1;
-        
+
         loc.sourceDir = path;
         loc.baseDir = path.substr(0, path.length - m[1].length - 1);
-        loc.skinDir = (isProductionRelease ? path : loc.baseDir) + "skin/" + Env.skin + "/"; 
+        loc.skinDir = (isProductionRelease ? path : loc.baseDir) + "skin/" + Env.skin + "/";
         loc.skin = loc.skinDir + "firebug.html";
         loc.app = path + fileName;
     }
@@ -581,7 +562,7 @@ this.append = function(l, r)
 {
     for (var n in r)
         l[n] = r[n];
-        
+
     return l;
 };
 
@@ -697,7 +678,7 @@ this.createStyleSheet = function(doc, url)
     style.setAttribute("rel", "stylesheet");
     style.setAttribute("type", "text/css");
     style.setAttribute("href", url);
-    
+
     //TODO: xxxpedro
     //style.innerHTML = this.getResource(url);
     return style;
@@ -746,7 +727,7 @@ this.addScript = function(doc, id, src)
 
 // ************************************************************************************************
 
-this.getStyle = this.isIE ? 
+this.getStyle = this.isIE ?
     function(el, name)
     {
         return el.currentStyle[name] || el.style[name] || undefined;
@@ -754,7 +735,7 @@ this.getStyle = this.isIE ?
     :
     function(el, name)
     {
-        return el.ownerDocument.defaultView.getComputedStyle(el,null)[name] 
+        return el.ownerDocument.defaultView.getComputedStyle(el,null)[name]
             || el.style[name] || undefined;
     };
 
@@ -1132,7 +1113,7 @@ this.safeToString = function(ob)
 {
     if (this.isIE)
         return ob + "";
-    
+
     try
     {
         if (ob && "toString" in ob && typeof ob.toString == "function")
@@ -1187,9 +1168,9 @@ this.isVisible = function(elt)
         return (!elt.hidden && !elt.collapsed);
     }
     /**/
-    
+
     return this.getStyle(elt, "visibility") != "hidden" &&
-        ( elt.offsetWidth > 0 || elt.offsetHeight > 0 
+        ( elt.offsetWidth > 0 || elt.offsetHeight > 0
         || elt.tagName in invisibleTags
         || elt.namespaceURI == "http://www.w3.org/2000/svg"
         || elt.namespaceURI == "http://www.w3.org/1998/Math/MathML" );
@@ -1197,8 +1178,8 @@ this.isVisible = function(elt)
 
 this.collapse = function(elt, collapsed)
 {
-    // IE6 doesn't support the [collapsed] CSS selector. IE7 does support the selector, 
-    // but it is causing a bug (the element disappears when you set the "collapsed" 
+    // IE6 doesn't support the [collapsed] CSS selector. IE7 does support the selector,
+    // but it is causing a bug (the element disappears when you set the "collapsed"
     // attribute, but it doesn't appear when you remove the attribute. So, for those
     // cases, we need to use the class attribute.
     if (this.isIElt8)
@@ -1229,7 +1210,7 @@ this.clearNode = function(node)
 {
     var nodeName = " " + node.nodeName.toLowerCase() + " ";
     var ignoreTags = " table tbody thead tfoot th tr td ";
-    
+
     // IE can't use innerHTML of table elements
     if (this.isIE && ignoreTags.indexOf(nodeName) != -1)
         this.eraseNode(node);
@@ -1282,22 +1263,28 @@ this.getClientOffset = function(elt)
     {
         var p = elt.offsetParent;
 
-        var style = isIE ? elt.currentStyle : view.getComputedStyle(elt, "");
+        ///var style = isIE ? elt.currentStyle : view.getComputedStyle(elt, "");
+        var chrome = Firebug.chrome;
 
         if (elt.offsetLeft)
-            coords.x += elt.offsetLeft + parseInt(style.borderLeftWidth);
+            ///coords.x += elt.offsetLeft + parseInt(style.borderLeftWidth);
+            coords.x += elt.offsetLeft + chrome.getMeasurementInPixels(elt, "borderLeft");
         if (elt.offsetTop)
-            coords.y += elt.offsetTop + parseInt(style.borderTopWidth);
+            ///coords.y += elt.offsetTop + parseInt(style.borderTopWidth);
+            coords.y += elt.offsetTop + chrome.getMeasurementInPixels(elt, "borderTop");
 
         if (p)
         {
             if (p.nodeType == 1)
                 addOffset(p, coords, view);
         }
-        else 
+        else
         {
             var otherView = isIE ? elt.ownerDocument.parentWindow : elt.ownerDocument.defaultView;
-            if (otherView.frameElement)
+            // IE will fail when reading the frameElement property of a popup window.
+            // We don't need it anyway once it is outside the (popup) viewport, so we're
+            // ignoring the frameElement check when the window is a popup
+            if (!otherView.opener && otherView.frameElement)
                 addOffset(otherView.frameElement, coords, otherView);
         }
     };
@@ -1660,18 +1647,18 @@ this.copyTextStyles = function(fromNode, toNode, style)
     var view = this.isIE ?
             fromNode.ownerDocument.parentWindow :
             fromNode.ownerDocument.defaultView;
-    
+
     if (view)
     {
         if (!style)
             style = this.isIE ? fromNode.currentStyle : view.getComputedStyle(fromNode, "");
 
         toNode.style.fontFamily = style.fontFamily;
-        
+
         // TODO: xxxpedro need to create a FBL.getComputedStyle() because IE
         // returns wrong computed styles for inherited properties (like font-*)
         //
-        // Also would be good to create a FBL.getStyle() 
+        // Also would be good to create a FBL.getStyle()
         toNode.style.fontSize = style.fontSize;
         toNode.style.fontWeight = style.fontWeight;
         toNode.style.fontStyle = style.fontStyle;
@@ -1685,7 +1672,7 @@ this.copyBoxStyles = function(fromNode, toNode, style)
     var view = this.isIE ?
             fromNode.ownerDocument.parentWindow :
             fromNode.ownerDocument.defaultView;
-    
+
     if (view)
     {
         if (!style)
@@ -1989,7 +1976,7 @@ this.hasClass = function(node, name) // className, className, ...
     // which seems to be what happens 99% of the time
     if (arguments.length == 2)
         return (' '+node.className+' ').indexOf(' '+name+' ') != -1;
-    
+
     if (!node || node.nodeType != 1)
         return false;
     else
@@ -2147,7 +2134,7 @@ this.getAncestorByClass = function(node, className)
 this.getElementsByClass = function(node, className)
 {
     var result = [];
-    
+
     for (var child = node.firstChild; child; child = child.nextSibling)
     {
         if (this.hasClass(child, className))
@@ -2330,23 +2317,23 @@ this.isElement = function(o)
 // ************************************************************************************************
 // DOM Modification
 
-// TODO: xxxpedro use doc fragments in Context API 
+// TODO: xxxpedro use doc fragments in Context API
 var appendFragment = null;
 
 this.appendInnerHTML = function(element, html, referenceElement)
 {
-    // if undefined, we must convert it to null otherwise it will throw an error in IE 
+    // if undefined, we must convert it to null otherwise it will throw an error in IE
     // when executing element.insertBefore(firstChild, referenceElement)
     referenceElement = referenceElement || null;
-    
+
     var doc = element.ownerDocument;
-    
+
     // doc.createRange not available in IE
     if (doc.createRange)
     {
         var range = doc.createRange();  // a helper object
         range.selectNodeContents(element); // the environment to interpret the html
-    
+
         var fragment = range.createContextualFragment(html);  // parse
         var firstChild = fragment.firstChild;
         element.insertBefore(fragment, referenceElement);
@@ -2355,19 +2342,19 @@ this.appendInnerHTML = function(element, html, referenceElement)
     {
         if (!appendFragment || appendFragment.ownerDocument != doc)
             appendFragment = doc.createDocumentFragment();
-        
+
         var div = doc.createElement("div");
         div.innerHTML = html;
-        
+
         var firstChild = div.firstChild;
         while (div.firstChild)
             appendFragment.appendChild(div.firstChild);
 
         element.insertBefore(appendFragment, referenceElement);
-        
+
         div = null;
     }
-    
+
     return firstChild;
 };
 
@@ -2379,9 +2366,9 @@ this.createElement = function(tagName, properties)
 {
     properties = properties || {};
     var doc = properties.document || FBL.Firebug.chrome.document;
-    
+
     var element = doc.createElement(tagName);
-    
+
     for(var name in properties)
     {
         if (name != "document")
@@ -2389,7 +2376,7 @@ this.createElement = function(tagName, properties)
             element[name] = properties[name];
         }
     }
-    
+
     return element;
 };
 
@@ -2397,22 +2384,22 @@ this.createGlobalElement = function(tagName, properties)
 {
     properties = properties || {};
     var doc = FBL.Env.browser.document;
-    
-    var element = this.NS && doc.createElementNS ? 
+
+    var element = this.NS && doc.createElementNS ?
             doc.createElementNS(FBL.NS, tagName) :
-            doc.createElement(tagName); 
-            
+            doc.createElement(tagName);
+
     for(var name in properties)
     {
         var propname = name;
         if (FBL.isIE && name == "class") propname = "className";
-        
+
         if (name != "document")
         {
             element.setAttribute(propname, properties[name]);
         }
     }
-    
+
     return element;
 };
 
@@ -2448,7 +2435,7 @@ this.safeGetWindowLocation = function(window)
 
 this.isLeftClick = function(event)
 {
-    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ?
             event.button == 1 : // IE "click" and "dblclick" button model
             event.button == 0) && // others
         this.noKeyModifiers(event);
@@ -2456,17 +2443,17 @@ this.isLeftClick = function(event)
 
 this.isMiddleClick = function(event)
 {
-    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ?
             event.button == 4 : // IE "click" and "dblclick" button model
-            event.button == 1) && 
+            event.button == 1) &&
         this.noKeyModifiers(event);
 };
 
 this.isRightClick = function(event)
 {
-    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ?
             event.button == 2 : // IE "click" and "dblclick" button model
-            event.button == 2) && 
+            event.button == 2) &&
         this.noKeyModifiers(event);
 };
 
@@ -2477,17 +2464,17 @@ this.noKeyModifiers = function(event)
 
 this.isControlClick = function(event)
 {
-    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ?
             event.button == 1 : // IE "click" and "dblclick" button model
-            event.button == 0) && 
+            event.button == 0) &&
         this.isControl(event);
 };
 
 this.isShiftClick = function(event)
 {
-    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ?
             event.button == 1 : // IE "click" and "dblclick" button model
-            event.button == 0) && 
+            event.button == 0) &&
         this.isShift(event);
 };
 
@@ -2503,9 +2490,9 @@ this.isAlt = function(event)
 
 this.isAltClick = function(event)
 {
-    return (this.isIE && event.type != "click" && event.type != "dblclick" ? 
+    return (this.isIE && event.type != "click" && event.type != "dblclick" ?
             event.button == 1 : // IE "click" and "dblclick" button model
-            event.button == 0) && 
+            event.button == 0) &&
         this.isAlt(event);
 };
 
@@ -2546,7 +2533,7 @@ this.removeEvent = function(object, name, handler, useCapture)
 this.cancelEvent = function(e, preventDefault)
 {
     if (!e) return;
-    
+
     if (preventDefault)
     {
                 if (e.preventDefault)
@@ -2554,7 +2541,7 @@ this.cancelEvent = function(e, preventDefault)
                 else
                     e.returnValue = false;
     }
-    
+
     if (e.stopPropagation)
         e.stopPropagation();
     else
@@ -2567,12 +2554,12 @@ this.addGlobalEvent = function(name, handler)
 {
     var doc = this.Firebug.browser.document;
     var frames = this.Firebug.browser.window.frames;
-    
+
     this.addEvent(doc, name, handler);
-    
+
     if (this.Firebug.chrome.type == "popup")
         this.addEvent(this.Firebug.chrome.document, name, handler);
-  
+
     for (var i = 0, frame; frame = frames[i]; i++)
     {
         try
@@ -2590,12 +2577,12 @@ this.removeGlobalEvent = function(name, handler)
 {
     var doc = this.Firebug.browser.document;
     var frames = this.Firebug.browser.window.frames;
-    
+
     this.removeEvent(doc, name, handler);
-    
+
     if (this.Firebug.chrome.type == "popup")
         this.removeEvent(this.Firebug.chrome.document, name, handler);
-  
+
     for (var i = 0, frame; frame = frames[i]; i++)
     {
         try
@@ -2614,13 +2601,13 @@ this.removeGlobalEvent = function(name, handler)
 this.dispatch = function(listeners, name, args)
 {
     if (!listeners) return;
-    
+
     try
     {/**/
         if (typeof listeners.length != "undefined")
         {
             if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to "+listeners.length+" listeners");
-    
+
             for (var i = 0; i < listeners.length; ++i)
             {
                 var listener = listeners[i];
@@ -2631,7 +2618,7 @@ this.dispatch = function(listeners, name, args)
         else
         {
             if (FBTrace.DBG_DISPATCH) FBTrace.sysout("FBL.dispatch", name+" to listeners of an object");
-            
+
             for (var prop in listeners)
             {
                 var listener = listeners[prop];
@@ -2656,7 +2643,7 @@ this.dispatch = function(listeners, name, args)
 var disableTextSelectionHandler = function(event)
 {
     FBL.cancelEvent(event, true);
-    
+
     return false;
 };
 
@@ -2664,17 +2651,17 @@ this.disableTextSelection = function(e)
 {
     if (typeof e.onselectstart != "undefined") // IE
         this.addEvent(e, "selectstart", disableTextSelectionHandler);
-        
+
     else // others
     {
         e.style.cssText = "user-select: none; -khtml-user-select: none; -moz-user-select: none;";
-        
-        // canceling the event in FF will prevent the menu popups to close when clicking over 
+
+        // canceling the event in FF will prevent the menu popups to close when clicking over
         // text-disabled elements
-        if (!this.isFirefox) 
+        if (!this.isFirefox)
             this.addEvent(e, "mousedown", disableTextSelectionHandler);
     }
-    
+
     e.style.cursor = "default";
 };
 
@@ -2682,12 +2669,12 @@ this.restoreTextSelection = function(e)
 {
     if (typeof e.onselectstart != "undefined") // IE
         this.removeEvent(e, "selectstart", disableTextSelectionHandler);
-        
+
     else // others
     {
         e.style.cssText = "cursor: default;";
-            
-        // canceling the event in FF will prevent the menu popups to close when clicking over 
+
+        // canceling the event in FF will prevent the menu popups to close when clicking over
         // text-disabled elements
         if (!this.isFirefox)
             this.removeEvent(e, "mousedown", disableTextSelectionHandler);
@@ -3254,7 +3241,7 @@ this.parseJSONString = function(jsonString, originURL)
     try
     {
         ///jsonObject = Components.utils.evalInSandbox(jsonString, s);
-        
+
         //jsonObject = Firebug.context.eval(jsonString);
         jsonObject = Firebug.context.evaluate(jsonString, null, null, function(){return null;});
     }
@@ -3305,9 +3292,9 @@ this.setSelectionRange = function(input, start, length)
 {
     if (input.createTextRange)
     {
-        var range = input.createTextRange(); 
-        range.moveStart("character", start); 
-        range.moveEnd("character", length - input.value.length); 
+        var range = input.createTextRange();
+        range.moveStart("character", start);
+        range.moveEnd("character", length - input.value.length);
         range.select();
     }
     else if (input.setSelectionRange)
@@ -3326,9 +3313,9 @@ this.getInputSelectionStart = function(input)
     {
         var range = input.ownerDocument.selection.createRange();
         var text = range.text;
-        
+
         //console.log("range", range.text);
-        
+
         // if there is a selection, find the start position
         if (text)
         {
@@ -3338,13 +3325,13 @@ this.getInputSelectionStart = function(input)
         else
         {
             range.moveStart("character", -input.value.length);
-            
+
             return range.text.length;
         }
     }
     else if (typeof input.selectionStart != "undefined")
         return input.selectionStart;
-    
+
     return 0;
 };
 
@@ -3411,19 +3398,19 @@ this.EventCopy = EventCopy;
 // Type Checking
 
 var toString = Object.prototype.toString;
-var reFunction = /^\s*function(\s+[\w_$][\w\d_$]*)?\s*\(/; 
+var reFunction = /^\s*function(\s+[\w_$][\w\d_$]*)?\s*\(/;
 
 this.isArray = function(object) {
-    return toString.call(object) === '[object Array]'; 
+    return toString.call(object) === '[object Array]';
 };
 
 this.isFunction = function(object) {
     if (!object) return false;
-    
-    return toString.call(object) === "[object Function]" || 
+
+    return toString.call(object) === "[object Function]" ||
             this.isIE && typeof object != "string" && reFunction.test(""+object);
 };
-    
+
 
 // ************************************************************************************************
 // Instance Checking
@@ -3432,18 +3419,18 @@ this.instanceOf = function(object, className)
 {
     if (!object || typeof object != "object")
         return false;
-    
+
     // Try to use the native instanceof operator. We can only use it when we know
     // exactly the window where the object is located at
     if (object.ownerDocument)
     {
         // find the correct window of the object
         var win = object.ownerDocument.defaultView || object.ownerDocument.parentWindow;
-        
+
         // if the class is accessible in the window, uses the native instanceof operator
         // if the instanceof evaluates to "true" we can assume it is a instance, but if it
         // evaluates to "false" we must continue with the duck type detection below because
-        // the native object may be extended, thus breaking the instanceof result 
+        // the native object may be extended, thus breaking the instanceof result
         // See Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
         if (className in win && object instanceof win[className])
             return true;
@@ -3459,8 +3446,8 @@ this.instanceOf = function(object, className)
         if (className in win)
             return object instanceof win[className];
     }
-    
-    // get the duck type model from the cache 
+
+    // get the duck type model from the cache
     var cache = instanceCheckMap[className];
     if (!cache)
         return false;
@@ -3471,27 +3458,27 @@ this.instanceOf = function(object, className)
         var obj = cache[n];
         var type = typeof obj;
         obj = type == "object" ? obj : [obj];
-        
+
         for(var name in obj)
         {
             // avoid problems with extended native objects
             // See Issue 3524: Firebug Lite Style Panel doesn't work if the native Element is extended
             if (!obj.hasOwnProperty(name))
                 continue;
-            
+
             var value = obj[name];
-            
+
             if( n == "property" && !(value in object) ||
                 n == "method" && !this.isFunction(object[value]) ||
                 n == "value" && (""+object[name]).toLowerCase() != (""+value).toLowerCase() )
                     return false;
         }
     }
-    
+
     return true;
 };
 
-var instanceCheckMap = 
+var instanceCheckMap =
 {
     // DuckTypeCheck:
     // {
@@ -3499,37 +3486,37 @@ var instanceCheckMap =
     //     method: "setTimeout",
     //     value: {nodeType: 1}
     // },
-    
+
     Window:
     {
         property: ["window", "document"],
         method: "setTimeout"
     },
-    
+
     Document:
     {
         property: ["body", "cookie"],
         method: "getElementById"
     },
-    
+
     Node:
     {
         property: "ownerDocument",
         method: "appendChild"
     },
-    
+
     Element:
     {
         property: "tagName",
         value: {nodeType: 1}
     },
-    
+
     Location:
     {
         property: ["hostname", "protocol"],
         method: "assign"
     },
-    
+
     HTMLImageElement:
     {
         property: "useMap",
@@ -3539,7 +3526,7 @@ var instanceCheckMap =
             tagName: "img"
         }
     },
-    
+
     HTMLAnchorElement:
     {
         property: "hreflang",
@@ -3549,7 +3536,7 @@ var instanceCheckMap =
             tagName: "a"
         }
     },
-    
+
     HTMLInputElement:
     {
         property: "form",
@@ -3559,12 +3546,12 @@ var instanceCheckMap =
             tagName: "input"
         }
     },
-    
+
     HTMLButtonElement:
     {
-        // ?        
+        // ?
     },
-    
+
     HTMLFormElement:
     {
         method: "submit",
@@ -3574,22 +3561,22 @@ var instanceCheckMap =
             tagName: "form"
         }
     },
-    
+
     HTMLBodyElement:
     {
-        
+
     },
-    
+
     HTMLHtmlElement:
     {
-        
+
     },
-    
+
     CSSStyleRule:
     {
         property: ["selectorText", "style"]
     }
-    
+
 };
 
 
@@ -3616,51 +3603,51 @@ var getDomMemberMap2 = function(name)
     {
         var doc = Firebug.chrome.document;
         var frame = doc.createElement("iframe");
-        
+
         frame.id = "FirebugSandbox";
         frame.style.display = "none";
         frame.src = "about:blank";
-        
+
         doc.body.appendChild(frame);
-        
+
         domMemberMap2Sandbox = frame.window || frame.contentWindow;
     }
-    
+
     var props = [];
-    
+
     //var object = domMemberMap2Sandbox[name];
     //object = object.prototype || object;
-    
+
     var object = null;
-    
+
     if (name == "Window")
         object = domMemberMap2Sandbox.window;
-    
+
     else if (name == "Document")
         object = domMemberMap2Sandbox.document;
-        
+
     else if (name == "HTMLScriptElement")
         object = domMemberMap2Sandbox.document.createElement("script");
-    
+
     else if (name == "HTMLAnchorElement")
         object = domMemberMap2Sandbox.document.createElement("a");
-    
+
     else if (name.indexOf("Element") != -1)
     {
         object = domMemberMap2Sandbox.document.createElement("div");
     }
-    
+
     if (object)
     {
         //object = object.prototype || object;
-        
+
         //props  = 'addEventListener,document,location,navigator,window'.split(',');
-        
+
         for (var n in object)
           props.push(n);
     }
     /**/
-    
+
     return props;
     return extendArray(props, domMemberMap[name]);
 };
@@ -3671,12 +3658,12 @@ this.getDOMMembers = function(object)
     if (!domMemberCache)
     {
         FBL.domMemberCache = domMemberCache = {};
-        
+
         for (var name in domMemberMap)
         {
             var builtins = getDomMemberMap2(name);
             var cache = domMemberCache[name] = {};
-            
+
             /*
             if (name.indexOf("Element") != -1)
             {
@@ -3684,12 +3671,12 @@ this.getDOMMembers = function(object)
                 this.append(cache, this.getDOMMembers("Element"));
             }
             /**/
-            
+
             for (var i = 0; i < builtins.length; ++i)
                 cache[builtins[i]] = i;
         }
     }
-    
+
     try
     {
         if (this.instanceOf(object, "Window"))
@@ -3743,7 +3730,7 @@ this.getDOMMembers = function(object)
     {
         if (FBTrace.DBG_ERRORS)
             FBTrace.sysout("lib.getDOMMembers FAILED ", E);
-        
+
         return {};
     }
 };
@@ -3755,7 +3742,7 @@ this.getDOMMembers = function(object)
     if (!domMemberCache)
     {
         domMemberCache = {};
-        
+
         for (var name in domMemberMap)
         {
             var builtins = domMemberMap[name];
@@ -3765,7 +3752,7 @@ this.getDOMMembers = function(object)
                 cache[builtins[i]] = i;
         }
     }
-    
+
     try
     {
         if (this.instanceOf(object, "Window"))
@@ -4290,7 +4277,7 @@ domMemberMap.HTMLImageElement = extendArray(domMemberMap.Element,
     "hspace",
     "vspace",
     "isMap",
-    "useMap",
+    "useMap"
 ]);
 
 domMemberMap.HTMLAnchorElement = extendArray(domMemberMap.Element,
@@ -5744,16 +5731,16 @@ if (typeof KeyEvent == "undefined") {
  */
 this.Ajax =
 {
-  
+
     requests: [],
     transport: null,
     states: ["Uninitialized","Loading","Loaded","Interactive","Complete"],
-  
+
     initialize: function()
     {
         this.transport = this.getXHRObject();
     },
-    
+
     getXHRObject: function()
     {
         var xhrObj = false;
@@ -5764,10 +5751,10 @@ this.Ajax =
         catch(e)
         {
             var progid = [
-                    "MSXML2.XMLHTTP.5.0", "MSXML2.XMLHTTP.4.0", 
+                    "MSXML2.XMLHTTP.5.0", "MSXML2.XMLHTTP.4.0",
                     "MSXML2.XMLHTTP.3.0", "MSXML2.XMLHTTP", "Microsoft.XMLHTTP"
                 ];
-              
+
             for ( var i=0; i < progid.length; ++i ) {
                 try
                 {
@@ -5785,18 +5772,18 @@ this.Ajax =
             return xhrObj;
         }
     },
-    
-    
+
+
     /**
      * Create a AJAX request.
-     * 
+     *
      * @name request
      * @param {Object}   options               request options
      * @param {String}   options.url           URL to be requested
      * @param {String}   options.type          Request type ("get" ou "post"). Default is "get".
-     * @param {Boolean}  options.async         Asynchronous flag. Default is "true".   
+     * @param {Boolean}  options.async         Asynchronous flag. Default is "true".
      * @param {String}   options.dataType      Data type ("text", "html", "xml" or "json"). Default is "text".
-     * @param {String}   options.contentType   Content-type of the data being sent. Default is "application/x-www-form-urlencoded".  
+     * @param {String}   options.contentType   Content-type of the data being sent. Default is "application/x-www-form-urlencoded".
      * @param {Function} options.onLoading     onLoading callback
      * @param {Function} options.onLoaded      onLoaded callback
      * @param {Function} options.onInteractive onInteractive callback
@@ -5804,7 +5791,7 @@ this.Ajax =
      * @param {Function} options.onUpdate      onUpdate callback
      * @param {Function} options.onSuccess     onSuccess callback
      * @param {Function} options.onFailure     onFailure callback
-     */      
+     */
     request: function(options)
     {
         // process options
@@ -5815,35 +5802,35 @@ this.Ajax =
                     async: true,
                     dataType: "text",
                     contentType: "application/x-www-form-urlencoded"
-                }, 
+                },
                 options || {}
             );
-    
+
         this.requests.push(o);
-    
+
         var s = this.getState();
-        if (s == "Uninitialized" || s == "Complete" || s == "Loaded") 
+        if (s == "Uninitialized" || s == "Complete" || s == "Loaded")
             this.sendRequest();
     },
-    
+
     serialize: function(data)
     {
         var r = [""], rl = 0;
         if (data) {
             if (typeof data == "string")  r[rl++] = data;
-              
+
             else if (data.innerHTML && data.elements) {
                 for (var i=0,el,l=(el=data.elements).length; i < l; i++)
                     if (el[i].name) {
-                        r[rl++] = encodeURIComponent(el[i].name); 
+                        r[rl++] = encodeURIComponent(el[i].name);
                         r[rl++] = "=";
                         r[rl++] = encodeURIComponent(el[i].value);
                         r[rl++] = "&";
                     }
-                    
-            } else 
+
+            } else
                 for(var param in data) {
-                    r[rl++] = encodeURIComponent(param); 
+                    r[rl++] = encodeURIComponent(param);
                     r[rl++] = "=";
                     r[rl++] = encodeURIComponent(data[param]);
                     r[rl++] = "&";
@@ -5851,83 +5838,83 @@ this.Ajax =
         }
         return r.join("").replace(/&$/, "");
     },
-  
+
     sendRequest: function()
     {
         var t = FBL.Ajax.transport, r = FBL.Ajax.requests.shift(), data;
-    
+
         // open XHR object
         t.open(r.type, r.url, r.async);
-    
+
         //setRequestHeaders();
-    
+
         // indicates that it is a XHR request to the server
         t.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-    
+
         // if data is being sent, sets the appropriate content-type
         if (data = FBL.Ajax.serialize(r.data))
             t.setRequestHeader("Content-Type", r.contentType);
-    
+
         /** @ignore */
         // onreadystatechange handler
         t.onreadystatechange = function()
-        { 
-            FBL.Ajax.onStateChange(r); 
-        }; 
-    
+        {
+            FBL.Ajax.onStateChange(r);
+        };
+
         // send the request
         t.send(data);
     },
-  
+
     /**
      * Handles the state change
-     */     
+     */
     onStateChange: function(options)
     {
         var fn, o = options, t = this.transport;
-        var state = this.getState(t); 
-    
+        var state = this.getState(t);
+
         if (fn = o["on" + state]) fn(this.getResponse(o), o);
-    
+
         if (state == "Complete")
         {
             var success = t.status == 200, response = this.getResponse(o);
-      
+
             if (fn = o["onUpdate"])
               fn(response, o);
-      
+
             if (fn = o["on" + (success ? "Success" : "Failure")])
               fn(response, o);
-      
+
             t.onreadystatechange = FBL.emptyFn;
-      
-            if (this.requests.length > 0) 
+
+            if (this.requests.length > 0)
                 setTimeout(this.sendRequest, 10);
         }
     },
-  
+
     /**
      * gets the appropriate response value according the type
      */
     getResponse: function(options)
     {
         var t = this.transport, type = options.dataType;
-    
+
         if      (t.status != 200) return t.statusText;
         else if (type == "text")  return t.responseText;
         else if (type == "html")  return t.responseText;
         else if (type == "xml")   return t.responseXML;
         else if (type == "json")  return eval("(" + t.responseText + ")");
     },
-  
+
     /**
      * returns the current state of the XHR object
-     */     
+     */
     getState: function()
     {
         return this.states[this.transport.readyState];
     }
-  
+
 };
 
 
@@ -5944,9 +5931,9 @@ this.createCookie = function(name,value,days)
             date.setTime(date.getTime()+(days*24*60*60*1000));
             var expires = "; expires="+date.toGMTString();
         }
-        else 
+        else
             var expires = "";
-        
+
         document.cookie = name+"="+value+expires+"; path=/";
     }
 };
@@ -5957,7 +5944,7 @@ this.readCookie = function (name)
     {
         var nameEQ = name + "=";
         var ca = document.cookie.split(';');
-        
+
         for(var i=0; i < ca.length; i++)
         {
             var c = ca[i];
@@ -5965,7 +5952,7 @@ this.readCookie = function (name)
             if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
         }
     }
-    
+
     return null;
 };
 
@@ -5983,10 +5970,10 @@ var fixIE6BackgroundImageCache = function(doc)
     try
     {
         doc.execCommand("BackgroundImageCache", false, true);
-    } 
+    }
     catch(E)
     {
-        
+
     }
 };
 
@@ -6000,12 +5987,12 @@ var calculatePixelsPerInch = function calculatePixelsPerInch(doc, body)
     var inch = FBL.createGlobalElement("div");
     inch.style.cssText = resetStyle + "width:1in; height:1in; position:absolute; top:-1234px; left:-1234px;";
     body.appendChild(inch);
-    
+
     FBL.pixelsPerInch = {
         x: inch.offsetWidth,
         y: inch.offsetHeight
     };
-    
+
     body.removeChild(inch);
 };
 
@@ -6056,25 +6043,25 @@ this.SourceText.getLineAsHTML = function(lineNo)
 
 /* See license.txt for terms of usage */
 
-FBL.ns( /** @scope ns-i18n */ function() { with (FBL) {
+FBL.ns( /** @scope s_i18n */ function() { with (FBL) {
 // ************************************************************************************************
 
 // TODO: xxxpedro localization
 var oSTR =
 {
     "NoMembersWarning": "There are no properties to show for this object.",
-    
+
     "EmptyStyleSheet": "There are no rules in this stylesheet.",
     "EmptyElementCSS": "This element has no style rules.",
     "AccessRestricted": "Access to restricted URI denied.",
-    
+
     "net.label.Parameters": "Parameters",
     "net.label.Source": "Source",
     "URLParameters": "Params",
-    
+
     "EditStyle": "Edit Element Style...",
     "NewRule": "New Rule...",
-    
+
     "NewProp": "New Property...",
     "EditProp": 'Edit "%s"',
     "DeleteProp": 'Delete "%s"',
@@ -6091,14 +6078,14 @@ FBL.$STR = function(name)
 FBL.$STRF = function(name, args)
 {
     if (!oSTR.hasOwnProperty(name)) return name;
-    
+
     var format = oSTR[name];
     var objIndex = 0;
-    
+
     var parts = parseFormat(format);
     var trialIndex = objIndex;
     var objects = args;
-    
+
     for (var i= 0; i < parts.length; i++)
     {
         var part = parts[i];
@@ -6114,7 +6101,7 @@ FBL.$STRF = function(name, args)
         }
 
     }
-    
+
     var result = [];
     for (var i = 0; i < parts.length; ++i)
     {
@@ -6126,7 +6113,7 @@ FBL.$STRF = function(name, args)
         else
             result.push(part);
     }
-    
+
     return result.join("");
 };
 
@@ -6183,7 +6170,7 @@ var parseFormat = function parseFormat(format)
 
 /* See license.txt for terms of usage */
 
-FBL.ns( /** @scope ns-firebug */ function() { with (FBL) {
+FBL.ns( /** @scope s_firebug */ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -6205,72 +6192,79 @@ var parentPanelMap = {};
 
 /**
  * @namespace describe Firebug
- * @exports window.Firebug as Firebug 
+ * @exports FBL.Firebug as Firebug
  */
-window.Firebug = FBL.Firebug =  
+FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version:  "Firebug Lite 1.4.0a1",
     revision: "$Revision$",
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
     panelTypeMap: panelTypeMap,
     reps: reps,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Initialization
-    
+
     initialize: function()
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.initialize", "initializing application");
-        
+
         Firebug.browser = new Context(Env.browser);
         Firebug.context = Firebug.browser;
-        
+
         // Document must be cached before chrome initialization
         cacheDocument();
-        
+
         if (Firebug.Inspector && Firebug.Inspector.create)
             Firebug.Inspector.create();
-        
+
         if (FBL.processAllStyleSheets)
             processAllStyleSheets(Firebug.browser.document);
-        
+
         FirebugChrome.initialize();
-        
+
         dispatch(modules, "initialize", []);
-        
+
         if (Env.onLoad)
         {
             var onLoad = Env.onLoad;
             delete Env.onLoad;
-            
+
             setTimeout(onLoad, 200);
         }
     },
-  
+
     shutdown: function()
     {
         if (Firebug.Inspector)
             Firebug.Inspector.destroy();
-        
+
         dispatch(modules, "shutdown", []);
-        
+
         var chromeMap = FirebugChrome.chromeMap;
-        
+
         for (var name in chromeMap)
         {
             if (chromeMap.hasOwnProperty(name))
             {
-                chromeMap[name].destroy();
+                try
+                {
+                    chromeMap[name].destroy();
+                }
+                catch(E)
+                {
+                    if (FBTrace.DBG_ERRORS) FBTrace.sysout("chrome.destroy() failed to: " + name);
+                }
             }
         }
-        
+
         Firebug.Lite.Cache.Element.clear();
         Firebug.Lite.Cache.StyleSheet.clear();
-        
+
         Firebug.browser = null;
         Firebug.context = null;
     },
@@ -6292,16 +6286,16 @@ window.Firebug = FBL.Firebug =
         for (var i = 0, panelType; panelType = arguments[i]; ++i)
         {
             panelTypeMap[panelType.prototype.name] = arguments[i];
-            
+
             if (panelType.prototype.parentPanel)
                 parentPanelMap[panelType.prototype.parentPanel] = 1;
         }
-        
+
         if (FBTrace.DBG_INITIALIZE)
             for (var i = 0; i < arguments.length; ++i)
                 FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
     },
-    
+
     registerRep: function()
     {
         reps.push.apply(reps, arguments);
@@ -6327,7 +6321,7 @@ window.Firebug = FBL.Firebug =
         var type = typeof object;
         if (isIE && isFunction(object))
             type = "function";
-        
+
         for (var i = 0; i < reps.length; ++i)
         {
             var rep = reps[i];
@@ -6390,22 +6384,22 @@ window.Firebug = FBL.Firebug =
                 return child;
         }
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Preferences
-    
+
     getPref: function(name)
     {
         return Firebug[name];
     },
-    
+
     setPref: function(name, value)
     {
         Firebug[name] = value;
-        
+
         this.savePrefs();
     },
-    
+
     setPrefs: function(prefs)
     {
         for (var name in prefs)
@@ -6413,47 +6407,47 @@ window.Firebug = FBL.Firebug =
             if (prefs.hasOwnProperty(name))
                 Firebug[name] = prefs[name];
         }
-        
+
         this.savePrefs();
     },
-    
+
     restorePrefs: function()
     {
         var Options = Env.Options;
-        
+
         for (var name in Options)
         {
             Firebug[name] = Options[name];
         }
     },
-    
+
     loadPrefs: function(prefs)
     {
         this.restorePrefs();
-        
+
         prefs = prefs || eval("(" + readCookie("FirebugLite") + ")");
-        
+
         for (var name in prefs)
         {
             if (prefs.hasOwnProperty(name))
                 Firebug[name] = prefs[name];
         }
     },
-    
+
     savePrefs: function()
     {
         var json = ['{'], jl = 0;
         var Options = Env.Options;
-        
+
         for (var name in Options)
         {
             if (Options.hasOwnProperty(name))
             {
                 var value = Firebug[name];
-                
-                json[++jl] = '"'; 
+
+                json[++jl] = '"';
                 json[++jl] = name;
-                
+
                 var type = typeof value;
                 if (type == "boolean" || type == "number")
                 {
@@ -6469,13 +6463,13 @@ window.Firebug = FBL.Firebug =
                 }
             }
         }
-        
+
         json.length = jl--;
         json[++jl] = '}';
-        
+
         createCookie("FirebugLite", json.join(""));
     },
-    
+
     erasePrefs: function()
     {
         removeCookie("FirebugLite");
@@ -6484,10 +6478,13 @@ window.Firebug = FBL.Firebug =
 
 Firebug.restorePrefs();
 
-if (!Env.Options.enablePersistent || 
-     Env.Options.enablePersistent && Env.isChromeContext || 
+// xxxpedro should we remove this?
+window.Firebug = FBL.Firebug;
+
+if (!Env.Options.enablePersistent ||
+     Env.Options.enablePersistent && Env.isChromeContext ||
      Env.isDebugMode)
-        Env.browser.window.Firebug = FBL.Firebug; 
+        Env.browser.window.Firebug = FBL.Firebug;
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -6508,7 +6505,7 @@ FBL.cacheDocument = function cacheDocument()
 
 /**
  * @class
- *  
+ *
  * Support for listeners registration. This object also extended by Firebug.Module so,
  * all modules supports listening automatically. Notice that array of listeners
  * is created for each intance of a module within initialize method. Thus all derived
@@ -6549,7 +6546,7 @@ Firebug.Listener.prototype =
  * @module Base class for all modules. Every derived module object must be registered using
  * <code>Firebug.registerModule</code> method. There is always one instance of a module object
  * per browser window.
- * @extends Firebug.Listener 
+ * @extends Firebug.Listener
  */
 Firebug.Module = extend(new Firebug.Listener(),
 /** @extend Firebug.Module */
@@ -6560,66 +6557,66 @@ Firebug.Module = extend(new Firebug.Listener(),
     initialize: function()
     {
     },
-  
+
     /**
      * Called when the window is closed.
      */
     shutdown: function()
     {
     },
-  
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-  
+
     /**
      * Called when a new context is created but before the page is loaded.
      */
     initContext: function(context)
     {
     },
-  
+
     /**
      * Called after a context is detached to a separate window;
      */
     reattachContext: function(browser, context)
     {
     },
-  
+
     /**
      * Called when a context is destroyed. Module may store info on persistedState for reloaded pages.
      */
     destroyContext: function(context, persistedState)
     {
     },
-  
+
     // Called when a FF tab is create or activated (user changes FF tab)
     // Called after context is created or with context == null (to abort?)
     showContext: function(browser, context)
     {
     },
-  
+
     /**
      * Called after a context's page gets DOMContentLoaded
      */
     loadedContext: function(context)
     {
     },
-  
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-  
+
     showPanel: function(browser, panel)
     {
     },
-  
+
     showSidePanel: function(browser, panel)
     {
     },
-  
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-  
+
     updateOption: function(name, value)
     {
     },
-  
+
     getObjectByURL: function(context, url)
     {
     }
@@ -6637,32 +6634,32 @@ Firebug.Panel =
 {
     name: "HelloWorld",
     title: "Hello World!",
-    
+
     parentPanel: null,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     options: {
         hasCommandLine: false,
         hasStatusBar: false,
         hasToolButtons: false,
-        
+
         // Pre-rendered panels are those included in the skin file (firebug.html)
         isPreRendered: false,
         innerHTMLSync: false
-        
+
         /*
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // To be used by external extensions
         panelHTML: "",
         panelCSS: "",
-        
+
         toolButtonsHTML: ""
         /**/
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     tabNode: null,
     panelNode: null,
     sidePanelNode: null,
@@ -6670,49 +6667,49 @@ Firebug.Panel =
     toolButtonsNode: null,
 
     panelBarNode: null,
-    
+
     sidePanelBarBoxNode: null,
-    sidePanelBarNode: null,            
-    
+    sidePanelBarNode: null,
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     sidePanelBar: null,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     searchable: false,
     editable: true,
     order: 2147483647,
     statusSeparator: "<",
-    
+
     create: function(context, doc)
     {
-        this.hasSidePanel = parentPanelMap.hasOwnProperty(this.name); 
-        
+        this.hasSidePanel = parentPanelMap.hasOwnProperty(this.name);
+
         this.panelBarNode = $("fbPanelBar1");
         this.sidePanelBarBoxNode = $("fbPanelBar2");
-        
+
         if (this.hasSidePanel)
         {
             this.sidePanelBar = extend({}, PanelBar);
             this.sidePanelBar.create(this);
         }
-        
+
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
-        
+
         if (options.isPreRendered)
         {
             this.panelNode = $(panelId);
-            
+
             this.tabNode = $(panelId + "Tab");
             this.tabNode.style.display = "block";
-            
+
             if (options.hasToolButtons)
             {
                 this.toolButtonsNode = $(panelId + "Buttons");
             }
-            
+
             if (options.hasStatusBar)
             {
                 this.statusBarBox = $("fbStatusBarBox");
@@ -6722,7 +6719,7 @@ Firebug.Panel =
         else
         {
             var containerSufix = this.parentPanel ? "2" : "1";
-            
+
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // Create Panel
             var panelNode = this.panelNode = createElement("div", {
@@ -6731,30 +6728,30 @@ Firebug.Panel =
             });
 
             $("fbPanel" + containerSufix).appendChild(panelNode);
-            
+
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // Create Panel Tab
             var tabHTML = '<span class="fbTabL"></span><span class="fbTabText">' +
-                    this.title + '</span><span class="fbTabR"></span>';            
-            
+                    this.title + '</span><span class="fbTabR"></span>';
+
             var tabNode = this.tabNode = createElement("a", {
                 id: panelId + "Tab",
                 className: "fbTab fbHover",
                 innerHTML: tabHTML
             });
-            
+
             if (isIE6)
             {
                 tabNode.href = "javascript:void(0)";
             }
-            
-            var panelBarNode = this.parentPanel ? 
+
+            var panelBarNode = this.parentPanel ?
                     Firebug.chrome.getPanel(this.parentPanel).sidePanelBarNode :
                     this.panelBarNode;
-            
+
             panelBarNode.appendChild(tabNode);
             tabNode.style.display = "block";
-            
+
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create ToolButtons
             if (options.hasToolButtons)
@@ -6763,35 +6760,35 @@ Firebug.Panel =
                     id: panelId + "Buttons",
                     className: "fbToolbarButtons"
                 });
-                
+
                 $("fbToolbarButtons").appendChild(this.toolButtonsNode);
             }
-            
+
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create StatusBar
             if (options.hasStatusBar)
             {
                 this.statusBarBox = $("fbStatusBarBox");
-                
+
                 this.statusBarNode = createElement("span", {
                     id: panelId + "StatusBar",
                     className: "fbToolbarButtons fbStatusBar"
                 });
-                
+
                 this.statusBarBox.appendChild(this.statusBarNode);
             }
-            
+
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // create SidePanel
         }
-        
+
         this.containerNode = this.panelNode.parentNode;
-        
+
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.create", this.name);
-        
+
         // xxxpedro contextMenu
         this.onContextMenu = bind(this.onContextMenu, this);
-        
+
         /*
         this.context = context;
         this.document = doc;
@@ -6812,103 +6809,103 @@ Firebug.Panel =
     destroy: function(state) // Panel may store info on state
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.destroy", this.name);
-        
+
         if (this.hasSidePanel)
         {
             this.sidePanelBar.destroy();
             this.sidePanelBar = null;
         }
-        
+
         this.options = null;
         this.name = null;
         this.parentPanel = null;
-        
+
         this.tabNode = null;
         this.panelNode = null;
         this.containerNode = null;
-        
+
         this.toolButtonsNode = null;
         this.statusBarBox = null;
         this.statusBarNode = null;
-        
+
         //if (this.panelNode)
         //    delete this.panelNode.ownerPanel;
 
         //this.destroyNode();
     },
-    
+
     initialize: function()
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.initialize", this.name);
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (this.hasSidePanel)
         {
             this.sidePanelBar.initialize();
         }
-        
+
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
-        
+
         this.panelNode = $(panelId);
-        
+
         this.tabNode = $(panelId + "Tab");
         this.tabNode.style.display = "block";
-        
+
         if (options.hasStatusBar)
         {
             this.statusBarBox = $("fbStatusBarBox");
             this.statusBarNode = $(panelId + "StatusBar");
         }
-        
+
         if (options.hasToolButtons)
         {
             this.toolButtonsNode = $(panelId + "Buttons");
         }
-            
+
         this.containerNode = this.panelNode.parentNode;
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // restore persistent state
         this.containerNode.scrollTop = this.lastScrollTop;
-        
+
         // xxxpedro contextMenu
         addEvent(this.containerNode, "contextmenu", this.onContextMenu);
-        
-        
+
+
         /// TODO: xxxpedro infoTip Hack
-        Firebug.chrome.currentPanel = 
+        Firebug.chrome.currentPanel =
                 Firebug.chrome.selectedPanel && Firebug.chrome.selectedPanel.sidePanelBar ?
-                Firebug.chrome.selectedPanel.sidePanelBar.selectedPanel : 
+                Firebug.chrome.selectedPanel.sidePanelBar.selectedPanel :
                 Firebug.chrome.selectedPanel;
-        
+
         Firebug.showInfoTips = true;
         Firebug.InfoTip.initializeBrowser(Firebug.chrome);
     },
-    
+
     shutdown: function()
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
-        
+
         /// TODO: xxxpedro infoTip Hack
         Firebug.InfoTip.uninitializeBrowser(Firebug.chrome);
-        
+
         if (Firebug.chrome.largeCommandLineVisible)
             Firebug.chrome.hideLargeCommandLine();
-            
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (this.hasSidePanel)
         {
-            // TODO: xxxpedro firebug1.3a6 
-            // new PanelBar mechanism will need to call shutdown to hide the panels (so it 
-            // doesn't appears in other panel's sidePanelBar. Therefore, we need to implement 
+            // TODO: xxxpedro firebug1.3a6
+            // new PanelBar mechanism will need to call shutdown to hide the panels (so it
+            // doesn't appears in other panel's sidePanelBar. Therefore, we need to implement
             // a "remember selected panel" feature in the sidePanelBar
             //this.sidePanelBar.shutdown();
         }
-        
+
         // store persistent state
         this.lastScrollTop = this.containerNode.scrollTop;
-        
+
         // xxxpedro contextMenu
         removeEvent(this.containerNode, "contextmenu", this.onContextMenu);
     },
@@ -6924,7 +6921,7 @@ Firebug.Panel =
         if (this.options.innerHTMLSync)
             this.synchronizeUI();
     },
-    
+
     synchronizeUI: function()
     {
         this.containerNode.scrollTop = this.lastScrollTop || 0;
@@ -6933,22 +6930,22 @@ Firebug.Panel =
     show: function(state)
     {
         var options = this.options;
-        
+
         if (options.hasStatusBar)
         {
             this.statusBarBox.style.display = "inline";
             this.statusBarNode.style.display = "inline";
         }
-        
+
         if (options.hasToolButtons)
         {
             this.toolButtonsNode.style.display = "inline";
         }
-        
+
         this.panelNode.style.display = "block";
-        
+
         this.visible = true;
-        
+
         if (!this.parentPanel)
             Firebug.chrome.layout(this);
     },
@@ -6956,20 +6953,20 @@ Firebug.Panel =
     hide: function(state)
     {
         var options = this.options;
-        
+
         if (options.hasStatusBar)
         {
             this.statusBarBox.style.display = "none";
             this.statusBarNode.style.display = "none";
         }
-        
+
         if (options.hasToolButtons)
         {
             this.toolButtonsNode.style.display = "none";
         }
-        
+
         this.panelNode.style.display = "none";
-        
+
         this.visible = false;
     },
 
@@ -7074,7 +7071,7 @@ Firebug.Panel =
                 this.context.invalidatePanels.apply(this.context, this.dependents);
         }
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
     startInspecting: function()
@@ -7297,43 +7294,43 @@ Firebug.Panel =
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     // xxxpedro contextMenu
     onContextMenu: function(event)
     {
         if (!this.getContextMenuItems)
             return;
-        
+
         cancelEvent(event, true);
 
         var target = event.target || event.srcElement;
-        
+
         var menu = this.getContextMenuItems(this.selection, target);
-        if (!menu) 
+        if (!menu)
             return;
-        
+
         var contextMenu = new Menu(
         {
             id: "fbPanelContextMenu",
-            
+
             items: menu
         });
-        
+
         contextMenu.show(event.clientX, event.clientY);
-        
+
         return true;
-        
+
         /*
         // TODO: xxxpedro move code to somewhere. code to get cross-browser
         // window to screen coordinates
         var box = Firebug.browser.getElementPosition(Firebug.chrome.node);
-        
+
         var screenY = 0;
-        
+
         // Firefox
         if (typeof window.mozInnerScreenY != "undefined")
         {
-            screenY = window.mozInnerScreenY; 
+            screenY = window.mozInnerScreenY;
         }
         // Chrome
         else if (typeof window.innerHeight != "undefined")
@@ -7345,11 +7342,11 @@ Firebug.Panel =
         {
             screenY = window.screenTop;
         }
-        
+
         contextMenu.show(event.screenX-box.left, event.screenY-screenY-box.top);
         /**/
     }
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 };
 
@@ -7363,7 +7360,7 @@ Firebug.Panel =
  *     <li>     var size = this.measureText(lineNoCharsSpacer); </li>
  *     <li>     this.stopMeasuring(); </li>
  * </ul>
- *  
+ *
  * @namespace
  */
 Firebug.MeasureBox =
@@ -7449,9 +7446,9 @@ if (FBL.domplate) Firebug.Rep = domplate(
 
         var re = /\[object (.*?)\]/;
         var m = re.exec(label);
-        
+
         ///return m ? m[1] : label;
-        
+
         // if the label is in the "[object TYPE]" format return its type
         if (m)
         {
@@ -7460,10 +7457,10 @@ if (FBL.domplate) Firebug.Rep = domplate(
         // if it is IE we need to handle some special cases
         else if (
                 // safeToString() fails to recognize some objects in IE
-                isIE && 
-                // safeToString() returns "[object]" for some objects like window.Image 
-                (label == "[object]" || 
-                // safeToString() returns undefined for some objects like window.clientInformation 
+                isIE &&
+                // safeToString() returns "[object]" for some objects like window.Image
+                (label == "[object]" ||
+                // safeToString() returns undefined for some objects like window.clientInformation
                 typeof object == "object" && typeof label == "undefined")
             )
         {
@@ -7522,7 +7519,7 @@ if (FBL.domplate) Firebug.Rep = domplate(
 
 /* See license.txt for terms of usage */
 
-FBL.ns( /** @scope ns-gui */ function() { with (FBL) {
+FBL.ns( /** @scope s_gui */ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -7530,47 +7527,47 @@ FBL.ns( /** @scope ns-gui */ function() { with (FBL) {
 
 /**@namespace*/
 FBL.Controller = {
-        
+
     controllers: null,
     controllerContext: null,
-    
+
     initialize: function(context)
     {
         this.controllers = [];
         this.controllerContext = context || Firebug.chrome;
     },
-    
+
     shutdown: function()
     {
         this.removeControllers();
-        
+
         //this.controllers = null;
         //this.controllerContext = null;
     },
-    
+
     addController: function()
     {
         for (var i=0, arg; arg=arguments[i]; i++)
         {
-            // If the first argument is a string, make a selector query 
+            // If the first argument is a string, make a selector query
             // within the controller node context
             if (typeof arg[0] == "string")
             {
                 arg[0] = $$(arg[0], this.controllerContext);
             }
-            
+
             // bind the handler to the proper context
             var handler = arg[2];
             arg[2] = bind(handler, this);
             // save the original handler as an extra-argument, so we can
-            // look for it later, when removing a particular controller            
+            // look for it later, when removing a particular controller
             arg[3] = handler;
-            
+
             this.controllers.push(arg);
             addEvent.apply(this, arg);
         }
     },
-    
+
     removeController: function()
     {
         for (var i=0, arg; arg=arguments[i]; i++)
@@ -7582,7 +7579,7 @@ FBL.Controller = {
             }
         }
     },
-    
+
     removeControllers: function()
     {
         for (var i=0, c; c=this.controllers[i]; i++)
@@ -7597,125 +7594,125 @@ FBL.Controller = {
 // PanelBar
 
 /**@namespace*/
-FBL.PanelBar = 
+FBL.PanelBar =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     panelMap: null,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     selectedPanel: null,
     parentPanelName: null,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     create: function(ownerPanel)
     {
         this.panelMap = {};
         this.ownerPanel = ownerPanel;
-        
+
         if (ownerPanel)
         {
             ownerPanel.sidePanelBarNode = createElement("span");
             ownerPanel.sidePanelBarNode.style.display = "none";
             ownerPanel.sidePanelBarBoxNode.appendChild(ownerPanel.sidePanelBarNode);
         }
-        
+
         var panels = Firebug.panelTypes;
         for (var i=0, p; p=panels[i]; i++)
         {
             if ( // normal Panel  of the Chrome's PanelBar
                 !ownerPanel && !p.prototype.parentPanel ||
                 // Child Panel of the current Panel's SidePanelBar
-                ownerPanel && p.prototype.parentPanel && 
+                ownerPanel && p.prototype.parentPanel &&
                 ownerPanel.name == p.prototype.parentPanel)
             {
                 this.addPanel(p.prototype.name);
             }
         }
     },
-    
+
     destroy: function()
     {
         PanelBar.shutdown.call(this);
-        
+
         for (var name in this.panelMap)
         {
             this.removePanel(name);
-            
+
             var panel = this.panelMap[name];
             panel.destroy();
-            
+
             this.panelMap[name] = null;
             delete this.panelMap[name];
         }
-        
+
         this.panelMap = null;
         this.ownerPanel = null;
     },
-    
+
     initialize: function()
     {
         if (this.ownerPanel)
             this.ownerPanel.sidePanelBarNode.style.display = "inline";
-        
+
         for(var name in this.panelMap)
         {
             (function(self, name){
-                
+
                 // tab click handler
                 var onTabClick = function onTabClick()
-                { 
+                {
                     self.selectPanel(name);
                     return false;
                 };
-                
+
                 Firebug.chrome.addController([self.panelMap[name].tabNode, "mousedown", onTabClick]);
-                
+
             })(this, name);
         }
     },
-    
+
     shutdown: function()
     {
         var selectedPanel = this.selectedPanel;
-        
+
         if (selectedPanel)
         {
             removeClass(selectedPanel.tabNode, "fbSelectedTab");
             selectedPanel.hide();
             selectedPanel.shutdown();
         }
-        
+
         if (this.ownerPanel)
-            this.ownerPanel.sidePanelBarNode.style.display = "none";        
-        
+            this.ownerPanel.sidePanelBarNode.style.display = "none";
+
         this.selectedPanel = null;
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
     addPanel: function(panelName, parentPanel)
     {
         var PanelType = Firebug.panelTypeMap[panelName];
         var panel = this.panelMap[panelName] = new PanelType();
-        
+
         panel.create();
     },
-    
+
     removePanel: function(panelName)
     {
         var panel = this.panelMap[panelName];
         if (panel.hasOwnProperty(panelName))
             panel.destroy();
     },
-    
+
     selectPanel: function(panelName)
     {
         var selectedPanel = this.selectedPanel;
         var panel = this.panelMap[panelName];
-        
+
         if (panel && selectedPanel != panel)
         {
             if (selectedPanel)
@@ -7724,25 +7721,25 @@ FBL.PanelBar =
                 selectedPanel.shutdown();
                 selectedPanel.hide();
             }
-            
+
             if (!panel.parentPanel)
                 FirebugChrome.selectedPanelName = panelName;
-            
+
             this.selectedPanel = panel;
-            
+
             setClass(panel.tabNode, "fbSelectedTab");
             panel.show();
             panel.initialize();
         }
     },
-    
+
     getPanel: function(panelName)
     {
         var panel = this.panelMap[panelName];
-        
+
         return panel;
     }
-   
+
 };
 
 //************************************************************************************************
@@ -7752,29 +7749,29 @@ FBL.PanelBar =
  * options.element
  * options.caption
  * options.title
- * 
+ *
  * options.owner
  * options.className
  * options.pressedClassName
- * 
+ *
  * options.onPress
  * options.onUnpress
  * options.onClick
- * 
+ *
  * @class
- * @extends FBL.Controller 
- *  
+ * @extends FBL.Controller
+ *
  */
 
 FBL.Button = function(options)
 {
     options = options || {};
-    
+
     append(this, options);
-    
+
     this.state = "unpressed";
     this.display = "unpressed";
-    
+
     if (this.element)
     {
         this.container = this.element.parentNode;
@@ -7782,17 +7779,17 @@ FBL.Button = function(options)
     else
     {
         this.shouldDestroy = true;
-        
+
         this.container = this.owner.getPanel().toolButtonsNode;
-        
+
         this.element = createElement("a", {
             className: this.baseClassName + " " + this.className + " fbHover",
             innerHTML: this.caption
         });
-        
+
         if (this.title)
             this.element.title = this.title;
-        
+
         this.container.appendChild(this.element);
     }
 };
@@ -7805,39 +7802,39 @@ Button.prototype = extend(Controller,
     type: "normal",
     caption: "caption",
     title: null,
-    
+
     className: "", // custom class
     baseClassName: "fbButton", // control class
     pressedClassName: "fbBtnPressed", // control pressed class
-    
+
     element: null,
     container: null,
     owner: null,
-    
+
     state: null,
     display: null,
-    
+
     destroy: function()
     {
         this.shutdown();
-        
+
         // only remove if it is a dynamically generated button (not pre-rendered)
         if (this.shouldDestroy)
             this.container.removeChild(this.element);
-        
+
         this.element = null;
         this.container = null;
         this.owner = null;
     },
-    
+
     initialize: function()
     {
         Controller.initialize.apply(this);
-        
+
         var element = this.element;
-        
+
         this.addController([element, "mousedown", this.handlePress]);
-        
+
         if (this.type == "normal")
             this.addController(
                 [element, "mouseup", this.handleUnpress],
@@ -7845,23 +7842,23 @@ Button.prototype = extend(Controller,
                 [element, "click", this.handleClick]
             );
     },
-    
+
     shutdown: function()
     {
         Controller.shutdown.apply(this);
     },
-    
+
     restore: function()
     {
         this.changeState("unpressed");
     },
-    
+
     changeState: function(state)
     {
         this.state = state;
         this.changeDisplay(state);
     },
-    
+
     changeDisplay: function(display)
     {
         if (display != this.display)
@@ -7877,11 +7874,11 @@ Button.prototype = extend(Controller,
             this.display = display;
         }
     },
-    
+
     handlePress: function(event)
     {
         cancelEvent(event, true);
-        
+
         if (this.type == "normal")
         {
             this.changeDisplay("pressed");
@@ -7892,49 +7889,49 @@ Button.prototype = extend(Controller,
             if (this.state == "pressed")
             {
                 this.changeState("unpressed");
-                
+
                 if (this.onUnpress)
                     this.onUnpress.apply(this.owner, arguments);
             }
             else
             {
                 this.changeState("pressed");
-                
+
                 if (this.onPress)
                     this.onPress.apply(this.owner, arguments);
             }
-            
+
             if (this.onClick)
                 this.onClick.apply(this.owner, arguments);
         }
-        
+
         return false;
     },
-    
+
     handleUnpress: function(event)
     {
         cancelEvent(event, true);
-        
+
         if (this.beforeClick)
             this.changeDisplay("unpressed");
-        
+
         return false;
     },
-    
+
     handleClick: function(event)
     {
         cancelEvent(event, true);
-        
+
         if (this.type == "normal")
         {
             if (this.onClick)
                 this.onClick.apply(this.owner);
-            
+
             this.changeState("unpressed");
         }
-        
+
         this.beforeClick = false;
-        
+
         return false;
     }
 });
@@ -7943,7 +7940,7 @@ Button.prototype = extend(Controller,
 
 /**
  * @class
- * @extends FBL.Button 
+ * @extends FBL.Button
  */
 FBL.IconButton = function()
 {
@@ -7951,7 +7948,7 @@ FBL.IconButton = function()
 };
 
 IconButton.prototype = extend(Button.prototype,
-/**@extend FBL.IconButton.prototype*/ 
+/**@extend FBL.IconButton.prototype*/
 {
     baseClassName: "fbIconButton",
     pressedClassName: "fbIconPressed"
@@ -7979,29 +7976,29 @@ var MenuPlate = domplate(Firebug.Rep,
                 )
             )
         ),
-        
+
     itemTag:
         A(menuItemProps,
             "$item.label"
         ),
-        
+
     checkBoxTag:
         A(extend(menuItemProps, {checked : "$item.checked"}),
-           
+
             "$item.label"
         ),
-        
+
     radioButtonTag:
         A(extend(menuItemProps, {selected : "$item.selected"}),
-           
+
             "$item.label"
         ),
-        
+
     groupTag:
         A(extend(menuItemProps, {child: "$item.child"}),
             "$item.label"
         ),
-        
+
     shortcutTag:
         A(menuItemProps,
             "$item.label",
@@ -8009,39 +8006,39 @@ var MenuPlate = domplate(Firebug.Rep,
                 "$item.key"
             )
         ),
-        
+
     separatorTag:
         SPAN({"class": "fbMenuSeparator"}),
-        
+
     memberIterator: function(items)
     {
         var result = [];
-        
+
         for (var i=0, length=items.length; i<length; i++)
         {
             var item = items[i];
-            
+
             // separator representation
             if (typeof item == "string" && item.indexOf("-") == 0)
             {
                 result.push({tag: this.separatorTag});
                 continue;
             }
-            
+
             item = extend(item, {});
-            
+
             item.type = item.type || "";
             item.value = item.value || "";
-            
+
             var type = item.type;
-            
+
             // default item representation
             item.tag = this.itemTag;
-            
-            var className = item.className || ""; 
-            
+
+            var className = item.className || "";
+
             className += "fbMenuOption fbHover ";
-            
+
             // specific representations
             if (type == "checkbox")
             {
@@ -8063,22 +8060,22 @@ var MenuPlate = domplate(Firebug.Rep,
                 className += "fbMenuShortcut ";
                 item.tag = this.shortcutTag;
             }
-            
+
             if (item.checked)
                 className += "fbMenuChecked ";
             else if (item.selected)
                 className += "fbMenuRadioSelected ";
-            
+
             if (item.disabled)
                 className += "fbMenuDisabled ";
-            
+
             item.className = className;
-            
+
             item.label = $STR(item.label);
-            
+
             result.push(item);
         }
-        
+
         return result;
     }
 });
@@ -8090,7 +8087,7 @@ var MenuPlate = domplate(Firebug.Rep,
  * options.element
  * options.id
  * options.items
- * 
+ *
  * item.label
  * item.className
  * item.type
@@ -8100,11 +8097,11 @@ var MenuPlate = domplate(Firebug.Rep,
  * item.selected
  * item.command
  * item.child
- * 
- * 
+ *
+ *
  * @class
  * @extends FBL.Controller
- *   
+ *
  */
 FBL.Menu = function(options)
 {
@@ -8113,17 +8110,17 @@ FBL.Menu = function(options)
     {
         if (options.getItems)
             options.items = options.getItems();
-        
+
         options.element = MenuPlate.tag.append(
                 {object: options},
                 getElementByClass(Firebug.chrome.document, "fbBody"),
                 MenuPlate
             );
     }
-    
+
     // extend itself with the provided options
     append(this, options);
-    
+
     if (typeof this.element == "string")
     {
         this.id = this.element;
@@ -8133,16 +8130,16 @@ FBL.Menu = function(options)
     {
         this.element.id = this.id;
     }
-    
+
     this.element.firebugIgnore = true;
     this.elementStyle = this.element.style;
-    
+
     this.isVisible = false;
-    
+
     this.handleMouseDown = bind(this.handleMouseDown, this);
     this.handleMouseOver = bind(this.handleMouseOver, this);
     this.handleMouseOut = bind(this.handleMouseOut, this);
-    
+
     this.handleWindowMouseDown = bind(this.handleWindowMouseDown, this);
 };
 
@@ -8158,49 +8155,49 @@ Menu.prototype =  extend(Controller,
     destroy: function()
     {
         //if (this.element) console.log("destroy", this.element.id);
-        
+
         this.hide();
-        
+
         // if it is a childMenu, remove its reference from the parentMenu
         if (this.parentMenu)
             this.parentMenu.childMenu = null;
-        
+
         // remove the element from the document
         this.element.parentNode.removeChild(this.element);
-        
+
         // clear references
         this.element = null;
         this.elementStyle = null;
         this.parentMenu = null;
         this.parentTarget = null;
     },
-    
+
     initialize: function()
     {
         Controller.initialize.call(this);
-        
+
         this.addController(
                 [this.element, "mousedown", this.handleMouseDown],
                 [this.element, "mouseover", this.handleMouseOver]
              );
     },
-    
+
     shutdown: function()
     {
         Controller.shutdown.call(this);
     },
-    
+
     show: function(x, y)
     {
         this.initialize();
-        
+
         if (this.isVisible) return;
-        
+
         //console.log("show", this.element.id);
-        
+
         x = x || 0;
         y = y || 0;
-        
+
         if (this.parentMenu)
         {
             var oldChildMenu = this.parentMenu.childMenu;
@@ -8208,91 +8205,91 @@ Menu.prototype =  extend(Controller,
             {
                 oldChildMenu.destroy();
             }
-            
+
             this.parentMenu.childMenu = this;
         }
         else
             addEvent(Firebug.chrome.document, "mousedown", this.handleWindowMouseDown);
-        
+
         this.elementStyle.display = "block";
         this.elementStyle.visibility = "hidden";
-        
+
         var size = Firebug.chrome.getSize();
-        
+
         x = Math.min(x, size.width - this.element.clientWidth - 10);
         x = Math.max(x, 0);
-        
+
         y = Math.min(y, size.height - this.element.clientHeight - 10);
         y = Math.max(y, 0);
-        
+
         this.elementStyle.left = x + "px";
         this.elementStyle.top = y + "px";
-        
+
         this.elementStyle.visibility = "visible";
-        
+
         this.isVisible = true;
-        
+
         if (isFunction(this.onShow))
             this.onShow.apply(this, arguments);
     },
-    
+
     hide: function()
     {
         this.clearHideTimeout();
         this.clearShowChildTimeout();
-        
+
         if (!this.isVisible) return;
-        
+
         //console.log("hide", this.element.id);
-        
+
         this.elementStyle.display = "none";
-        
+
         if(this.childMenu)
         {
             this.childMenu.destroy();
             this.childMenu = null;
         }
-        
+
         if(this.parentTarget)
             removeClass(this.parentTarget, "fbMenuGroupSelected");
-        
+
         this.isVisible = false;
-        
+
         this.shutdown();
-        
+
         if (isFunction(this.onHide))
             this.onHide.apply(this, arguments);
     },
-    
+
     showChildMenu: function(target)
     {
         var id = target.getAttribute("child");
-        
+
         var parent = this;
         var target = target;
-        
+
         this.showChildTimeout = Firebug.chrome.window.setTimeout(function(){
-            
+
             //if (!parent.isVisible) return;
-            
+
             var box = Firebug.chrome.getElementBox(target);
-            
+
             var childMenuObject = menuMap.hasOwnProperty(id) ?
                     menuMap[id] : {element: $(id)};
-            
-            var childMenu = new Menu(extend(childMenuObject, 
+
+            var childMenu = new Menu(extend(childMenuObject,
                 {
                     parentMenu: parent,
                     parentTarget: target
                 }));
-            
+
             var offsetLeft = isIE6 ? -1 : -6; // IE6 problem with fixed position
             childMenu.show(box.left + box.width + offsetLeft, box.top -6);
             setClass(target, "fbMenuGroupSelected");
-            
+
         },350);
     },
-    
+
     clearHideTimeout: function()
     {
         if (this.hideTimeout)
@@ -8301,7 +8298,7 @@ Menu.prototype =  extend(Controller,
             delete this.hideTimeout;
         }
     },
-    
+
     clearShowChildTimeout: function()
     {
         if(this.showChildTimeout)
@@ -8310,32 +8307,32 @@ Menu.prototype =  extend(Controller,
             this.showChildTimeout = null;
         }
     },
-    
+
     handleMouseDown: function(event)
     {
         cancelEvent(event, true);
-        
+
         var topParent = this;
         while (topParent.parentMenu)
             topParent = topParent.parentMenu;
-        
+
         var target = event.target || event.srcElement;
-        
+
         target = getAncestorByClass(target, "fbMenuOption");
-        
+
         if(!target || hasClass(target, "fbMenuGroup"))
             return false;
-        
+
         if (target && !hasClass(target, "fbMenuDisabled"))
         {
             var type = target.getAttribute("type");
-            
+
             if (type == "checkbox")
             {
                 var checked = target.getAttribute("checked");
                 var value = target.getAttribute("value");
                 var wasChecked = hasClass(target, "fbMenuChecked");
-                
+
                 if (wasChecked)
                 {
                     removeClass(target, "fbMenuChecked");
@@ -8346,65 +8343,65 @@ Menu.prototype =  extend(Controller,
                     setClass(target, "fbMenuChecked");
                     target.setAttribute("checked", "true");
                 }
-                
+
                 if (isFunction(this.onCheck))
                     this.onCheck.call(this, target, value, !wasChecked)
-            }            
-            
+            }
+
             if (type == "radiobutton")
             {
                 var selectedRadios = getElementsByClass(target.parentNode, "fbMenuRadioSelected");
-                
+
                 var group = target.getAttribute("group");
-                
+
                 for (var i = 0, length = selectedRadios.length; i < length; i++)
                 {
                     radio = selectedRadios[i];
-                    
+
                     if (radio.getAttribute("group") == group)
                     {
                         removeClass(radio, "fbMenuRadioSelected");
                         radio.setAttribute("selected", "");
                     }
                 }
-                
+
                 setClass(target, "fbMenuRadioSelected");
                 target.setAttribute("selected", "true");
-            }            
-            
+            }
+
             var handler = null;
-             
-            // target.command can be a function or a string. 
+
+            // target.command can be a function or a string.
             var cmd = target.command;
-            
+
             // If it is a function it will be used as the handler
             if (isFunction(cmd))
                 handler = cmd;
-            // If it is a string it the property of the current menu object 
+            // If it is a string it the property of the current menu object
             // will be used as the handler
             else if (typeof cmd == "string")
                 handler = this[cmd];
-            
+
             var closeMenu = true;
-            
+
             if (handler)
                 closeMenu = handler.call(this, target) !== false;
-            
+
             if (closeMenu)
                 topParent.hide();
         }
-        
+
         return false;
     },
-    
+
     handleWindowMouseDown: function(event)
     {
         //console.log("handleWindowMouseDown");
-        
+
         var target = event.target || event.srcElement;
-        
+
         target = getAncestorByClass(target, "fbMenu");
-        
+
         if (!target)
         {
             removeEvent(Firebug.chrome.document, "mousedown", this.handleWindowMouseDown);
@@ -8415,31 +8412,31 @@ Menu.prototype =  extend(Controller,
     handleMouseOver: function(event)
     {
         //console.log("handleMouseOver", this.element.id);
-        
+
         this.clearHideTimeout();
         this.clearShowChildTimeout();
-        
+
         var target = event.target || event.srcElement;
-        
+
         target = getAncestorByClass(target, "fbMenuOption");
-        
+
         if(!target)
             return;
-        
+
         var childMenu = this.childMenu;
-        if(childMenu) 
+        if(childMenu)
         {
             removeClass(childMenu.parentTarget, "fbMenuGroupSelected");
-            
+
             if (childMenu.parentTarget != target && childMenu.isVisible)
             {
-                childMenu.clearHideTimeout(); 
+                childMenu.clearHideTimeout();
                 childMenu.hideTimeout = Firebug.chrome.window.setTimeout(function(){
                     childMenu.destroy();
                 },300);
             }
         }
-        
+
         if(hasClass(target, "fbMenuGroup"))
         {
             this.showChildMenu(target);
@@ -8456,24 +8453,24 @@ append(Menu,
     {
         menuMap[object.id] = object;
     },
-    
+
     check: function(element)
     {
         setClass(element, "fbMenuChecked");
         element.setAttribute("checked", "true");
     },
-    
+
     uncheck: function(element)
     {
         removeClass(element, "fbMenuChecked");
         element.setAttribute("checked", "");
     },
-    
+
     disable: function(element)
     {
         setClass(element, "fbMenuDisabled");
     },
-    
+
     enable: function(element)
     {
         removeClass(element, "fbMenuDisabled");
@@ -8488,7 +8485,7 @@ append(Menu,
 function StatusBar(){};
 
 StatusBar.prototype = extend(Controller, {
-    
+
 });
 
 // ************************************************************************************************
@@ -8499,7 +8496,7 @@ StatusBar.prototype = extend(Controller, {
 
 /* See license.txt for terms of usage */
 
-FBL.ns( /**@scope ns-context*/ function() { with (FBL) {
+FBL.ns( /**@scope s_context*/ function() { with (FBL) {
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -8508,8 +8505,8 @@ FBL.ns( /**@scope ns-context*/ function() { with (FBL) {
 var refreshDelay = 300;
 
 // Opera and some versions of webkit returns the wrong value of document.elementFromPoint()
-// function, without taking into account the scroll position. Safari 4 (webkit/531.21.8) 
-// still have this issue. Google Chrome 4 (webkit/532.5) does not. So, we're assuming this 
+// function, without taking into account the scroll position. Safari 4 (webkit/531.21.8)
+// still have this issue. Google Chrome 4 (webkit/532.5) does not. So, we're assuming this
 // issue was fixed in the 532 version
 var shouldFixElementFromPoint = isOpera || isSafari && browserVersion < "532";
 
@@ -8528,9 +8525,9 @@ FBL.Context = function(win)
 {
     this.window = win.window;
     this.document = win.document;
-    
+
     this.browser = Env.browser;
-    
+
     // Some windows in IE, like iframe, doesn't have the eval() method
     if (isIE && !this.window.eval)
     {
@@ -8540,7 +8537,7 @@ FBL.Context = function(win)
         if (!this.window.eval)
             throw new Error("Firebug Error: eval() method not found in this window");
     }
-    
+
     // Create a new "black-box" eval() method that runs in the global namespace
     // of the context window, without exposing the local variables declared
     // by the function that calls it
@@ -8550,20 +8547,20 @@ FBL.Context = function(win)
 };
 
 FBL.Context.prototype =
-{  
+{
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // partial-port of Firebug tabContext.js
-    
+
     browser: null,
     loaded: true,
-    
+
     setTimeout: function(fn, delay)
     {
         var win = this.window;
-        
+
         if (win.setTimeout == this.setTimeout)
             throw new Error("setTimeout recursion");
-        
+
         var timeout = win.setTimeout.apply ? // IE doesn't have apply method on setTimeout
                 win.setTimeout.apply(win, arguments) :
                 win.setTimeout(fn, delay);
@@ -8587,7 +8584,7 @@ FBL.Context.prototype =
     setInterval: function(fn, delay)
     {
         var win = this.window;
-        
+
         var timeout = win.setInterval.apply ? // IE doesn't have apply method on setTimeout
                 win.setInterval.apply(win, arguments) :
                 win.setInterval(fn, delay);
@@ -8616,11 +8613,11 @@ FBL.Context.prototype =
         for (var i = 0; i < arguments.length; ++i)
         {
             var panelName = arguments[i];
-            
+
             // avoid error. need to create a better getPanel() function as explained below
             if (!Firebug.chrome || !Firebug.chrome.selectedPanel)
                 return;
-            
+
             //var panel = this.getPanel(panelName, true);
             //TODO: xxxpedro context how to get all panels using a single function?
             // the current workaround to make the invalidation works is invalidating
@@ -8628,7 +8625,7 @@ FBL.Context.prototype =
             var panel = Firebug.chrome.selectedPanel.sidePanelBar ?
                     Firebug.chrome.selectedPanel.sidePanelBar.getPanel(panelName, true) :
                     null;
-            
+
             if (panel && !panel.noRefresh)
                 this.invalidPanels[panelName] = 1;
         }
@@ -8675,27 +8672,27 @@ FBL.Context.prototype =
                 this.invalidatePanels.apply(this, invalids);
         }, this), refreshDelay);
     },
-    
-    
+
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Evalutation Method
-    
+
     /**
      * Evaluates an expression in the current context window.
-     * 
+     *
      * @param {String}   expr           expression to be evaluated
-     * 
+     *
      * @param {String}   context        string indicating the global location
      *                                  of the object that will be used as the
      *                                  context. The context is referred in
      *                                  the expression as the "this" keyword.
      *                                  If no context is informed, the "window"
      *                                  context is used.
-     *                                  
+     *
      * @param {String}   api            string indicating the global location
      *                                  of the object that will be used as the
      *                                  api of the evaluation.
-     *                                  
+     *
      * @param {Function} errorHandler(message) error handler to be called
      *                                         if the evaluation fails.
      */
@@ -8703,32 +8700,32 @@ FBL.Context.prototype =
     {
         // Need to remove line breaks otherwise only the first line will be executed
         expr = stripNewLines(expr);
-        
+
         // the default context is the "window" object. It can be any string that represents
         // a global accessible element as: "my.namespaced.object"
         context = context || "window";
-        
+
         var cmd,
             result;
-        
+
         // if the context is the "window" object, we don't need a closure
         if (context == "window")
         {
-            // try first the expression wrapped in parenthesis (so we can capture 
+            // try first the expression wrapped in parenthesis (so we can capture
             // object literal expressions like "{}" and "{some:1,props:2}")
             cmd = api ?
                 "with("+api+"){ ("+expr+") }" :
                 "(" + expr + ")";
-            
+
             result = this.eval(cmd);
-            
-            // if it results in error, then try it without parenthesis 
+
+            // if it results in error, then try it without parenthesis
             if (result && result[evalError])
             {
                 cmd = api ?
                     "with("+api+"){ "+expr+" }" :
                     expr;
-                
+
                 result = this.eval(cmd);
 
             }
@@ -8738,57 +8735,57 @@ FBL.Context.prototype =
             // try to execute the command using a "return" statement in the evaluation closure.
             cmd = api ?
                 // with API and context, trying to get the return value
-                "(function(arguments){ with(" + api + "){ return (" + 
-                    expr + 
+                "(function(arguments){ with(" + api + "){ return (" +
+                    expr +
                 ") } }).call(" + context + ",undefined)"
                 :
                 // with context only, trying to get the return value
                 "(function(arguments){ return (" +
                     expr +
                 ") }).call(" +context + ",undefined)";
-            
+
             result = this.eval(cmd);
-            
-            // if it results in error, then try it without the "return" statement 
+
+            // if it results in error, then try it without the "return" statement
             if (result && result[evalError])
             {
                 cmd = api ?
                     // with API and context, no return value
                     "(function(arguments){ with(" + api + "){ " +
-                        expr + 
+                        expr +
                     " } }).call(" + context + ",undefined)"
                     :
                     // with context only, no return value
-                    "(function(arguments){ " + 
-                        expr + 
+                    "(function(arguments){ " +
+                        expr +
                     " }).call(" + context + ",undefined)";
-                    
+
                 result = this.eval(cmd);
             }
         }
-        
+
         if (result && result[evalError])
         {
             var msg = result.name ? (result.name + ": ") : "";
             msg += result.message || result;
-            
+
             if (errorHandler)
                 result = errorHandler(msg)
             else
                 result = msg;
         }
-        
+
         return result;
     },
-    
+
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Window Methods
-    
+
     getWindowSize: function()
     {
         var width=0, height=0, el;
-        
+
         if (typeof this.window.innerWidth == "number")
         {
             width = this.window.innerWidth;
@@ -8804,22 +8801,22 @@ FBL.Context.prototype =
             width = el.clientWidth;
             height = el.clientHeight;
         }
-        
+
         return {width: width, height: height};
     },
-    
+
     getWindowScrollSize: function()
     {
         var width=0, height=0, el;
 
         // first try the document.documentElement scroll size
-        if (!isIEQuiksMode && (el=this.document.documentElement) && 
+        if (!isIEQuiksMode && (el=this.document.documentElement) &&
            (el.scrollHeight || el.scrollWidth))
         {
             width = el.scrollWidth;
             height = el.scrollHeight;
         }
-        
+
         // then we need to check if document.body has a bigger scroll size value
         // because sometimes depending on the browser and the page, the document.body
         // scroll size returns a smaller (and wrong) measure
@@ -8829,14 +8826,14 @@ FBL.Context.prototype =
             width = el.scrollWidth;
             height = el.scrollHeight;
         }
-        
+
         return {width: width, height: height};
     },
-    
+
     getWindowScrollPosition: function()
     {
         var top=0, left=0, el;
-        
+
         if(typeof this.window.pageYOffset == "number")
         {
             top = this.window.pageYOffset;
@@ -8852,10 +8849,10 @@ FBL.Context.prototype =
             top = el.scrollTop;
             left = el.scrollLeft;
         }
-        
+
         return {top:top, left:left};
     },
-    
+
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Element Methods
@@ -8870,95 +8867,95 @@ FBL.Context.prototype =
         else
             return this.document.elementFromPoint(x, y);
     },
-    
+
     getElementPosition: function(el)
     {
         var left = 0
         var top = 0;
-        
+
         do
         {
             left += el.offsetLeft;
             top += el.offsetTop;
         }
         while (el = el.offsetParent);
-            
-        return {left:left, top:top};      
+
+        return {left:left, top:top};
     },
-    
+
     getElementBox: function(el)
     {
         var result = {};
-        
+
         if (el.getBoundingClientRect)
         {
             var rect = el.getBoundingClientRect();
-            
+
             // fix IE problem with offset when not in fullscreen mode
             var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
-            
+
             var scroll = this.getWindowScrollPosition();
-            
+
             result.top = Math.round(rect.top - offset + scroll.top);
             result.left = Math.round(rect.left - offset + scroll.left);
             result.height = Math.round(rect.bottom - rect.top);
             result.width = Math.round(rect.right - rect.left);
         }
-        else 
+        else
         {
             var position = this.getElementPosition(el);
-            
+
             result.top = position.top;
             result.left = position.left;
             result.height = el.offsetHeight;
             result.width = el.offsetWidth;
         }
-        
+
         return result;
     },
-    
+
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Measurement Methods
-    
+
     getMeasurement: function(el, name)
     {
         var result = {value: 0, unit: "px"};
-        
+
         var cssValue = this.getStyle(el, name);
-        
+
         if (!cssValue) return result;
         if (cssValue.toLowerCase() == "auto") return result;
-        
+
         var reMeasure = /(\d+\.?\d*)(.*)/;
         var m = cssValue.match(reMeasure);
-        
+
         if (m)
         {
             result.value = m[1]-0;
             result.unit = m[2].toLowerCase();
         }
-        
-        return result;        
+
+        return result;
     },
-    
+
     getMeasurementInPixels: function(el, name)
     {
         if (!el) return null;
-        
+
         var m = this.getMeasurement(el, name);
         var value = m.value;
         var unit = m.unit;
-        
+
         if (unit == "px")
             return value;
-          
+
         else if (unit == "pt")
             return this.pointsToPixels(name, value);
-          
+
         if (unit == "em")
             return this.emToPixels(el, value);
-          
+
         else if (unit == "%")
             return this.percentToPixels(el, value);
     },
@@ -8967,99 +8964,99 @@ FBL.Context.prototype =
     {
         var sufixes = ["Top", "Left", "Bottom", "Right"];
         var result = [];
-        
+
         for(var i=0, sufix; sufix=sufixes[i]; i++)
             result[i] = Math.round(this.getMeasurementInPixels(el, name + sufix));
-        
+
         return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
     },
-    
+
     getMeasurementBox: function(el, name)
     {
         var result = [];
         var sufixes = name == "border" ?
                 ["TopWidth", "LeftWidth", "BottomWidth", "RightWidth"] :
                 ["Top", "Left", "Bottom", "Right"];
-        
+
         if (isIE)
         {
             var propName, cssValue;
             var autoMargin = null;
-            
+
             for(var i=0, sufix; sufix=sufixes[i]; i++)
             {
                 propName = name + sufix;
-                
-                cssValue = el.currentStyle[propName] || el.style[propName]; 
-                
+
+                cssValue = el.currentStyle[propName] || el.style[propName];
+
                 if (cssValue == "auto")
                 {
                     if (!autoMargin)
                         autoMargin = this.getCSSAutoMarginBox(el);
-                    
+
                     result[i] = autoMargin[sufix.toLowerCase()];
                 }
                 else
                     result[i] = this.getMeasurementInPixels(el, propName);
-                      
+
             }
-        
+
         }
         else
         {
             for(var i=0, sufix; sufix=sufixes[i]; i++)
                 result[i] = this.getMeasurementInPixels(el, name + sufix);
         }
-        
+
         return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
-    }, 
-    
+    },
+
     getCSSAutoMarginBox: function(el)
     {
         if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
             return {top:0, left:0, bottom:0, right:0};
             /**/
-            
+
         if (isIE && " h1 h2 h3 h4 h5 h6 h7 ul p ".indexOf(" "+el.nodeName.toLowerCase()+" ") == -1)
             return {top:0, left:0, bottom:0, right:0};
             /**/
-            
+
         var offsetTop = 0;
         if (false && isIEStantandMode)
         {
             var scrollSize = Firebug.browser.getWindowScrollSize();
             offsetTop = scrollSize.height;
         }
-        
+
         var box = this.document.createElement("div");
         //box.style.cssText = "margin:0; padding:1px; border: 0; position:static; overflow:hidden; visibility: hidden;";
         box.style.cssText = "margin:0; padding:1px; border: 0; visibility: hidden;";
-        
+
         var clone = el.cloneNode(false);
         var text = this.document.createTextNode("&nbsp;");
         clone.appendChild(text);
-        
+
         box.appendChild(clone);
-    
+
         this.document.body.appendChild(box);
-        
+
         var marginTop = clone.offsetTop - box.offsetTop - 1;
         var marginBottom = box.offsetHeight - clone.offsetHeight - 2 - marginTop;
-        
+
         var marginLeft = clone.offsetLeft - box.offsetLeft - 1;
         var marginRight = box.offsetWidth - clone.offsetWidth - 2 - marginLeft;
-        
+
         this.document.body.removeChild(box);
-        
+
         return {top:marginTop+offsetTop, left:marginLeft, bottom:marginBottom-offsetTop, right:marginRight};
     },
-    
+
     getFontSizeInPixels: function(el)
     {
         var size = this.getMeasurement(el, "fontSize");
-        
+
         if (size.unit == "px") return size.value;
-        
+
         // get font size, the dirty way
         var computeDirtyFontSize = function(el, calibration)
         {
@@ -9068,92 +9065,92 @@ FBL.Context.prototype =
 
             if (calibration)
                 divStyle +=  " font-size:"+calibration+"px;";
-            
+
             div.style.cssText = divStyle;
             div.innerHTML = "A";
             el.appendChild(div);
-            
+
             var value = div.offsetHeight;
             el.removeChild(div);
             return value;
         }
-        
+
         /*
         var calibrationBase = 200;
         var calibrationValue = computeDirtyFontSize(el, calibrationBase);
         var rate = calibrationBase / calibrationValue;
         /**/
-        
+
         // the "dirty technique" fails in some environments, so we're using a static value
         // based in some tests.
         var rate = 200 / 225;
-        
+
         var value = computeDirtyFontSize(el);
 
         return value * rate;
     },
-    
-    
+
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Unit Funtions
-  
+
     pointsToPixels: function(name, value, returnFloat)
     {
         var axis = /Top$|Bottom$/.test(name) ? "y" : "x";
-        
+
         var result = value * pixelsPerInch[axis] / 72;
-        
+
         return returnFloat ? result : Math.round(result);
     },
-    
+
     emToPixels: function(el, value)
     {
         if (!el) return null;
-        
+
         var fontSize = this.getFontSizeInPixels(el);
-        
+
         return Math.round(value * fontSize);
     },
-    
+
     exToPixels: function(el, value)
     {
         if (!el) return null;
-        
+
         // get ex value, the dirty way
         var div = this.document.createElement("div");
         div.style.cssText = offscreenStyle + "width:"+value + "ex;";
-        
+
         el.appendChild(div);
         var value = div.offsetWidth;
         el.removeChild(div);
-        
+
         return value;
     },
-      
+
     percentToPixels: function(el, value)
     {
         if (!el) return null;
-        
+
         // get % value, the dirty way
         var div = this.document.createElement("div");
         div.style.cssText = offscreenStyle + "width:"+value + "%;";
-        
+
         el.appendChild(div);
         var value = div.offsetWidth;
         el.removeChild(div);
-        
+
         return value;
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     getStyle: isIE ? function(el, name)
     {
         return el.currentStyle[name] || el.style[name] || undefined;
     }
     : function(el, name)
     {
-        return this.document.defaultView.getComputedStyle(el,null)[name] 
+        return this.document.defaultView.getComputedStyle(el,null)[name]
             || el.style[name] || undefined;
     }
 
@@ -9174,7 +9171,7 @@ FBL.ns( /**@scope ns-chrome*/ function() { with (FBL) {
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Window Options
 
-var WindowDefaultOptions = 
+var WindowDefaultOptions =
     {
         type: "frame",
         id: "FirebugUI",
@@ -9218,7 +9215,7 @@ var WindowDefaultOptions =
     fbHTML,
 
     fbCommandLine,
-    fbLargeCommandLine, 
+    fbLargeCommandLine,
     fbLargeCommandButtons,
 
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -9236,9 +9233,9 @@ var WindowDefaultOptions =
     lastSelectedPanelName,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
-    focusCommandLineState = 0, 
-    lastFocusedPanelName, 
+
+    focusCommandLineState = 0,
+    lastFocusedPanelName,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -9257,56 +9254,56 @@ var WindowDefaultOptions =
 // FirebugChrome
 
 /**@namespace*/
-FBL.FirebugChrome = 
+FBL.FirebugChrome =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     isOpen: false,
     height: 250,
     sidePanelWidth: 350,
-    
+
     selectedPanelName: "Console",
     selectedHTMLElementId: null,
-    
+
     chromeMap: {},
-    
+
     htmlSelectionStack: [],
     consoleMessageQueue: [],
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     create: function()
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.create", "creating chrome window");
-        
+
         createChromeWindow();
     },
-    
+
     initialize: function()
     {
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("FirebugChrome.initialize", "initializing chrome window");
-        
+
         if (Env.chrome.type == "frame" || Env.chrome.type == "div")
             ChromeMini.create(Env.chrome);
-        
+
         var chrome = Firebug.chrome = new Chrome(Env.chrome);
         FirebugChrome.chromeMap[chrome.type] = chrome;
-        
+
         addGlobalEvent("keydown", onGlobalKeyDown);
-        
+
         if (Env.Options.enablePersistent && chrome.type == "popup")
         {
             // TODO: xxxpedro persist - revise chrome synchronization when in persistent mode
             var frame = FirebugChrome.chromeMap.frame;
             if (frame)
                 frame.close();
-            
+
             //chrome.reattach(frame, chrome);
             //TODO: xxxpedro persist synchronize?
             chrome.initialize();
         }
     },
-    
+
     clone: function(FBChrome)
     {
         for (var name in FBChrome)
@@ -9328,36 +9325,36 @@ FBL.FirebugChrome =
 var createChromeWindow = function(options)
 {
     options = extend(WindowDefaultOptions, options || {});
-    
+
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Locals
-    
+
     var chrome = {},
-        
+
         context = options.context || Env.browser,
-    
-        type = chrome.type = Env.Options.enablePersistent ? 
-                "popup" : 
+
+        type = chrome.type = Env.Options.enablePersistent ?
+                "popup" :
                 options.type,
-        
+
         isChromeFrame = type == "frame",
-        
+
         useLocalSkin = Env.useLocalSkin,
-        
-        url = useLocalSkin ? 
-                Env.Location.skin : 
+
+        url = useLocalSkin ?
+                Env.Location.skin :
                 "about:blank",
-        
+
         // document.body not available in XML+XSL documents in Firefox
         body = context.document.getElementsByTagName("body")[0],
-                
+
         formatNode = function(node)
         {
             if (!Env.isDebugMode)
             {
                 node.firebugIgnore = true;
             }
-            
+
             node.style.border = "0";
             node.style.visibility = "hidden";
             node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
@@ -9366,25 +9363,25 @@ var createChromeWindow = function(options)
             node.style.left = "0";
             node.style.bottom = noFixedPosition ? "-1px" : "0";
             node.style.height = options.height + "px";
-            
+
             // avoid flickering during chrome rendering
             if (isFirefox)
                 node.style.display = "none";
         },
-        
+
         createChromeDiv = function()
         {
             //Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
-        
+
             var node = chrome.node = createGlobalElement("div"),
                 style = createGlobalElement("style"),
-                
+
                 css = FirebugChrome.Skin.CSS
                         /*
                         .replace(/;/g, " !important;")
                         .replace(/!important\s!important/g, "!important")
                         .replace(/display\s*:\s*(\w+)\s*!important;/g, "display:$1;")*/,
-                
+
                         // reset some styles to minimize interference from the main page's style
                 rules = ".fbBody *{margin:0;padding:0;font-size:11px;line-height:13px;color:inherit;}" +
                         // load the chrome styles
@@ -9394,23 +9391,23 @@ var createChromeWindow = function(options)
             /*
             if (isIE)
             {
-                // IE7 CSS bug (FbChrome table bigger than its parent div) 
+                // IE7 CSS bug (FbChrome table bigger than its parent div)
                 rules += ".fbBody table.fbChrome{position: static !important;}";
             }/**/
-            
+
             style.type = "text/css";
-            
+
             if (style.styleSheet)
                 style.styleSheet.cssText = rules;
             else
                 style.appendChild(context.document.createTextNode(rules));
-            
+
             document.getElementsByTagName("head")[0].appendChild(style);
-            
+
             node.className = "fbBody";
             node.style.overflow = "hidden";
             node.innerHTML = getChromeDivTemplate();
-            
+
             if (isIE)
             {
                 // IE7 CSS bug (FbChrome table bigger than its parent div)
@@ -9420,18 +9417,18 @@ var createChromeWindow = function(options)
                 },0);
                 /**/
             }
-            
+
             formatNode(node);
-            
+
             body.appendChild(node);
-            
+
             chrome.window = window;
             chrome.document = document;
-            onChromeLoad(chrome);            
+            onChromeLoad(chrome);
         };
-    
+
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     try
     {
         //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -9441,7 +9438,7 @@ var createChromeWindow = function(options)
             createChromeDiv();
             return;
         }
-        
+
         //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // cretate the Chrome as an "iframe"
         else if (isChromeFrame)
@@ -9450,24 +9447,24 @@ var createChromeWindow = function(options)
             var node = chrome.node = createGlobalElement("iframe");
             node.setAttribute("src", url);
             node.setAttribute("frameBorder", "0");
-            
+
             formatNode(node);
-            
+
             body.appendChild(node);
-            
+
             // must set the id after appending to the document, otherwise will cause an
             // strange error in IE, making the iframe load the page in which the bookmarklet
             // was created (like getfirebug.com), before loading the injected UI HTML,
             // generating an "Access Denied" error.
             node.id = options.id;
         }
-        
+
         //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the Chrome as a "popup"
         else
         {
             var height = FirebugChrome.height || options.height,
-            
+
                 options = [
                     "true,top=",
                     Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
@@ -9475,15 +9472,15 @@ var createChromeWindow = function(options)
                     height,
                     ",width=",
                     screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
-                    ",resizable"          
+                    ",resizable"
                 ].join(""),
-            
+
                 node = chrome.node = context.window.open(
-                    url, 
-                    "popup", 
+                    url,
+                    "popup",
                     options
                 );
-            
+
             if (node)
             {
                 try
@@ -9502,40 +9499,40 @@ var createChromeWindow = function(options)
                 return;
             }
         }
-        
+
         //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Inject the interface HTML if it is not using the local skin
-        
+
         if (!useLocalSkin)
         {
             var tpl = getChromeTemplate(!isChromeFrame),
                 doc = isChromeFrame ? node.contentWindow.document : node.document;
-            
+
             doc.write(tpl);
             doc.close();
         }
-        
+
         //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Wait the Window to be loaded
-        
+
         var win,
-        
+
             waitDelay = useLocalSkin ? isChromeFrame ? 200 : 300 : 100,
-            
+
             waitForWindow = function()
             {
                 if ( // Frame loaded... OR
                      isChromeFrame && (win=node.contentWindow) &&
                      node.contentWindow.document.getElementById("fbCommandLine") ||
-                     
+
                      // Popup loaded
                      !isChromeFrame && (win=node.window) && node.document &&
                      node.document.getElementById("fbCommandLine") )
                 {
                     chrome.window = win.window;
                     chrome.document = win.document;
-                    
-                    // Prevent getting the wrong chrome height in FF when opening a popup 
+
+                    // Prevent getting the wrong chrome height in FF when opening a popup
                     setTimeout(function(){
                         onChromeLoad(chrome);
                     }, useLocalSkin ? 200 : 0);
@@ -9543,24 +9540,24 @@ var createChromeWindow = function(options)
                 else
                     setTimeout(waitForWindow, waitDelay);
             };
-        
+
         waitForWindow();
     }
     catch(e)
     {
         var msg = e.message || e;
-        
+
         if (/access/i.test(msg))
         {
             // Firebug Lite could not create a window for its Graphical User Interface due to
             // a access restriction. This happens in some pages, when loading via bookmarklet.
             // In such cases, the only way is to load the GUI in a "windowless mode".
-            
+
             if (isChromeFrame)
                 body.removeChild(node);
             else if(type == "popup")
                 node.close();
-            
+
             // Load the GUI in a "windowless mode"
             createChromeDiv();
         }
@@ -9576,17 +9573,17 @@ var createChromeWindow = function(options)
 var onChromeLoad = function onChromeLoad(chrome)
 {
     Env.chrome = chrome;
-    
+
     if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Chrome onChromeLoad", "chrome window loaded");
-    
+
     if (Env.Options.enablePersistent)
     {
         // TODO: xxxpedro persist - make better chrome synchronization when in persistent mode
         Env.FirebugChrome = FirebugChrome;
-        
+
         chrome.window.Firebug = chrome.window.Firebug || {};
         chrome.window.Firebug.SharedEnv = Env;
-        
+
         if (Env.isDevelopmentMode)
         {
             Env.browser.window.FBDev.loadChromeApplication(chrome);
@@ -9611,15 +9608,15 @@ var onChromeLoad = function onChromeLoad(chrome)
         else if (chrome.type == "popup")
         {
             var oldChrome = FirebugChrome.chromeMap.frame;
-            
+
             var newChrome = new Chrome(chrome);
-        
+
             // TODO: xxxpedro sync detach reattach attach
             dispatch(newChrome.panelMap, "detach", [oldChrome, newChrome]);
-        
+
             if (oldChrome)
                 oldChrome.close();
-            
+
             newChrome.reattach(oldChrome, newChrome);
         }
     }
@@ -9634,54 +9631,54 @@ var getChromeDivTemplate = function()
 
 var getChromeTemplate = function(isPopup)
 {
-    var tpl = FirebugChrome.Skin; 
+    var tpl = FirebugChrome.Skin;
     var r = [], i = -1;
-    
+
     r[++i] = '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">';
     r[++i] = '<html><head><title>';
     r[++i] = Firebug.version;
-    
+
     /*
     r[++i] = '</title><link href="';
     r[++i] = Env.Location.skinDir + 'firebug.css';
     r[++i] = '" rel="stylesheet" type="text/css" />';
     /**/
-    
+
     r[++i] = '</title><style>html,body{margin:0;padding:0;overflow:hidden;}';
     r[++i] = tpl.CSS;
     r[++i] = '</style>';
     /**/
-    
+
     r[++i] = '</head><body class="fbBody' + (isPopup ? ' FirebugPopup' : '') + '">';
     r[++i] = tpl.HTML;
     r[++i] = '</body></html>';
-    
+
     return r.join("");
 };
 
 
 // ************************************************************************************************
 // Chrome Class
-    
+
 /**@class*/
 var Chrome = function Chrome(chrome)
 {
     var type = chrome.type;
-    var Base = type == "frame" || type == "div" ? ChromeFrameBase : ChromePopupBase; 
-    
+    var Base = type == "frame" || type == "div" ? ChromeFrameBase : ChromePopupBase;
+
     append(this, Base);   // inherit from base class (ChromeFrameBase or ChromePopupBase)
     append(this, chrome); // inherit chrome window properties
     append(this, new Context(chrome.window)); // inherit from Context class
-    
+
     FirebugChrome.chromeMap[type] = this;
     Firebug.chrome = this;
     Env.chrome = chrome.window;
-    
+
     this.commandLineVisible = false;
     this.sidePanelVisible = false;
-    
+
     this.create();
-    
+
     return this;
 };
 
@@ -9690,75 +9687,75 @@ var Chrome = function Chrome(chrome)
 
 /**
  * @namespace
- * @extends FBL.Controller 
- * @extends FBL.PanelBar 
+ * @extends FBL.Controller
+ * @extends FBL.PanelBar
  **/
 var ChromeBase = {};
-append(ChromeBase, Controller); 
+append(ChromeBase, Controller);
 append(ChromeBase, PanelBar);
 append(ChromeBase,
 /**@extend ns-chrome-ChromeBase*/
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // inherited properties
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // inherited from createChrome function
-    
+
     node: null,
     type: null,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // inherited from Context.prototype
-    
+
     document: null,
     window: null,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // value properties
-    
+
     sidePanelVisible: false,
     commandLineVisible: false,
     largeCommandLineVisible: false,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // object properties
-    
+
     inspectButton: null,
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     create: function()
     {
         PanelBar.create.call(this);
-        
+
         if (Firebug.Inspector)
             this.inspectButton = new Button({
                 type: "toggle",
                 element: $("fbChrome_btInspect"),
                 owner: Firebug.Inspector,
-                
+
                 onPress: Firebug.Inspector.startInspecting,
-                onUnpress: Firebug.Inspector.stopInspecting          
+                onUnpress: Firebug.Inspector.stopInspecting
             });
     },
-    
+
     destroy: function()
     {
         if(Firebug.Inspector)
             this.inspectButton.destroy();
-        
+
         PanelBar.destroy.call(this);
-        
+
         this.shutdown();
     },
-    
+
     testMenu: function()
     {
         var firebugMenu = new Menu(
         {
             id: "fbFirebugMenu",
-            
+
             items:
             [
                 {
@@ -9806,63 +9803,63 @@ append(ChromeBase,
                     command: "visitIssueTracker"
                 }
             ],
-            
+
             onHide: function()
             {
                 iconButton.restore();
             },
-            
+
             toggleChrome: function()
             {
                 Firebug.chrome.toggle();
             },
-            
+
             openPopup: function()
             {
                 Firebug.chrome.toggle(true, true);
             },
-            
+
             toggleInspect: function()
             {
                 Firebug.Inspector.toggleInspect();
             },
-            
+
             focusCommandLine: function()
             {
                 Firebug.chrome.focusCommandLine();
             },
-            
+
             visitWebsite: function()
             {
                 this.visit("http://getfirebug.com/lite.html");
             },
-            
+
             visitDiscussionGroup: function()
             {
                 this.visit("http://groups.google.com/group/firebug");
             },
-            
+
             visitIssueTracker: function()
             {
                 this.visit("http://code.google.com/p/fbug/issues/list");
             },
-            
+
             visit: function(url)
             {
                 window.open(url);
             }
-            
+
         });
-        
+
         /**@private*/
         var firebugOptionsMenu =
         {
             id: "fbFirebugOptionsMenu",
-            
+
             getItems: function()
             {
                 var cookiesDisabled = !Firebug.saveCookies;
-                
+
                 return [
                     {
                         label: "Save Options in Cookies",
@@ -9893,7 +9890,6 @@ append(ChromeBase,
                         checked: Firebug.showIconWhenHidden,
                         disabled: cookiesDisabled
                     },
-                    "-",
                     {
                         label: "Override Console Object",
                         type: "checkbox",
@@ -9915,7 +9911,13 @@ append(ChromeBase,
                         checked: Firebug.disableWhenFirebugActive,
                         disabled: cookiesDisabled
                     },
-                    "-",
+                    {
+                        label: "Disable XHR Listener",
+                        type: "checkbox",
+                        value: "disableXHRListener",
+                        checked: Firebug.disableXHRListener,
+                        disabled: cookiesDisabled
+                    },
                     {
                         label: "Enable Trace Mode",
                         type: "checkbox",
@@ -9932,72 +9934,72 @@ append(ChromeBase,
                     },
                     "-",
                     {
-                        label: "Restore Options",
+                        label: "Reset All Firebug Options",
                         command: "restorePrefs",
                         disabled: cookiesDisabled
                     }
                 ];
             },
-            
+
             onCheck: function(target, value, checked)
             {
                 Firebug.setPref(value, checked);
-            },           
-            
+            },
+
             saveOptions: function(target)
             {
                 var saveEnabled = target.getAttribute("checked");
-                
+
                 if (!saveEnabled) this.restorePrefs();
-                
+
                 this.updateMenu(target);
-                
+
                 return false;
             },
-            
+
             restorePrefs: function(target)
             {
                 Firebug.restorePrefs();
-                
+
                 if(Firebug.saveCookies)
                     Firebug.savePrefs();
                 else
                     Firebug.erasePrefs();
-                
+
                 if (target)
                     this.updateMenu(target);
-                
+
                 return false;
             },
-            
+
             updateMenu: function(target)
             {
                 var options = getElementsByClass(target.parentNode, "fbMenuOption");
-                
-                var firstOption = options[0]; 
+
+                var firstOption = options[0];
                 var enabled = Firebug.saveCookies;
                 if (enabled)
                     Menu.check(firstOption);
                 else
                     Menu.uncheck(firstOption);
-                
+
                 if (enabled)
                     Menu.check(options[0]);
                 else
                     Menu.uncheck(options[0]);
-                
+
                 for (var i = 1, length = options.length; i < length; i++)
                 {
                     var option = options[i];
-                    
+
                     var value = option.getAttribute("value");
                     var pref = Firebug[value];
-                    
+
                     if (pref)
                         Menu.check(option);
                     else
                         Menu.uncheck(option);
-                    
+
                     if (enabled)
                         Menu.enable(option);
                     else
@@ -10005,53 +10007,53 @@ append(ChromeBase,
                 }
             }
         };
-        
+
         Menu.register(firebugOptionsMenu);
-        
+
         var menu = firebugMenu;
-        
+
         var testMenuClick = function(event)
         {
             //console.log("testMenuClick");
             cancelEvent(event, true);
-            
+
             var target = event.target || event.srcElement;
-            
+
             if (menu.isVisible)
                 menu.hide();
             else
             {
                 var offsetLeft = isIE6 ? 1 : -4,  // IE6 problem with fixed position
-                    
+
                     chrome = Firebug.chrome,
-                    
+
                     box = chrome.getElementBox(target),
-                    
+
                     offset = chrome.type == "div" ?
                             chrome.getElementPosition(chrome.node) :
                             {top: 0, left: 0};
-                
+
                 menu.show(
-                            box.left + offsetLeft - offset.left, 
+                            box.left + offsetLeft - offset.left,
                             box.top + box.height -5 - offset.top
                         );
             }
-            
+
             return false;
         };
-        
+
         var iconButton = new IconButton({
             type: "toggle",
             element: $("fbFirebugButton"),
-            
+
             onClick: testMenuClick
         });
-        
+
         iconButton.initialize();
-        
+
         //addEvent($("fbToolbarIcon"), "click", testMenuClick);
     },
-    
+
     initialize: function()
     {
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -10060,69 +10062,69 @@ append(ChromeBase,
                   "A new bookmarklet version is available. " +
                   "Please visit http://getfirebug.com/firebuglite#Install and update it."
                 ], Firebug.context, "warn");
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (Firebug.Console)
             Firebug.Console.flush();
-        
+
         if (Firebug.Trace)
             FBTrace.flush(Firebug.Trace);
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.chrome.initialize", "initializing chrome application");
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize inherited classes
         Controller.initialize.call(this);
         PanelBar.initialize.call(this);
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
-        
+
         fbTop = $("fbTop");
         fbContent = $("fbContent");
         fbContentStyle = fbContent.style;
         fbBottom = $("fbBottom");
         fbBtnInspect = $("fbBtnInspect");
-        
+
         fbToolbar = $("fbToolbar");
-      
+
         fbPanelBox1 = $("fbPanelBox1");
         fbPanelBox1Style = fbPanelBox1.style;
         fbPanelBox2 = $("fbPanelBox2");
         fbPanelBox2Style = fbPanelBox2.style;
         fbPanelBar2Box = $("fbPanelBar2Box");
         fbPanelBar2BoxStyle = fbPanelBar2Box.style;
-      
+
         fbHSplitter = $("fbHSplitter");
         fbVSplitter = $("fbVSplitter");
         fbVSplitterStyle = fbVSplitter.style;
-      
+
         fbPanel1 = $("fbPanel1");
         fbPanel1Style = fbPanel1.style;
         fbPanel2 = $("fbPanel2");
         fbPanel2Style = fbPanel2.style;
-      
+
         fbConsole = $("fbConsole");
         fbConsoleStyle = fbConsole.style;
         fbHTML = $("fbHTML");
-      
+
         fbCommandLine = $("fbCommandLine");
         fbLargeCommandLine = $("fbLargeCommandLine");
         fbLargeCommandButtons = $("fbLargeCommandButtons");
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
         topHeight = fbTop.offsetHeight;
         topPartialHeight = fbToolbar.offsetHeight;
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
+
         disableTextSelection($("fbToolbar"));
         disableTextSelection($("fbPanelBarBox"));
         disableTextSelection($("fbPanelBar1"));
         disableTextSelection($("fbPanelBar2"));
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
         if (isIE6 && Firebug.Selector)
@@ -10134,7 +10136,7 @@ append(ChromeBase,
                 a.setAttribute("href", "javascript:void(0)");
             }
         }
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // initialize all panels
         /*
@@ -10147,45 +10149,45 @@ append(ChromeBase,
             }
         }
         /**/
-        
+
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
-        
+
         if(Firebug.Inspector)
             this.inspectButton.initialize();
-        
+
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
-        
+
         this.addController(
-            [$("fbLargeCommandLineIcon"), "click", this.showLargeCommandLine]       
+            [$("fbLargeCommandLineIcon"), "click", this.showLargeCommandLine]
         );
-        
+
         // ************************************************************************************************
-        
+
         // Select the first registered panel
         // TODO: BUG IE7
         var self = this;
         setTimeout(function(){
             self.selectPanel(FirebugChrome.selectedPanelName);
-            
+
             if (FirebugChrome.selectedPanelName == "Console" && Firebug.CommandLine)
                 Firebug.chrome.focusCommandLine();
         },0);
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //this.draw();
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -10197,13 +10199,13 @@ append(ChromeBase,
         var onPanelMouseDown = function onPanelMouseDown(event)
         {
             //console.log("onPanelMouseDown", event.target || event.srcElement, event);
-            
+
             var target = event.target || event.srcElement;
-            
+
             if (FBL.isLeftClick(event))
             {
                 var editable = FBL.getAncestorByClass(target, "editable");
-                
+
                 // if an editable element has been clicked then start editing
                 if (editable)
                 {
@@ -10223,29 +10225,29 @@ append(ChromeBase,
                 FBL.cancelEvent(event);
             }
         };
-        
+
         Firebug.getElementPanel = function(element)
         {
             var panelNode = getAncestorByClass(element, "fbPanel");
             var id = panelNode.id.substr(2);
-            
+
             var panel = Firebug.chrome.panelMap[id];
-            
+
             if (!panel)
             {
                 if (Firebug.chrome.selectedPanel.sidePanelBar)
                     panel = Firebug.chrome.selectedPanel.sidePanelBar.panelMap[id];
             }
-            
+
             return panel;
         };
-        
-        
-        
+
+
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
+
         // TODO: xxxpedro port to Firebug
-        
+
         // Improved window key code event listener. Only one "keydown" event will be attached
         // to the window, and the onKeyCodeListen() function will delegate which listeners
         // should be called according to the event.keyCode fired.
@@ -10255,11 +10257,11 @@ append(ChromeBase,
             for (var keyCode in onKeyCodeListenersMap)
             {
                 var listeners = onKeyCodeListenersMap[keyCode];
-                
+
                 for (var i = 0, listener; listener = listeners[i]; i++)
                 {
                     var filter = listener.filter || FBL.noKeyModifiers;
-        
+
                     if (event.keyCode == keyCode && (!filter || filter(event)))
                     {
                         listener.listener();
@@ -10269,7 +10271,7 @@ append(ChromeBase,
                 }
             }
         };
-        
+
         addEvent(Firebug.chrome.document, "keydown", onKeyCodeListen);
 
         /**
@@ -10279,18 +10281,18 @@ append(ChromeBase,
         Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
         {
             var keyCode = KeyEvent["DOM_VK_"+key];
-            
+
             if (!onKeyCodeListenersMap[keyCode])
                 onKeyCodeListenersMap[keyCode] = [];
-            
+
             onKeyCodeListenersMap[keyCode].push({
                 filter: filter,
                 listener: listener
             });
-    
+
             return keyCode;
         };
-        
+
         /**
          * @name keyIgnore
          * @memberOf FBL.FirebugChrome
@@ -10300,11 +10302,11 @@ append(ChromeBase,
             onKeyCodeListenersMap[keyCode] = null;
             delete onKeyCodeListenersMap[keyCode];
         };
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
+
         /**/
-        // move to shutdown 
+        // move to shutdown
         //removeEvent(Firebug.chrome.document, "keydown", listener[0]);
 
 
@@ -10313,9 +10315,9 @@ append(ChromeBase,
         {
             if (!filter)
                 filter = FBL.noKeyModifiers;
-    
+
             var keyCode = KeyEvent["DOM_VK_"+key];
-    
+
             var fn = function fn(event)
             {
                 if (event.keyCode == keyCode && (!filter || filter(event)))
@@ -10325,19 +10327,19 @@ append(ChromeBase,
                     return false;
                 }
             }
-    
+
             addEvent(Firebug.chrome.document, "keydown", fn);
-            
+
             return [fn, capture];
         };
-        
+
         Firebug.chrome.keyIgnore = function(listener)
         {
             removeEvent(Firebug.chrome.document, "keydown", listener[0]);
         };
         /**/
-        
-        
+
+
         this.addController(
                 [fbPanel1, "mousedown", onPanelMouseDown],
                 [fbPanel2, "mousedown", onPanelMouseDown]
@@ -10349,54 +10351,54 @@ append(ChromeBase,
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
-        
+
+
         // menus can be used without domplate
         if (FBL.domplate)
             this.testMenu();
         /**/
-        
+
         //test XHR
         /*
         setTimeout(function(){
-        
+
         FBL.Ajax.request({url: "../content/firebug/boot.js"});
         FBL.Ajax.request({url: "../content/firebug/boot.js.invalid"});
-        
+
         },1000);
         /**/
     },
-    
+
     shutdown: function()
     {
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
-        
+
         if(Firebug.Inspector)
             this.inspectButton.shutdown();
-        
+
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
+
         // remove disableTextSelection event handlers
         restoreTextSelection($("fbToolbar"));
         restoreTextSelection($("fbPanelBarBox"));
         restoreTextSelection($("fbPanelBar1"));
         restoreTextSelection($("fbPanelBar2"));
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
         Controller.shutdown.call(this);
         PanelBar.shutdown.call(this);
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Remove the interface elements cache (this must happen after calling 
+        // Remove the interface elements cache (this must happen after calling
         // the shutdown method of all dependent components to avoid errors)
 
         fbTop = null;
@@ -10404,7 +10406,7 @@ append(ChromeBase,
         fbContentStyle = null;
         fbBottom = null;
         fbBtnInspect = null;
-        
+
         fbToolbar = null;
 
         fbPanelBox1 = null;
@@ -10413,32 +10415,32 @@ append(ChromeBase,
         fbPanelBox2Style = null;
         fbPanelBar2Box = null;
         fbPanelBar2BoxStyle = null;
-  
+
         fbHSplitter = null;
         fbVSplitter = null;
         fbVSplitterStyle = null;
-  
+
         fbPanel1 = null;
         fbPanel1Style = null;
         fbPanel2 = null;
-  
+
         fbConsole = null;
         fbConsoleStyle = null;
         fbHTML = null;
-  
+
         fbCommandLine = null;
         fbLargeCommandLine = null;
         fbLargeCommandButtons = null;
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
-        
+
         topHeight = null;
         topPartialHeight = null;
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     toggle: function(forceOpen, popup)
     {
         if(popup)
@@ -10451,58 +10453,58 @@ append(ChromeBase,
             {
                 var frame = FirebugChrome.chromeMap.frame;
                 frame.reattach();
-                
+
                 FirebugChrome.chromeMap.popup = null;
-                
+
                 frame.open();
-                
+
                 return;
             }
-                
+
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
-            
+
             var shouldOpen = forceOpen || !FirebugChrome.isOpen;
-            
+
             if(shouldOpen)
                this.open();
             else
                this.close();
-        }       
+        }
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     detach: function()
     {
         if(!FirebugChrome.chromeMap.popup)
-        {     
+        {
             createChromeWindow({type: "popup"});
         }
     },
-    
+
     reattach: function(oldChrome, newChrome)
     {
         Firebug.browser.window.Firebug = Firebug;
-        
+
         // chrome synchronization
         var newPanelMap = newChrome.panelMap;
         var oldPanelMap = oldChrome.panelMap;
-        
+
         var panel;
         for(var name in newPanelMap)
         {
             // TODO: xxxpedro innerHTML
-            panel = newPanelMap[name]; 
+            panel = newPanelMap[name];
             if (panel.options.innerHTMLSync)
                 panel.panelNode.innerHTML = oldPanelMap[name].panelNode.innerHTML;
         }
-        
+
         Firebug.chrome = newChrome;
-        
+
         // TODO: xxxpedro sync detach reattach attach
         //dispatch(Firebug.chrome.panelMap, "detach", [oldChrome, newChrome]);
-        
+
         if (newChrome.type == "popup")
         {
             newChrome.initialize();
@@ -10512,38 +10514,38 @@ append(ChromeBase,
         {
             // TODO: xxxpedro only needed in persistent
             // should use FirebugChrome.clone, but popup FBChrome
-            // isn't acessible 
+            // isn't acessible
             FirebugChrome.selectedPanelName = oldChrome.selectedPanel.name;
         }
-        
+
         dispatch(newPanelMap, "reattach", [oldChrome, newChrome]);
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
     draw: function()
     {
         var size = this.getSize();
-        
+
         // Height related values
         var commandLineHeight = Firebug.chrome.commandLineVisible ? fbCommandLine.offsetHeight : 0,
-            
+
             y = Math.max(size.height /* chrome height */, topHeight),
-            
-            heightValue = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0), 
-            
+
+            heightValue = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0),
+
             height = heightValue + "px",
-            
+
             // Width related values
             sideWidthValue = Firebug.chrome.sidePanelVisible ? FirebugChrome.sidePanelWidth : 0,
-            
+
             width = Math.max(size.width /* chrome width */ - sideWidthValue, 0) + "px";
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Height related rendering
         fbPanelBox1Style.height = height;
         fbPanel1Style.height = height;
-        
+
         if (isIE || isOpera)
         {
             // Fix IE and Opera problems with auto resizing the verticall splitter
@@ -10556,30 +10558,30 @@ append(ChromeBase,
             // Fix Firefox problem with table rows with 100% height (fit height)
             fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
         }/**/
-        
+
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Width related rendering
         fbPanelBox1Style.width = width;
         fbPanel1Style.width = width;
-        
+
         // SidePanel rendering
         if (Firebug.chrome.sidePanelVisible)
         {
             sideWidthValue = Math.max(sideWidthValue - 6, 0);
-            
+
             var sideWidth = sideWidthValue + "px";
-            
+
             fbPanelBox2Style.width = sideWidth;
-            
+
             fbVSplitterStyle.right = sideWidth;
-            
+
             if (Firebug.chrome.largeCommandLineVisible)
             {
                 fbLargeCommandLine = $("fbLargeCommandLine");
-                
+
                 fbLargeCommandLine.style.height = heightValue - 4 + "px";
                 fbLargeCommandLine.style.width = sideWidthValue - 2 + "px";
-                
+
                 fbLargeCommandButtons = $("fbLargeCommandButtons");
                 fbLargeCommandButtons.style.width = sideWidth;
             }
@@ -10587,14 +10589,14 @@ append(ChromeBase,
             {
                 fbPanel2Style.height = height;
                 fbPanel2Style.width = sideWidth;
-                
+
                 fbPanelBar2BoxStyle.width = sideWidth;
             }
         }
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     getSize: function()
     {
         return this.type == "div" ?
@@ -10605,114 +10607,114 @@ append(ChromeBase,
             :
             this.getWindowSize();
     },
-    
+
     resize: function()
     {
         var self = this;
-        
+
         // avoid partial resize when maximizing window
         setTimeout(function(){
             self.draw();
-            
+
             if (noFixedPosition && (self.type == "frame" || self.type == "div"))
                 self.fixIEPosition();
         }, 0);
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     layout: function(panel)
     {
         if (FBTrace.DBG_CHROME) FBTrace.sysout("Chrome.layout", "");
-        
+
         var options = panel.options;
-        
+
         changeCommandLineVisibility(options.hasCommandLine);
         changeSidePanelVisibility(panel.hasSidePanel);
-        
+
         Firebug.chrome.draw();
     },
-    
+
     showLargeCommandLine: function(hideToggleIcon)
     {
         var chrome = Firebug.chrome;
-        
+
         if (!chrome.largeCommandLineVisible)
         {
             chrome.largeCommandLineVisible = true;
-            
+
             if (chrome.selectedPanel.options.hasCommandLine)
             {
                 if (Firebug.CommandLine)
                     Firebug.CommandLine.blur();
-                
+
                 changeCommandLineVisibility(false);
             }
-            
+
             changeSidePanelVisibility(true);
-            
+
             fbLargeCommandLine.style.display = "block";
             fbLargeCommandButtons.style.display = "block";
-            
+
             fbPanel2Style.display = "none";
             fbPanelBar2BoxStyle.display = "none";
-            
+
             chrome.draw();
-            
+
             fbLargeCommandLine.focus();
-            
+
             if (Firebug.CommandLine)
                 Firebug.CommandLine.setMultiLine(true);
         }
     },
-    
+
     hideLargeCommandLine: function()
     {
         if (Firebug.chrome.largeCommandLineVisible)
         {
             Firebug.chrome.largeCommandLineVisible = false;
-            
+
             if (Firebug.CommandLine)
                 Firebug.CommandLine.setMultiLine(false);
-            
+
             fbLargeCommandLine.blur();
-            
+
             fbPanel2Style.display = "block";
             fbPanelBar2BoxStyle.display = "block";
-            
+
             fbLargeCommandLine.style.display = "none";
-            fbLargeCommandButtons.style.display = "none";            
-            
+            fbLargeCommandButtons.style.display = "none";
+
             changeSidePanelVisibility(false);
-            
+
             if (Firebug.chrome.selectedPanel.options.hasCommandLine)
                 changeCommandLineVisibility(true);
-            
+
             Firebug.chrome.draw();
-            
+
         }
-    },    
-    
+    },
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     focusCommandLine: function()
     {
         var selectedPanelName = this.selectedPanel.name, panelToSelect;
-        
+
         if (focusCommandLineState == 0 || selectedPanelName != "Console")
         {
             focusCommandLineState = 0;
             lastFocusedPanelName = selectedPanelName;
-            
+
             panelToSelect = "Console";
         }
         if (focusCommandLineState == 1)
         {
             panelToSelect = lastFocusedPanelName;
         }
-        
+
         this.selectPanel(panelToSelect);
-        
+
         try
         {
             if (Firebug.CommandLine)
@@ -10727,10 +10729,10 @@ append(ChromeBase,
         {
             //TODO: xxxpedro trace error
         }
-        
+
         focusCommandLineState = ++focusCommandLineState % 2;
     }
-    
+
 });
 
 // ************************************************************************************************
@@ -10738,139 +10740,142 @@ append(ChromeBase,
 
 /**
  * @namespace
- * @extends ns-chrome-ChromeBase 
- */ 
+ * @extends ns-chrome-ChromeBase
+ */
 var ChromeFrameBase = extend(ChromeBase,
 /**@extend ns-chrome-ChromeFrameBase*/
 {
     create: function()
     {
         ChromeBase.create.call(this);
-        
+
         // restore display for the anti-flicker trick
         if (isFirefox)
             this.node.style.display = "block";
-        
+
         if (Env.Options.startInNewWindow)
         {
             this.close();
             this.toggle(true, true);
             return;
         }
-        
+
         if (Env.Options.startOpened)
             this.open();
         else
             this.close();
     },
-    
+
     destroy: function()
     {
         removeGlobalEvent("keydown", onGlobalKeyDown);
-        
+
         ChromeBase.destroy.call(this);
-        
+
         this.document = null;
         delete this.document;
-        
+
         this.window = null;
         delete this.window;
-        
+
         this.node.parentNode.removeChild(this.node);
         this.node = null;
         delete this.node;
     },
-    
+
     initialize: function()
     {
         //FBTrace.sysout("Frame", "initialize();")
         ChromeBase.initialize.call(this);
-        
+
         this.addController(
             [Firebug.browser.window, "resize", this.resize],
             [$("fbWindow_btClose"), "click", this.close],
-            [$("fbWindow_btDetach"), "click", this.detach],       
-            [$("fbWindow_btDeactivate"), "click", this.deactivate]       
+            [$("fbWindow_btDetach"), "click", this.detach],
+            [$("fbWindow_btDeactivate"), "click", this.deactivate]
         );
-        
+
         if (!Env.Options.enablePersistent)
             this.addController([Firebug.browser.window, "unload", Firebug.shutdown]);
-        
+
         if (noFixedPosition)
         {
             this.addController(
                 [Firebug.browser.window, "scroll", this.fixIEPosition]
             );
         }
-        
+
         fbVSplitter.onmousedown = onVSplitterMouseDown;
         fbHSplitter.onmousedown = onHSplitterMouseDown;
-        
+
         this.isInitialized = true;
     },
-    
+
     shutdown: function()
     {
         fbVSplitter.onmousedown = null;
         fbHSplitter.onmousedown = null;
-        
+
         ChromeBase.shutdown.apply(this);
-        
+
         this.isInitialized = false;
     },
-    
+
     reattach: function()
     {
         var frame = FirebugChrome.chromeMap.frame;
-        
+
         ChromeBase.reattach(FirebugChrome.chromeMap.popup, this);
     },
-    
+
     open: function()
     {
         if (!FirebugChrome.isOpen)
         {
             FirebugChrome.isOpen = true;
-            
+
             if (Env.isChromeExtension)
                 localStorage.setItem("Firebug", "1,1");
-            
+
             var node = this.node;
-            
+
             node.style.visibility = "hidden"; // Avoid flickering
-            
+
             if (Firebug.showIconWhenHidden)
             {
                 if (ChromeMini.isInitialized)
                 {
                     ChromeMini.shutdown();
                 }
-                
+
             }
             else
                 node.style.display = "block";
-            
+
             var main = $("fbChrome");
-            main.style.display = "table";
-            
+
+            // IE6 throws an error when setting this property! why?
+            //main.style.display = "table";
+            main.style.display = "";
+
             var self = this;
                 /// TODO: xxxpedro FOUC
                 node.style.visibility = "visible";
             setTimeout(function(){
                 ///node.style.visibility = "visible";
-                
+
                 //dispatch(Firebug.modules, "initialize", []);
                 self.initialize();
-                
+
                 if (noFixedPosition)
                     self.fixIEPosition();
-                
+
                 self.draw();
-        
+
             }, 10);
         }
     },
-    
+
     close: function()
     {
         if (FirebugChrome.isOpen || !this.isInitialized)
@@ -10880,68 +10885,75 @@ var ChromeFrameBase = extend(ChromeBase,
                 //dispatch(Firebug.modules, "shutdown", []);
                 this.shutdown();
             }
-            
+
             FirebugChrome.isOpen = false;
-            
+
             if (Env.isChromeExtension)
                 localStorage.setItem("Firebug", "1,0");
-            
+
             var node = this.node;
-            
+
             if (Firebug.showIconWhenHidden)
             {
                 node.style.visibility = "hidden"; // Avoid flickering
-                
-                // TODO: xxxpedro - persist IE fixed? 
+
+                // TODO: xxxpedro - persist IE fixed?
                 var main = $("fbChrome", FirebugChrome.chromeMap.frame.document);
                 main.style.display = "none";
-                        
+
                 ChromeMini.initialize();
-                
+
                 node.style.visibility = "visible";
             }
             else
                 node.style.display = "none";
         }
     },
-    
+
     deactivate: function()
     {
-        Firebug.shutdown();
-        
-        // if it is running as a Chrome extension, dispatch a message to the extension signaling 
+        // if it is running as a Chrome extension, dispatch a message to the extension signaling
         // that Firebug should be deactivated for the current tab
         if (Env.isChromeExtension)
         {
             localStorage.removeItem("Firebug");
-            chromeExtensionDispatch("FB_deactivate");
+            Firebug.GoogleChrome.dispatch("FB_deactivate");
+
+            // xxxpedro problem here regarding Chrome extension. We can't deactivate the whole
+            // app, otherwise it won't be able to be reactivated without reloading the page.
+            // but we need to stop listening global keys, otherwise the key activation won't work.
+            Firebug.chrome.close();
+        }
+        else
+        {
+            Firebug.shutdown();
         }
     },
-    
+
     fixIEPosition: function()
     {
         // fix IE problem with offset when not in fullscreen mode
         var doc = this.document;
         var offset = isIE ? doc.body.clientTop || doc.documentElement.clientTop: 0;
-        
+
         var size = Firebug.browser.getWindowSize();
         var scroll = Firebug.browser.getWindowScrollPosition();
         var maxHeight = size.height;
         var height = this.node.offsetHeight;
-        
+
         var bodyStyle = doc.body.currentStyle;
-        
+
         this.node.style.top = maxHeight - height + scroll.top + "px";
-        
-        if ((this.type == "frame" || this.type == "div") && 
+
+        if ((this.type == "frame" || this.type == "div") &&
             (bodyStyle.marginLeft || bodyStyle.marginRight))
         {
             this.node.style.width = size.width + "px";
         }
-        
+
         if (fbVSplitterStyle)
             fbVSplitterStyle.right = FirebugChrome.sidePanelWidth + "px";
-        
+
         this.draw();
     }
 
@@ -10954,39 +10966,39 @@ var ChromeFrameBase = extend(ChromeBase,
 /**
  * @namespace
  * @extends FBL.Controller
- */  
+ */
 var ChromeMini = extend(Controller,
-/**@extend ns-chrome-ChromeMini*/ 
+/**@extend ns-chrome-ChromeMini*/
 {
     create: function(chrome)
     {
         append(this, chrome);
         this.type = "mini";
     },
-    
+
     initialize: function()
     {
         Controller.initialize.apply(this);
-        
+
         var doc = FirebugChrome.chromeMap.frame.document;
-        
+
         var mini = $("fbMiniChrome", doc);
         mini.style.display = "block";
-        
+
         var miniIcon = $("fbMiniIcon", doc);
         var width = miniIcon.offsetWidth + 10;
         miniIcon.title = "Open " + Firebug.version;
-        
+
         var errors = $("fbMiniErrors", doc);
         if (errors.offsetWidth)
             width += errors.offsetWidth + 10;
-        
+
         var node = this.node;
         node.style.height = "27px";
         node.style.width = width + "px";
         node.style.left = "";
         node.style.right = 0;
-        
+
         if (this.node.nodeName.toLowerCase() == "iframe")
         {
             node.setAttribute("allowTransparency", "true");
@@ -10997,21 +11009,21 @@ var ChromeMini = extend(Controller,
 
         if (noFixedPosition)
             this.fixIEPosition();
-        
+
         this.addController(
-            [$("fbMiniIcon", doc), "click", onMiniIconClick]       
+            [$("fbMiniIcon", doc), "click", onMiniIconClick]
         );
-        
+
         if (noFixedPosition)
         {
             this.addController(
                 [Firebug.browser.window, "scroll", this.fixIEPosition]
             );
         }
-        
+
         this.isInitialized = true;
     },
-    
+
     shutdown: function()
     {
         var node = this.node;
@@ -11019,7 +11031,7 @@ var ChromeMini = extend(Controller,
         node.style.width = "100%";
         node.style.left = 0;
         node.style.right = "";
-        
+
         if (this.node.nodeName.toLowerCase() == "iframe")
         {
             node.setAttribute("allowTransparency", "false");
@@ -11027,27 +11039,27 @@ var ChromeMini = extend(Controller,
         }
         else
             node.style.background = "#fff";
-        
+
         if (noFixedPosition)
             this.fixIEPosition();
-        
+
         var doc = FirebugChrome.chromeMap.frame.document;
-        
+
         var mini = $("fbMiniChrome", doc);
         mini.style.display = "none";
-        
+
         Controller.shutdown.apply(this);
-        
+
         this.isInitialized = false;
     },
-    
+
     draw: function()
     {
-    
+
     },
-    
+
     fixIEPosition: ChromeFrameBase.fixIEPosition
-    
+
 });
 
 
@@ -11057,22 +11069,22 @@ var ChromeMini = extend(Controller,
 /**
  * @namespace
  * @extends ns-chrome-ChromeBase
- */  
+ */
 var ChromePopupBase = extend(ChromeBase,
 /**@extend ns-chrome-ChromePopupBase*/
 {
-    
+
     initialize: function()
     {
         setClass(this.document.body, "FirebugPopup");
-        
+
         ChromeBase.initialize.call(this);
-        
+
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
             [Firebug.chrome.window, "unload", this.destroy]
         );
-        
+
         if (Env.Options.enablePersistent)
         {
             this.persist = bind(this.persist, this);
@@ -11082,79 +11094,85 @@ var ChromePopupBase = extend(ChromeBase,
             this.addController(
                 [Firebug.browser.window, "unload", this.close]
             );
-        
+
         fbVSplitter.onmousedown = onVSplitterMouseDown;
     },
-    
+
     destroy: function()
     {
         // TODO: xxxpedro sync detach reattach attach
         var frame = FirebugChrome.chromeMap.frame;
-        
+
         if(frame)
         {
             dispatch(frame.panelMap, "detach", [this, frame]);
-            
+
             frame.reattach(this, frame);
         }
-        
+
         if (Env.Options.enablePersistent)
         {
             removeEvent(Firebug.browser.window, "unload", this.persist);
         }
-        
+
         ChromeBase.destroy.apply(this);
-        
+
         FirebugChrome.chromeMap.popup = null;
-        
+
         this.node.close();
     },
-    
+
     persist: function()
     {
         persistTimeStart = new Date().getTime();
-        
+
         removeEvent(Firebug.browser.window, "unload", this.persist);
-        
+
         Firebug.Inspector.destroy();
         Firebug.browser.window.FirebugOldBrowser = true;
-        
+
         var persistTimeStart = new Date().getTime();
-        
+
         var waitMainWindow = function()
         {
             var doc, head;
-        
+
             try
             {
-                if (window.opener && !window.opener.FirebugOldBrowser && (doc = window.opener.document)/* && 
+                if (window.opener && !window.opener.FirebugOldBrowser && (doc = window.opener.document)/* &&
                     doc.documentElement && (head = doc.documentElement.firstChild)*/)
                 {
-                    
+
                     try
                     {
+                        // exposes the FBL to the global namespace when in debug mode
+                        if (Env.isDebugMode)
+                        {
+                            window.FBL = FBL;
+                        }
+
                         window.Firebug = Firebug;
                         window.opener.Firebug = Firebug;
-                
+
                         Env.browser = window.opener;
                         Firebug.browser = Firebug.context = new Context(Env.browser);
-                
+
                         registerConsole();
-                
-                        // the delay time should be calculated right after registering the 
+
+                        // the delay time should be calculated right after registering the
                         // console, once right after the console registration, call log messages
                         // will be properly handled
                         var persistDelay = new Date().getTime() - persistTimeStart;
-                
+
                         var chrome = Firebug.chrome;
                         addEvent(Firebug.browser.window, "unload", chrome.persist);
-                
+
                         FBL.cacheDocument();
                         Firebug.Inspector.create();
-                
+
                         var htmlPanel = chrome.getPanel("HTML");
                         htmlPanel.createUI();
-                        
+
                         Firebug.Console.logFormatted(
                             ["Firebug could not capture console calls during " +
                             persistDelay + "ms"],
@@ -11166,21 +11184,21 @@ var ChromePopupBase = extend(ChromeBase,
                     {
                         alert("persist error: " + (pE.message || pE));
                     }
-                    
+
                 }
                 else
                 {
                     window.setTimeout(waitMainWindow, 0);
                 }
-            
+
             } catch (E) {
                 window.close();
             }
         };
-        
-        waitMainWindow();    
+
+        waitMainWindow();
     },
-    
+
     close: function()
     {
         this.destroy();
@@ -11195,15 +11213,15 @@ var ChromePopupBase = extend(ChromeBase,
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
     var last = Firebug.chrome.commandLineVisible;
-    var visible = Firebug.chrome.commandLineVisible =  
+    var visible = Firebug.chrome.commandLineVisible =
         typeof visibility == "boolean" ? visibility : !Firebug.chrome.commandLineVisible;
-    
+
     if (visible != last)
     {
         if (visible)
         {
             fbBottom.className = "";
-            
+
             if (Firebug.CommandLine)
                 Firebug.CommandLine.activate();
         }
@@ -11211,7 +11229,7 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
         {
             if (Firebug.CommandLine)
                 Firebug.CommandLine.deactivate();
-            
+
             fbBottom.className = "hide";
         }
     }
@@ -11220,12 +11238,12 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
 var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 {
     var last = Firebug.chrome.sidePanelVisible;
-    Firebug.chrome.sidePanelVisible =  
+    Firebug.chrome.sidePanelVisible =
         typeof visibility == "boolean" ? visibility : !Firebug.chrome.sidePanelVisible;
-    
+
     if (Firebug.chrome.sidePanelVisible != last)
     {
-        fbPanelBox2.className = Firebug.chrome.sidePanelVisible ? "" : "hide"; 
+        fbPanelBox2.className = Firebug.chrome.sidePanelVisible ? "" : "hide";
         fbPanelBar2Box.className = Firebug.chrome.sidePanelVisible ? "" : "hide";
     }
 };
@@ -11239,11 +11257,18 @@ var onGlobalKeyDown = function onGlobalKeyDown(event)
     var keyCode = event.keyCode;
     var shiftKey = event.shiftKey;
     var ctrlKey = event.ctrlKey;
-    
+
     if (keyCode == 123 /* F12 */ && (!isFirefox && !shiftKey || shiftKey && isFirefox))
     {
         Firebug.chrome.toggle(false, ctrlKey);
         cancelEvent(event, true);
+
+        // TODO: xxxpedro replace with a better solution. we're doing this
+        // to allow reactivating with the F12 key after being deactivated
+        if (Env.isChromeExtension)
+        {
+            Firebug.GoogleChrome.dispatch("FB_enableIcon");
+        }
     }
     else if (keyCode == 67 /* C */ && ctrlKey && shiftKey)
     {
@@ -11271,27 +11296,27 @@ var onHSplitterMouseDown = function onHSplitterMouseDown(event)
 {
     addGlobalEvent("mousemove", onHSplitterMouseMove);
     addGlobalEvent("mouseup", onHSplitterMouseUp);
-    
+
     if (isIE)
         addEvent(Firebug.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
-    
+
     fbHSplitter.className = "fbOnMovingHSplitter";
-    
+
     return false;
 };
 
 var onHSplitterMouseMove = function onHSplitterMouseMove(event)
 {
     cancelEvent(event, true);
-    
+
     var clientY = event.clientY;
     var win = isIE
         ? event.srcElement.ownerDocument.parentWindow
         : event.target.ownerDocument && event.target.ownerDocument.defaultView;
-    
+
     if (!win)
         return;
-    
+
     if (win != win.parent)
     {
         var frameElement = win.frameElement;
@@ -11299,12 +11324,12 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
         {
             var framePos = Firebug.browser.getElementPosition(frameElement).top;
             clientY += framePos;
-            
+
             if (frameElement.style.position != "fixed")
                 clientY -= Firebug.browser.getWindowScrollPosition().top;
         }
     }
-    
+
     if (isOpera && isQuiksMode && win.frameElement.id == "FirebugUI")
     {
         clientY = Firebug.browser.getWindowSize().height - win.frameElement.offsetHeight + clientY;
@@ -11316,9 +11341,9 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
             event.target,
             clientY
         );/**/
-    
+
     onHSplitterMouseMoveBuffer = clientY; // buffer
-    
+
     if (new Date().getTime() - lastHSplitterMouseMove > chromeRedrawSkipRate) // frame skipping
     {
         lastHSplitterMouseMove = new Date().getTime();
@@ -11327,7 +11352,7 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
     else
         if (!onHSplitterMouseMoveTimer)
             onHSplitterMouseMoveTimer = setTimeout(handleHSplitterMouseMove, chromeRedrawSkipRate);
-    
+
     // improving the resizing performance by canceling the mouse event.
     // canceling events will prevent the page to receive such events, which would imply
     // in more processing being expended.
@@ -11342,32 +11367,32 @@ var handleHSplitterMouseMove = function()
         clearTimeout(onHSplitterMouseMoveTimer);
         onHSplitterMouseMoveTimer = null;
     }
-    
+
     var clientY = onHSplitterMouseMoveBuffer;
-    
+
     var windowSize = Firebug.browser.getWindowSize();
     var scrollSize = Firebug.browser.getWindowScrollSize();
-    
+
     // compute chrome fixed size (top bar and command line)
     var commandLineHeight = Firebug.chrome.commandLineVisible ? fbCommandLine.offsetHeight : 0;
     var fixedHeight = topHeight + commandLineHeight;
     var chromeNode = Firebug.chrome.node;
-    
+
     var scrollbarSize = !isIE && (scrollSize.width > windowSize.width) ? 17 : 0;
-    
+
     //var height = !isOpera ? chromeNode.offsetTop + chromeNode.clientHeight : windowSize.height;
     var height =  windowSize.height;
-    
+
     // compute the min and max size of the chrome
     var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
         chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
 
     FirebugChrome.height = chromeHeight;
     chromeNode.style.height = chromeHeight + "px";
-    
+
     if (noFixedPosition)
         Firebug.chrome.fixIEPosition();
-    
+
     Firebug.chrome.draw();
 };
 
@@ -11375,14 +11400,14 @@ var onHSplitterMouseUp = function onHSplitterMouseUp(event)
 {
     removeGlobalEvent("mousemove", onHSplitterMouseMove);
     removeGlobalEvent("mouseup", onHSplitterMouseUp);
-    
+
     if (isIE)
         removeEvent(Firebug.browser.document.documentElement, "mouseleave", onHSplitterMouseUp);
-    
+
     fbHSplitter.className = "";
-    
+
     Firebug.chrome.draw();
-    
+
     // avoid text selection in IE when returning to the document
     // after the mouse leaves the document during the resizing
     return false;
@@ -11396,7 +11421,7 @@ var onVSplitterMouseDown = function onVSplitterMouseDown(event)
 {
     addGlobalEvent("mousemove", onVSplitterMouseMove);
     addGlobalEvent("mouseup", onVSplitterMouseUp);
-    
+
     return false;
 };
 
@@ -11411,20 +11436,20 @@ var onVSplitterMouseMove = function onVSplitterMouseMove(event)
             var win = document.all
                 ? event.srcElement.ownerDocument.parentWindow
                 : event.target.ownerDocument.defaultView;
-          
+
             if (win != win.parent)
                 clientX += win.frameElement ? win.frameElement.offsetLeft : 0;
-            
+
             var size = Firebug.chrome.getSize();
             var x = Math.max(size.width - clientX + 3, 6);
-            
+
             FirebugChrome.sidePanelWidth = x;
             Firebug.chrome.draw();
         }
-        
+
         lastVSplitterMouseMove = new Date().getTime();
     }
-    
+
     cancelEvent(event, true);
     return false;
 };
@@ -11433,1590 +11458,13 @@ var onVSplitterMouseUp = function onVSplitterMouseUp(event)
 {
     removeGlobalEvent("mousemove", onVSplitterMouseMove);
     removeGlobalEvent("mouseup", onVSplitterMouseUp);
-    
+
     Firebug.chrome.draw();
 };
 
 
 // ************************************************************************************************
 }});
-
-/* See license.txt for terms of usage */
-
-FBL.ns(function() { with (FBL) {
-
-// ************************************************************************************************
-// Constants
-
-var throttleTimeWindow = 200;
-var throttleMessageLimit = 30;
-var throttleInterval = 30;
-var throttleFlushCount = 20;
-
-var refreshDelay = 300;
-
-// ************************************************************************************************
-
-Firebug.TabContext = function(win, browser, chrome, persistedState)
-{
-    this.window = win;
-    this.browser = browser;
-    this.persistedState = persistedState;
-
-    /// TODO: xxxpedro context
-    ///browser.__defineGetter__("chrome", function() { return Firebug.chrome; }); // backward compat
-
-    this.name = normalizeURL(this.getWindowLocation().toString());
-
-    this.windows = [];
-    this.panelMap = {};
-    this.sidePanelNames = {};
-    this.sourceFileMap = {};
-
-    // New nsITraceableChannel interface (introduced in FF3.0.4) makes possible
-    // to re-implement source-cache so, it solves the double-load problem.
-    // Anyway, keep the previous cache implementation for backward compatibility
-    // (with Firefox 3.0.3 and lower)
-    
-    /// TODO: xxxpedro context cache tabcache
-    this.sourceCache = new Firebug.SourceCache(this);
-    ///if (Components.interfaces.nsITraceableChannel)
-    ///    this.sourceCache = new Firebug.TabCache(this);
-    ///else
-    ///    this.sourceCache = new Firebug.SourceCache(this);
-
-    this.global = win;  // used by chromebug
-};
-
-Firebug.TabContext.prototype =
-{
-    getWindowLocation: function()
-    {
-        return safeGetWindowLocation(this.window);
-    },
-
-    getTitle: function()
-    {
-        if (this.window && this.window.document)
-            return this.window.document.title;
-        else
-            return "";
-    },
-
-    getName: function()
-    {
-        if (!this.name || this.name === "about:blank")
-        {
-            var url = this.getWindowLocation().toString();
-            if (isDataURL(url))
-            {
-                var props = splitDataURL(url);
-                if (props.fileName)
-                     this.name = "data url from "+props.fileName;
-            }
-            else
-            {
-                this.name = normalizeURL(url);
-                if (this.name === "about:blank" && this.window.frameElement)
-                    this.name += " in "+getElementCSSSelector(this.window.frameElement);
-            }
-        }
-        return this.name;
-    },
-
-    getGlobalScope: function()
-    {
-        return this.window;
-    },
-
-    addSourceFile: function(sourceFile)
-    {
-        this.sourceFileMap[sourceFile.href] = sourceFile;
-        sourceFile.context = this;
-
-        Firebug.onSourceFileCreated(this, sourceFile);
-    },
-
-    removeSourceFile: function(sourceFile)
-    {
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("tabContext.removeSourceFile "+sourceFile.href+" in context "+sourceFile.context.getName());
-
-        delete this.sourceFileMap[sourceFile.href];
-        delete sourceFile.context;
-
-        // ?? Firebug.onSourceFileDestroyed(this, sourceFile);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    /// TODO: xxxpedro context
-    ///get chrome()  // backward compat
-    ///{
-    ///    return Firebug.chrome;
-    ///},
-    
-    reattach: function(oldChrome, newChrome)
-    {
-        for (var panelName in this.panelMap)
-        {
-            var panel = this.panelMap[panelName];
-            panel.detach(oldChrome, newChrome);
-            panel.invalid = true;// this will cause reattach on next use
-
-            var panelNode = panel.panelNode;  // delete panel content
-            if (panelNode && panelNode.parentNode)
-                panelNode.parentNode.removeChild(panelNode);
-        }
-    },
-
-    destroy: function(state)
-    {
-        // All existing timeouts need to be cleared
-        if (this.timeouts)
-        {
-            for (var timeout in this.timeouts)
-                clearTimeout(timeout);
-        }
-
-        // Also all waiting intervals must be cleared.
-        if (this.intervals)
-        {
-            for (var timeout in this.intervals)
-                clearInterval(timeout);
-        }
-
-        if (this.throttleTimeout)
-            clearTimeout(this.throttleTimeout);
-
-        state.panelState = {};
-
-        // Inherit panelStates that have not been restored yet
-        if (this.persistedState)
-        {
-            for (var panelName in this.persistedState.panelState)
-                state.panelState[panelName] = this.persistedState.panelState[panelName];
-        }
-
-        // Destroy all panels in this context.
-        for (var panelName in this.panelMap)
-        {
-            var panelType = Firebug.getPanelType(panelName);
-            this.destroyPanel(panelType, state);
-        }
-
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("tabContext.destroy "+this.getName()+" set state ", state);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    initPanelTypes: function()
-    {
-        if (!this.panelTypes)
-        {
-            this.panelTypes = [];
-            this.panelTypeMap = {};
-        }
-    },
-
-    addPanelType: function(url, title, parentPanel)
-    {
-        url = absoluteURL(url, this.window.location.href);
-        if (!url)
-        {
-            // XXXjoe Need some kind of notification to console that URL is invalid
-            throw("addPanelType: url is invalid!");
-            return;
-        }
-
-        this.initPanelTypes();
-
-        var name = createPanelName(url);
-        while (name in this.panelTypeMap)
-            name += "_";
-
-        var panelType = createPanelType(name, url, title, parentPanel);
-
-        this.panelTypes.push(panelType);
-        this.panelTypeMap[name] = panelType;
-
-        return panelType;
-    },
-
-    addPanelTypeConstructor: function(panelType)
-    {
-        this.initPanelTypes();
-        this.panelTypes.push(panelType);
-        var name = panelType.prototype.name;
-        this.panelTypeMap[name] = panelType;
-    },
-
-    removePanelType: function(url)
-    {
-        // NYI
-    },
-
-    getPanel: function(panelName, noCreate)
-    {
-        // Get "global" panelType, registered using Firebug.registerPanel
-        var panelType = Firebug.getPanelType(panelName);
-
-        // The panelType cane be "local", available only within the context.
-        if (!panelType && this.panelTypeMap)
-            panelType = this.panelTypeMap[panelName];
-
-        if (!panelType)
-            return null;
-
-        var enabled = panelType.prototype.isEnabled ? panelType.prototype.isEnabled() : true;
-
-        // Create instance of the panelType only if it's enabled.
-        if (enabled)
-            return this.getPanelByType(panelType, noCreate);
-
-        return null;
-    },
-
-    getPanelByType: function(panelType, noCreate)
-    {
-        if (!panelType || !this.panelMap)
-            return null;
-
-        var panelName = panelType.prototype.name;
-        if ( this.panelMap.hasOwnProperty(panelName) )
-        {
-            var panel = this.panelMap[panelName];
-            //if (FBTrace.DBG_PANELS)
-            //    FBTrace.sysout("tabContext.getPanelByType panel in panelMap, .invalid="+panel.invalid+"\n");
-            if (panel.invalid)
-            {
-                var doc = this.chrome.getPanelDocument(panelType);
-                panel.reattach(doc);
-                delete panel.invalid;
-            }
-
-            return panel;
-        }
-        else if (!noCreate)
-        {
-            return this.createPanel(panelType);
-        }
-    },
-
-    eachPanelInContext: function(callback)
-    {
-        for (var panelName in this.panelMap)
-        {
-            if (this.panelMap.hasOwnProperty(panelName))
-            {
-                var panel = this.panelMap[panelName];
-                var rc = callback(panel);
-                if (rc)
-                    return rc;
-            }
-        }
-    },
-
-    createPanel: function(panelType)
-    {
-        // Instantiate a panel object. This is why panels are defined by prototype inheritance
-        var panel = new panelType();
-        this.panelMap[panel.name] = panel;
-
-        if (FBTrace.DBG_PANELS)
-            FBTrace.sysout("tabContext.createPanel; Panel created: " + panel.name, panel);
-
-        dispatch(Firebug.modules, "onCreatePanel", [this, panel, panelType]);
-
-        // Initialize panel and associate with a document.
-        if (panel.parentPanel) // then this new panel is a side panel
-        {
-            panel.mainPanel = this.panelMap[panel.parentPanel];
-            panel.mainPanel.addListener(panel); // wire the side panel to get UI events from the main panel
-        }
-            
-        var doc = this.chrome.getPanelDocument(panelType);
-        panel.initialize(this, doc);
-
-        return panel;
-    },
-
-    destroyPanel: function(panelType, state)
-    {
-        var panelName = panelType.prototype.name;
-        var panel = this.panelMap[panelName];
-        if (!panel)
-            return;
-
-        // Create an object to persist state, re-using old one if it was never restored
-        var panelState = panelName in state.panelState ? state.panelState[panelName] : {};
-        state.panelState[panelName] = panelState;
-
-        try
-        {
-            // Destroy the panel and allow it to persist extra info to the state object
-            var dontRemove = panel.destroy(panelState);
-            delete this.panelMap[panelName];
-
-            if (dontRemove)
-                return;
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("tabContext.destroy FAILS "+exc, exc);
-
-            // the destroy failed, don't keep the bad state
-            delete state.panelState[panelName];
-        }
-
-        // Remove the panel node from the DOM and so delet its content.
-        var panelNode = panel.panelNode;
-        if (panelNode && panelNode.parentNode)
-            panelNode.parentNode.removeChild(panelNode);
-    },
-
-    setPanel: function(panelName, panel)  // allows a panel from one context to be used in other contexts.
-    {
-        if (panel)
-            this.panelMap[panelName] = panel;
-        else
-            delete this.panelMap[panelName];
-    },
-
-    invalidatePanels: function()
-    {
-        if (!this.invalidPanels)
-            this.invalidPanels = {};
-
-        for (var i = 0; i < arguments.length; ++i)
-        {
-            var panelName = arguments[i];
-            var panel = this.getPanel(panelName, true);
-            if (panel && !panel.noRefresh)
-                this.invalidPanels[panelName] = 1;
-        }
-
-        if (this.refreshTimeout)
-        {
-            this.clearTimeout(this.refreshTimeout);
-            delete this.refreshTimeout;
-        }
-
-        this.refreshTimeout = this.setTimeout(bindFixed(function()
-        {
-            var invalids = [];
-
-            for (var panelName in this.invalidPanels)
-            {
-                var panel = this.getPanel(panelName, true);
-                if (panel)
-                {
-                    if (panel.visible && !panel.editing)
-                        panel.refresh();
-                    else
-                        panel.needsRefresh = true;
-
-                    // If the panel is being edited, we'll keep trying to
-                    // refresh it until editing is done
-                    if (panel.editing)
-                        invalids.push(panelName);
-                }
-            }
-
-            delete this.invalidPanels;
-            delete this.refreshTimeout;
-
-            // Keep looping until every tab is valid
-            if (invalids.length)
-                this.invalidatePanels.apply(this, invalids);
-        }, this), refreshDelay);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    setTimeout: function()
-    {
-        if (setTimeout == this.setTimeout)
-            throw new Error("setTimeout recursion");
-        var timeout = setTimeout.apply(top, arguments);
-
-        if (!this.timeouts)
-            this.timeouts = {};
-
-        this.timeouts[timeout] = 1;
-
-        return timeout;
-    },
-
-    clearTimeout: function(timeout)
-    {
-        clearTimeout(timeout);
-
-        if (this.timeouts)
-            delete this.timeouts[timeout];
-    },
-
-    setInterval: function()
-    {
-        var timeout = setInterval.apply(top, arguments);
-
-        if (!this.intervals)
-            this.intervals = {};
-
-        this.intervals[timeout] = 1;
-
-        return timeout;
-    },
-
-    clearInterval: function(timeout)
-    {
-        clearInterval(timeout);
-
-        if (this.intervals)
-            delete this.intervals[timeout];
-    },
-
-    delay: function(message, object)
-    {
-        this.throttle(message, object, null, true);
-    },
-
-    // queue the call |object.message(arg)| or just delay it if forceDelay
-    throttle: function(message, object, args, forceDelay)
-    {
-        if (!this.throttleInit)
-        {
-            this.throttleBuildup = 0;
-            this.throttleQueue = [];
-            this.throttleTimeout = 0;
-            this.lastMessageTime = 0;
-            this.throttleInit = true;
-        }
-
-        if (!forceDelay)
-        {
-            if (!Firebug.throttleMessages)
-            {
-                message.apply(object, args);
-                return false;
-            }
-
-            // Count how many messages have been logged during the throttle period
-            var logTime = new Date().getTime();
-            if (logTime - this.lastMessageTime < throttleTimeWindow)
-                ++this.throttleBuildup;
-            else
-                this.throttleBuildup = 0;
-
-            this.lastMessageTime = logTime;
-
-            // If the throttle limit has been passed, enqueue the message to be logged later on a timer,
-            // otherwise just execute it now
-            if (!this.throttleQueue.length && this.throttleBuildup <= throttleMessageLimit)
-            {
-                message.apply(object, args);
-                return false;
-            }
-        }
-
-        this.throttleQueue.push(message, object, args);
-
-        if (this.throttleTimeout)
-            this.clearTimeout(this.throttleTimeout);
-
-        var self = this;
-        this.throttleTimeout =
-            this.setTimeout(function() { self.flushThrottleQueue(); }, throttleInterval);
-        return true;
-    },
-
-    flushThrottleQueue: function()
-    {
-        var queue = this.throttleQueue;
-
-        if (!queue[0])
-            FBTrace.sysout("tabContext.flushThrottleQueue no queue[0]", queue);
-
-        var max = throttleFlushCount * 3;
-        if (max > queue.length)
-            max = queue.length;
-
-        for (var i = 0; i < max; i += 3)
-            queue[i].apply(queue[i+1], queue[i+2]);
-
-        queue.splice(0, throttleFlushCount*3);
-
-        if (queue.length)
-        {
-            var self = this;
-            this.throttleTimeout =
-                this.setTimeout(function f() { self.flushThrottleQueue(); }, throttleInterval);
-        }
-        else
-            this.throttleTimeout = 0;
-    }
-};
-
-// ************************************************************************************************
-// Local Helpers
-
-function createPanelType(name, url, title, parentPanel)
-{
-    var panelType = new Function("");
-    panelType.prototype = extend(new Firebug.PluginPanel(),
-    {
-        name: name,
-        url: url,
-        title: title ? title : "...",
-        parentPanel: parentPanel
-    });
-
-    return panelType;
-}
-
-function createPanelName(url)
-{
-    return url.replace(/[:\\\/\s\.\?\=\&\~]/g, "_");
-}
-
-// ************************************************************************************************
-
-}});
-
-
-/* See license.txt for terms of usage */
-
-FBL.ns(function() { with (FBL) {
-
-// ************************************************************************************************
-// Constants
-
-///const Cc = Components.classes;
-///const Ci = Components.interfaces;
-///const nsIWebNavigation = Ci.nsIWebNavigation;
-///const nsIWebProgressListener = Ci.nsIWebProgressListener;
-///const nsIWebProgress = Ci.nsIWebProgress;
-///const nsISupportsWeakReference = Ci.nsISupportsWeakReference;
-///const nsISupports = Ci.nsISupports;
-///const nsIURI = Ci.nsIURI;
-
-///const NOTIFY_STATE_DOCUMENT = nsIWebProgress.NOTIFY_STATE_DOCUMENT;
-
-///const STATE_IS_WINDOW = nsIWebProgressListener.STATE_IS_WINDOW;
-///const STATE_IS_DOCUMENT = nsIWebProgressListener.STATE_IS_DOCUMENT;
-///const STATE_IS_REQUEST = nsIWebProgressListener.STATE_IS_REQUEST;
-
-///const STATE_START = nsIWebProgressListener.STATE_START;
-///const STATE_STOP = nsIWebProgressListener.STATE_STOP;
-///const STATE_TRANSFERRING = nsIWebProgressListener.STATE_TRANSFERRING;
-
-///const STOP_ALL = nsIWebNavigation.STOP_ALL;
-
-var dummyURI = "about:layout-dummy-request";
-var aboutBlank = "about:blank";
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-/// TODO: xxxpedro tabWatcher - tabBrowser is a XUL element (where the "tabs" resides)
-var tabBrowser = null;
-///var tabBrowser = $("content");
-
-// ************************************************************************************************
-// Globals
-
-var contexts = [];
-
-// ************************************************************************************************
-
-top.TabWatcher = extend(new Firebug.Listener(),
-{
-    // Store contexts where they can be accessed externally
-    contexts: contexts,
-
-    initialize: function()
-    {
-        if (Firebug.TraceModule)
-            Firebug.TraceModule.addListener(TraceListener);
-
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("-> tabWatcher initialize "+tabBrowser);
-
-        /// TODO: xxxpedro tabWatcher - tabBrowser is a XUL element
-        ///if (tabBrowser)
-        ///    tabBrowser.addProgressListener(TabProgressListener, NOTIFY_STATE_DOCUMENT);
-
-        httpObserver.addObserver(TabWatcherHttpObserver, "firebug-http-event", false);
-    },
-
-    destroy: function()
-    {
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher destroy\n");
-
-        this.shuttingDown = true;
-
-        httpObserver.removeObserver(TabWatcherHttpObserver, "firebug-http-event");
-
-        /// TODO: xxxpedro tabWatcher - tabBrowser is a XUL element
-        /*
-        if (tabBrowser)
-        {
-            tabBrowser.removeProgressListener(TabProgressListener);
-
-            var browsers = Firebug.chrome.getBrowsers();
-            for (var i = 0; i < browsers.length; ++i)
-            {
-                var browser = browsers[i];
-                this.unwatchTopWindow(browser.contentWindow);
-            }
-        }
-        /**/
-
-        if (Firebug.TraceModule)
-            Firebug.TraceModule.removeListener(TraceListener);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    /**
-     * Called when tabBrowser browsers get a new location OR when we get a explicit user op to open firebug
-     * Attaches to a top-level window. Creates context unless we just re-activated on an existing context
-     */
-    watchTopWindow: function(win, uri, userCommands)
-    {
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher.watchTopWindow for: "+(uri instanceof nsIURI?uri.spec:uri)+
-                ", tab: "+Firebug.getTabIdForWindow(win)+"\n");
-
-        if (!win)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("-> tabWatcher.watchTopWindow should not have a null window!");
-            return false;
-        }
-
-        var selectedBrowser = Firebug.chrome.getCurrentBrowser();
-
-        var context = this.getContextByWindow(win);
-        if (context) // then we've looked at this window before in this FF session...
-        {
-            if (FBTrace.DBG_ACTIVATION)
-                FBTrace.sysout("-> tabWatcher.watchTopWindow context exists "+context.getName());
-            if (!this.shouldShowContext(context))
-            {
-                // ...but now it is not wanted.
-                if (context.browser)
-                    delete context.browser.showFirebug;
-                this.unwatchContext(win, context);
-
-                return;  // did not create a context
-            }
-            // else we should show
-        }
-        else // then we've not looked this window in this session
-        {
-            // decide whether this window will be debugged or not
-            var url = (uri instanceof nsIURI) ? uri.spec : uri;
-            if (!this.shouldCreateContext(selectedBrowser, url, userCommands))
-            {
-                if (FBTrace.DBG_ACTIVATION)
-                    FBTrace.sysout("-> tabWatcher will not create context ");
-
-                delete selectedBrowser.showFirebug;
-                this.watchContext(win, null);
-
-                return false;  // we did not create a context
-            }
-
-            var browser = this.getBrowserByWindow(win);
-
-            context = this.createContext(win, browser, Firebug.getContextType());
-       }
-
-        if (win instanceof Ci.nsIDOMWindow && win.parent == win)
-        {
-            win.addEventListener("pageshow", onLoadWindowContent, onLoadWindowContent.capturing);
-            win.addEventListener("DOMContentLoaded", onLoadWindowContent, onLoadWindowContent.capturing);
-            if (FBTrace.DBG_WINDOWS)
-                FBTrace.sysout("-> tabWatcher.watchTopWindow addEventListener for pageshow, DomContentLoaded "+safeGetWindowLocation(win));
-        }
-
-        // Dispatch watchWindow for the outer most DOM window
-        this.watchWindow(win, context);
-
-        // This is one of two places that loaded is set. The other is in watchLoadedTopWindow
-        if (context && !context.loaded)
-        {
-            context.loaded = !context.browser.webProgress.isLoadingDocument;
-
-            // If the loaded flag is set, the proper event should be dispatched.
-            if (context.loaded)
-                dispatch(this.fbListeners, "loadedContext", [context]);
-
-            if (FBTrace.DBG_WINDOWS)
-                FBTrace.sysout("-> tabWatcher context "+(context.loaded ? '*** LOADED ***' : 'isLoadingDocument')+" in watchTopWindow, id: "+context.uid+", uri: "+
-                    (uri instanceof nsIURI ? uri.spec : uri)+"\n");
-        }
-
-        if (context && !context.loaded && !context.showContextTimeout)
-        {
-            // still loading, we want to showContext one time but not too agressively
-            context.showContextTimeout = setTimeout(bindFixed( function delayShowContext()
-            {
-                if (FBTrace.DBG_WINDOWS)
-                    FBTrace.sysout("-> watchTopWindow delayShowContext id:"+context.showContextTimeout, context);
-                if (context.window)   // Sometimes context.window is not defined ?
-                    this.rushShowContext(win, context);  // calls showContext
-                else
-                {
-                    if(FBTrace.DBG_ERRORS)
-                        FBTrace.sysout("tabWatcher watchTopWindow no context.window "+(context.browser? context.browser.currentURI.spec : " and no context.browser")+"\n");
-                }
-            }, this), 400);
-        }
-        else
-        {
-            if (FBTrace.DBG_WINDOWS)
-                FBTrace.sysout("-> watchTopWindow context.loaded:"+context.loaded+ " for "+context.getName());
-            this.rushShowContext(win, context);
-        }
-
-        return context;  // we did create or find a context
-    },
-
-    rushShowContext: function(win, context)
-    {
-        if (context.showContextTimeout) // then the timeout even has not run, we'll not need it after all.
-            clearTimeout(context.showContextTimeout);
-        delete context.showContextTimeout;
-
-        // Call showContext only for currently active tab.
-        var currentURI = Firebug.chrome.getCurrentURI();
-        if (!currentURI || currentURI.spec != context.browser.currentURI.spec)
-        {
-            if (FBTrace.DBG_WINDOWS)
-                FBTrace.sysout("-> rushShowContext: Do not show context as it's not the active tab: " +
-                    context.browser.currentURI.spec + "\n");
-            return;
-        }
-
-        this.watchContext(win, context);  // calls showContext
-    },
-
-    // Listeners decide to show or not
-    shouldShowContext: function(context)
-    {
-        if ( dispatch2(this.fbListeners, "shouldShowContext", [context]))
-            return true;
-        else
-            return false;
-    },
-
-    // Listeners given force-in and veto on URIs/Window.
-
-    shouldCreateContext: function(browser, url, userCommands)
-    {
-        // called when win has no context, answers the question: create one, true or false?
-
-        if (!this.fbListeners)
-            return userCommands;
-
-        // Create if any listener says true to showCreateContext
-        if (dispatch2(this.fbListeners, "shouldCreateContext", [browser, url, userCommands]))
-        {
-             if (FBTrace.DBG_ACTIVATION)
-                 FBTrace.sysout("-> shouldCreateContext with user: "+userCommands+ " one listener says yes to "+ url, this.fbListeners);
-            return true;
-        }
-
-
-        if (FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("-> shouldCreateContext with user: "+userCommands+ " no opinion for: "+ url);
-
-        // Do not Create if any Listener says true to shouldNotCreateContext
-        if (dispatch2(this.fbListeners, "shouldNotCreateContext", [browser, url, userCommands]))
-            return false;
-
-        if (FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("-> shouldNotCreateContext no opinion for: "+ url);
-
-        // create if user said so and no one else has an opinion.
-        return userCommands;
-    },
-
-    createContext: function(win, browser, contextType)
-    {
-        if (contexts.length == 0)
-            Firebug.broadcast('enableXULWindow', []);
-
-        // If the page is reloaded, store the persisted state from the previous
-        // page on the new context
-        var persistedState = browser.persistedState;
-        delete browser.persistedState;
-        var location = safeGetWindowLocation(win).toString();
-        //if (!persistedState || persistedState.location != location)
-        //    persistedState = null;
-
-        // xxxHonza, xxxJJB: web application detection. Based on domain check.
-        var prevDomain = persistedState ? getDomain(persistedState.location) : null;
-        var domain = getDomain(location);
-        // Remove this, see 3484
-        //if (!persistedState || prevDomain != domain)
-        //    persistedState = null;
-
-        // The proper instance of FirebugChrome object (different for detached Firebug and
-        // accessible as Firebug.chrome property) must be used for the context object.
-        // (the global context object Firebug.currentContext is also different for detached firebug).
-        var context = new contextType(win, browser, Firebug.chrome, persistedState);
-        contexts.push(context);
-
-        context.uid =  FBL.getUniqueId();
-
-        browser.showFirebug = true; // this is the only place we should set showFirebug.
-
-        if (FBTrace.DBG_WINDOWS || FBTrace.DBG_ACTIVATION) {
-            FBTrace.sysout("-> tabWatcher *** INIT *** context, id: "+context.uid+
-                ", "+context.getName()+" browser "+browser.currentURI.spec+" Firebug.chrome.window: "+Firebug.chrome.window.location+" context.window: "+safeGetWindowLocation(context.window));
-        }
-
-        dispatch(this.fbListeners, "initContext", [context, persistedState]);
-
-        return context;
-    },
-
-    /**
-     * Called once the document within a tab is completely loaded.
-     */
-    watchLoadedTopWindow: function(win)
-    {
-        var isSystem = isSystemPage(win);
-
-        var context = this.getContextByWindow(win);
-        if ((context && !context.window))
-        {
-            if (FBTrace.DBG_WINDOWS)
-                FBTrace.sysout("-> tabWatcher.watchLoadedTopWindow bailing !!!, context.window: "+
-                    context.window+", isSystem: "+isSystem+"\n");
-
-            this.unwatchTopWindow(win);
-            this.watchContext(win, null, isSystem);
-            return;
-        }
-
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> watchLoadedTopWindow context: "+
-                (context?(context.uid+", loaded="+context.loaded):'undefined')+
-                ", "+safeGetWindowLocation(win)+"\n");
-
-        if (context && !context.loaded)
-        {
-            context.loaded = true;
-
-            if (FBTrace.DBG_WINDOWS)
-                FBTrace.sysout("-> Context *** LOADED *** in watchLoadedTopWindow, id: "+context.uid+
-                    ", uri: "+safeGetWindowLocation(win)+"\n");
-
-            dispatch(this.fbListeners, "loadedContext", [context]);
-
-            // DOMContentLoaded arrived. Whether or not we did showContext at 400ms, do it now.
-            this.rushShowContext(win, context);
-        }
-    },
-
-    /**
-     * Attaches to a window that may be either top-level or a frame within the page.
-     */
-    watchWindow: function(win, context)
-    {
-        if (!context)
-            context = this.getContextByWindow(getRootWindow(win));
-
-        var location = safeGetWindowLocation(win);
-
-        // For every window we watch, prepare for unwatch. It's OK if this is called
-        // more times (see 2695).
-        if (context && location != aboutBlank)
-            TabWatcherUnloader.registerWindow(win);
-
-        // Unfortunately, dummy requests that trigger the call to watchWindow
-        // are called several times, so we have to avoid dispatching watchWindow
-        // more than once
-        if (context && context.windows.indexOf(win) == -1)
-        {
-            context.windows.push(win);
-
-            if (FBTrace.DBG_WINDOWS)
-                FBTrace.sysout("-> watchWindow register *** FRAME *** to context for win.location: "+location+"\n");
-
-            dispatch(this.fbListeners, "watchWindow", [context, win]);
-
-            if (FBTrace.DBG_WINDOWS)
-            {
-                FBTrace.sysout("-> watchWindow for: "+location+", context: "+context.uid+"\n");
-                if (context)
-                    for (var i = 0; i < context.windows.length; i++)
-                        FBTrace.sysout("   context: "+context.uid+", window in context: "+context.windows[i].location.href+"\n");
-            }
-        }
-    },
-
-    /**
-     * Detaches from a top-level window. Destroys context
-     * Called when windows are closed, or user closes firebug
-     */
-    unwatchTopWindow: function(win)
-    {
-        var context = this.getContextByWindow(win);
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher.unwatchTopWindow for: " +
-                (context ? context.getWindowLocation() : "NULL Context") +
-                ", context: " + context);
-
-        this.unwatchContext(win, context);
-
-        return true; // we might later allow extensions to reject unwatch
-    },
-
-    /**
-     * Detaches from a window, top-level or frame (interior)
-     */
-    unwatchWindow: function(win)
-    {
-        var context = this.getContextByWindow(win);
-
-        if (!context)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("unwatchWindow: no context for win "+safeGetWindowLocation(win));
-            return;
-        }
-
-        var index = context.windows.indexOf(win);
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher.unwatchWindow context: "+context.getName()+" index of win: "+index+"/"+context.windows.length, context.windows);
-        if (index != -1)
-        {
-            context.windows.splice(index, 1);
-            dispatch(this.fbListeners, "unwatchWindow", [context, win]);
-        }
-    },
-
-    /**
-     * Attaches to the window inside a browser because of user-activation
-     * returns false if no context was created by the attach attempt, eg extension rejected page
-     */
-    watchBrowser: function(browser)
-    {
-        if (FBTrace.DBG_WINDOWS)
-        {
-            var uri = safeGetURI(browser);
-            FBTrace.sysout("-> tabWatcher.watchBrowser for: " + (uri instanceof nsIURI?uri.spec:uri) + "\n");
-        }
-
-        registerFrameListener(browser);
-
-        var shouldDispatch = this.watchTopWindow(browser.contentWindow, safeGetURI(browser), true);
-
-        if (shouldDispatch)
-        {
-            dispatch(this.fbListeners, "watchBrowser", [browser]);
-            return true;
-        }
-        return false;
-    },
-
-    /*
-     * User closes Firebug
-     */
-
-    unwatchBrowser: function(browser, userCommands)
-    {
-        if (FBTrace.DBG_WINDOWS)
-        {
-            var uri = safeGetURI(browser);
-            FBTrace.sysout("-> tabWatcher.unwatchBrowser for: " + (uri instanceof nsIURI?uri.spec:uri) + " user commands: "+userCommands+(browser?"":"NULL BROWSER"));
-        }
-        if (!browser)
-            return;
-
-        delete browser.showFirebug;
-
-        var shouldDispatch = this.unwatchTopWindow(browser.contentWindow);
-
-        if (shouldDispatch)
-        {
-            dispatch(this.fbListeners, "unwatchBrowser", [browser, userCommands]);
-            return true;
-        }
-        return false;
-    },
-
-    watchContext: function(win, context, isSystem)  // called when tabs change in firefox
-    {
-        if (this.shuttingDown)
-            return;
-
-        var browser = context ? context.browser : this.getBrowserByWindow(win);
-        if (browser)
-            browser.isSystemPage = isSystem;
-
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher context *** SHOW *** (watchContext), id: " +
-                (context?context.uid:"null")+", uri: "+win.location.href+"\n");
-
-        dispatch(this.fbListeners, "showContext", [browser, context]); // context is null if we don't want to debug this browser
-    },
-
-    unwatchContext: function(win, context)
-    {
-        if (!context)
-        {
-            var browser = this.getBrowserByWindow(win);
-            if (browser)
-            {
-                browser.persistedState = {};
-                delete browser.showFirebug;
-                dispatch(this.fbListeners, "showContext", [browser, null]); // context is null if we don't want to debug this browser
-            }
-            dispatch(this.fbListeners, "destroyContext", [null, (browser?browser.persistedState:null), browser]);
-            return;
-        }
-
-        var persistedState = {location: context.getWindowLocation()};
-        context.browser.persistedState = persistedState;  // store our state on FF browser elt
-
-        iterateWindows(context.window, function(win)
-        {
-            dispatch(TabWatcher.fbListeners, "unwatchWindow", [context, win]);
-        });
-
-        dispatch(this.fbListeners, "destroyContext", [context, persistedState, context.browser]);
-
-        if (FBTrace.DBG_WINDOWS || FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("-> tabWatcher.unwatchContext *** DESTROY *** context "+context.uid+" for: "+
-                (context.window && !context.window.closed?context.window.location:"no window or closed ")+" aborted: "+context.aborted);
-
-        context.destroy(persistedState);
-        remove(contexts, context);
-
-        for (var name in context)
-            delete context[name];
-
-        var currentBrowser = Firebug.chrome.getCurrentBrowser();
-        if (!currentBrowser.showFirebug)  // unwatchContext can be called on an unload event after another tab is selected
-            dispatch(this.fbListeners, "showContext", [browser, null]); // context is null if we don't want to debug this browser
-
-        if (contexts.length == 0)
-            Firebug.broadcast("disableXULWindow", []);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    getContextByWindow: function(winIn)
-    {
-        if (!winIn)
-            return;
-
-        var rootWindow = getRootWindow(winIn);
-
-        //if (FBTrace.DBG_INITIALIZE)
-        //    FBTrace.sysout("winIn: "+safeGetWindowLocation(winIn).substr(0,50)+" rootWindow: "+safeGetWindowLocation(rootWindow));
-
-        if (rootWindow)
-        {
-            for (var i = 0; i < contexts.length; ++i)
-            {
-                var context = contexts[i];
-                if (context.window == rootWindow)
-                    return context;
-            }
-        }
-    },
-
-    getContextBySandbox: function(sandbox)
-    {
-        for (var i = 0; i < contexts.length; ++i)
-        {
-            var context = contexts[i];
-            if (context.sandboxes)
-            {
-                for (var iframe = 0; iframe < context.sandboxes.length; iframe++)
-                {
-                    if (context.sandboxes[iframe] == sandbox)
-                        return context;
-                }
-            }
-        }
-        return null;
-    },
-
-    getBrowserByWindow: function(win)
-    {
-        var browsers = Firebug.chrome.getBrowsers();
-        for (var i = 0; i < browsers.length; ++i)
-        {
-            var browser = browsers[i];
-            if (browser.contentWindow == win)
-            {
-                registerFrameListener(browser);
-                return browser;
-            }
-        }
-
-        return null;
-    },
-
-    iterateContexts: function(fn)
-    {
-        for (var i = 0; i < contexts.length; ++i)
-        {
-            var rc = fn(contexts[i]);
-            if (rc)
-                return rc;
-        }
-    }
-});
-
-// ************************************************************************************************
-
-var TabWatcherUnloader =
-{
-    listeners: [],
-
-    registerWindow: function(win)
-    {
-        var root = (win.parent == win);
-        var eventName = root ? "pagehide" : "unload";
-        var listener = bind(root ? this.onPageHide : this.onUnload, this);
-        win.addEventListener(eventName, listener, false);
-
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher.watchWindow addEventListener for " + eventName);
-
-        this.listeners.push({
-            window: win,
-            listener: listener,
-            eventName: eventName
-        });
-    },
-
-    unregisterWindow: function(win)
-    {
-        var newListeners = [];
-        for (var i=0; i<this.listeners.length; i++)
-        {
-            var listener = this.listeners[i];
-            if (listener.window != win)
-                newListeners.push(listener);
-            else
-                win.removeEventListener(listener.eventName, listener.listener, false);
-        }
-        this.listeners = newListeners;
-    },
-
-    onPageHide: function(event)
-    {
-        var win = event.currentTarget;
-        this.unregisterWindow(win);
-
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher.Unloader; PAGE HIDE (" +
-                this.listeners.length + ") " + win.location, event);
-
-        onPageHideTopWindow(event);
-    },
-
-    onUnload: function(event)
-    {
-        var win = event.currentTarget;
-        this.unregisterWindow(win);
-
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher.Unloader; PAGE UNLOAD (" +
-                this.listeners.length + ") " + win.location, event);
-
-        onUnloadWindow(event);
-    }
-};
-
-// ************************************************************************************************
-
-/// TODO: xxxpedro tabWatcher - tabBrowser is a XUL element 
-/*
-var TabProgressListener = extend(BaseProgressListener,
-{
-    onLocationChange: function(progress, request, uri)
-    {
-        // Only watch windows that are their own parent - e.g. not frames
-        if (progress.DOMWindow.parent == progress.DOMWindow)
-        {
-            var srcWindow = getWindowForRequest(request);
-            var browser = srcWindow ? TabWatcher.getBrowserByWindow(srcWindow) : null;
-            var requestFromFirebuggedWindow = browser && browser.showFirebug;
-
-            if (FBTrace.DBG_WINDOWS || FBTrace.DBG_ACTIVATION)
-            {
-                FBTrace.sysout("-> TabProgressListener.onLocationChange "+
-                    progress.DOMWindow.location+" to: "+
-                    (uri?uri.spec:"null location")+
-                    (requestFromFirebuggedWindow?" from firebugged window":" no firebug"));
-            }
-
-            if (uri && uri.spec === "about:blank") // the onStateChange will deal with this troublesome case
-                return;
-
-            if (uri && uri.scheme === "wyciwyg")  // document.open() was called, the document was cleared.
-                evictTopWindow(progress.DOMWindow, uri);
-
-            if (uri)
-                TabWatcher.watchTopWindow(progress.DOMWindow, uri);
-            else // the location change to a non-uri means we need to hide
-                TabWatcher.watchContext(progress.DOMWindow, null, true);
-        }
-    },
-
-    onStateChange: function(progress, request, flag, status)
-    {
-        if (FBTrace.DBG_WINDOWS)
-        {
-            var win = progress.DOMWindow;
-            FBTrace.sysout("-> TabProgressListener.onStateChanged for: " +
-                safeGetName(request) + ", win: " + win.location.href +
-                ", content URL: " + (win.document ? win.document.URL : "no content URL") +
-                " " + getStateDescription(flag));
-        }
-    }
-});
-/**/
-
-// ************************************************************************************************
-
-/// TODO: xxxpedro tabWatcher - BaseProgressListener relies on XPCOM component 
-/*
-var FrameProgressListener = extend(BaseProgressListener,
-{
-    onStateChange: function(progress, request, flag, status)
-    {
-        if (FBTrace.DBG_WINDOWS)
-        {
-            var win = progress.DOMWindow;
-            FBTrace.sysout("-> FrameProgressListener.onStateChanged for: " +
-                safeGetName(request) + ", win: " + win.location.href +
-                ", content URL: " + (win.document ? win.document.URL : "no content URL") +
-                " " + getStateDescription(flag));
-        }
-
-        if (flag & STATE_IS_REQUEST && flag & STATE_START)
-        {
-            // We need to get the hook in as soon as the new DOMWindow is created, but before
-            // it starts executing any scripts in the page.  After lengthy analysis, it seems
-            // that the start of these "dummy" requests is the only state that works.
-
-            var safeName = safeGetName(request);
-            if (safeName && ((safeName == dummyURI) || safeName == "about:document-onload-blocker") )
-            {
-                var win = progress.DOMWindow;
-                // Another weird edge case here - when opening a new tab with about:blank,
-                // "unload" is dispatched to the document, but onLocationChange is not called
-                // again, so we have to call watchTopWindow here
-
-                if (win.parent == win && (win.location.href == "about:blank"))
-                {
-                    TabWatcher.watchTopWindow(win, win.location.href);
-                    return;
-                }
-                else
-                    TabWatcher.watchWindow(win);
-            }
-        }
-
-        // Later I discovered that XHTML documents don't dispatch the dummy requests, so this
-        // is our best shot here at hooking them.
-        if (flag & STATE_IS_DOCUMENT && flag & STATE_TRANSFERRING)
-        {
-            TabWatcher.watchWindow(progress.DOMWindow);
-            return;
-        }
-
-    }
-});
-
-// Registers frame listener for specified tab browser.
-function registerFrameListener(browser)
-{
-    if (browser.frameListener)
-        return;
-
-    browser.frameListener = FrameProgressListener;  // just a mark saying we've registered. TODO remove!
-    browser.addProgressListener(FrameProgressListener, NOTIFY_STATE_DOCUMENT);
-
-    if (FBTrace.DBG_WINDOWS)
-    {
-        var win = browser.contentWindow;
-        FBTrace.sysout("-> tabWatcher register FrameProgressListener for: "+
-            safeGetWindowLocation(win)+", tab: "+Firebug.getTabIdForWindow(win)+"\n");
-    }
-}
-/**/
-
-function getRefererHeader(request)
-{
-    var http = QI(request, Ci.nsIHttpChannel);
-    var referer = null;
-    http.visitRequestHeaders({
-        visitHeader: function(name, value)
-        {
-            if (name == 'referer')
-                referer = value;
-        }
-    });
-    return referer;
-}
-
-var TabWatcherHttpObserver = extend(Object,
-{
-    // nsIObserver
-    observe: function(aSubject, aTopic, aData)
-    {
-        try
-        {
-            if (aTopic == "http-on-modify-request")
-            {
-                aSubject = aSubject.QueryInterface(Ci.nsIHttpChannel);
-                this.onModifyRequest(aSubject);
-            }
-        }
-        catch (err)
-        {
-            ERROR(err);
-        }
-    },
-
-    onModifyRequest: function(request)
-    {
-        var win = getWindowForRequest(request);
-        var tabId = Firebug.getTabIdForWindow(win);
-
-        // Tab watcher is only interested in tab related requests.
-        if (!tabId)
-            return;
-
-        // Ignore redirects
-        if (request.URI.spec != request.originalURI.spec)
-            return;
-
-        // A document request for the specified tab is here. It can be a top window
-        // request (win == win.parent) or embedded iframe request.
-        if (request.loadFlags & Ci.nsIHttpChannel.LOAD_DOCUMENT_URI)
-        {
-            if ( (FBTrace.DBG_ACTIVATION || FBTrace.DBG_WINDOWS) && win == win.parent)
-            {
-                FBTrace.sysout("-> tabWatcher TabWatcherHttpObserver *** START *** " +
-                    "document request for: " + request.URI.spec + " window for request is "+safeGetWindowLocation(win)+"\n");
-            }
-
-            if (win == win.parent)
-            {
-                // Make sure the frame listener is registered for top level window so,
-                // we can get all onStateChange events and init context for all opened tabs.
-                var browser = TabWatcher.getBrowserByWindow(win);
-
-                if (!browser)
-                    return;
-
-                delete browser.FirebugLink;
-
-                if (safeGetWindowLocation(win).toString() == "about:blank") // then this page is opened in new tab or window
-                {
-                    var referer = getRefererHeader(request);
-                    if (referer)
-                    {
-                        try
-                        {
-                            var srcURI = makeURI(referer);
-                            browser.FirebugLink = {src: srcURI, dst: request.URI};
-                        }
-                        catch(e)
-                        {
-                            if (FBTrace.DBG_ERRORS)
-                                FBTrace.sysout("tabWatcher.onModifyRequest failed to make URI from "+referer+" because "+exc, exc);
-                        }
-                    }
-                }
-                else
-                {
-                    // Here we know the source of the request is 'win'. For viral activation and web app tracking
-                    browser.FirebugLink = {src: browser.currentURI, dst: request.URI};
-                }
-                if (FBTrace.DBG_ACTIVATION && browser.FirebugLink)
-                    FBTrace.sysout("tabWatcher.onModifyRequest created FirebugLink from "+browser.FirebugLink.src.spec + " to "+browser.FirebugLink.dst.spec);
-            }
-        }
-    },
-
-    QueryInterface : function (aIID)
-    {
-        if (aIID.equals(Ci.nsIObserver) ||
-            aIID.equals(Ci.nsISupportsWeakReference) ||
-            aIID.equals(Ci.nsISupports))
-        {
-            return this;
-        }
-
-        throw Components.results.NS_NOINTERFACE;
-    }
-});
-
-// ************************************************************************************************
-// Local Helpers
-
-function onPageHideTopWindow(event)
-{
-    var win = event.currentTarget;  // we set the handler on a window
-    var doc = event.target; // the pagehide is sent to the document.
-    if (doc.defaultView != win)
-        return; // ignore page hides on interior windows
-
-    if (FBTrace.DBG_WINDOWS)
-        FBTrace.sysout("-> tabWatcher pagehide event.currentTarget "+safeGetWindowLocation(win), event);
-
-    // http://developer.mozilla.org/en/docs/Using_Firefox_1.5_caching#pagehide_event
-    if (event.persisted) // then the page is cached and there cannot be an unload handler
-    {
-        //  see Bug 484710 -  add pageIgnore event for pages that are ejected from the bfcache
-
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher onPageHideTopWindow for: "+safeGetWindowLocation(win)+"\n");
-        TabWatcher.unwatchTopWindow(win);
-    }
-    else
-    {
-        // Page is not cached, there may be an unload
-        win.addEventListener("unload", onUnloadTopWindow, true);
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher onPageHideTopWindow set unload handler "+safeGetWindowLocation(win)+"\n");
-    }
-}
-
-function evictTopWindow(win, uri)
-{
-    if (FBTrace.DBG_WINDOWS)
-        FBTrace.sysout("-> tabWatcher evictTopWindow win "+safeGetWindowLocation(win)+" uri "+uri.spec);
-    TabWatcher.unwatchTopWindow(win);
-}
-
-function onUnloadTopWindow(event)
-{
-    var win = event.currentTarget;
-    win.removeEventListener("unload", onUnloadTopWindow, true);
-    if (FBTrace.DBG_WINDOWS)
-        FBTrace.sysout("-> tabWatcher onUnloadTopWindow for: "+safeGetWindowLocation(win)+" typeof :"+typeof(win)+"\n");
-    TabWatcher.unwatchTopWindow(win);
-}
-
-function onLoadWindowContent(event)
-{
-    if (FBTrace.DBG_WINDOWS)
-        FBTrace.sysout("-> tabWatcher.onLoadWindowContent event.type: "+event.type+"\n");
-
-    var win = event.currentTarget;
-    try
-    {
-        win.removeEventListener("pageshow", onLoadWindowContent, onLoadWindowContent.capturing);
-        if (FBTrace.DBG_WINDOWS) FBTrace.sysout("-> tabWatcher.onLoadWindowContent pageshow removeEventListener "+safeGetWindowLocation(win));
-    }
-    catch (exc)
-    {
-        if (FBTrace.DBG_ERRORS)
-            FBTrace.sysout("-> tabWatcher.onLoadWindowContent removeEventListener pageshow fails", exc);
-    }
-
-    try
-    {
-        win.removeEventListener("DOMContentLoaded", onLoadWindowContent, onLoadWindowContent.capturing);
-        if (FBTrace.DBG_WINDOWS) FBTrace.sysout("-> tabWatcher.onLoadWindowContent DOMContentLoaded removeEventListener "+safeGetWindowLocation(win));
-    }
-    catch (exc)
-    {
-        if (FBTrace.DBG_ERRORS)
-            FBTrace.sysout("-> tabWatcher.onLoadWindowContent removeEventListener DOMContentLoaded fails", exc);
-    }
-
-    // Signal that we got the onLoadWindowContent event. This prevents the FrameProgressListener from sending it.
-    var context = TabWatcher.getContextByWindow(win);
-    if (context)
-        context.onLoadWindowContent = true;
-
-    try
-    {
-        if (FBTrace.DBG_WINDOWS)
-            FBTrace.sysout("-> tabWatcher.onLoadWindowContent:"+safeGetWindowLocation(win), win);
-        TabWatcher.watchLoadedTopWindow(win);
-    }
-    catch(exc)
-    {
-        if (FBTrace.DBG_ERRORS)
-            FBTrace.sysout("-> tabWatchter onLoadWindowContent FAILS: "+exc, exc);
-    }
-
-}
-onLoadWindowContent.capturing = false;
-
-function onUnloadWindow(event)
-{
-    var win = event.currentTarget;
-    var eventType = "unload";
-    if (FBTrace.DBG_WINDOWS)
-        FBTrace.sysout("-> tabWatcher.onUnloadWindow for: "+safeGetWindowLocation(win) +" removeEventListener: "+ eventType+"\n");
-    TabWatcher.unwatchWindow(win);
-}
-
-function safeGetName(request)
-{
-    try
-    {
-        return request.name;
-    }
-    catch (exc)
-    {
-        return null;
-    }
-}
-
-function safeGetURI(browser)
-{
-    try
-    {
-        return browser.currentURI;
-    }
-    catch (exc)
-    {
-        return null;
-    }
-}
-
-// ************************************************************************************************
-
-var TraceListener =
-{
-    onDump: function(message)
-    {
-        var prefix = "->";
-        if (message.text.indexOf(prefix) == 0)
-        {
-            message.text = message.text.substr(prefix.length);
-            message.text = trim(message.text);
-            message.type = "DBG_WINDOWS";
-        }
-    }
-};
-
-// ************************************************************************************************
-
-}});
-
 
 /* See license.txt for terms of usage */
 
@@ -13041,13 +11489,13 @@ Firebug.Lite.Browser = function(window)
 {
     this.contentWindow = window;
     this.contentDocument = window.document;
-    this.currentURI = 
+    this.currentURI =
     {
         spec: window.location.href
     };
 };
 
-Firebug.Lite.Browser.prototype = 
+Firebug.Lite.Browser.prototype =
 {
     toString: function()
     {
@@ -13065,25 +11513,39 @@ Firebug.Lite.Browser.prototype =
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-Firebug.Lite.Cache = 
+Firebug.Lite.Cache =
 {
-    ID: "firebug" + new Date().getTime()
+    ID: "firebug-" + new Date().getTime()
 };
 
 // ************************************************************************************************
 
+/**
+ * TODO: if a cached element is cloned, the expando property will be cloned too in IE
+ * which will result in a bug. Firebug Lite will think the new cloned node is the old
+ * one.
+ *
+ * TODO: Investigate a possibility of cache validation, to be customized by each
+ * kind of cache. For ElementCache it should validate if the element still is
+ * inserted at the DOM.
+ */
 var cacheUID = 0;
 var createCache = function()
 {
     var map = {};
+    var data = {};
+
     var CID = Firebug.Lite.Cache.ID;
-    
+
+    // better detection
+    var supportsDeleteExpando = !document.all;
+
     var cacheFunction = function(element)
     {
         return cacheAPI.set(element);
     };
-    
-    var cacheAPI =  
+
+    var cacheAPI =
     {
         get: function(key)
         {
@@ -13091,63 +11553,126 @@ var createCache = function()
                     map[key] :
                     null;
         },
-        
+
         set: function(element)
         {
-            var id = element[CID];
-            
+            var id = getValidatedKey(element);
+
             if (!id)
             {
                 id = ++cacheUID;
                 element[CID] = id;
             }
-            
+
             if (!map.hasOwnProperty(id))
             {
                 map[id] = element;
+                data[id] = {};
             }
-            
+
             return id;
         },
-        
+
         unset: function(element)
         {
-            var id = element[CID];
-            
-            element[CID] = null;
-            delete element[CID];
-            
-            map[id] = null;
+            var id = getValidatedKey(element);
+
+            if (!id) return;
+
+            if (supportsDeleteExpando)
+            {
+                delete element[CID];
+            }
+            else if (element.removeAttribute)
+            {
+                element.removeAttribute(CID);
+            }
+
             delete map[id];
+            delete data[id];
+
         },
-        
+
         key: function(element)
         {
-            return element[CID];
+            return getValidatedKey(element);
         },
-        
+
         has: function(element)
         {
-            return map.hasOwnProperty(element[CID]);
+            var id = getValidatedKey(element);
+            return id && map.hasOwnProperty(id);
         },
-        
+
+        each: function(callback)
+        {
+            for (var key in map)
+            {
+                if (map.hasOwnProperty(key))
+                {
+                    callback(key, map[key]);
+                }
+            }
+        },
+
+        data: function(element, name, value)
+        {
+            // set data
+            if (value)
+            {
+                if (!name) return null;
+
+                var id = cacheAPI.set(element);
+
+                return data[id][name] = value;
+            }
+            // get data
+            else
+            {
+                var id = cacheAPI.key(element);
+
+                return data.hasOwnProperty(id) && data[id].hasOwnProperty(name) ?
+                        data[id][name] :
+                        null;
+            }
+        },
+
         clear: function()
         {
             for (var id in map)
             {
                 var element = map[id];
-                
-                element[CID] = null;
-                delete element[CID];
-                
-                map[id] = null;
-                delete map[id];
+                cacheAPI.unset(element);
             }
         }
     };
-    
+
+    var getValidatedKey = function(element)
+    {
+        var id = element[CID];
+
+        // If a cached element is cloned in IE, the expando property CID will be also
+        // cloned (differently than other browsers) resulting in a bug: Firebug Lite
+        // will think the new cloned node is the old one. To prevent this problem we're
+        // checking if the cached element matches the given element.
+        if (
+            !supportsDeleteExpando &&   // the problem happens when supportsDeleteExpando is false
+            id &&                       // the element has the expando property
+            map.hasOwnProperty(id) &&   // there is a cached element with the same id
+            map[id] != element          // but it is a different element than the current one
+            )
+        {
+            // remove the problematic property
+            element.removeAttribute(CID);
+
+            id = null;
+        }
+
+        return id;
+    }
+
     FBL.append(cacheFunction, cacheAPI);
-    
+
     return cacheFunction;
 };
 
@@ -13156,6 +11681,10 @@ var createCache = function()
 // TODO: xxxpedro : check if we need really this on FBL scope
 Firebug.Lite.Cache.StyleSheet = createCache();
 Firebug.Lite.Cache.Element = createCache();
+
+// TODO: xxxpedro
+Firebug.Lite.Cache.Event = createCache();
+
 
 // ************************************************************************************************
 }});
@@ -13167,13 +11696,13 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
 
-Firebug.Lite.Proxy = 
+Firebug.Lite.Proxy =
 {
     // jsonp callbacks
     _callbacks: {},
-    
+
     /**
-     * Load a resource, either locally (directly) or externally (via proxy) using 
+     * Load a resource, either locally (directly) or externally (via proxy) using
      * synchronous XHR calls. Loading external resources requires the proxy plugin to
      * be installed and configured (see /plugin/proxy/proxy.php).
      */
@@ -13185,10 +11714,10 @@ Firebug.Lite.Proxy =
             !resourceDomain ||
             // same domain means local too
             resourceDomain ==  Firebug.context.window.location.host; // TODO: xxxpedro context
-        
+
         return isLocalResource ? fetchResource(url) : fetchProxyResource(url);
     },
-    
+
     /**
      * Load a resource using JSONP technique.
      */
@@ -13196,29 +11725,29 @@ Firebug.Lite.Proxy =
     {
         var script = createGlobalElement("script"),
             doc = Firebug.context.document,
-            
+
             uid = "" + new Date().getTime(),
             callbackName = "callback=Firebug.Lite.Proxy._callbacks." + uid,
-            
-            jsonpURL = url.indexOf("?") != -1 ? 
+
+            jsonpURL = url.indexOf("?") != -1 ?
                     url + "&" + callbackName :
                     url + "?" + callbackName;
-            
+
         Firebug.Lite.Proxy._callbacks[uid] = function(data)
         {
             if (callback)
                 callback(data);
-            
+
             script.parentNode.removeChild(script);
             delete Firebug.Lite.Proxy._callbacks[uid];
         };
-        
+
         script.src = jsonpURL;
-        
+
         if (doc.documentElement)
             doc.documentElement.appendChild(script);
     },
-    
+
     /**
      * Load a resource using YQL (not reliable).
      */
@@ -13226,16 +11755,16 @@ Firebug.Lite.Proxy =
     {
         var yql = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20html%20where%20url%3D%22" +
                 encodeURIComponent(url) + "%22&format=xml";
-        
+
         this.loadJSONP(yql, function(data)
         {
             var source = data.results[0];
-            
+
             // clean up YQL bogus elements
             var match = /<body>\s+<p>([\s\S]+)<\/p>\s+<\/body>$/.exec(source);
             if (match)
                 source = match[1];
-            
+
             console.log(source);
         });
     }
@@ -13248,7 +11777,7 @@ var fetchResource = function(url)
     var xhr = FBL.Ajax.getXHRObject();
     xhr.open("get", url, false);
     xhr.send();
-    
+
     return xhr.responseText;
 };
 
@@ -13256,7 +11785,7 @@ var fetchProxyResource = function(url)
 {
     var proxyURL = Env.Location.baseDir + "plugin/proxy/proxy.php?url=" + encodeURIComponent(url);
     var response = fetchResource(proxyURL);
-    
+
     try
     {
         var data = eval("(" + response + ")");
@@ -13265,10 +11794,10 @@ var fetchProxyResource = function(url)
     {
         return "ERROR: Firebug Lite Proxy plugin returned an invalid response.";
     }
-    
+
     return data ? data.contents : "";
 };
-    
+
 
 // ************************************************************************************************
 }});
@@ -13286,17 +11815,17 @@ Firebug.Lite.Script = function(window)
     this.baseLineNumber = null;
     this.lineExtent = null;
     this.tag = null;
-    
+
     this.functionName = null;
     this.functionSource = null;
 };
 
-Firebug.Lite.Script.prototype = 
+Firebug.Lite.Script.prototype =
 {
     isLineExecutable: function(){},
     pcToLine: function(){},
     lineToPc: function(){},
-    
+
     toString: function()
     {
         return "Firebug.Lite.Script";
@@ -13312,7 +11841,7 @@ Firebug.Lite.Script.prototype =
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-Firebug.Lite.Style = 
+Firebug.Lite.Style =
 {
 };
 
@@ -13322,7 +11851,7 @@ Firebug.Lite.Style =
 
 /* See license.txt for terms of usage */
 
-FBL.ns( /**@scope ns-selector*/ function() { with (FBL) {
+FBL.ns( /**@scope s_selector*/ function() { with (FBL) {
 // ************************************************************************************************
 
 /*
@@ -13348,13 +11877,13 @@ var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^
 });
 
 /**
- * @name Firebug.Selector 
+ * @name Firebug.Selector
  * @namespace
  */
 
 /**
  * @exports Sizzle as Firebug.Selector
- */ 
+ */
 var Sizzle = function(selector, context, results, seed) {
     results = results || [];
     var origContext = context = context || document;
@@ -13362,20 +11891,20 @@ var Sizzle = function(selector, context, results, seed) {
     if ( context.nodeType !== 1 && context.nodeType !== 9 ) {
         return [];
     }
-    
+
     if ( !selector || typeof selector !== "string" ) {
         return results;
     }
 
     var parts = [], m, set, checkSet, check, mode, extra, prune = true, contextXML = isXML(context),
         soFar = selector;
-    
+
     // Reset the position of the chunker regexp (start from head)
     while ( (chunker.exec(""), m = chunker.exec(soFar)) !== null ) {
         soFar = m[3];
-        
+
         parts.push( m[1] );
-        
+
         if ( m[2] ) {
             extra = m[3];
             break;
@@ -13506,7 +12035,7 @@ Sizzle.find = function(expr, context, isXML){
 
     for ( var i = 0, l = Expr.order.length; i < l; i++ ) {
         var type = Expr.order[i], match;
-        
+
         if ( (match = Expr.leftMatch[ type ].exec( expr )) ) {
             var left = match[1];
             match.splice(1,1);
@@ -13771,7 +12300,7 @@ var Expr = Sizzle.selectors = {
         },
         ATTR: function(match, curLoop, inplace, result, not, isXML){
             var name = match[1].replace(/\\/g, "");
-            
+
             if ( !isXML && Expr.attrMap[name] ) {
                 match[1] = Expr.attrMap[name];
             }
@@ -13797,7 +12326,7 @@ var Expr = Sizzle.selectors = {
             } else if ( Expr.match.POS.test( match[0] ) || Expr.match.CHILD.test( match[0] ) ) {
                 return true;
             }
-            
+
             return match;
         },
         POS: function(match){
@@ -13931,20 +12460,20 @@ var Expr = Sizzle.selectors = {
                     if ( first == 1 && last == 0 ) {
                         return true;
                     }
-                    
+
                     var doneName = match[0],
                         parent = elem.parentNode;
-    
+
                     if ( parent && (parent.sizcache !== doneName || !elem.nodeIndex) ) {
                         var count = 0;
                         for ( node = parent.firstChild; node; node = node.nextSibling ) {
                             if ( node.nodeType === 1 ) {
                                 node.nodeIndex = ++count;
                             }
-                        } 
+                        }
                         parent.sizcache = doneName;
                     }
-                    
+
                     var diff = elem.nodeIndex - last;
                     if ( first == 0 ) {
                         return diff == 0;
@@ -14018,7 +12547,7 @@ var makeArray = function(array, results) {
         results.push.apply( results, array );
         return results;
     }
-    
+
     return array;
 };
 
@@ -14187,7 +12716,7 @@ if ( document.querySelectorAll ) (function(){
     if ( div.querySelectorAll && div.querySelectorAll(".TEST").length === 0 ) {
         return;
     }
-    
+
     Sizzle = function(query, context, extra, seed){
         context = context || document;
 
@@ -14198,7 +12727,7 @@ if ( document.querySelectorAll ) (function(){
                 return makeArray( context.querySelectorAll(query), extra );
             } catch(e){}
         }
-        
+
         return oldSizzle(query, context, extra, seed);
     };
 
@@ -14363,28 +12892,43 @@ Firebug.Selector = Sizzle;
 
 /* See license.txt for terms of usage */
 
+( /** @scope s_domplate */ function() {
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-function DomplateTag(tagName)
+/** @class */
+FBL.DomplateTag = function DomplateTag(tagName)
 {
     this.tagName = tagName;
-}
+};
 
-function DomplateEmbed()
+/**
+ * @class
+ * @extends FBL.DomplateTag
+ */
+FBL.DomplateEmbed = function DomplateEmbed()
 {
-}
+};
 
-function DomplateLoop()
+/**
+ * @class
+ * @extends FBL.DomplateTag
+ */
+FBL.DomplateLoop = function DomplateLoop()
 {
-}
+};
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-( /** @scope ns-domplate */ function() {
+var DomplateTag = FBL.DomplateTag;
+var DomplateEmbed = FBL.DomplateEmbed;
+var DomplateLoop = FBL.DomplateLoop;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 var womb = null;
 
-var domplate = FBL.domplate = function()
+FBL.domplate = function()
 {
     var lastSubject;
     for (var i = 0; i < arguments.length; ++i)
@@ -14400,7 +12944,9 @@ var domplate = FBL.domplate = function()
     return lastSubject;
 };
 
-domplate.context = function(context, fn)
+var domplate = FBL.domplate;
+
+FBL.domplate.context = function(context, fn)
 {
     var lastContext = domplate.lastContext;
     domplate.topContext = context;
@@ -14420,7 +12966,7 @@ FBL.FOR = function()
     return loop.merge(arguments);
 };
 
-DomplateTag.prototype =
+FBL.DomplateTag.prototype =
 {
     merge: function(args, oldTag)
     {
@@ -14508,7 +13054,7 @@ DomplateTag.prototype =
     {
         this.markupArgs = [];
         var topBlock = [], topOuts = [], blocks = [], info = {args: this.markupArgs, argIndex: 0};
-         
+
         this.generateMarkup(topBlock, topOuts, blocks, info);
         this.addCode(topBlock, topOuts, blocks);
 
@@ -14869,7 +13415,8 @@ DomplateTag.prototype =
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-DomplateEmbed.prototype = copyObject(DomplateTag.prototype,
+FBL.DomplateEmbed.prototype = copyObject(FBL.DomplateTag.prototype,
+/** @lends FBL.DomplateEmbed.prototype */
 {
     merge: function(args, oldTag)
     {
@@ -14937,7 +13484,8 @@ DomplateEmbed.prototype = copyObject(DomplateTag.prototype,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-DomplateLoop.prototype = copyObject(DomplateTag.prototype,
+FBL.DomplateLoop.prototype = copyObject(FBL.DomplateTag.prototype,
+/** @lends FBL.DomplateLoop.prototype */
 {
     merge: function(args, oldTag)
     {
@@ -15031,12 +13579,14 @@ DomplateLoop.prototype = copyObject(DomplateTag.prototype,
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+/** @class */
 function Variable(name, format)
 {
     this.name = name;
     this.format = format;
 }
 
+/** @class */
 function Parts(parts)
 {
     this.parts = parts;
@@ -15226,6 +13776,7 @@ function addEvent(object, name, handler)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+/** @class */
 function ArrayIterator(array)
 {
     var index = -1;
@@ -15239,6 +13790,7 @@ function ArrayIterator(array)
     };
 }
 
+/** @class */
 function StopIteration() {}
 
 FBL.$break = function()
@@ -15248,6 +13800,7 @@ FBL.$break = function()
 
 // ************************************************************************************************
 
+/** @namespace */
 var Renderer =
 {
     renderHTML: function(args, outputs, self)
@@ -15319,16 +13872,16 @@ var Renderer =
 
         var outputs = [];
         var html = this.renderHTML(args, outputs, self);
-        
+
         //if (FBTrace.DBG_DOM)
         //    FBTrace.sysout("domplate.insertNode html: "+html+"\n");
 
         var doc = element.ownerDocument;
         if (!womb || womb.ownerDocument != doc)
             womb = doc.createElement("div");
-        
+
         womb.innerHTML = html;
-  
+
         var root = womb.firstChild;
         if (isAfter)
         {
@@ -15367,16 +13920,16 @@ var Renderer =
         var doc = before.ownerDocument;
         if (!womb || womb.ownerDocument != doc)
             womb = doc.createElement("div");
-        
+
         womb.innerHTML = html;
-  
+
         var root = womb.firstChild;
         while (womb.firstChild)
             if (before.nextSibling)
                 before.parentNode.insertBefore(womb.firstChild, before.nextSibling);
             else
                 before.parentNode.appendChild(womb.firstChild);
-        
+
         var domArgs = [root, this.tag.context, 0];
         domArgs.push.apply(domArgs, this.tag.domArgs);
         domArgs.push.apply(domArgs, outputs);
@@ -15387,7 +13940,7 @@ var Renderer =
         return root;
     },
     /**/
-    
+
     replace: function(args, parent, self)
     {
         this.tag.compile();
@@ -15429,7 +13982,7 @@ var Renderer =
         var outputs = [];
         var html = this.renderHTML(args, outputs, self);
         //if (FBTrace.DBG_DOM) FBTrace.sysout("domplate.append html: "+html+"\n");
-        
+
         if (!womb || womb.ownerDocument != parent.ownerDocument)
             womb = parent.ownerDocument.createElement("div");
         womb.innerHTML = html;
@@ -15441,11 +13994,11 @@ var Renderer =
 
         // clearing element reference to avoid reference error in IE8 when switching contexts
         womb = null;
-        
+
         var domArgs = [root, this.tag.context, 0];
         domArgs.push.apply(domArgs, this.tag.domArgs);
         domArgs.push.apply(domArgs, outputs);
-        
+
         //if (FBTrace.DBG_DOM) FBTrace.dumpProperties("domplate append domArgs:", domArgs);
         this.tag.renderDOM.apply(self ? self : this.tag.subject, domArgs);
 
@@ -15495,11 +14048,19 @@ var OBJECTLINK = this.OBJECTLINK = isIE6 ? // IE6 object link representation
     A({
         "class": "objectLink objectLink-$className a11yFocus",
         href: "javascript:void(0)",
+        // workaround to show XPath (a better approach would use the tooltip on mouseover,
+        // so the XPath information would be calculated dynamically, but we need to create
+        // a tooltip class/wrapper around Menu or InfoTip)
+        title: "$object|FBL.getElementXPath",
         _repObject: "$object"
     })
     : // Other browsers
     A({
         "class": "objectLink objectLink-$className a11yFocus",
+        // workaround to show XPath (a better approach would use the tooltip on mouseover,
+        // so the XPath information would be calculated dynamically, but we need to create
+        // a tooltip class/wrapper around Menu or InfoTip)
+        title: "$object|FBL.getElementXPath",
         _repObject: "$object"
     });
 
@@ -15769,8 +14330,8 @@ this.Obj = domplate(Firebug.Rep,
     tag:
         OBJECTLINK(
             SPAN({"class": "objectTitle"}, "$object|getTitle "),
-            
-            SPAN({"class": "objectProps"}, 
+
+            SPAN({"class": "objectProps"},
                 SPAN({"class": "objectLeftBrace", role: "presentation"}, "{"),
                 FOR("prop", "$object|propIterator",
                     SPAN({"class": "objectPropName", role: "presentation"}, "$prop.name"),
@@ -15794,21 +14355,21 @@ this.Obj = domplate(Firebug.Rep,
     propIterator: function (object)
     {
         ///Firebug.ObjectShortIteratorMax;
-        maxLength = 55; // default max length for long representation
-        
+        var maxLength = 55; // default max length for long representation
+
         if (!object)
             return [];
 
         var props = [];
         var length = 0;
-        
+
         var numProperties = 0;
         var numPropertiesShown = 0;
         var maxLengthReached = false;
-        
+
         var lib = this;
-        
-        var propRepsMap = 
+
+        var propRepsMap =
         {
             "boolean": this.propNumberTag,
             "number": this.propNumberTag,
@@ -15832,44 +14393,44 @@ this.Obj = domplate(Firebug.Rep,
                 {
                     continue;
                 }
-                
+
                 var type = typeof(value);
-                if (type == "boolean" || 
-                    type == "number" || 
-                    (type == "string" && value) || 
+                if (type == "boolean" ||
+                    type == "number" ||
+                    (type == "string" && value) ||
                     (type == "object" && value && value.toString))
                 {
                     var tag = propRepsMap[type];
-                    
+
                     var value = (type == "object") ?
                         Firebug.getRep(value).getTitle(value) :
                         value + "";
-                        
+
                     length += name.length + value.length + 4;
-                    
+
                     if (length <= maxLength)
                     {
                         props.push({
-                            tag: tag, 
-                            name: name, 
-                            object: value, 
-                            equal: "=", 
+                            tag: tag,
+                            name: name,
+                            object: value,
+                            equal: "=",
                             delim: ", "
                         });
-                        
+
                         numPropertiesShown++;
                     }
                     else
                         maxLengthReached = true;
 
                 }
-                
+
                 numProperties++;
-                
+
                 if (maxLengthReached && numProperties > numPropertiesShown)
                     break;
             }
-            
+
             if (numProperties > numPropertiesShown)
             {
                 props.push({
@@ -15894,7 +14455,7 @@ this.Obj = domplate(Firebug.Rep,
         }
         return props;
     },
-    
+
     fb_1_6_propIterator: function (object, max)
     {
         max = max || 3;
@@ -15960,7 +14521,7 @@ this.Obj = domplate(Firebug.Rep,
         }
         return props;
     },
-    
+
     /*
     propIterator: function (object)
     {
@@ -16278,21 +14839,32 @@ this.Element = domplate(Firebug.Rep,
              for (var i = 0; i < elt.attributes.length; ++i)
              {
                  var attr = elt.attributes[i];
-                 if (attr.nodeName && attr.nodeName.indexOf("firebug-") != -1)
+
+                 // we must check if the attribute is specified otherwise IE will show them
+                 if (!attr.specified || attr.nodeName && attr.nodeName.indexOf("firebug-") != -1)
                     continue;
                  else if (attr.nodeName == "id")
-                     idAttr = attr;
-                else if (attr.nodeName == "class")
+                    idAttr = attr;
+                 else if (attr.nodeName == "class")
                     classAttr = attr;
+                 else if (attr.nodeName == "style")
+                    attrs.push({
+                        nodeName: attr.nodeName,
+                        nodeValue: attr.nodeValue ||
+                        // IE won't recognize the attr.nodeValue of <style> nodes ...
+                        // and will return CSS property names in upper case, so we need to convert them
+                        elt.style.cssText.replace(/([^\s]+)\s*:/g,
+                                function(m,g){return g.toLowerCase()+":"})
+                    });
                  else
-                     attrs.push(attr);
+                    attrs.push(attr);
              }
          }
          if (classAttr)
             attrs.splice(0, 0, classAttr);
          if (idAttr)
             attrs.splice(0, 0, idAttr);
-         
+
          return attrs;
      },
 
@@ -16321,7 +14893,7 @@ this.Element = domplate(Firebug.Rep,
      {
          return getElementTreeXPath(elt);
      },
-     
+
      // TODO: xxxpedro remove this?
      getNodeText: function(element)
      {
@@ -16717,11 +15289,11 @@ this.SourceLink = domplate(Firebug.Rep,
             if (FBTrace.DBG_ERRORS)
                 FBTrace.sysout("reps.getSourceLinkTitle decodeURIComponent fails for \'"+fileName+"\': "+exc, exc);
         }
-        
+
         return typeof sourceLink.line == "number" ?
                 fileName + " (line " + sourceLink.line + ")" :
                 fileName;
-        
+
         // TODO: xxxpedro
         //return $STRF("Line", [fileName, sourceLink.line]);
     },
@@ -16859,7 +15431,7 @@ this.StackFrame = domplate(Firebug.Rep,  // XXXjjb Since the repObject is fn the
     {
         //TODO: xxxpedro reps StackFrame
         return frame.name || "anonymous";
-        
+
         //return getFunctionName(frame.script, frame.context);
     },
 
@@ -16868,7 +15440,7 @@ this.StackFrame = domplate(Firebug.Rep,  // XXXjjb Since the repObject is fn the
         //TODO: xxxpedro reps StackFrame
         var fileName = cropString(getFileName(frame.href), 20);
         return fileName + (frame.lineNo ? " (line " + frame.lineNo + ")" : "");
-        
+
         var fileName = cropString(getFileName(frame.href), 17);
         return $STRF("Line", [fileName, frame.lineNo]);
     },
@@ -17542,7 +16114,7 @@ Firebug.Editor = extend(Firebug.Module,
         //dispatch(this.fbListeners, "onStopEdit", [currentPanel, currentEditor, currentTarget]);
         //if (FBTrace.DBG_EDITOR)
         //    FBTrace.sysout("Editor stop panel "+currentPanel.name);
-        
+
         currentTarget = null;
         currentGroup = null;
         currentPanel = null;
@@ -17700,7 +16272,7 @@ Firebug.Editor = extend(Firebug.Module,
         var win = isIE ?
                 currentTarget.ownerDocument.parentWindow :
                 currentTarget.ownerDocument.defaultView;
-        
+
         addEvent(win, "resize", this.onResize);
         addEvent(win, "blur", this.onBlur);
 
@@ -17759,7 +16331,7 @@ Firebug.Editor = extend(Firebug.Module,
         var win = isIE ?
                 currentTarget.ownerDocument.parentWindow :
                 currentTarget.ownerDocument.defaultView;
-        
+
         removeEvent(win, "resize", this.onResize);
         removeEvent(win, "blur", this.onBlur);
 
@@ -17877,20 +16449,20 @@ Firebug.BaseEditor = extend(Firebug.MeasureBox,
 // basic inline editor attributes
 var inlineEditorAttributes = {
     "class": "textEditorInner",
-    
-    type: "text", 
+
+    type: "text",
     spellcheck: "false",
-    
+
     onkeypress: "$onKeyPress",
-    
+
     onoverflow: "$onOverflow",
     oncontextmenu: "$onContextMenu"
 };
 
 // IE does not support the oninput event, so we're using the onkeydown to signalize
 // the relevant keyboard events, and the onpropertychange to actually handle the
-// input event, which should happen after the onkeydown event is fired and after the 
-// value of the input is updated, but before the onkeyup and before the input (with the 
+// input event, which should happen after the onkeydown event is fired and after the
+// value of the input is updated, but before the onkeyup and before the input (with the
 // new value) is rendered
 if (isIE)
 {
@@ -17960,18 +16532,18 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
     {
         if (FBTrace.DBG_EDITOR)
             FBTrace.sysout("Firebug.InlineEditor initializeInline()");
-        
+
         //this.box = this.tag.replace({}, doc, this);
         this.box = this.tag.append({}, doc.body, this);
-        
+
         //this.input = this.box.childNodes[1].firstChild.firstChild;  // XXXjjb childNode[1] required
         this.input = this.box.getElementsByTagName("input")[0];
-        
+
         if (isIElt8)
         {
             this.input.style.top = "-8px";
         }
-        
+
         this.expander = this.expanderTag.replace({}, doc, this);
         this.initialize();
     },
@@ -17999,30 +16571,30 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         this.panel = panel;
 
         this.targetSize = targetSize;
-        
+
         // TODO: xxxpedro editor
         //this.targetOffset = getClientOffset(target);
-        
-        // Some browsers (IE, Google Chrome and Safari) will have problem trying to get the 
-        // offset values of invisible elements, or empty elements. So, in order to get the 
-        // correct values, we temporary inject a character in the innerHTML of the empty element, 
+
+        // Some browsers (IE, Google Chrome and Safari) will have problem trying to get the
+        // offset values of invisible elements, or empty elements. So, in order to get the
+        // correct values, we temporary inject a character in the innerHTML of the empty element,
         // then we get the offset values, and next, we restore the original innerHTML value.
         var innerHTML = target.innerHTML;
         var isEmptyElement = !innerHTML;
         if (isEmptyElement)
             target.innerHTML = ".";
-        
+
         // Get the position of the target element (that is about to be edited)
-        this.targetOffset = 
+        this.targetOffset =
         {
             x: target.offsetLeft,
             y: target.offsetTop
         };
-        
+
         // Restore the original innerHTML value of the empty element
         if (isEmptyElement)
             target.innerHTML = innerHTML;
-        
+
         this.originalClassName = this.box.className;
 
         var classNames = target.className.split(" ");
@@ -18046,11 +16618,11 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             if (hasClass(parent, "textEditorInner2"))
             {
                 var yDiff = this.textSize.height - this.shadowExpand;
-                
+
                 // IE6 height offset
                 if (isIE6)
                     yDiff -= 2;
-                
+
                 parent.style.height = yDiff + "px";
                 parent.parentNode.style.height = yDiff + "px";
             }
@@ -18063,11 +16635,11 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         if (isIElt8)
             panel.panelNode.appendChild(this.box);
         else
-            target.offsetParent.appendChild(this.box);        
-        
+            target.offsetParent.appendChild(this.box);
+
         //console.log(target);
         //this.input.select(); // it's called bellow, with setTimeout
-        
+
         if (isIE)
         {
             // reset input style
@@ -18087,12 +16659,12 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
         //TODO: xxxpedro
         //scrollIntoCenterView(this.box, null, true);
-        
+
         // Display the editor after change its size and position to avoid flickering
         this.box.style.display = "block";
-        
-        // we need to call input.focus() and input.select() with a timeout, 
-        // otherwise it won't work on all browsers due to timing issues 
+
+        // we need to call input.focus() and input.select() with a timeout,
+        // otherwise it won't work on all browsers due to timing issues
         var self = this;
         setTimeout(function(){
             self.input.focus();
@@ -18103,7 +16675,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
     hide: function()
     {
         this.box.className = this.originalClassName;
-        
+
         if (!this.fixedWidth)
         {
             this.stopMeasuring();
@@ -18118,7 +16690,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
         {
             ///setSelectionRange(this.input, 0, 0);
             this.input.blur();
-            
+
             this.box.parentNode.removeChild(this.box);
         }
 
@@ -18189,13 +16761,13 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
     completeValue: function(amt)
     {
         //console.log("completeValue");
-        
-        var selectRangeCallback = this.getAutoCompleter().complete(currentPanel.context, this.input, true, amt < 0); 
-        
+
+        var selectRangeCallback = this.getAutoCompleter().complete(currentPanel.context, this.input, true, amt < 0);
+
         if (selectRangeCallback)
         {
             Firebug.Editor.update(true);
-            
+
             // We need to select the editor text after calling update in Safari/Chrome,
             // otherwise the text won't be selected
             if (isSafari)
@@ -18210,7 +16782,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
     incrementValue: function(amt)
     {
         var value = this.input.value;
-        
+
         // TODO: xxxpedro editor
         if (isIE)
             var start = getInputSelectionStart(this.input), end = start;
@@ -18235,7 +16807,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
 
             var completion = intValue-amt;
             this.input.value = preExpr + completion + digitPost + postExpr;
-            
+
             setSelectionRange(this.input, start, end);
 
             Firebug.Editor.update(true);
@@ -18288,25 +16860,25 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             this.keyDownPressed = true;
         }
     },
-    
+
     onInput: function(event)
     {
         //debugger;
-        
+
         // skip not relevant onpropertychange calls on IE
         if (isIE)
         {
-            if (event.propertyName != "value" || !isVisible(this.input) || !this.keyDownPressed) 
+            if (event.propertyName != "value" || !isVisible(this.input) || !this.keyDownPressed)
                 return;
-            
+
             this.keyDownPressed = false;
         }
-        
+
         //console.log("onInput", event);
         //console.trace();
-        
+
         var selectRangeCallback;
-        
+
         if (this.ignoreNextInput)
         {
             this.ignoreNextInput = false;
@@ -18318,7 +16890,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
             this.getAutoCompleter().reset();
 
         Firebug.Editor.update();
-        
+
         if (selectRangeCallback)
         {
             // We need to select the editor text after calling update in Safari/Chrome,
@@ -18387,7 +16959,7 @@ Firebug.InlineEditor.prototype = domplate(Firebug.BaseEditor,
                 var style = isIE ?
                         this.target.currentStyle :
                         this.target.ownerDocument.defaultView.getComputedStyle(this.target, "");
-                
+
                 targetMargin = parseInt(style.marginLeft) + parseInt(style.marginRight);
 
                 // Make the width fit the remaining x-space from the offset to the far right
@@ -18460,7 +17032,7 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         if (originalOffset != -1)
         {
             textBox.value = originalValue;
-            
+
             setSelectionRange(textBox, originalOffset, originalOffset);
 
             this.reset();
@@ -18489,14 +17061,14 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         // TODO: xxxpedro important port to firebug (variable leak)
         //var value = lastValue = textBox.value;
         var value = textBox.value;
-        
+
         //var offset = textBox.selectionStart;
         var offset = getInputSelectionStart(textBox);
-        
+
         // The result of selectionStart() in Safari/Chrome is 1 unit less than the result
         // in Firefox. Therefore, we need to manually adjust the value here.
         if (isSafari && !cycle && offset >= 0) offset++;
-        
+
         if (!selectMode && originalOffset != -1)
             offset = originalOffset;
 
@@ -18658,7 +17230,7 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
 
         textBox.value = preParsed + preExpr + preCompletion + postCompletion + postExpr;
         var offsetEnd = preParsed.length + preExpr.length + completion.length;
-        
+
         // TODO: xxxpedro remove the following commented code, if the lib.setSelectionRange()
         // is working well.
         /*
@@ -18675,7 +17247,7 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
             },0);
         }
         /**/
-        
+
         // we must select the range with a timeout, otherwise the text won't
         // be properly selected (because after this function executes, the editor's
         // input will be resized to fit the whole text)
@@ -18686,11 +17258,11 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
             else
                 setSelectionRange(textBox, offsetEnd, offsetEnd);
         },0);
-                
+
         return true;
         /**/
-        
-        // The editor text should be selected only after calling the editor.update() 
+
+        // The editor text should be selected only after calling the editor.update()
         // in Safari/Chrome, otherwise the text won't be selected. So, we're returning
         // a function to be called later (in the proper time for all browsers).
         //
@@ -18699,7 +17271,7 @@ Firebug.AutoCompleter = function(getExprOffset, getRange, evaluator, selectMode,
         // editor.js. See if this function is called anywhere else (like css.js for example).
         return function(){
             //console.log("autocomplete ", textBox, offset, offsetEnd);
-            
+
             if (selectMode)
                 setSelectionRange(textBox, offset, offsetEnd);
             else
@@ -18768,7 +17340,7 @@ var getInlineParent = function getInlineParent(element)
         var s = isIE ?
                 element.currentStyle :
                 element.ownerDocument.defaultView.getComputedStyle(element, "");
-        
+
         if (s.display != "inline")
             return lastInline;
         else
@@ -18808,22 +17380,22 @@ Firebug.Inspector =
     create: function()
     {
         offlineFragment = Env.browser.document.createDocumentFragment();
-        
+
         createBoxModelInspector();
         createOutlineInspector();
     },
-    
+
     destroy: function()
     {
         destroyBoxModelInspector();
         destroyOutlineInspector();
-        
+
         offlineFragment = null;
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Inspect functions
-    
+
     toggleInspect: function()
     {
         if (isInspecting)
@@ -18836,42 +17408,42 @@ Firebug.Inspector =
             this.startInspecting();
         }
     },
-    
+
     startInspecting: function()
     {
         isInspecting = true;
-        
+
         Firebug.chrome.selectPanel("HTML");
-        
+
         createInspectorFrame();
-        
+
         var size = Firebug.browser.getWindowScrollSize();
-        
+
         fbInspectFrame.style.width = size.width + "px";
         fbInspectFrame.style.height = size.height + "px";
-        
+
         //addEvent(Firebug.browser.document.documentElement, "mousemove", Firebug.Inspector.onInspectingBody);
-        
+
         addEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
         addEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
     },
-    
+
     stopInspecting: function()
     {
         isInspecting = false;
-        
+
         if (outlineVisible) this.hideOutline();
         removeEvent(fbInspectFrame, "mousemove", Firebug.Inspector.onInspecting);
         removeEvent(fbInspectFrame, "mousedown", Firebug.Inspector.onInspectingClick);
-        
+
         destroyInspectorFrame();
-        
+
         Firebug.chrome.inspectButton.restore();
-        
+
         if (Firebug.chrome.type == "popup")
             Firebug.chrome.node.focus();
     },
-    
+
     onInspectingClick: function(e)
     {
         fbInspectFrame.style.display = "none";
@@ -18885,11 +17457,11 @@ Firebug.Inspector =
 
         // Avoid looking at text nodes in Opera
         while (targ.nodeType != 1) targ = targ.parentNode;
-        
+
         //Firebug.Console.log(targ);
         Firebug.Inspector.stopInspecting();
     },
-    
+
     onInspecting: function(e)
     {
         if (new Date().getTime() - lastInspecting > 30)
@@ -18897,75 +17469,75 @@ Firebug.Inspector =
             fbInspectFrame.style.display = "none";
             var targ = Firebug.browser.getElementFromPoint(e.clientX, e.clientY);
             fbInspectFrame.style.display = "block";
-    
+
             // Avoid inspecting the outline, and the FirebugUI
             var id = targ.id;
             if (id && /^fbOutline\w$/.test(id)) return;
             if (id == "FirebugUI") return;
-            
+
             // Avoid looking at text nodes in Opera
             while (targ.nodeType != 1) targ = targ.parentNode;
-    
+
             if (targ.nodeName.toLowerCase() == "body") return;
-    
+
             //Firebug.Console.log(e.clientX, e.clientY, targ);
             Firebug.Inspector.drawOutline(targ);
-            
+
             if (ElementCache(targ))
             {
                 var target = ""+ElementCache.key(targ);
                 var lazySelect = function()
                 {
                     inspectorTS = new Date().getTime();
-                    
+
                     Firebug.HTML.selectTreeNode(""+ElementCache.key(targ))
                 };
-                
+
                 if (inspectorTimer)
                 {
                     clearTimeout(inspectorTimer);
                     inspectorTimer = null;
                 }
-                
+
                 if (new Date().getTime() - inspectorTS > 200)
                     setTimeout(lazySelect, 0)
                 else
                     inspectorTimer = setTimeout(lazySelect, 300);
             }
-            
+
             lastInspecting = new Date().getTime();
         }
     },
-    
+
     // TODO: xxxpedro remove this?
     onInspectingBody: function(e)
     {
         if (new Date().getTime() - lastInspecting > 30)
         {
             var targ = e.target;
-    
+
             // Avoid inspecting the outline, and the FirebugUI
             var id = targ.id;
             if (id && /^fbOutline\w$/.test(id)) return;
             if (id == "FirebugUI") return;
-            
+
             // Avoid looking at text nodes in Opera
             while (targ.nodeType != 1) targ = targ.parentNode;
-    
+
             if (targ.nodeName.toLowerCase() == "body") return;
-    
+
             //Firebug.Console.log(e.clientX, e.clientY, targ);
             Firebug.Inspector.drawOutline(targ);
-            
+
             if (ElementCache.has(targ))
                 FBL.Firebug.HTML.selectTreeNode(""+ElementCache.key(targ));
-            
+
             lastInspecting = new Date().getTime();
         }
     },
-    
+
     /**
-     * 
+     *
      *   llttttttrr
      *   llttttttrr
      *   ll      rr
@@ -18977,43 +17549,43 @@ Firebug.Inspector =
     {
         var border = 2;
         var scrollbarSize = 17;
-        
+
         var windowSize = Firebug.browser.getWindowSize();
         var scrollSize = Firebug.browser.getWindowScrollSize();
         var scrollPosition = Firebug.browser.getWindowScrollPosition();
-        
+
         var box = Firebug.browser.getElementBox(el);
-        
+
         var top = box.top;
         var left = box.left;
         var height = box.height;
         var width = box.width;
-        
-        var freeHorizontalSpace = scrollPosition.left + windowSize.width - left - width - 
+
+        var freeHorizontalSpace = scrollPosition.left + windowSize.width - left - width -
                 (!isIE && scrollSize.height > windowSize.height ? // is *vertical* scrollbar visible
                  scrollbarSize : 0);
-        
+
         var freeVerticalSpace = scrollPosition.top + windowSize.height - top - height -
                 (!isIE && scrollSize.width > windowSize.width ? // is *horizontal* scrollbar visible
                 scrollbarSize : 0);
-        
+
         var numVerticalBorders = freeVerticalSpace > 0 ? 2 : 1;
-        
+
         var o = outlineElements;
         var style;
-        
+
         style = o.fbOutlineT.style;
         style.top = top-border + "px";
         style.left = left + "px";
         style.height = border + "px";  // TODO: on initialize()
         style.width = width + "px";
-  
+
         style = o.fbOutlineL.style;
         style.top = top-border + "px";
         style.left = left-border + "px";
         style.height = height+ numVerticalBorders*border + "px";
         style.width = border + "px";  // TODO: on initialize()
-        
+
         style = o.fbOutlineB.style;
         if (freeVerticalSpace > 0)
         {
@@ -19029,7 +17601,7 @@ Firebug.Inspector =
             style.width = border + "px";
             //style.height = border + "px";
         }
-        
+
         style = o.fbOutlineR.style;
         if (freeHorizontalSpace > 0)
         {
@@ -19045,102 +17617,102 @@ Firebug.Inspector =
             style.height = border + "px";
             style.width = border + "px";
         }
-        
-        if (!outlineVisible) this.showOutline();        
+
+        if (!outlineVisible) this.showOutline();
     },
-    
+
     hideOutline: function()
     {
         if (!outlineVisible) return;
-        
+
         for (var name in outline)
             offlineFragment.appendChild(outlineElements[name]);
 
         outlineVisible = false;
     },
-    
+
     showOutline: function()
     {
         if (outlineVisible) return;
-        
+
         if (boxModelVisible) this.hideBoxModel();
-        
+
         for (var name in outline)
             Firebug.browser.document.getElementsByTagName("body")[0].appendChild(outlineElements[name]);
-        
+
         outlineVisible = true;
     },
-  
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Box Model
-    
+
     drawBoxModel: function(el)
     {
         // avoid error when the element is not attached a document
         if (!el || !el.parentNode)
             return;
-        
+
         var box = Firebug.browser.getElementBox(el);
-        
+
         var windowSize = Firebug.browser.getWindowSize();
         var scrollPosition = Firebug.browser.getWindowScrollPosition();
-        
+
         // element may be occluded by the chrome, when in frame mode
         var offsetHeight = Firebug.chrome.type == "frame" ? FirebugChrome.height : 0;
-        
+
         // if element box is not inside the viewport, don't draw the box model
         if (box.top > scrollPosition.top + windowSize.height - offsetHeight ||
             box.left > scrollPosition.left + windowSize.width ||
             scrollPosition.top > box.top + box.height ||
             scrollPosition.left > box.left + box.width )
             return;
-        
+
         var top = box.top;
         var left = box.left;
         var height = box.height;
         var width = box.width;
-        
+
         var margin = Firebug.browser.getMeasurementBox(el, "margin");
         var padding = Firebug.browser.getMeasurementBox(el, "padding");
         var border = Firebug.browser.getMeasurementBox(el, "border");
-        
+
         boxModelStyle.top = top - margin.top + "px";
         boxModelStyle.left = left - margin.left + "px";
         boxModelStyle.height = height + margin.top + margin.bottom + "px";
         boxModelStyle.width = width + margin.left + margin.right + "px";
-      
+
         boxBorderStyle.top = margin.top + "px";
         boxBorderStyle.left = margin.left + "px";
         boxBorderStyle.height = height + "px";
         boxBorderStyle.width = width + "px";
-        
+
         boxPaddingStyle.top = margin.top + border.top + "px";
         boxPaddingStyle.left = margin.left + border.left + "px";
         boxPaddingStyle.height = height - border.top - border.bottom + "px";
         boxPaddingStyle.width = width - border.left - border.right + "px";
-      
+
         boxContentStyle.top = margin.top + border.top + padding.top + "px";
         boxContentStyle.left = margin.left + border.left + padding.left + "px";
         boxContentStyle.height = height - border.top - padding.top - padding.bottom - border.bottom + "px";
         boxContentStyle.width = width - border.left - padding.left - padding.right - border.right + "px";
-        
+
         if (!boxModelVisible) this.showBoxModel();
     },
-  
+
     hideBoxModel: function()
     {
         if (!boxModelVisible) return;
-        
+
         offlineFragment.appendChild(boxModel);
         boxModelVisible = false;
     },
-    
+
     showBoxModel: function()
     {
         if (boxModelVisible) return;
-            
+
         if (outlineVisible) this.hideOutline();
-        
+
         Firebug.browser.document.getElementsByTagName("body")[0].appendChild(boxModel);
         boxModelVisible = true;
     }
@@ -19163,10 +17735,10 @@ var offlineFragment = null;
 
 var boxModelVisible = false;
 
-var boxModel, boxModelStyle, 
+var boxModel, boxModelStyle,
     boxMargin, boxMarginStyle,
     boxBorder, boxBorderStyle,
-    boxPadding, boxPaddingStyle, 
+    boxPadding, boxPaddingStyle,
     boxContent, boxContentStyle;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -19188,7 +17760,7 @@ var inspectPaddingStyle = inspectStyle + "background: SlateBlue;";
 var inspectContentStyle = inspectStyle + "background: SkyBlue;";
 
 
-var outlineStyle = { 
+var outlineStyle = {
     fbHorizontalLine: "background: #3875D7;height: 2px;",
     fbVerticalLine: "background: #3875D7;width: 2px;"
 }
@@ -19213,7 +17785,7 @@ var outline = {
 
 var getInspectingTarget = function()
 {
-    
+
 };
 
 // ************************************************************************************************
@@ -19265,31 +17837,31 @@ var createBoxModelInspector = function createBoxModelInspector()
     boxModel.firebugIgnore = true;
     boxModelStyle = boxModel.style;
     boxModelStyle.cssText = inspectModelStyle;
-    
+
     boxMargin = createGlobalElement("div");
     boxMargin.id = "fbBoxMargin";
     boxMarginStyle = boxMargin.style;
     boxMarginStyle.cssText = inspectMarginStyle;
     boxModel.appendChild(boxMargin);
-    
+
     boxBorder = createGlobalElement("div");
     boxBorder.id = "fbBoxBorder";
     boxBorderStyle = boxBorder.style;
     boxBorderStyle.cssText = inspectBorderStyle;
     boxModel.appendChild(boxBorder);
-    
+
     boxPadding = createGlobalElement("div");
     boxPadding.id = "fbBoxPadding";
     boxPaddingStyle = boxPadding.style;
     boxPaddingStyle.cssText = inspectPaddingStyle;
     boxModel.appendChild(boxPadding);
-    
+
     boxContent = createGlobalElement("div");
     boxContent.id = "fbBoxContent";
     boxContentStyle = boxContent.style;
     boxContentStyle.cssText = inspectContentStyle;
     boxModel.appendChild(boxContent);
-    
+
     offlineFragment.appendChild(boxModel);
 };
 
@@ -19386,7 +17958,7 @@ Firebug.ConsoleBase =
     {
         // TODO: xxxpedro console console2
         noThrottle = true; // xxxpedro forced because there is no TabContext yet
-        
+
         if (!context)
             context = FirebugContext;
 
@@ -19455,7 +18027,7 @@ Firebug.ConsoleBase =
         if (context)
             Firebug.Errors.clear(context);
         /**/
-        
+
         var panel = this.getPanel(context, true);
         if (panel)
         {
@@ -19477,7 +18049,7 @@ Firebug.ConsoleBase =
 
 //TODO: xxxpedro
 //var ActivableConsole = extend(Firebug.ActivableModule, Firebug.ConsoleBase);
-var ActivableConsole = extend(Firebug.ConsoleBase, 
+var ActivableConsole = extend(Firebug.ConsoleBase,
 {
     isAlwaysEnabled: function()
     {
@@ -19489,14 +18061,16 @@ Firebug.Console = Firebug.Console = extend(ActivableConsole,
 //Firebug.Console = extend(ActivableConsole,
 {
     dispatchName: "console",
-    
+
     error: function()
     {
         Firebug.Console.logFormatted(arguments, Firebug.browser, "error");
     },
-    
+
     flush: function()
     {
+        dispatch(this.fbListeners,"flush",[]);
+
         for (var i=0, length=consoleQueue.length; i<length; i++)
         {
             var args = consoleQueue[i];
@@ -19933,13 +18507,13 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
             if (isLeftClick(event))
             {
                 //console.log(event.currentTarget == event.target);
-                
+
                 var target = event.target || event.srcElement;
-                
+
                 target = getAncestorByClass(target, "logGroupLabel");
-                
+
                 var groupRow = target.parentNode;
-                
+
                 if (hasClass(groupRow, "opened"))
                 {
                     removeClass(groupRow, "opened");
@@ -19967,10 +18541,10 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     onMouseMove: function(event)
     {
         var target = event.srcElement || event.target;
-        
+
         var object = getAncestorByClass(target, "objectLink-element");
         object = object ? object.repObject : null;
-        
+
         if(object && instanceOf(object, "Element") && object.nodeType == 1)
         {
             if(object != lastHighlightedObject)
@@ -19981,21 +18555,21 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         }
         else
             Firebug.Inspector.hideBoxModel();
-        
+
     },
-    
+
     onMouseDown: function(event)
     {
         var target = event.srcElement || event.target;
-        
+
         var object = getAncestorByClass(target, "objectLink");
         var repObject = object ? object.repObject : null;
-        
+
         if (!repObject)
         {
             return;
         }
-        
+
         if (hasClass(object, "objectLink-object"))
         {
             Firebug.chrome.selectPanel("DOM");
@@ -20006,7 +18580,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
             Firebug.chrome.selectPanel("HTML");
             Firebug.chrome.getPanel("HTML").select(repObject, true);
         }
-        
+
         /*
         if(object && instanceOf(object, "Element") && object.nodeType == 1)
         {
@@ -20019,7 +18593,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         else
             Firebug.Inspector.hideBoxModel();
         /**/
-        
+
     },
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -20033,23 +18607,23 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     //searchable: true,
     //breakable: true,
     //editable: false,
-    
+
     options:
     {
         hasCommandLine: true,
         hasToolButtons: true,
         isPreRendered: true
     },
-    
+
     create: function()
     {
         Firebug.Panel.create.apply(this, arguments);
-        
+
         this.context = Firebug.browser.window;
         this.document = Firebug.chrome.document;
         this.onMouseMove = bind(this.onMouseMove, this);
         this.onMouseDown = bind(this.onMouseDown, this);
-        
+
         this.clearButton = new Button({
             element: $("fbConsole_btClear"),
             owner: Firebug.Console,
@@ -20074,21 +18648,21 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         }
 
         //Firebug.Console.injector.install(Firebug.browser.window);
-        
+
         addEvent(this.panelNode, "mouseover", this.onMouseMove);
         addEvent(this.panelNode, "mousedown", this.onMouseDown);
-        
+
         this.clearButton.initialize();
-        
+
         //consolex.trace();
-        //TODO: xxxpedro remove this 
+        //TODO: xxxpedro remove this
         /*
         Firebug.Console.openGroup(["asd"], null, "group", null, false);
         Firebug.Console.log("asd");
         Firebug.Console.log("asd");
         Firebug.Console.log("asd");
         /**/
-        
+
         //TODO: xxxpedro preferences prefs
         //prefs.addObserver(Firebug.prefDomain, this, false);
     },
@@ -20120,14 +18694,14 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     {
         //TODO: xxxpedro console console2
         this.clearButton.shutdown();
-        
+
         removeEvent(this.panelNode, "mousemove", this.onMouseMove);
         removeEvent(this.panelNode, "mousedown", this.onMouseDown);
-        
+
         this.destroyNode();
 
         Firebug.Panel.shutdown.apply(this, arguments);
-        
+
         //TODO: xxxpedro preferences prefs
         //prefs.removeObserver(Firebug.prefDomain, this, false);
     },
@@ -20394,7 +18968,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     {
         //TODO: xxxpedro show command line important
         return;
-        
+
         if (shouldShow)
         {
             collapse(Firebug.chrome.$("fbCommandBox"), false);
@@ -20507,7 +19081,7 @@ FBL.ns(function() { with (FBL) {
 
 //const Cc = Components.classes;
 //const Ci = Components.interfaces;
-    
+
 var frameCounters = {};
 var traceRecursion = 0;
 
@@ -20516,10 +19090,10 @@ Firebug.Console.injector =
     install: function(context)
     {
         var win = context.window;
-        
+
         var consoleHandler = new FirebugConsoleHandler(context, win);
-        
-        var properties = 
+
+        var properties =
         [
             "log",
             "debug",
@@ -20542,14 +19116,14 @@ Firebug.Console.injector =
             "open",
             "close"
         ];
-        
+
         var Handler = function(name)
         {
             var c = consoleHandler;
             var f = consoleHandler[name];
             return function(){return f.apply(c,arguments)};
         };
-        
+
         var installer = function(c)
         {
             for (var i=0, l=properties.length; i<l; i++)
@@ -20559,13 +19133,13 @@ Firebug.Console.injector =
                 c.firebuglite = Firebug.version;
             }
         };
-        
+
         var consoleNS = (!isFirefox || isFirefox && !("console" in win)) ? "console" : "firebug";
         var sandbox = new win.Function("arguments.callee.install(window." + consoleNS + "={})");
         sandbox.install = installer;
         sandbox();
     },
-    
+
     isAttached: function(context, win)
     {
         if (win.wrappedJSObject)
@@ -20749,7 +19323,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         }
     };
 
-    this.firebuglite = Firebug.version;    
+    this.firebuglite = Firebug.version;
 
     this.init = function()
     {
@@ -20848,14 +19422,14 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
     this.profile = function(title)
     {
         logFormatted(["console.profile() not supported."], "warn", true);
-        
+
         //Firebug.Profiler.startProfiling(context, title);
     };
 
     this.profileEnd = function()
     {
         logFormatted(["console.profile() not supported."], "warn", true);
-        
+
         //Firebug.Profiler.stopProfiling(context);
     };
 
@@ -20903,11 +19477,11 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
             {
                 return f.name;
             }
-            
+
             var name = f.toString().match(/function\s*([_$\w\d]*)/)[1];
             return name || "anonymous";
         };
-        
+
         var wasVisited = function(fn)
         {
             for (var i=0, l=frames.length; i<l; i++)
@@ -20917,26 +19491,26 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
                     return true;
                 }
             }
-            
+
             return false;
         };
-        
+
         traceRecursion++;
-        
+
         if (traceRecursion > 1)
         {
             traceRecursion--;
             return;
         }
-    
+
         var frames = [];
-        
+
         for (var fn = arguments.callee.caller.caller; fn; fn = fn.caller)
         {
             if (wasVisited(fn)) break;
-            
+
             var args = [];
-            
+
             for (var i = 0, l = fn.arguments.length; i < l; ++i)
             {
                 args.push({value: fn.arguments[i]});
@@ -20944,10 +19518,10 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
             frames.push({fn: fn, name: getFuncName(fn), args: args});
         }
-        
-        
+
+
         // ****************************************************************************************
-        
+
         try
         {
             (0)();
@@ -20955,15 +19529,15 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         catch(e)
         {
             var result = e;
-            
-            var stack = 
-                result.stack || // Firefox / Google Chrome 
+
+            var stack =
+                result.stack || // Firefox / Google Chrome
                 result.stacktrace || // Opera
                 "";
-            
+
             stack = stack.replace(/\n\r|\r\n/g, "\n"); // normalize line breaks
             var items = stack.split(/[\n\r]/);
-            
+
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // Google Chrome
             if (FBL.isSafari)
@@ -20971,85 +19545,85 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
                 //var reChromeStackItem = /^\s+at\s+([^\(]+)\s\((.*)\)$/;
                 //var reChromeStackItem = /^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
                 var reChromeStackItem = /^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
-                
+
                 var reChromeStackItemName = /\s*\($/;
                 var reChromeStackItemValue = /^(.+)\:(\d+\:\d+)\)?$/;
-                
+
                 var framePos = 0;
                 for (var i=4, length=items.length; i<length; i++, framePos++)
                 {
                     var frame = frames[framePos];
                     var item = items[i];
                     var match = item.match(reChromeStackItem);
-                    
+
                     //Firebug.Console.log("["+ framePos +"]--------------------------");
                     //Firebug.Console.log(item);
                     //Firebug.Console.log("................");
-                    
+
                     if (match)
                     {
                         var name = match[1];
                         if (name)
                         {
                             name = name.replace(reChromeStackItemName, "");
-                            frame.name = name; 
+                            frame.name = name;
                         }
-                        
+
                         //Firebug.Console.log("name: "+name);
-                        
+
                         var value = match[2].match(reChromeStackItemValue);
                         if (value)
                         {
                             frame.href = value[1];
                             frame.lineNo = value[2];
-                            
+
                             //Firebug.Console.log("url: "+value[1]);
                             //Firebug.Console.log("line: "+value[2]);
                         }
                         //else
                         //    Firebug.Console.log(match[2]);
-                        
-                    }                
+
+                    }
                 }
             }
             /**/
-            
+
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             else if (FBL.isFirefox)
             {
                 // Firefox
                 var reFirefoxStackItem = /^(.*)@(.*)$/;
                 var reFirefoxStackItemValue = /^(.+)\:(\d+)$/;
-                
+
                 var framePos = 0;
                 for (var i=2, length=items.length; i<length; i++, framePos++)
                 {
                     var frame = frames[framePos] || {};
                     var item = items[i];
                     var match = item.match(reFirefoxStackItem);
-                    
+
                     if (match)
                     {
                         var name = match[1];
-                        
+
                         //Firebug.Console.logFormatted("name: "+name);
-                        
+
                         var value = match[2].match(reFirefoxStackItemValue);
                         if (value)
                         {
                             frame.href = value[1];
                             frame.lineNo = value[2];
-                            
+
                             //Firebug.Console.log("href: "+ value[1]);
                             //Firebug.Console.log("line: " + value[2]);
                         }
                         //else
                         //    Firebug.Console.logFormatted([match[2]]);
-                    }                
+                    }
                 }
             }
             /**/
-            
+
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             /*
             else if (FBL.isOpera)
@@ -21057,40 +19631,40 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
                 // Opera
                 var reOperaStackItem = /^\s\s(?:\.\.\.\s\s)?Line\s(\d+)\sof\s(.+)$/;
                 var reOperaStackItemValue = /^linked\sscript\s(.+)$/;
-                
+
                 for (var i=0, length=items.length; i<length; i+=2)
                 {
                     var item = items[i];
-                    
+
                     var match = item.match(reOperaStackItem);
-                    
+
                     if (match)
                     {
                         //Firebug.Console.log(match[1]);
-                        
+
                         var value = match[2].match(reOperaStackItemValue);
-                        
+
                         if (value)
                         {
                             //Firebug.Console.log(value[1]);
                         }
                         //else
                         //    Firebug.Console.log(match[2]);
-                        
+
                         //Firebug.Console.log("--------------------------");
-                    }                
+                    }
                 }
             }
             /**/
         }
-        
+
         //console.log(stack);
         //console.dir(frames);
         Firebug.Console.log({frames: frames}, context, "stackTrace", FirebugReps.StackTrace);
-        
+
         traceRecursion--;
     };
-    
+
     this.trace_ok = function()
     {
         var getFuncName = function getFuncName (f)
@@ -21099,11 +19673,11 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
                 return f.getName();
             if (f.name) // in FireFox, Function objects have a name property...
                 return f.name;
-            
+
             var name = f.toString().match(/function\s*([_$\w\d]*)/)[1];
             return name || "anonymous";
         };
-        
+
         var wasVisited = function(fn)
         {
             for (var i=0, l=frames.length; i<l; i++)
@@ -21111,18 +19685,18 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
                 if (frames[i].fn == fn)
                     return true;
             }
-            
+
             return false;
         };
-    
+
         var frames = [];
-        
+
         for (var fn = arguments.callee.caller; fn; fn = fn.caller)
         {
             if (wasVisited(fn)) break;
-            
+
             var args = [];
-            
+
             for (var i = 0, l = fn.arguments.length; i < l; ++i)
             {
                 args.push({value: fn.arguments[i]});
@@ -21130,10 +19704,10 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
             frames.push({fn: fn, name: getFuncName(fn), args: args});
         }
-        
+
         Firebug.Console.log({frames: frames}, context, "stackTrace", FirebugReps.StackTrace);
     };
-    
+
     this.clear = function()
     {
         Firebug.Console.clear(context);
@@ -21361,10 +19935,10 @@ var _completion =
     [
         "console"
     ],
-    
+
     document:
     [
-        "getElementById", 
+        "getElementById",
         "getElementsByTagName"
     ]
 };
@@ -21385,117 +19959,117 @@ var _stack = function(command)
 Firebug.CommandLine = extend(Firebug.Module,
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        
+
     element: null,
     isMultiLine: false,
     isActive: false,
-  
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     initialize: function(doc)
     {
         this.clear = bind(this.clear, this);
         this.enter = bind(this.enter, this);
-        
+
         this.onError = bind(this.onError, this);
         this.onKeyDown = bind(this.onKeyDown, this);
         this.onMultiLineKeyDown = bind(this.onMultiLineKeyDown, this);
-        
+
         addEvent(Firebug.browser.window, "error", this.onError);
         addEvent(Firebug.chrome.window, "error", this.onError);
     },
-    
+
     shutdown: function(doc)
     {
         this.deactivate();
-        
+
         removeEvent(Firebug.browser.window, "error", this.onError);
         removeEvent(Firebug.chrome.window, "error", this.onError);
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     activate: function(multiLine, hideToggleIcon, onRun)
     {
         defineCommandLineAPI();
-        
+
         if (this.isActive)
         {
             if (this.isMultiLine == multiLine) return;
-            
+
             this.deactivate();
         }
-        
+
         fbCommandLine = $("fbCommandLine");
         fbLargeCommandLine = $("fbLargeCommandLine");
         fbLargeCommandButtons = $("fbLargeCommandButtons");
-        
+
         if (multiLine)
         {
             onRun = onRun || this.enter;
-            
+
             this.isMultiLine = true;
-            
+
             this.element = fbLargeCommandLine;
-            
+
             addEvent(this.element, "keydown", this.onMultiLineKeyDown);
-            
+
             addEvent($("fbSmallCommandLineIcon"), "click", Firebug.chrome.hideLargeCommandLine);
-            
+
             this.runButton = new Button({
                 element: $("fbCommand_btRun"),
                 owner: Firebug.CommandLine,
                 onClick: onRun
             });
-            
+
             this.runButton.initialize();
-            
+
             this.clearButton = new Button({
                 element: $("fbCommand_btClear"),
                 owner: Firebug.CommandLine,
                 onClick: this.clear
             });
-            
+
             this.clearButton.initialize();
         }
         else
         {
             this.isMultiLine = false;
             this.element = fbCommandLine;
-            
+
             if (!fbCommandLine)
                 return;
-            
+
             addEvent(this.element, "keydown", this.onKeyDown);
         }
-        
+
         //Firebug.Console.log("activate", this.element);
-        
+
         if (isOpera)
           fixOperaTabKey(this.element);
-        
+
         if(this.lastValue)
             this.element.value = this.lastValue;
-        
+
         this.isActive = true;
     },
-    
+
     deactivate: function()
     {
         if (!this.isActive) return;
-        
+
         //Firebug.Console.log("deactivate", this.element);
-        
+
         this.isActive = false;
-        
+
         this.lastValue = this.element.value;
-        
+
         if (this.isMultiLine)
         {
             removeEvent(this.element, "keydown", this.onMultiLineKeyDown);
-            
+
             removeEvent($("fbSmallCommandLineIcon"), "click", Firebug.chrome.hideLargeCommandLine);
-            
+
             this.runButton.destroy();
             this.clearButton.destroy();
         }
@@ -21503,112 +20077,112 @@ Firebug.CommandLine = extend(Firebug.Module,
         {
             removeEvent(this.element, "keydown", this.onKeyDown);
         }
-        
+
         this.element = null
         delete this.element;
-        
+
         fbCommandLine = null;
         fbLargeCommandLine = null;
         fbLargeCommandButtons = null;
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     focus: function()
     {
         this.element.focus();
     },
-    
+
     blur: function()
     {
         this.element.blur();
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     clear: function()
     {
         this.element.value = "";
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     evaluate: function(expr)
     {
         // TODO: need to register the API in console.firebug.commandLineAPI
         var api = "Firebug.CommandLine.API"
-        
+
         var result = Firebug.context.evaluate(expr, "window", api, Firebug.Console.error);
-        
+
         return result;
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     enter: function()
     {
         var command = this.element.value;
-        
+
         if (!command) return;
-        
+
         _stack(command);
-        
+
         Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
-        
+
         var result = this.evaluate(command);
-        
+
         Firebug.Console.log(result);
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     prevCommand: function()
     {
         if (commandPointer > 0 && commandHistory.length > 0)
             this.element.value = commandHistory[--commandPointer];
     },
-  
+
     nextCommand: function()
     {
         var element = this.element;
-        
+
         var limit = commandHistory.length -1;
         var i = commandPointer;
-        
+
         if (i < limit)
           element.value = commandHistory[++commandPointer];
-          
+
         else if (i == limit)
         {
             ++commandPointer;
             element.value = "";
         }
     },
-  
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     autocomplete: function(reverse)
     {
         var element = this.element;
-        
+
         var command = element.value;
         var offset = getExpressionOffset(command);
 
         var valBegin = offset ? command.substr(0, offset) : "";
         var val = command.substr(offset);
-        
+
         var buffer, obj, objName, commandBegin, result, prefix;
-        
+
         // if it is the beginning of the completion
         if(!isAutoCompleting)
         {
-            
+
             // group1 - command begin
             // group2 - base object
             // group3 - property prefix
             var reObj = /(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
             var r = reObj.exec(val);
-            
+
             // parse command
             if (r[1] || r[2] || r[3])
             {
@@ -21621,25 +20195,25 @@ Firebug.CommandLine = extend(Firebug.Module,
                 commandBegin = objName = prefix = "";
             } else
                 return;
-            
+
             isAutoCompleting = true;
-      
+
             // find base object
             if(objName == "")
                 obj = window;
-              
+
             else
             {
                 objName = objName.replace(/\.$/, "");
-        
+
                 var n = objName.split(".");
                 var target = window, o;
-                
+
                 for (var i=0, ni; ni = n[i]; i++)
                 {
                     if (o = target[ni])
                       target = o;
-                      
+
                     else
                     {
                         target = null;
@@ -21648,35 +20222,35 @@ Firebug.CommandLine = extend(Firebug.Module,
                 }
                 obj = target;
             }
-            
+
             // map base object
             if(obj)
             {
                 autoCompletePrefix = prefix;
                 autoCompleteExpr = valBegin + commandBegin + (objName ? objName + "." : "");
                 autoCompletePosition = -1;
-                
+
                 buffer = autoCompleteBuffer = isIE ?
                     _completion[objName || "window"] || [] : [];
-                
+
                 for(var p in obj)
                     buffer.push(p);
             }
-    
+
         // if it is the continuation of the last completion
         } else
           buffer = autoCompleteBuffer;
-        
+
         if (buffer)
         {
             prefix = autoCompletePrefix;
-            
+
             var diff = reverse ? -1 : 1;
-            
+
             for(var i=autoCompletePosition+diff, l=buffer.length, bi; i>=0 && i<l; i+=diff)
             {
                 bi = buffer[i];
-                
+
                 if (bi.indexOf(prefix) == 0)
                 {
                     autoCompletePosition = i;
@@ -21685,49 +20259,49 @@ Firebug.CommandLine = extend(Firebug.Module,
                 }
             }
         }
-        
+
         if (result)
             element.value = autoCompleteExpr + result;
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     setMultiLine: function(multiLine)
     {
         if (multiLine == this.isMultiLine) return;
-        
+
         this.activate(multiLine);
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     onError: function(msg, href, lineNo)
     {
         href = href || "";
-        
+
         var lastSlash = href.lastIndexOf("/");
         var fileName = lastSlash == -1 ? href : href.substr(lastSlash+1);
         var html = [
-            '<span class="errorMessage">', msg, '</span>', 
+            '<span class="errorMessage">', msg, '</span>',
             '<div class="objectBox-sourceLink">', fileName, ' (line ', lineNo, ')</div>'
           ];
-        
+
         // TODO: xxxpedro ajust to Console2
         //Firebug.Console.writeRow(html, "error");
     },
-    
+
     onKeyDown: function(e)
     {
         e = e || event;
-        
+
         var code = e.keyCode;
-        
+
         /*tab, shift, control, alt*/
         if (code != 9 && code != 16 && code != 17 && code != 18)
         {
             isAutoCompleting = false;
         }
-    
+
         if (code == 13 /* enter */)
         {
             this.enter();
@@ -21736,7 +20310,7 @@ Firebug.CommandLine = extend(Firebug.Module,
         else if (code == 27 /* ESC */)
         {
             setTimeout(this.clear, 0);
-        } 
+        }
         else if (code == 38 /* up */)
         {
             this.prevCommand();
@@ -21751,17 +20325,17 @@ Firebug.CommandLine = extend(Firebug.Module,
         }
         else
             return;
-        
+
         cancelEvent(e, true);
         return false;
     },
-    
+
     onMultiLineKeyDown: function(e)
     {
         e = e || event;
-        
+
         var code = e.keyCode;
-        
+
         if (code == 13 /* enter */ && e.ctrlKey)
         {
             this.enter();
@@ -21773,7 +20347,7 @@ Firebug.registerModule(Firebug.CommandLine);
 
 
 // ************************************************************************************************
-// 
+//
 
 function getExpressionOffset(command)
 {
@@ -21816,15 +20390,15 @@ var CommandLineAPI =
     $$: function(selector, context)
     {
         context = context || Firebug.browser.document;
-        return Firebug.Selector ? 
-                Firebug.Selector(selector, context) : 
+        return Firebug.Selector ?
+                Firebug.Selector(selector, context) :
                 Firebug.Console.error("Firebug.Selector module not loaded.");
     },
-    
+
     $0: null,
-    
+
     $1: null,
-    
+
     dir: function(o)
     {
         Firebug.Console.log(o, Firebug.context, "dir", Firebug.DOMPanel.DirTable);
@@ -21851,7 +20425,7 @@ var defineCommandLineAPI = function defineCommandLineAPI()
     for (var m in CommandLineAPI)
         if (!Env.browser.window[m])
             Firebug.CommandLine.API[m] = CommandLineAPI[m];
-    
+
     var stack = FirebugChrome.htmlSelectionStack;
     if (stack)
     {
@@ -21865,39 +20439,42 @@ var defineCommandLineAPI = function defineCommandLineAPI()
 
 /* See license.txt for terms of usage */
 
-(function() { with (FBL) {
+FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
+
+if (Env.Options.disableXHRListener)
+    return;
 
 // ************************************************************************************************
 // XHRSpy
-    
+
 var XHRSpy = function()
 {
     this.requestHeaders = [];
     this.responseHeaders = [];
 };
 
-XHRSpy.prototype = 
+XHRSpy.prototype =
 {
     method: null,
     url: null,
     async: null,
-    
+
     xhrRequest: null,
-    
+
     href: null,
-    
+
     loaded: false,
-    
+
     logRow: null,
-    
+
     responseText: null,
-    
+
     requestHeaders: null,
     responseHeaders: null,
-    
+
     sourceLink: null, // {href:"file.html", line: 22}
-    
+
     getURL: function()
     {
         return this.href;
@@ -21911,22 +20488,22 @@ var XMLHttpRequestWrapper = function(activeXObject)
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper internal variables
-    
+
     var xhrRequest = typeof activeXObject != "undefined" ?
                 activeXObject :
                 new _XMLHttpRequest(),
-        
+
         spy = new XHRSpy(),
-        
+
         self = this,
-        
+
         reqType,
         reqUrl,
         reqStartTS;
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper internal methods
-    
+
     var updateSelfPropertiesIgnore = {
         abort: 1,
         channel: 1,
@@ -21940,28 +20517,42 @@ var XMLHttpRequestWrapper = function(activeXObject)
         send: 1,
         setRequestHeader: 1
     };
-    
+
     var updateSelfProperties = function()
     {
-        for (var propName in xhrRequest)
+        if (supportsXHRIterator)
         {
-            if (propName in updateSelfPropertiesIgnore)
-                continue;
-            
-            try
+            for (var propName in xhrRequest)
             {
-                var propValue = xhrRequest[propName];
-                
-                if (propValue && !isFunction(propValue))
-                    self[propName] = propValue;
+                if (propName in updateSelfPropertiesIgnore)
+                    continue;
+
+                try
+                {
+                    var propValue = xhrRequest[propName];
+
+                    if (propValue && !isFunction(propValue))
+                        self[propName] = propValue;
+                }
+                catch(E)
+                {
+                    //console.log(propName, E.message);
+                }
             }
-            catch(E)
+        }
+        else
+        {
+            // will fail to read these xhrRequest properties if the request is not completed
+            if (xhrRequest.readyState == 4)
             {
-                //console.log(propName, E.message);
+                self.status = xhrRequest.status;
+                self.statusText = xhrRequest.statusText;
+                self.responseText = xhrRequest.responseText;
+                self.responseXML = xhrRequest.responseXML;
             }
         }
     };
-    
+
     var updateXHRPropertiesIgnore = {
         channel: 1,
         onreadystatechange: 1,
@@ -21973,18 +20564,18 @@ var XMLHttpRequestWrapper = function(activeXObject)
         statusText: 1,
         upload: 1
     };
-    
+
     var updateXHRProperties = function()
     {
         for (var propName in self)
         {
             if (propName in updateXHRPropertiesIgnore)
                 continue;
-            
+
             try
             {
                 var propValue = self[propName];
-                
+
                 if (propValue && !xhrRequest[propName])
                 {
                     xhrRequest[propName] = propValue;
@@ -21996,88 +20587,88 @@ var XMLHttpRequestWrapper = function(activeXObject)
             }
         }
     };
-    
-    var logXHR = function() 
+
+    var logXHR = function()
     {
         var row = Firebug.Console.log(spy, null, "spy", Firebug.Spy.XHR);
-        
+
         if (row)
         {
             setClass(row, "loading");
             spy.logRow = row;
         }
     };
-    
-    var finishXHR = function() 
+
+    var finishXHR = function()
     {
         var duration = new Date().getTime() - reqStartTS;
         var success = xhrRequest.status == 200;
-        
+
         var responseHeadersText = xhrRequest.getAllResponseHeaders();
         var responses = responseHeadersText ? responseHeadersText.split(/[\n\r]/) : [];
         var reHeader = /^(\S+):\s*(.*)/;
-        
+
         for (var i=0, l=responses.length; i<l; i++)
         {
             var text = responses[i];
             var match = text.match(reHeader);
-            
+
             if (match)
             {
                 var name = match[1];
                 var value = match[2];
-                
-                // update the spy mimeType property so we can detect when to show 
+
+                // update the spy mimeType property so we can detect when to show
                 // custom response viewers (such as HTML, XML or JSON viewer)
                 if (name == "Content-Type")
                     spy.mimeType = value;
-                
+
                 /*
                 if (name == "Last Modified")
                 {
                     if (!spy.cacheEntry)
                         spy.cacheEntry = [];
-                    
+
                     spy.cacheEntry.push({
                        name: [name],
                        value: [value]
                     });
                 }
                 /**/
-                
+
                 spy.responseHeaders.push({
                    name: [name],
                    value: [value]
                 });
             }
         }
-            
+
         with({
-            row: spy.logRow, 
-            status: xhrRequest.status == 0 ? 
+            row: spy.logRow,
+            status: xhrRequest.status == 0 ?
                         // if xhrRequest.status == 0 then accessing xhrRequest.statusText
                         // will cause an error, so we must handle this case (Issue 3504)
-                        "" : xhrRequest.status + " " + xhrRequest.statusText, 
+                        "" : xhrRequest.status + " " + xhrRequest.statusText,
             time: duration,
             success: success
         })
         {
             setTimeout(function(){
-                
+
                 spy.responseText = xhrRequest.responseText;
-                
-                // update row information to avoid "ethernal spinning gif" bug in IE 
+
+                // update row information to avoid "ethernal spinning gif" bug in IE
                 row = row || spy.logRow;
-                
+
                 // if chrome document is not loaded, there will be no row yet, so just ignore
                 if (!row) return;
-                
+
                 // update the XHR representation data
                 handleRequestStatus(success, status, time);
-                
+
             },200);
         }
-        
+
         spy.loaded = true;
         /*
         // commented because they are being updated by the updateSelfProperties() function
@@ -22088,70 +20679,70 @@ var XMLHttpRequestWrapper = function(activeXObject)
         /**/
         updateSelfProperties();
     };
-    
+
     var handleStateChange = function()
     {
         //Firebug.Console.log(["onreadystatechange", xhrRequest.readyState, xhrRequest.readyState == 4 && xhrRequest.status]);
-        
+
         self.readyState = xhrRequest.readyState;
-        
+
         if (xhrRequest.readyState == 4)
         {
             finishXHR();
-            
+
             xhrRequest.onreadystatechange = function(){};
         }
-        
+
         //Firebug.Console.log(spy.url + ": " + xhrRequest.readyState);
-        
+
         self.onreadystatechange();
     };
-    
+
     // update the XHR representation data
     var handleRequestStatus = function(success, status, time)
     {
         var row = spy.logRow;
         FBL.removeClass(row, "loading");
-        
+
         if (!success)
             FBL.setClass(row, "error");
-        
+
         var item = FBL.$$(".spyStatus", row)[0];
         item.innerHTML = status;
-        
+
         if (time)
         {
             var item = FBL.$$(".spyTime", row)[0];
             item.innerHTML = time + "ms";
         }
     };
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper public properties and handlers
-    
+
     this.readyState = 0;
-    
+
     this.onreadystatechange = function(){};
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // XMLHttpRequestWrapper public methods
-    
+
     this.open = function(method, url, async, user, password)
     {
         //Firebug.Console.log("xhrRequest open");
-        
+
         updateSelfProperties();
-        
+
         if (spy.loaded)
             spy = new XHRSpy();
-        
+
         spy.method = method;
         spy.url = url;
         spy.async = async;
         spy.href = url;
         spy.xhrRequest = xhrRequest;
         spy.urlParams = parseURLParamsArray(url);
-        
+
         try
         {
             // xhrRequest.open.apply may not be available in IE
@@ -22163,22 +20754,22 @@ var XMLHttpRequestWrapper = function(activeXObject)
         catch(e)
         {
         }
-        
+
         xhrRequest.onreadystatechange = handleStateChange;
-        
+
     };
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     this.send = function(data)
     {
         //Firebug.Console.log("xhrRequest send");
         spy.data = data;
-        
+
         reqStartTS = new Date().getTime();
-        
+
         updateXHRProperties();
-        
+
         try
         {
             xhrRequest.send(data);
@@ -22191,11 +20782,11 @@ var XMLHttpRequestWrapper = function(activeXObject)
         finally
         {
             logXHR();
-            
+
             if (!spy.async)
             {
                 self.readyState = xhrRequest.readyState;
-                
+
                 // sometimes an error happens when calling finishXHR()
                 // Issue 3422: Firebug Lite breaks Google Instant Search
                 try
@@ -22208,67 +20799,70 @@ var XMLHttpRequestWrapper = function(activeXObject)
             }
         }
     };
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     this.setRequestHeader = function(header, value)
     {
         spy.requestHeaders.push({name: [header], value: [value]});
         return xhrRequest.setRequestHeader(header, value);
     };
-    
-    
+
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     this.abort = function()
     {
         xhrRequest.abort();
         updateSelfProperties();
         handleRequestStatus(false, "Aborted");
     };
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     this.getResponseHeader = function(header)
     {
         return xhrRequest.getResponseHeader(header);
     };
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
+
     this.getAllResponseHeaders = function()
     {
         return xhrRequest.getAllResponseHeaders();
     };
-    
+
     /**/
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Clone XHR object
 
-    // xhrRequest.open.apply not available in IE and will throw an error in 
+    // xhrRequest.open.apply not available in IE and will throw an error in
     // IE6 by simply reading xhrRequest.open so we must sniff it
     var supportsApply = !isIE6 &&
-            xhrRequest && 
-            xhrRequest.open && 
+            xhrRequest &&
+            xhrRequest.open &&
             typeof xhrRequest.open.apply != "undefined";
-    
+
+    var numberOfXHRProperties = 0;
     for (var propName in xhrRequest)
     {
+        numberOfXHRProperties++;
+
         if (propName in updateSelfPropertiesIgnore)
             continue;
-        
+
         try
         {
             var propValue = xhrRequest[propName];
-            
+
             if (isFunction(propValue))
             {
                 if (typeof self[propName] == "undefined")
                 {
                     this[propName] = (function(name, xhr){
-                    
+
                         return supportsApply ?
-                            // if the browser supports apply 
+                            // if the browser supports apply
                             function()
                             {
                                 return xhr[name].apply(xhr, arguments);
@@ -22278,9 +20872,9 @@ var XMLHttpRequestWrapper = function(activeXObject)
                             {
                                 return xhr[name](a,b,c,d,e);
                             };
-                    
+
                     })(propName, xhrRequest);
-                } 
+                }
             }
             else
                 this[propName] = propValue;
@@ -22290,8 +20884,12 @@ var XMLHttpRequestWrapper = function(activeXObject)
             //console.log(propName, E.message);
         }
     }
+
+    // IE6 does not support for (var prop in XHR)
+    var supportsXHRIterator = numberOfXHRProperties > 0;
+
     /**/
-    
+
     return this;
 };
 
@@ -22304,13 +20902,13 @@ var isIE6 =  /msie 6/i.test(navigator.appVersion);
 if (isIE6)
 {
     _ActiveXObject = window.ActiveXObject;
-    
+
     var xhrObjects = " MSXML2.XMLHTTP.5.0 MSXML2.XMLHTTP.4.0 MSXML2.XMLHTTP.3.0 MSXML2.XMLHTTP Microsoft.XMLHTTP ";
-    
+
     window.ActiveXObject = function(name)
     {
         var error = null;
-        
+
         try
         {
             var activeXObject = new _ActiveXObject(name);
@@ -22347,7 +20945,7 @@ if (!isIE6)
 }
 
 // ************************************************************************************************
-}})();
+}});
 
 
 /* See license.txt for terms of usage */
@@ -22453,7 +21051,7 @@ var binaryCategoryMap =
 Firebug.NetMonitor = extend(Firebug.ActivableModule,
 {
     dispatchName: "netMonitor",
-    
+
     clear: function(context)
     {
         // The user pressed a Clear button so, remove content of the panel...
@@ -22468,7 +21066,7 @@ Firebug.NetMonitor = extend(Firebug.ActivableModule,
     initialize: function()
     {
         return;
-        
+
         this.panelName = panelName;
 
         Firebug.ActivableModule.initialize.apply(this, arguments);
@@ -22487,7 +21085,7 @@ Firebug.NetMonitor = extend(Firebug.ActivableModule,
     shutdown: function()
     {
         return;
-        
+
         prefs.removeObserver(Firebug.prefDomain, this, false);
         if (Firebug.TraceModule)
             Firebug.TraceModule.removeListener(this.TraceListener);
@@ -22667,7 +21265,7 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
     {
         // TODO: xxxpedro console2
         return param.value;
-        
+
         // This value is inserted into CODE element and so, make sure the HTML isn't escaped (1210).
         // This is why the second parameter is true.
         // The CODE (with style white-space:pre) element preserves whitespaces so they are
@@ -22698,16 +21296,16 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
     selectTab: function(tab)
     {
         var view = tab.getAttribute("view");
-        
+
         var netInfoBox = getAncestorByClass(tab, "netInfoBody");
-        
+
         var selectedTab = netInfoBox.selectedTab;
 
         if (selectedTab)
         {
             //netInfoBox.selectedText.removeAttribute("selected");
             removeClass(netInfoBox.selectedText, "netInfoTextSelected");
-            
+
             removeClass(selectedTab, "netInfoTabSelected");
             //selectedTab.removeAttribute("selected");
             selectedTab.setAttribute("aria-selected", "false");
@@ -22716,22 +21314,22 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
         var textBodyName = "netInfo" + view + "Text";
 
         selectedTab = netInfoBox.selectedTab = tab;
-        
+
         netInfoBox.selectedText = $$("."+textBodyName, netInfoBox)[0];
         //netInfoBox.selectedText = netInfoBox.getElementsByClassName(textBodyName).item(0);
 
         //netInfoBox.selectedText.setAttribute("selected", "true");
         setClass(netInfoBox.selectedText, "netInfoTextSelected");
-        
+
         setClass(selectedTab, "netInfoTabSelected");
         selectedTab.setAttribute("selected", "true");
         selectedTab.setAttribute("aria-selected", "true");
 
         var file = Firebug.getRepObject(netInfoBox);
-        
+
         //var context = Firebug.getElementPanel(netInfoBox).context;
         var context = Firebug.chrome;
-        
+
         this.updateInfo(netInfoBox, file, context);
     },
 
@@ -22748,7 +21346,7 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
         }
 
         var tab = netInfoBox.selectedTab;
-        
+
         if (hasClass(tab, "netInfoParamsTab"))
         {
             if (file.urlParams && !netInfoBox.urlParamsPresented)
@@ -22832,17 +21430,17 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
             netInfoBox.htmlPresented = true;
 
             var text = Utils.getResponseText(file, context);
-            
+
             ///var iframe = netInfoBox.getElementsByClassName("netInfoHtmlPreview").item(0);
             var iframe = $$(".netInfoHtmlPreview", netInfoBox)[0];
-            
+
             ///iframe.contentWindow.document.body.innerHTML = text;
-            
+
             // TODO: xxxpedro net - remove scripts
             var reScript = /<script(.|\s)*?\/script>/gi;
-            
+
             text = text.replace(reScript, "");
-                
+
             iframe.contentWindow.document.write(text);
             iframe.contentWindow.document.close();
         }
@@ -22861,18 +21459,18 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
         // make this only once in the initialization? we don't have net panels and modules yet.
         if (isIE)
             responseTextBox.style.whiteSpace = "nowrap";
-        
+
         responseTextBox[
-                typeof responseTextBox.textContent != "undefined" ? 
-                        "textContent" : 
+                typeof responseTextBox.textContent != "undefined" ?
+                        "textContent" :
                         "innerText"
             ] = file.responseText;
-        
+
         return;
         //**********************************************
         //**********************************************
         //**********************************************
-        
+
         // Get response text and make sure it doesn't exceed the max limit.
         var text = Utils.getResponseText(file, context);
         var limit = Firebug.netDisplayedResponseLimit + 15;
@@ -23009,7 +21607,7 @@ Firebug.NetMonitor.NetInfoHeaders = domplate(Firebug.Rep, //new Firebug.Listener
     {
         var headersTable = $$(".netInfoHeadersTable", netInfoBox)[0];
         var tbody = $$(".netInfo" + rowName + "Body", headersTable)[0];
-        
+
         //var headersTable = netInfoBox.getElementsByClassName("netInfoHeadersTable").item(0);
         //var tbody = headersTable.getElementsByClassName("netInfo" + rowName + "Body").item(0);
 
@@ -23166,10 +21764,10 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
         var spy = getAncestorByClass(parentNode, "spyHead");
         var spyObject = spy.repObject;
         var data = spyObject.data;
-        
+
         ///var contentType = Utils.findHeader(file.requestHeaders, "content-type");
         var contentType = file.mimeType;
-        
+
         ///var text = Utils.getPostText(file, context, true);
         ///if (text == undefined)
         ///    return;
@@ -23177,7 +21775,7 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
         ///if (Utils.isURLEncodedRequest(file, context))
         // fake Utils.isURLEncodedRequest identification
         if (contentType && contentType == "application/x-www-form-urlencoded" ||
-            data && data.indexOf("=") != -1) 
+            data && data.indexOf("=") != -1)
         {
             ///var lines = text.split("\n");
             ///var params = parseURLEncodedText(lines[lines.length-1]);
@@ -23200,7 +21798,7 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
         var jsonData = {
             responseText: data
         };
-        
+
         if (Firebug.JSONViewerModel.isJSON(contentType, data))
             ///this.insertJSON(parentNode, file, context);
             this.insertJSON(parentNode, jsonData, context);
@@ -23224,9 +21822,9 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Firebug.Rep, /*new Firebug.Listene
         var row = $$(".netInfoPostParamsTitle", paramTable)[0];
         //var paramTable = this.paramsTable.append(null, parentNode);
         //var row = paramTable.getElementsByClassName("netInfoPostParamsTitle").item(0);
-        
+
         var tbody = paramTable.getElementsByTagName("tbody")[0];
-        
+
         NetInfoBody.headerDataTag.insertRows({headers: params}, row);
     },
 
@@ -23684,7 +22282,7 @@ var contexts = [];
  * XHR activity of the current page and create appropriate log into the Console panel.
  * This feature can be controlled by an option <i>Show XMLHttpRequests</i> (from within the
  * console panel).
- * 
+ *
  * The module is responsible for attaching/detaching a HTTP Observers when Firebug is
  * activated/deactivated for a site.
  */
@@ -23950,7 +22548,7 @@ Firebug.Spy.XMLHttpRequestSpy = function(request, xhrRequest, context)
         this.onAbort = function() { onHTTPSpyAbort(spy); };
 
         // xxxHonza: #502959 is still failing on Fx 3.5
-        // Use activity distributor to identify 3.6 
+        // Use activity distributor to identify 3.6
         if (SpyHttpActivityObserver.getActivityDistributor())
         {
             this.onreadystatechange = this.xhrRequest.onreadystatechange;
@@ -24054,7 +22652,7 @@ function onHTTPSpyReadyStateChange(spy, event)
         updateTime(spy);
     }
 
-    // Request loaded. Get all the info from the request now, just in case the 
+    // Request loaded. Get all the info from the request now, just in case the
     // XHR would be aborted in the original onReadyStateChange handler.
     if (spy.xhrRequest.readyState == 4)
     {
@@ -24267,7 +22865,7 @@ Firebug.Spy.XHR = domplate(Firebug.Rep,
     {
         // TODO: xxxpedro spy xhr
         return false;
-        
+
         return object instanceof Firebug.Spy.XMLHttpRequestSpy;
     },
 
@@ -24340,7 +22938,7 @@ var updateHttpSpyInfo = function updateHttpSpyInfo(spy, logRow)
 {
     if (!spy.logRow && logRow)
         spy.logRow = logRow;
-    
+
     if (!spy.logRow || !hasClass(spy.logRow, "opened"))
         return;
 
@@ -24505,7 +23103,7 @@ Firebug.JSONViewerModel = extend(Firebug.Module,
         // responses (and post data) (with "{") can be parsed unnecessarily,
         // which represents a little overhead, but this happens only if the request
         // is actually expanded by the user in the UI (Net & Console panels).
-        
+
         ///var responseText = data ? trimLeft(data) : null;
         ///if (responseText && responseText.indexOf("{") == 0)
         ///    return true;
@@ -24656,12 +23254,12 @@ Firebug.XMLViewerModel = extend(Firebug.Module,
     insertXML: function(parentNode, text)
     {
         var xmlText = text.replace(/^\s*<?.+?>\s*/, "");
-        
+
         var div = parentNode.ownerDocument.createElement("div");
         div.innerHTML = xmlText;
-        
+
         var root = div.getElementsByTagName("*")[0];
-    
+
         /***
         var parser = CCIN("@mozilla.org/xmlextras/domparser;1", "nsIDOMParser");
         var doc = parser.parseFromString(text, "text/xml");
@@ -24705,13 +23303,13 @@ Firebug.XMLViewerModel = extend(Firebug.Module,
 
         // Generate XML preview.
         ///Firebug.HTMLPanel.CompleteElement.tag.replace({object: doc.documentElement}, parentNode);
-        
+
         // TODO: xxxpedro html3
         ///Firebug.HTMLPanel.CompleteElement.tag.replace({object: root}, parentNode);
         var html = [];
         Firebug.Reps.appendNode(root, html);
         parentNode.innerHTML = html.join("");
-        
+
 
         /*
         for (var i=0; i<originals.length; i++)
@@ -24775,7 +23373,7 @@ var cacheID = Firebug.Lite.Cache.ID;
 
 var ignoreHTMLProps =
 {
-    // ignores the attributes injected by Sizzle, otherwise it will 
+    // ignores the attributes injected by Sizzle, otherwise it will
     // be visible on IE (when enumerating element.attributes)
     sizcache: 1,
     sizset: 1
@@ -24788,47 +23386,47 @@ ignoreHTMLProps[cacheID] = 1;
 // ************************************************************************************************
 // HTML Module
 
-Firebug.HTML = extend(Firebug.Module, 
+Firebug.HTML = extend(Firebug.Module,
 {
     appendTreeNode: function(nodeArray, html)
     {
         var reTrim = /^\s+|\s+$/g;
-        
+
         if (!nodeArray.length) nodeArray = [nodeArray];
-        
+
         for (var n=0, node; node=nodeArray[n]; n++)
         {
             if (node.nodeType == 1)
             {
                 if (Firebug.ignoreFirebugElements && node.firebugIgnore) continue;
-                
+
                 var uid = ElementCache(node);
                 var child = node.childNodes;
                 var childLength = child.length;
-                
+
                 var nodeName = node.nodeName.toLowerCase();
-                
+
                 var nodeVisible = isVisible(node);
-                
+
                 var hasSingleTextChild = childLength == 1 && node.firstChild.nodeType == 3 &&
                         nodeName != "script" && nodeName != "style";
-                
-                var nodeControl = !hasSingleTextChild && childLength > 0 ? 
+
+                var nodeControl = !hasSingleTextChild && childLength > 0 ?
                     ('<div class="nodeControl"></div>') : '';
-                
+
                 var isIE = false;
 
                 if(isIE && nodeControl)
                     html.push(nodeControl);
-              
+
                 if (typeof uid != 'undefined')
                     html.push(
                         '<div class="objectBox-element" ',
-                        'id="', uid,                                                                                        
+                        'id="', uid,
                         '">',
-                        !isIE && nodeControl ? nodeControl: "",                        
+                        !isIE && nodeControl ? nodeControl: "",
                         '<span ',
-                        cacheID, 
+                        cacheID,
                         '="', uid,
                         '"  class="nodeBox',
                         nodeVisible ? "" : " nodeHidden",
@@ -24838,45 +23436,45 @@ Firebug.HTML = extend(Firebug.Module,
                     html.push(
                         '<div class="objectBox-element"><span class="nodeBox',
                         nodeVisible ? "" : " nodeHidden",
-                        '">&lt;<span class="nodeTag">', 
+                        '">&lt;<span class="nodeTag">',
                         nodeName, '</span>'
                     );
-                
+
                 for (var i = 0; i < node.attributes.length; ++i)
                 {
                     var attr = node.attributes[i];
-                    if (!attr.specified || Firebug.ignoreFirebugElements && 
+                    if (!attr.specified || Firebug.ignoreFirebugElements &&
                         ignoreHTMLProps.hasOwnProperty(attr.nodeName))
                             continue;
-                    
+
                     var name = attr.nodeName.toLowerCase();
                     var value = name == "style" ? formatStyles(node.style.cssText) : attr.nodeValue;
-                    
+
                     html.push('&nbsp;<span class="nodeName">', name,
                         '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
                         '</span>&quot;')
                 }
-                
+
                 /*
                 // source code nodes
                 if (nodeName == 'script' || nodeName == 'style')
                 {
-                  
+
                     if(document.all){
                         var src = node.innerHTML+'\n';
-                       
+
                     }else {
                         var src = '\n'+node.innerHTML+'\n';
                     }
-                    
+
                     var match = src.match(/\n/g);
                     var num = match ? match.length : 0;
                     var s = [], sl = 0;
-                    
+
                     for(var c=1; c<num; c++){
                         s[sl++] = '<div line="'+c+'">' + c + '</div>';
                     }
-                    
+
                     html.push('&gt;</div><div class="nodeGroup"><div class="nodeChildren"><div class="lineNo">',
                             s.join(''),
                             '</div><pre class="nodeCode">',
@@ -24887,10 +23485,10 @@ Firebug.HTML = extend(Firebug.Module,
                             '</span>&gt;</div>',
                             '</div>'
                         );
-                      
-                
+
+
                 }/**/
-                
+
                 // Just a single text node child
                 if (hasSingleTextChild)
                 {
@@ -24907,45 +23505,45 @@ Firebug.HTML = extend(Firebug.Module,
                     }
                     else
                       html.push('/&gt;</span></div>'); // blank text, print as childless node
-                
+
                 }
                 else if (childLength > 0)
                 {
                     html.push('&gt;</span></div>');
                 }
-                else 
+                else
                     html.push('/&gt;</span></div>');
-          
-            } 
+
+            }
             else if (node.nodeType == 3)
             {
                 if ( node.parentNode && ( node.parentNode.nodeName.toLowerCase() == "script" ||
                      node.parentNode.nodeName.toLowerCase() == "style" ) )
                 {
                     var value = node.nodeValue.replace(reTrim, '');
-                    
+
                     if(isIE){
                         var src = value+'\n';
-                       
+
                     }else {
                         var src = '\n'+value+'\n';
                     }
-                    
+
                     var match = src.match(/\n/g);
                     var num = match ? match.length : 0;
                     var s = [], sl = 0;
-                    
+
                     for(var c=1; c<num; c++){
                         s[sl++] = '<div line="'+c+'">' + c + '</div>';
                     }
-                    
+
                     html.push('<div class="lineNo">',
                             s.join(''),
                             '</div><pre class="sourceCode">',
                             escapeHTML(src),
                             '</pre>'
                         );
-                      
+
                 }
                 else
                 {
@@ -24956,64 +23554,64 @@ Firebug.HTML = extend(Firebug.Module,
             }
         }
     },
-    
+
     appendTreeChildren: function(treeNode)
     {
         var doc = Firebug.chrome.document;
         var uid = treeNode.id;
         var parentNode = ElementCache.get(uid);
-        
+
         if (parentNode.childNodes.length == 0) return;
-        
+
         var treeNext = treeNode.nextSibling;
         var treeParent = treeNode.parentNode;
-        
+
         var isIE = false;
         var control = isIE ? treeNode.previousSibling : treeNode.firstChild;
         control.className = 'nodeControl nodeMaximized';
-        
+
         var html = [];
         var children = doc.createElement("div");
         children.className = "nodeChildren";
         this.appendTreeNode(parentNode.childNodes, html);
         children.innerHTML = html.join("");
-        
+
         treeParent.insertBefore(children, treeNext);
-        
+
         var closeElement = doc.createElement("div");
         closeElement.className = "objectBox-element";
-        closeElement.innerHTML = '&lt;/<span class="nodeTag">' + 
+        closeElement.innerHTML = '&lt;/<span class="nodeTag">' +
             parentNode.nodeName.toLowerCase() + '&gt;</span>'
-        
+
         treeParent.insertBefore(closeElement, treeNext);
-        
+
     },
-    
+
     removeTreeChildren: function(treeNode)
     {
         var children = treeNode.nextSibling;
         var closeTag = children.nextSibling;
-        
+
         var isIE = false;
         var control = isIE ? treeNode.previousSibling : treeNode.firstChild;
         control.className = 'nodeControl';
-        
-        children.parentNode.removeChild(children);  
-        closeTag.parentNode.removeChild(closeTag);  
+
+        children.parentNode.removeChild(children);
+        closeTag.parentNode.removeChild(closeTag);
     },
-    
+
     isTreeNodeVisible: function(id)
     {
         return $(id);
     },
-    
+
     select: function(el)
     {
         var id = el && ElementCache(el);
         if (id)
             this.selectTreeNode(id);
     },
-    
+
     selectTreeNode: function(id)
     {
         id = ""+id;
@@ -25021,7 +23619,7 @@ Firebug.HTML = extend(Firebug.Module,
         while(id && !this.isTreeNodeVisible(id))
         {
             stack.push(id);
-            
+
             var node = ElementCache.get(id).parentNode;
 
             if (node)
@@ -25029,23 +23627,25 @@ Firebug.HTML = extend(Firebug.Module,
             else
                 break;
         }
-        
+
         stack.push(id);
-        
+
         while(stack.length > 0)
         {
             id = stack.pop();
             node = $(id);
-            
+
             if (stack.length > 0 && ElementCache.get(id).childNodes.length > 0)
               this.appendTreeChildren(node);
         }
-        
+
         selectElement(node);
-        
-        fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+
+        // TODO: xxxpedro
+        if (fbPanel1)
+            fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
     }
-    
+
 });
 
 Firebug.registerModule(Firebug.HTML);
@@ -25059,7 +23659,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
 {
     name: "HTML",
     title: "HTML",
-    
+
     options: {
         hasSidePanel: true,
         //hasToolButtons: true,
@@ -25069,82 +23669,82 @@ HTMLPanel.prototype = extend(Firebug.Panel,
 
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
-        
+
         this.panelNode.style.padding = "4px 3px 1px 15px";
         this.panelNode.style.minWidth = "500px";
-        
+
         if (Env.Options.enablePersistent || Firebug.chrome.type != "popup")
             this.createUI();
-        
+
         if(!this.sidePanelBar.selectedPanel)
         {
             this.sidePanelBar.selectPanel("css");
         }
     },
-    
+
     destroy: function()
     {
         selectedElement = null
         fbPanel1 = null;
-        
+
         selectedSidePanelTS = null;
         selectedSidePanelTimer = null;
-        
+
         Firebug.Panel.destroy.apply(this, arguments);
     },
-    
+
     createUI: function()
     {
         var rootNode = Firebug.browser.document.documentElement;
         var html = [];
         Firebug.HTML.appendTreeNode(rootNode, html);
-        
+
         this.panelNode.innerHTML = html.join("");
     },
-    
+
     initialize: function()
     {
         Firebug.Panel.initialize.apply(this, arguments);
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
-        
+
         fbPanel1 = $("fbPanel1");
-        
+
         if(!selectedElement)
         {
             Firebug.HTML.selectTreeNode(ElementCache(Firebug.browser.document.body));
         }
-        
+
         // TODO: xxxpedro
         addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
         addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
-        addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
+        addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
     },
-    
+
     shutdown: function()
     {
         // TODO: xxxpedro
         removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
         removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
-        
+
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
-        
+
         fbPanel1 = null;
-        
+
         Firebug.Panel.shutdown.apply(this, arguments);
     },
-    
+
     reattach: function()
     {
         // TODO: panel reattach
         if(FirebugChrome.selectedHTMLElementId)
             Firebug.HTML.selectTreeNode(FirebugChrome.selectedHTMLElementId);
     },
-    
+
     updateSelection: function(object)
     {
         var id = ElementCache(object);
-        
+
         if (id)
         {
             Firebug.HTML.selectTreeNode(id);
@@ -25170,7 +23770,7 @@ var formatStyles = function(styles)
 var selectedElement = null
 var fbPanel1 = null;
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 var selectedSidePanelTS, selectedSidePanelTimer;
 
 var selectElement= function selectElement(e)
@@ -25179,42 +23779,42 @@ var selectElement= function selectElement(e)
     {
         if (selectedElement)
             selectedElement.className = "objectBox-element";
-            
+
         e.className = e.className + " selectedElement";
 
         if (FBL.isFirefox)
             e.style.MozBorderRadius = "2px";
-        
+
         else if (FBL.isSafari)
             e.style.WebkitBorderRadius = "2px";
-        
+
         selectedElement = e;
-        
+
         FirebugChrome.selectedHTMLElementId = e.id;
-        
+
         var target = ElementCache.get(e.id);
         var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
-        
+
         var stack = FirebugChrome.htmlSelectionStack;
-        
+
         stack.unshift(target);
-        
+
         if (stack.length > 2)
             stack.pop();
-        
+
         var lazySelect = function()
         {
             selectedSidePanelTS = new Date().getTime();
-            
+
             selectedSidePanel.select(target, true);
         };
-        
+
         if (selectedSidePanelTimer)
         {
             clearTimeout(selectedSidePanelTimer);
             selectedSidePanelTimer = null;
         }
-        
+
         if (new Date().getTime() - selectedSidePanelTS > 100)
             setTimeout(lazySelect, 0)
         else
@@ -25230,36 +23830,36 @@ Firebug.HTML.onTreeClick = function (e)
 {
     e = e || event;
     var targ;
-    
+
     if (e.target) targ = e.target;
     else if (e.srcElement) targ = e.srcElement;
     if (targ.nodeType == 3) // defeat Safari bug
         targ = targ.parentNode;
-        
-    
+
+
     if (targ.className.indexOf('nodeControl') != -1 || targ.className == 'nodeTag')
     {
         var isIE = false;
-        
+
         if(targ.className == 'nodeTag')
         {
             var control = isIE ? (targ.parentNode.previousSibling || targ) :
                           (targ.parentNode.previousSibling || targ);
 
             selectElement(targ.parentNode.parentNode);
-            
+
             if (control.className.indexOf('nodeControl') == -1)
                 return;
-            
+
         } else
             control = targ;
-        
+
         FBL.cancelEvent(e);
-        
+
         var treeNode = isIE ? control.nextSibling : control.parentNode;
-        
+
         //FBL.Firebug.Console.log(treeNode);
-        
+
         if (control.className.indexOf(' nodeMaximized') != -1) {
             FBL.Firebug.HTML.removeTreeChildren(treeNode);
         } else {
@@ -25270,13 +23870,13 @@ Firebug.HTML.onTreeClick = function (e)
     {
         /*
         var input = FBL.Firebug.chrome.document.getElementById('treeInput');
-        
+
         input.style.display = "block";
         input.style.left = targ.offsetLeft + 'px';
         input.style.top = FBL.topHeight + targ.offsetTop - FBL.fbPanel1.scrollTop + 'px';
         input.style.width = targ.offsetWidth + 6 + 'px';
         input.value = targ.textContent || targ.innerText;
-        input.focus(); 
+        input.focus();
         /**/
     }
 }
@@ -25285,18 +23885,18 @@ function onListMouseOut(e)
 {
     e = e || event || window;
     var targ;
-    
+
     if (e.target) targ = e.target;
     else if (e.srcElement) targ = e.srcElement;
     if (targ.nodeType == 3) // defeat Safari bug
       targ = targ.parentNode;
-        
+
       if (hasClass(targ, "fbPanel")) {
           FBL.Firebug.Inspector.hideBoxModel();
-          hoverElement = null;        
+          hoverElement = null;
       }
 };
-    
+
 var hoverElement = null;
 var hoverElementTS = 0;
 
@@ -25306,12 +23906,12 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
     {
         e = e || event || window;
         var targ;
-        
+
         if (e.target) targ = e.target;
         else if (e.srcElement) targ = e.srcElement;
         if (targ.nodeType == 3) // defeat Safari bug
             targ = targ.parentNode;
-            
+
         var found = false;
         while (targ && !found) {
             if (!/\snodeBox\s|\sobjectBox-selector\s/.test(" " + targ.className + " "))
@@ -25319,41 +23919,41 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
             else
                 found = true;
         }
-        
+
         if (!targ)
         {
             FBL.Firebug.Inspector.hideBoxModel();
             hoverElement = null;
             return;
         }
-        
+
         /*
         if (typeof targ.attributes[cacheID] == 'undefined') return;
-        
+
         var uid = targ.attributes[cacheID];
         if (!uid) return;
         /**/
-        
+
         if (typeof targ.attributes[cacheID] == 'undefined') return;
-        
+
         var uid = targ.attributes[cacheID];
         if (!uid) return;
-        
+
         var el = ElementCache.get(uid.value);
-        
+
         var nodeName = el.nodeName.toLowerCase();
-    
+
         if (FBL.isIE && " meta title script link ".indexOf(" "+nodeName+" ") != -1)
             return;
-    
+
         if (!/\snodeBox\s|\sobjectBox-selector\s/.test(" " + targ.className + " ")) return;
-        
-        if (el.id == "FirebugUI" || " html head body br script link iframe ".indexOf(" "+nodeName+" ") != -1) { 
+
+        if (el.id == "FirebugUI" || " html head body br script link iframe ".indexOf(" "+nodeName+" ") != -1) {
             FBL.Firebug.Inspector.hideBoxModel();
             hoverElement = null;
             return;
         }
-      
+
         if ((new Date().getTime() - hoverElementTS > 40) && hoverElement != el) {
             hoverElementTS = new Date().getTime();
             hoverElement = el;
@@ -25374,28 +23974,28 @@ Firebug.Reps = {
     {
         html.push(escapeHTML(objectToString(object)));
     },
-    
+
     appendNull: function(object, html)
     {
         html.push('<span class="objectBox-null">', escapeHTML(objectToString(object)), '</span>');
     },
-    
+
     appendString: function(object, html)
     {
         html.push('<span class="objectBox-string">&quot;', escapeHTML(objectToString(object)),
             '&quot;</span>');
     },
-    
+
     appendInteger: function(object, html)
     {
         html.push('<span class="objectBox-number">', escapeHTML(objectToString(object)), '</span>');
     },
-    
+
     appendFloat: function(object, html)
     {
         html.push('<span class="objectBox-number">', escapeHTML(objectToString(object)), '</span>');
     },
-    
+
     appendFunction: function(object, html)
     {
         var reName = /function ?(.*?)\(/;
@@ -25403,19 +24003,19 @@ Firebug.Reps = {
         var name = m && m[1] ? m[1] : "function";
         html.push('<span class="objectBox-function">', escapeHTML(name), '()</span>');
     },
-    
+
     appendObject: function(object, html)
     {
         /*
         var rep = Firebug.getRep(object);
         var outputs = [];
-        
+
         rep.tag.tag.compile();
-        
+
         var str = rep.tag.renderHTML({object: object}, outputs);
         html.push(str);
         /**/
-        
+
         try
         {
             if (object == undefined)
@@ -25447,66 +24047,66 @@ Firebug.Reps = {
         }
         /**/
     },
-        
+
     appendObjectFormatted: function(object, html)
     {
         var text = objectToString(object);
         var reObject = /\[object (.*?)\]/;
-    
+
         var m = reObject.exec(text);
         html.push('<span class="objectBox-object">', m ? m[1] : text, '</span>')
     },
-    
+
     appendSelector: function(object, html)
     {
         var uid = ElementCache(object);
         var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";
-        
+
         html.push('<span class="objectBox-selector"', uidString, '>');
-    
+
         html.push('<span class="selectorTag">', escapeHTML(object.nodeName.toLowerCase()), '</span>');
         if (object.id)
             html.push('<span class="selectorId">#', escapeHTML(object.id), '</span>');
         if (object.className)
             html.push('<span class="selectorClass">.', escapeHTML(object.className), '</span>');
-    
+
         html.push('</span>');
     },
-    
+
     appendNode: function(node, html)
     {
         if (node.nodeType == 1)
         {
             var uid = ElementCache(node);
-            var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";                
-            
+            var uidString = uid ? [cacheID, '="', uid, '"'].join("") : "";
+
             html.push(
                 '<div class="objectBox-element"', uidString, '">',
                 '<span ', cacheID, '="', uid, '" class="nodeBox">',
                 '&lt;<span class="nodeTag">', node.nodeName.toLowerCase(), '</span>');
-    
+
             for (var i = 0; i < node.attributes.length; ++i)
             {
                 var attr = node.attributes[i];
                 if (!attr.specified || attr.nodeName == cacheID)
                     continue;
-                
+
                 var name = attr.nodeName.toLowerCase();
                 var value = name == "style" ? node.style.cssText : attr.nodeValue;
-                
+
                 html.push('&nbsp;<span class="nodeName">', name,
                     '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
                     '</span>&quot;')
             }
-    
+
             if (node.firstChild)
             {
                 html.push('&gt;</div><div class="nodeChildren">');
-    
+
                 for (var child = node.firstChild; child; child = child.nextSibling)
                     this.appendNode(child, html);
-                    
-                html.push('</div><div class="objectBox-element">&lt;/<span class="nodeTag">', 
+
+                html.push('</div><div class="objectBox-element">&lt;/<span class="nodeTag">',
                     node.nodeName.toLowerCase(), '&gt;</span></span></div>');
             }
             else
@@ -25519,19 +24119,19 @@ Firebug.Reps = {
                 html.push('<div class="nodeText">', escapeHTML(value),'</div>');
         }
     },
-    
+
     appendArray: function(object, html)
     {
         html.push('<span class="objectBox-array"><b>[</b> ');
-        
+
         for (var i = 0, l = object.length, obj; i < l; ++i)
         {
             this.appendObject(object[i], html);
-            
+
             if (i < l-1)
             html.push(', ');
         }
-    
+
         html.push(' <b>]</b></span>');
     }
 
@@ -25547,8 +24147,8 @@ Firebug.Reps = {
 /*
 
 Hack:
-Firebug.chrome.currentPanel = Firebug.chrome.selectedPanel; 
-Firebug.showInfoTips = true; 
+Firebug.chrome.currentPanel = Firebug.chrome.selectedPanel;
+Firebug.showInfoTips = true;
 Firebug.InfoTip.initializeBrowser(Firebug.chrome);
 
 /**/
@@ -25591,23 +24191,23 @@ Firebug.InfoTip = extend(Firebug.Module,
 
             ///var caption = bgImg.nextSibling;
             var innerBox = img.parentNode;
-            
+
             /// TODO: xxxpedro infoTip hack
             var caption = getElementByClass(innerBox, "infoTipCaption");
             var bgImg = getElementByClass(innerBox, "infoTipBgImage");
             if (!bgImg)
                 return; // Sometimes gets called after element is dead
-            
+
             // TODO: xxxpedro infoTip IE and timing issue
             // TODO: use offline document to avoid flickering
             if (isIE)
                 removeClass(innerBox, "infoTipLoading");
-            
+
             var updateInfoTip = function(){
-            
-            var w = img.naturalWidth || img.width || 10, 
+
+            var w = img.naturalWidth || img.width || 10,
                 h = img.naturalHeight || img.height || 10;
-            
+
             var repeat = img.getAttribute("repeat");
 
             if (repeat == "repeat-x" || (w == 1 && h > 1))
@@ -25659,11 +24259,11 @@ Firebug.InfoTip = extend(Firebug.Module,
 
             //caption.innerHTML = $STRF("Dimensions", [w, h]);
             caption.innerHTML = $STRF(w + " x " + h);
-            
-            
+
+
             };
-            
-            if (isIE) 
+
+            if (isIE)
                 setTimeout(updateInfoTip, 0);
             else
             {
@@ -25673,7 +24273,7 @@ Firebug.InfoTip = extend(Firebug.Module,
 
             ///
         }
-        
+
         /*
         /// onLoadImage original
         onLoadImage: function(event)
@@ -25741,7 +24341,7 @@ Firebug.InfoTip = extend(Firebug.Module,
             removeClass(innerBox, "infoTipLoading");
         }
         /**/
-        
+
     }),
 
     initializeBrowser: function(browser)
@@ -25760,7 +24360,7 @@ Firebug.InfoTip = extend(Firebug.Module,
         addEvent(doc, "mouseover", browser.onInfoTipMouseMove);
         addEvent(doc, "mouseout", browser.onInfoTipMouseOut);
         addEvent(doc, "mousemove", browser.onInfoTipMouseMove);
-        
+
         return browser.infoTip = this.tags.infoTipTag.append({}, getBody(doc));
     },
 
@@ -25916,7 +24516,7 @@ Firebug.registerModule(Firebug.InfoTip);
 /* See license.txt for terms of usage */
 
 // move to FBL
-(function() { 
+(function() {
 
 // ************************************************************************************************
 // XPath
@@ -25939,9 +24539,13 @@ this.getElementTreeXPath = function(element)
     for (; element && element.nodeType == 1; element = element.parentNode)
     {
         var index = 0;
+        var nodeName = element.nodeName;
+
         for (var sibling = element.previousSibling; sibling; sibling = sibling.previousSibling)
         {
-            if (sibling.nodeName == element.nodeName)
+            if (sibling.nodeType != 1) continue;
+
+            if (sibling.nodeName == nodeName)
                 ++index;
         }
 
@@ -26000,11 +24604,11 @@ var toCamelCase = function toCamelCase(s)
 var toSelectorCase = function toSelectorCase(s)
 {
   return s.replace(reCamelCase, "-$1").toLowerCase();
-  
+
 };
 
 var reCamelCase = /([A-Z])/g;
-var reSelectorCase = /\-(.)/g; 
+var reSelectorCase = /\-(.)/g;
 var toCamelCaseReplaceFn = function toCamelCaseReplaceFn(m,g)
 {
     return g.toUpperCase();
@@ -26037,34 +24641,34 @@ var loadExternalStylesheet = function(doc, styleSheetIterator, styleSheet)
 {
     var url = styleSheet.href;
     styleSheet.firebugIgnore = true;
-    
+
     var source = Firebug.Lite.Proxy.load(url);
-    
+
     // TODO: check for null and error responses
-    
-    
+
+
     // remove comments
     //var reMultiComment = /(\/\*([^\*]|\*(?!\/))*\*\/)/g;
     //source = source.replace(reMultiComment, "");
-    
-    // convert relative addresses to absolute ones  
+
+    // convert relative addresses to absolute ones
     source = source.replace(/url\(([^\)]+)\)/g, function(a,name){
-    
+
         var hasDomain = /\w+:\/\/./.test(name);
-        
+
         if (!hasDomain)
         {
             name = name.replace(/^(["'])(.+)\1$/, "$2");
             var first = name.charAt(0);
-            
+
             // relative path, based on root
             if (first == "/")
             {
                 // TODO: xxxpedro move to lib or Firebug.Lite.something
                 // getURLRoot
                 var m = /^([^:]+:\/{1,3}[^\/]+)/.exec(url);
-                
-                return m ? 
+
+                return m ?
                     "url(" + m[1] + name + ")" :
                     "url(" + name + ")";
             }
@@ -26074,31 +24678,31 @@ var loadExternalStylesheet = function(doc, styleSheetIterator, styleSheet)
                 // TODO: xxxpedro move to lib or Firebug.Lite.something
                 // getURLPath
                 var path = url.replace(/[^\/]+\.[\w\d]+(\?.+|#.+)?$/g, "");
-                
+
                 path = path + name;
-                
+
                 var reBack = /[^\/]+\/\.\.\//;
                 while(reBack.test(path))
                 {
                     path = path.replace(reBack, "");
                 }
-                
+
                 //console.log("url(" + path + ")");
-                
+
                 return "url(" + path + ")";
             }
         }
-        
+
         // if it is an absolute path, there is nothing to do
         return a;
     });
-    
+
     var oldStyle = styleSheet.ownerNode;
-    
+
     if (!oldStyle) return;
-    
+
     if (!oldStyle.parentNode) return;
-    
+
     var style = createGlobalElement("style");
     style.setAttribute("charset","utf-8");
     style.setAttribute("type", "text/css");
@@ -26107,52 +24711,52 @@ var loadExternalStylesheet = function(doc, styleSheetIterator, styleSheet)
     //debugger;
     oldStyle.parentNode.insertBefore(style, oldStyle.nextSibling);
     oldStyle.parentNode.removeChild(oldStyle);
-    
-    
+
+
     //doc.getElementsByTagName("head")[0].appendChild(style);
-    
+
     doc.styleSheets[doc.styleSheets.length-1].externalURL = url;
-    
+
     console.log(url, "call " + externalStyleSheetURLs.length, source);
-    
+
     externalStyleSheetURLs.pop();
-    
+
     if (processAllStyleSheetsTimeout)
     {
         clearTimeout(processAllStyleSheetsTimeout);
     }
-    
+
     processAllStyleSheetsTimeout = setTimeout(function(){
         console.log("processing");
         FBL.processAllStyleSheets(doc, styleSheetIterator);
         processAllStyleSheetsTimeout = null;
     },200);
-    
+
 };
 
 
 FBL.processAllStyleSheets = function(doc, styleSheetIterator)
 {
     styleSheetIterator = styleSheetIterator || processStyleSheet;
-    
+
     globalCSSRuleIndex = -1;
-    
+
     var styleSheets = doc.styleSheets;
     var importedStyleSheets = [];
-    
+
     if (FBTrace.DBG_CSS)
         var start = new Date().getTime();
-    
+
     for(var i=0, length=styleSheets.length; i<length; i++)
     {
         try
         {
             var styleSheet = styleSheets[i];
-            
+
             if ("firebugIgnore" in styleSheet) continue;
-            
-            // we must read the length to make sure we have permission to read 
-            // the stylesheet's content. If an error occurs here, we cannot 
+
+            // we must read the length to make sure we have permission to read
+            // the stylesheet's content. If an error occurs here, we cannot
             // read the stylesheet due to access restriction policy
             var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
             rules.length;
@@ -26162,28 +24766,28 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
             externalStyleSheetURLs.push(styleSheet.href);
             styleSheet.restricted = true;
             var ssid = StyleSheetCache(styleSheet);
-            
+
             /// TODO: xxxpedro external css
             //loadExternalStylesheet(doc, styleSheetIterator, styleSheet);
         }
-        
+
         // process internal and external styleSheets
         styleSheetIterator(doc, styleSheet);
-        
+
         var importedStyleSheet, importedRules;
-        
+
         // process imported styleSheets in IE
         if (isIE)
         {
             var imports = styleSheet.imports;
-            
+
             for(var j=0, importsLength=imports.length; j<importsLength; j++)
             {
                 try
                 {
                     importedStyleSheet = imports[j];
                     // we must read the length to make sure we have permission
-                    // to read the imported stylesheet's content. 
+                    // to read the imported stylesheet's content.
                     importedRules = importedStyleSheet.rules;
                     importedRules.length;
                 }
@@ -26193,7 +24797,7 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
                     importedStyleSheet.restricted = true;
                     var ssid = StyleSheetCache(importedStyleSheet);
                 }
-                
+
                 styleSheetIterator(doc, importedStyleSheet);
             }
         }
@@ -26205,13 +24809,13 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
                 try
                 {
                     var rule = rules[j];
-                    
+
                     importedStyleSheet = rule.styleSheet;
-                    
+
                     if (importedStyleSheet)
                     {
                         // we must read the length to make sure we have permission
-                        // to read the imported stylesheet's content. 
+                        // to read the imported stylesheet's content.
                         importedRules = importedStyleSheet.cssRules;
                         importedRules.length;
                     }
@@ -26229,7 +24833,7 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
             }
         }
     };
-    
+
     if (FBTrace.DBG_CSS)
     {
         FBTrace.sysout("FBL.processAllStyleSheets", "all stylesheet rules processed in " + (new Date().getTime() - start) + "ms");
@@ -26244,22 +24848,22 @@ var processStyleSheet = function(doc, styleSheet)
 {
     if (styleSheet.restricted)
         return;
-    
+
     var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
-    
+
     var ssid = StyleSheetCache(styleSheet);
-    
+
     for (var i=0, length=rules.length; i<length; i++)
     {
         var rid = ssid + ":" + i;
         var rule = rules[i];
         var selector = rule.selectorText;
-        
+
         if (isIE)
         {
             selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase();});
         }
-        
+
         // TODO: xxxpedro break grouped rules (,) into individual rules, otherwise
         // it will result in a overestimated value for getCSSRuleSpecificity
         CSSRuleMap[rid] =
@@ -26271,31 +24875,31 @@ var processStyleSheet = function(doc, styleSheet)
             // because the correct value will depend of the matched element.
             // The proper specificity value for grouped selectors are calculated
             // via getElementCSSRules(element)
-            specificity: selector && selector.indexOf(",") != -1 ? 
-                getCSSRuleSpecificity(selector) : 
+            specificity: selector && selector.indexOf(",") != -1 ?
+                getCSSRuleSpecificity(selector) :
                 0,
-            
+
             rule: rule,
             selector: selector,
-            cssText: rule.style ? rule.style.cssText : rule.cssText ? rule.cssText : ""        
+            cssText: rule.style ? rule.style.cssText : rule.cssText ? rule.cssText : ""
         };
-        
+
         var elements = Firebug.Selector(selector, doc);
-        
+
         for (var j=0, elementsLength=elements.length; j<elementsLength; j++)
         {
             var element = elements[j];
             var eid = ElementCache(element);
-            
+
             if (!ElementCSSRulesMap[eid])
                 ElementCSSRulesMap[eid] = [];
-            
+
             ElementCSSRulesMap[eid].push(rid);
         }
-        
+
         //console.log(selector, elements);
     }
-    
+
     // TODO: xxxpedro. remove this, we don't need this anymore with the new getElementCSSRules
     /*
     for (var name in ElementCSSRulesMap)
@@ -26303,7 +24907,7 @@ var processStyleSheet = function(doc, styleSheet)
         if (ElementCSSRulesMap.hasOwnProperty(name))
         {
             var rules = ElementCSSRulesMap[name];
-            
+
             rules.sort(sortElementRules);
             //rules.sort(solveRulesTied);
         }
@@ -26315,13 +24919,13 @@ FBL.getElementCSSRules = function(element)
 {
     var eid = ElementCache(element);
     var rules = ElementCSSRulesMap[eid];
-    
+
     if (!rules) return;
-    
+
     var arr = [element];
     var Selector = Firebug.Selector;
     var ruleId, rule;
-    
+
     // for the case of grouped selectors, we need to calculate the highest
     // specificity within the selectors of the group that matches the element,
     // so we can sort the rules properly without over estimating the specificity
@@ -26330,24 +24934,24 @@ FBL.getElementCSSRules = function(element)
     {
         ruleId = rules[i];
         rule = CSSRuleMap[ruleId];
-        
+
         // check if it is a grouped selector
         if (rule.selector.indexOf(",") != -1)
         {
             var selectors = rule.selector.split(",");
             var maxSpecificity = -1;
             var sel, spec, mostSpecificSelector;
-            
+
             // loop over all selectors in the group
             for (var j, len = selectors.length; j < len; j++)
             {
                 sel = selectors[j];
-                
+
                 // find if the selector matches the element
                 if (Selector.matches(sel, arr).length == 1)
                 {
                     spec = getCSSRuleSpecificity(sel);
-                    
+
                     // find the most specific selector that macthes the element
                     if (spec > maxSpecificity)
                     {
@@ -26356,14 +24960,14 @@ FBL.getElementCSSRules = function(element)
                     }
                 }
             }
-            
+
             rule.specificity = maxSpecificity;
         }
     }
-    
+
     rules.sort(sortElementRules);
     //rules.sort(solveRulesTied);
-    
+
     return rules;
 };
 
@@ -26371,16 +24975,16 @@ var sortElementRules = function(a, b)
 {
     var ruleA = CSSRuleMap[a];
     var ruleB = CSSRuleMap[b];
-    
+
     var specificityA = ruleA.specificity;
     var specificityB = ruleB.specificity;
-    
+
     if (specificityA > specificityB)
         return 1;
-    
+
     else if (specificityA < specificityB)
         return -1;
-    
+
     else
         return ruleA.order > ruleB.order ? 1 : -1;
 };
@@ -26389,10 +24993,10 @@ var solveRulesTied = function(a, b)
 {
     var ruleA = CSSRuleMap[a];
     var ruleB = CSSRuleMap[b];
-    
+
     if (ruleA.specificity == ruleB.specificity)
         return ruleA.order > ruleB.order ? 1 : -1;
-        
+
     return null;
 };
 
@@ -26404,13 +25008,13 @@ var getCSSRuleSpecificity = function(selector)
 {
     var match = selector.match(reSelectorTag);
     var tagCount = match ? match.length : 0;
-    
+
     match = selector.match(reSelectorClass);
     var classCount = match ? match.length : 0;
-    
+
     match = selector.match(reSelectorId);
     var idCount = match ? match.length : 0;
-    
+
     return tagCount + 10*classCount + 100*idCount;
 };
 
@@ -26690,17 +25294,17 @@ Firebug.CSSModule = extend(Firebug.Module,
         // Record the original CSS text for the inline case so we can reconstruct at a later
         // point for diffing purposes
         var baseText = style.cssText;
-        
+
         // good browsers
         if (style.getPropertyValue)
         {
             var prevValue = style.getPropertyValue(propName);
             var prevPriority = style.getPropertyPriority(propName);
-    
+
             // XXXjoe Gecko bug workaround: Just changing priority doesn't have any effect
             // unless we remove the property first
             style.removeProperty(propName);
-    
+
             style.setProperty(propName, propValue, propPriority);
         }
         // sad browsers
@@ -26723,13 +25327,13 @@ Firebug.CSSModule = extend(Firebug.Module,
         // Record the original CSS text for the inline case so we can reconstruct at a later
         // point for diffing purposes
         var baseText = style.cssText;
-        
+
         if (style.getPropertyValue)
         {
-    
+
             var prevValue = style.getPropertyValue(propName);
             var prevPriority = style.getPropertyPriority(propName);
-    
+
             style.removeProperty(propName);
         }
         else
@@ -26905,25 +25509,25 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             for (var i = 0; i < cssRules.length; ++i)
             {
                 var rule = cssRules[i];
-                
-                // TODO: xxxpedro opera instanceof stylesheet remove the following comments when 
+
+                // TODO: xxxpedro opera instanceof stylesheet remove the following comments when
                 // the issue with opera and style sheet Classes has been solved.
-                
+
                 //if (rule instanceof CSSStyleRule)
                 if (instanceOf(rule, "CSSStyleRule"))
                 {
                     var props = this.getRuleProperties(context, rule);
                     //var line = domUtils.getRuleLine(rule);
                     var line = null;
-                    
+
                     var selector = rule.selectorText;
-                    
+
                     if (isIE)
                     {
-                        selector = selector.replace(reSelectorTag, 
+                        selector = selector.replace(reSelectorTag,
                                 function(s){return s.toLowerCase();});
                     }
-                    
+
                     var ruleId = rule.selectorText+"/"+line;
                     rules.push({tag: CSSStyleRuleTag.tag, rule: rule, id: ruleId,
                                 selector: selector, props: props,
@@ -26970,7 +25574,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             var line,i=0;
             // TODO: xxxpedro port to firebug: variable leaked into global namespace
             var m;
-            
+
             while(line=lines[i++]){
                 m = propRE.exec(line);
                 if(!m)
@@ -26988,7 +25592,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     {
         var props = this.parseCSSProps(rule.style, inheritMode);
 
-        // TODO: xxxpedro port to firebug: variable leaked into global namespace 
+        // TODO: xxxpedro port to firebug: variable leaked into global namespace
         //var line = domUtils.getRuleLine(rule);
         var line;
         var ruleId = rule.selectorText+"/"+line;
@@ -27014,7 +25618,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     addProperty: function(name, value, important, disabled, inheritMode, props)
     {
         name = name.toLowerCase();
-        
+
         if (inheritMode && !inheritedStyleNames[name])
             return;
 
@@ -27189,10 +25793,10 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     onMouseDown: function(event)
     {
         //console.log("onMouseDown", event.target || event.srcElement, event);
-        
+
         // xxxpedro adjusting coordinates because the panel isn't a window yet
         var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
-        
+
         // XXjoe Hack to only allow clicking on the checkbox
         if (!isLeftClick(event) || offset > 20)
             return;
@@ -27212,21 +25816,21 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     onDoubleClick: function(event)
     {
         //console.log("onDoubleClick", event.target || event.srcElement, event);
-        
+
         // xxxpedro adjusting coordinates because the panel isn't a window yet
         var offset = event.clientX - this.panelNode.parentNode.offsetLeft;
-        
+
         if (!isLeftClick(event) || offset <= 20)
             return;
 
         var target = event.target || event.srcElement;
-        
+
         //console.log("ok", target, hasClass(target, "textEditorInner"), !isLeftClick(event), offset <= 20);
-        
+
         // if the inline editor was clicked, don't insert a new rule
         if (hasClass(target, "textEditorInner"))
             return;
-            
+
         var row = getAncestorByClass(target, "cssRule");
         if (row && !getAncestorByClass(target, "cssPropName")
             && !getAncestorByClass(target, "cssPropValue"))
@@ -27244,7 +25848,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     parentPanel: null,
     searchable: true,
     dependents: ["css", "stylesheet", "dom", "domSide", "layout"],
-    
+
     options:
     {
         hasToolButtons: true
@@ -27253,46 +25857,46 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
     create: function()
     {
         Firebug.Panel.create.apply(this, arguments);
-        
+
         this.onMouseDown = bind(this.onMouseDown, this);
         this.onDoubleClick = bind(this.onDoubleClick, this);
 
         if (this.name == "stylesheet")
         {
             this.onChangeSelect = bind(this.onChangeSelect, this);
-            
+
             var doc = Firebug.browser.document;
             var selectNode = this.selectNode = createElement("select");
-            
+
             processAllStyleSheets(doc, function(doc, styleSheet)
             {
                 var key = StyleSheetCache.key(styleSheet);
                 var fileName = getFileName(styleSheet.href) || getFileName(doc.location.href);
                 var option = createElement("option", {value: key});
-                
+
                 option.appendChild(Firebug.chrome.document.createTextNode(fileName));
                 selectNode.appendChild(option);
             });
-            
+
             this.toolButtonsNode.appendChild(selectNode);
         }
         /**/
     },
-    
+
     onChangeSelect: function(event)
     {
         event = event || window.event;
         var target = event.srcElement || event.currentTarget;
         var key = target.value;
         var styleSheet = StyleSheetCache.get(key);
-        
+
         this.updateLocation(styleSheet);
     },
-    
+
     initialize: function()
     {
         Firebug.Panel.initialize.apply(this, arguments);
-        
+
         //if (!domUtils)
         //{
         //    try {
@@ -27302,40 +25906,40 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
         //            FBTrace.sysout("@mozilla.org/inspector/dom-utils;1 FAILED to load: "+exc, exc);
         //    }
         //}
-        
+
         //TODO: xxxpedro
         this.context = Firebug.chrome; // TODO: xxxpedro css2
         this.document = Firebug.chrome.document; // TODO: xxxpedro css2
-        
+
         this.initializeNode();
-        
+
         if (this.name == "stylesheet")
         {
             var styleSheets = Firebug.browser.document.styleSheets;
-            
+
             if (styleSheets.length > 0)
             {
                 addEvent(this.selectNode, "change", this.onChangeSelect);
-                
+
                 this.updateLocation(styleSheets[0]);
             }
         }
-        
+
         //Firebug.SourceBoxPanel.initialize.apply(this, arguments);
     },
-    
+
     shutdown: function()
     {
         // must destroy the editor when we leave the panel to avoid problems (Issue 2981)
         Firebug.Editor.stopEditing();
-        
+
         if (this.name == "stylesheet")
         {
             removeEvent(this.selectNode, "change", this.onChangeSelect);
         }
-        
+
         this.destroyNode();
-        
+
         Firebug.Panel.shutdown.apply(this, arguments);
     },
 
@@ -27411,7 +26015,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             return;
         if (styleSheet.editStyleSheet)
             styleSheet = styleSheet.editStyleSheet.sheet;
-        
+
         // if it is a restricted stylesheet, show the warning message and abort the update process
         if (styleSheet.restricted)
         {
@@ -27423,7 +26027,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
                 link: "more...",
                 href: "http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22Access_to_restricted_URI_denied.22"
             }, this.panelNode);
-            
+
             return;
         }
 
@@ -27829,7 +26433,7 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
             // IE needs the sourceLink first, otherwise it will be rendered outside the panel
             DIV({"class": "cssElementRuleContainer"},
                 TAG(FirebugReps.SourceLink.tag, {object: "$rule.sourceLink"}),
-                TAG(CSSStyleRuleTag.tag, {rule: "$rule"})                
+                TAG(CSSStyleRuleTag.tag, {rule: "$rule"})
             )
             :
             // other browsers need the sourceLink last, otherwise it will cause an extra space
@@ -27902,11 +26506,11 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
     getElementRules: function(element, rules, usedProps, inheritMode)
     {
         var inspectedRules, displayedRules = {};
-        
+
         // TODO: xxxpedro remove document specificity issue
         //var eid = ElementCache(element);
         //inspectedRules = ElementCSSRulesMap[eid];
-        
+
         inspectedRules = getElementCSSRules(element);
 
         if (inspectedRules)
@@ -27916,9 +26520,9 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
                 var ruleId = inspectedRules[i];
                 var ruleData = CSSRuleMap[ruleId];
                 var rule = ruleData.rule;
-                
+
                 var ssid = ruleData.styleSheetId;
-                var parentStyleSheet = StyleSheetCache.get(ssid); 
+                var parentStyleSheet = StyleSheetCache.get(ssid);
 
                 var href = parentStyleSheet.externalURL ? parentStyleSheet.externalURL : parentStyleSheet.href;  // Null means inline
 
@@ -27927,10 +26531,10 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
 
                 var isSystemSheet = false;
                 //var isSystemSheet = isSystemStyleSheet(rule.parentStyleSheet);
-                
+
                 if (!Firebug.showUserAgentCSS && isSystemSheet) // This removes user agent rules
                     continue;
-                
+
                 if (!href)
                     href = element.ownerDocument.location.href; // http://code.google.com/p/fbug/issues/detail?id=452
 
@@ -27941,7 +26545,7 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
                 //
                 //var line = domUtils.getRuleLine(rule);
                 var line;
-                
+
                 var ruleId = rule.selectorText+"/"+line;
                 var sourceLink = new SourceLink(href, line, "css", rule, instance);
 
@@ -28060,17 +26664,17 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
     {
         this.context = Firebug.chrome; // TODO: xxxpedro css2
         this.document = Firebug.chrome.document; // TODO: xxxpedro css2
-        
+
         Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
-        
+
         // TODO: xxxpedro css2
         var selection = ElementCache.get(FirebugChrome.selectedHTMLElementId);
         if (selection)
             this.select(selection, true);
-        
+
         //this.updateCascadeView(document.getElementsByTagName("h1")[0]);
         //this.updateCascadeView(document.getElementById("build"));
-        
+
         /*
         this.onStateChange = bindFixed(this.contentStateCheck, this);
         this.onHoverChange = bindFixed(this.contentStateCheck, this, STATE_HOVER);
@@ -28277,7 +26881,7 @@ CSSComputedElementPanel.prototype = extend(CSSElementPanel.prototype,
         var win = isIE ?
                 element.ownerDocument.parentWindow :
                 element.ownerDocument.defaultView;
-        
+
         var style = isIE ?
                 element.currentStyle :
                 win.getComputedStyle(element, "");
@@ -28299,10 +26903,10 @@ CSSComputedElementPanel.prototype = extend(CSSElementPanel.prototype,
                 var propValue = style.getPropertyValue ?
                         style.getPropertyValue(propName) :
                         ""+style[toCamelCase(propName)];
-                
-                if (propValue === undefined || propValue === null) 
+
+                if (propValue === undefined || propValue === null)
                     continue;
-                
+
                 propValue = stripUnits(rgbToHex(propValue));
                 if (propValue)
                     group.props.push({name: propName, value: propValue});
@@ -28347,9 +26951,9 @@ CSSEditor.prototype = domplate(Firebug.InlineEditor.prototype,
     insertNewRow: function(target, insertWhere)
     {
         var rule = Firebug.getRepObject(target);
-        var emptyProp = 
+        var emptyProp =
         {
-            // TODO: xxxpedro - uses charCode(255) to force the element being rendered, 
+            // TODO: xxxpedro - uses charCode(255) to force the element being rendered,
             // allowing webkit to get the correct position of the property name "span",
             // when inserting a new CSS rule?
             name: "",
@@ -28365,10 +26969,10 @@ CSSEditor.prototype = domplate(Firebug.InlineEditor.prototype,
 
     saveEdit: function(target, value, previousValue)
     {
-    	// We need to check the value first in order to avoid a problem in IE8 
-    	// See Issue 3038: Empty (null) styles when adding CSS styles in Firebug Lite 
+    	// We need to check the value first in order to avoid a problem in IE8
+    	// See Issue 3038: Empty (null) styles when adding CSS styles in Firebug Lite
     	if (!value) return;
-    	
+
         target.innerHTML = escapeForCss(value);
 
         var row = getAncestorByClass(target, "cssProp");
@@ -28512,7 +27116,7 @@ CSSRuleEditor.prototype = domplate(Firebug.InlineEditor.prototype,
         // changes.
         if (value)
         {
-            var cssText = [ value, "{", ];
+            var cssText = [ value, "{" ];
             var props = row.getElementsByClassName("cssProp");
             for (var i = 0; i < props.length; i++) {
                 var propEl = props[i];
@@ -28795,6394 +27399,300 @@ Firebug.registerPanel(CSSComputedElementPanel);
 /* See license.txt for terms of usage */
 
 FBL.ns(function() { with (FBL) {
-
-// ************************************************************************************************
-// Constants
-
-///const Cc = Components.classes;
-///const Ci = Components.interfaces;
-///const nsIIOService = Ci.nsIIOService;
-///const nsIRequest = Ci.nsIRequest;
-///const nsICachingChannel = Ci.nsICachingChannel;
-///const nsIScriptableInputStream = Ci.nsIScriptableInputStream;
-///const nsIUploadChannel = Ci.nsIUploadChannel;
-///const nsIHttpChannel = Ci.nsIHttpChannel;
-
-///const IOService = Cc["@mozilla.org/network/io-service;1"];
-///const ioService = IOService.getService(nsIIOService);
-///const ScriptableInputStream = Cc["@mozilla.org/scriptableinputstream;1"];
-///const chromeReg = CCSV("@mozilla.org/chrome/chrome-registry;1", "nsIToolkitChromeRegistry");
-
-///const LOAD_FROM_CACHE = nsIRequest.LOAD_FROM_CACHE;
-///const LOAD_BYPASS_LOCAL_CACHE_IF_BUSY = nsICachingChannel.LOAD_BYPASS_LOCAL_CACHE_IF_BUSY;
-
-///const NS_BINDING_ABORTED = 0x804b0002;
-
 // ************************************************************************************************
 
-Firebug.SourceCache = function(context)
+// ************************************************************************************************
+// Script Module
+
+Firebug.Script = extend(Firebug.Module,
 {
-    this.context = context;
-    this.cache = {};
-};
-
-Firebug.SourceCache.prototype = extend(new Firebug.Listener(),
-{
-    isCached: function(url)
+    getPanel: function()
     {
-        return (this.cache[url] ? true : false);
+        return Firebug.chrome ? Firebug.chrome.getPanel("Script") : null;
     },
 
-    loadText: function(url, method, file)
+    selectSourceCode: function(index)
     {
-        var lines = this.load(url, method, file);
-        return lines ? lines.join("") : null;
-    },
-
-    load: function(url, method, file)
-    {
-        if (FBTrace.DBG_CACHE)
-        {
-            FBTrace.sysout("sourceCache.load: " + url);
-
-            if (!this.cache.hasOwnProperty(url) && this.cache[url])
-                FBTrace.sysout("sourceCache.load; ERROR - hasOwnProperty returns false, " +
-                    "but the URL is cached: " + url, this.cache[url]);
-        }
-
-        // xxxHonza: sometimes hasOwnProperty return false even if the URL is obviously there.
-        //if (this.cache.hasOwnProperty(url))
-        var response = this.cache[this.removeAnchor(url)];
-        if (response)
-            return response;
-
-        if (FBTrace.DBG_CACHE)
-        {
-            var urls = [];
-            for (var prop in this.cache)
-                urls.push(prop);
-
-            FBTrace.sysout("sourceCache.load: Not in the Firebug internal cache", urls);
-        }
-
-        var d = FBL.splitDataURL(url);  //TODO the RE should not have baseLine
-        if (d)
-        {
-            var src = d.encodedContent;
-            var data = decodeURIComponent(src);
-            var lines = splitLines(data);
-            this.cache[url] = lines;
-
-            return lines;
-        }
-
-        var j = FBL.reJavascript.exec(url);
-        if (j)
-        {
-            var src = url.substring(FBL.reJavascript.lastIndex);
-            var lines = splitLines(src);
-            this.cache[url] = lines;
-
-            return lines;
-        }
-
-        var c = FBL.reChrome.test(url);
-        if (c)
-        {
-            if (Firebug.filterSystemURLs)
-                return ["Filtered chrome url "+url];  // ignore chrome
-
-            // If the chrome.manifest has  xpcnativewrappers=no, platform munges the url
-            var reWrapperMunge = /(\S*)\s*->\s*(\S*)/;
-            var m = reWrapperMunge.exec(url);
-            if (m)
-            {
-                url = m[2];
-                if (FBTrace.DBG_CACHE)
-                    FBTrace.sysout("sourceCache found munged xpcnativewrapper url and set it to "+url+" m "+m+" m[0]:"+m[0]+" [1]"+m[1], m);
-            }
-
-            var chromeURI = makeURI(url);
-            if (!chromeURI)
-            {
-                if (FBTrace.DBG_CACHE)
-                    FBTrace.sysout("sourceCache.load failed to convert chrome to local: "+url);
-                return ["sourceCache failed to make URI from "+url];
-            }
-
-            var localURI = chromeReg.convertChromeURL(chromeURI);
-            if (FBTrace.DBG_CACHE)
-                FBTrace.sysout("sourceCache.load converting chrome to local: "+url, " -> "+localURI.spec);
-            return this.loadFromLocal(localURI.spec);
-        }
-
-        c = FBL.reFile.test(url);
-        if (c)
-        {
-            return this.loadFromLocal(url);
-        }
-
-        // Unfortunately, the URL isn't available so, let's try to use FF cache.
-        // Notice that additional network request to the server can be made in
-        // this method (double-load).
-        return this.loadFromCache(url, method, file);
-    },
-
-    store: function(url, text)
-    {
-        var tempURL = this.removeAnchor(url);
-
-        if (FBTrace.DBG_CACHE)
-            FBTrace.sysout("sourceCache for " + this.context.getName() + " store url=" +
-                url + ((tempURL != url) ? " -> " + tempURL : ""), text);
-
-        var lines = splitLines(text);
-        return this.storeSplitLines(tempURL, lines);
-    },
-
-    removeAnchor: function(url)
-    {
-        var index = url.indexOf("#");
-        if (index < 0)
-            return url;
-
-        return url.substr(0, index);
-    },
-
-    loadFromLocal: function(url)
-    {
-        // if we get this far then we have either a file: or chrome: url converted to file:
-        var src = getResource(url);
-        if (src)
-        {
-            var lines = splitLines(src);
-            this.cache[url] = lines;
-
-            return lines;
-        }
-    },
-
-    loadFromCache: function(url, method, file)
-    {
-        if (FBTrace.DBG_CACHE) FBTrace.sysout("sourceCache.loadFromCache url:"+url);
-
-        var doc = this.context.window.document;
-        if (doc)
-            var charset = doc.characterSet;
-        else
-            var charset = "UTF-8";
-
-        /// TODO: xxxpedro XPCOM
-        /*
-        var channel;
-        try
-        {
-            channel = ioService.newChannel(url, null, null);
-            channel.loadFlags |= LOAD_FROM_CACHE | LOAD_BYPASS_LOCAL_CACHE_IF_BUSY;
-
-            if (method && (channel instanceof nsIHttpChannel))
-            {
-                var httpChannel = QI(channel, nsIHttpChannel);
-                httpChannel.requestMethod = method;
-            }
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_CACHE)
-                FBTrace.sysout("sourceCache for url:"+url+" window="+this.context.window.location.href+" FAILS:", exc);
-            return;
-        }
-
-        if (url == this.context.browser.contentWindow.location.href)
-        {
-            if (FBTrace.DBG_CACHE) FBTrace.sysout("sourceCache.load content window href\n");
-            if (channel instanceof nsIUploadChannel)
-            {
-                var postData = getPostStream(this.context);
-                if (postData)
-                {
-                    var uploadChannel = QI(channel, nsIUploadChannel);
-                    uploadChannel.setUploadStream(postData, "", -1);
-                    if (FBTrace.DBG_CACHE) FBTrace.sysout("sourceCache.load uploadChannel set\n");
-                }
-            }
-
-            if (channel instanceof nsICachingChannel)
-            {
-                var cacheChannel = QI(channel, nsICachingChannel);
-                cacheChannel.cacheKey = getCacheKey(this.context);
-                if (FBTrace.DBG_CACHE) FBTrace.sysout("sourceCache.load cacheChannel key"+cacheChannel.cacheKey+"\n");
-            }
-        }
-        else if ((method == "PUT" || method == "POST") && file)
-        {
-            if (channel instanceof nsIUploadChannel)
-            {
-                // In case of PUT and POST, don't forget to use the original body.
-                var postData = getPostText(file, this.context);
-                if (postData)
-                {
-                    var postDataStream = getInputStreamFromString(postData);
-                    var uploadChannel = QI(channel, nsIUploadChannel);
-                    uploadChannel.setUploadStream(postDataStream, "application/x-www-form-urlencoded", -1);
-                    if (FBTrace.DBG_CACHE) FBTrace.sysout("sourceCache.load uploadChannel set\n");
-                }
-            }
-        }
-
-        var stream;
-        try
-        {
-            if (FBTrace.DBG_CACHE) FBTrace.sysout("sourceCache.load url:"+url+" with charset"+charset+"\n");
-            stream = channel.open();
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-            {
-                var isCache = (channel instanceof nsICachingChannel)?"nsICachingChannel":"NOT caching channel";
-                var isUp = (channel instanceof nsIUploadChannel)?"nsIUploadChannel":"NOT nsIUploadChannel";
-                FBTrace.sysout(url+" vs "+this.context.browser.contentWindow.location.href+" and "+isCache+" "+isUp+"\n");
-                FBTrace.sysout("sourceCache.load fails channel.open for url="+url+ " cause:", exc);
-                FBTrace.sysout("sourceCache.load fails channel=", channel);
-            }
-            return ["sourceCache.load FAILS for url="+url, exc.toString()];
-        }
-        /**/
-
-        try
-        {
-            ///var data = readFromStream(stream, charset);
-            var data = Firebug.Lite.Proxy.load(url);
-            var lines = splitLines(data);
-            this.cache[url] = lines;
-            return lines;
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("sourceCache.load FAILS, url="+url, exc);
-            return ["sourceCache.load FAILS for url="+url, exc.toString()];
-        }
-        finally
-        {
-            ///stream.close();
-        }
-    },
-
-    storeSplitLines: function(url, lines)
-    {
-        if (FBTrace.DBG_CACHE)
-            FBTrace.sysout("sourceCache for window="+this.context.getName()+" store url="+url+"\n");
-        return this.cache[url] = lines;
-    },
-
-    invalidate: function(url)
-    {
-        url = this.removeAnchor(url);
-
-        if (FBTrace.DBG_CACHE)
-            FBTrace.sysout("sourceCache.invalidate; " + url);
-
-        delete this.cache[url];
-    },
-
-    getLine: function(url, lineNo)
-    {
-        var lines = this.load(url);
-        if (lines)
-        {
-            if (lineNo <= lines.length)
-                return lines[lineNo-1];
-            else
-                return (lines.length == 1) ? lines[0] : "("+lineNo+" out of range "+lines.length+")";
-        }
-        else
-            return "(no source for "+url+")";
+        this.getPanel().selectSourceCode(index);
     }
 });
 
-var readWithXHR = function(url)
-{
-    Ajax.request({url: url, async: false});
-    return Ajax.transport.responseText;
-};
-
-/// TODO: xxxpedro XPCOM
-/*
-// xxxHonza getPostText and readPostTextFromRequest are copied from
-// net.js. These functions should be removed when this cache is
-// refactored due to the double-load problem.
-function getPostText(file, context)
-{
-    if (!file.postText)
-        file.postText = readPostTextFromPage(file.href, context);
-
-    if (!file.postText)
-        file.postText = readPostTextFromRequest(file.request, context);
-
-    return file.postText;
-}
-
-// ************************************************************************************************
-
-function getPostStream(context)
-{
-    try
-    {
-        var webNav = context.browser.webNavigation;
-        var descriptor = QI(webNav, Ci.nsIWebPageDescriptor).currentDescriptor;
-        var entry = QI(descriptor, Ci.nsISHEntry);
-
-        if (entry.postData)
-        {
-            // Seek to the beginning, or it will probably start reading at the end
-            var postStream = QI(entry.postData, Ci.nsISeekableStream);
-            postStream.seek(0, 0);
-            return postStream;
-        }
-     }
-     catch (exc)
-     {
-     }
-}
-
-function getCacheKey(context)
-{
-    try
-    {
-        var webNav = context.browser.webNavigation;
-        var descriptor = QI(webNav, Ci.nsIWebPageDescriptor).currentDescriptor;
-        var entry = QI(descriptor, Ci.nsISHEntry);
-        return entry.cacheKey;
-     }
-     catch (exc)
-     {
-     }
-}
-/**/
-
-// ************************************************************************************************
-}});
-
-
-/* See license.txt for terms of usage */
-
-FBL.ns(function() { with (FBL) {
-
-///    const Cc = Components.classes;
-///    const Ci = Components.interfaces;
-
-///    const PCMAP_SOURCETEXT = Ci.jsdIScript.PCMAP_SOURCETEXT;
-///    const PCMAP_PRETTYPRINT = Ci.jsdIScript.PCMAP_PRETTYPRINT;
-
-var PCMAP_SOURCETEXT = -1;
-var PCMAP_PRETTYPRINT = -2;
-
-
-//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-/*
- * SourceFile one for every compilation unit.
- * Unique URL for each. (href)
- * Unique outerScript, the statements outside of any function defintion
- * sourceCache keyed by href has source for this compilation unit
- * Stored by href in context.
- * Contains array of jsdIScript for functions (scripts) defined in this unit
- * May contain line table (for sources viewed)
- */
-
-Firebug.SourceFile = function (compilation_unit_type)
-{
-    this.compilation_unit_type = compilation_unit_type; /*@explore*/
-};
-
-Firebug.SourceFile.prototype =
-{
-    getBaseLineOffset: function()
-    {
-        return 0;
-    },
-
-    toString: function()
-    {
-        var str = (this.compilation_unit_type?this.compilation_unit_type+" ":"")+this.href+" script.tags( ";
-        if (this.outerScript)
-            str += (this.outerScript.isValid?this.outerScript.tag:"X") +"| ";
-        if (this.innerScripts)
-        {
-            var numberInvalid = 0;
-            for (var p in this.innerScripts)
-            {
-                var script = this.innerScripts[p];
-                if (script.isValid)
-                    str += p+" ";
-                else
-                    numberInvalid++;
-            }
-        }
-        str += ")"+(numberInvalid ? "("+numberInvalid+" invalid)" : "");
-        return str;
-    },
-
-    /*
-    forEachScript: function(callback)
-     {
-         if (this.outerScript)
-             callback(this.outerScript);
-         if (this.innerScripts)
-         {
-             for (var p in this.innerScripts)
-             {
-                 var script = this.innerScripts[p];
-                 var rc = callback(script);
-                 if (rc)
-                     return rc;
-             }
-         }
-     },
-
-     getLineRanges: function()
-     {
-         var str = "";
-         this.forEachScript(function appendARange(script)
-         {
-             var endLineNumber = script.baseLineNumber + script.lineExtent;
-             str += " "+script.baseLineNumber +"-("+script.tag+")-"+endLineNumber;
-         });
-         return str;
-     },
-
-     getSourceLength: function()
-     {
-             return this.sourceLength;
-     },
-
-     getLine: function(context, lineNo)
-     {
-         return context.sourceCache.getLine(this.href, lineNo);
-     },
-
-     addToLineTable: function(script)
-     {
-         if (!script || !script.isValid)
-         {
-             if (FBTrace.DBG_ERRORS)
-                 FBTrace.sysout("addToLineTable got invalid script "+(script?script.tag:"null")+"\n");
-             return;
-         }
-
-         // For outer scripts, a better algorithm would loop over PC, use pcToLine to mark the lines.
-         // This assumes there are fewer PCs in an outer script than lines, probably true for large systems.
-         // And now addToLineTable is only used for outerScripts (eval and top-level).
-         // But since we can't know the range of PC values we cannot use that approach.
-
-         if (!this.outerScriptLineMap)
-             this.outerScriptLineMap = [];
-
-         var lineCount = script.lineExtent + 1;
-         var offset = this.getBaseLineOffset();
-         if (FBTrace.DBG_LINETABLE)
-         {
-             FBTrace.sysout("lib.SourceFile.addToLineTable script.tag:"+script.tag+" lineExtent="+lineCount+" baseLineNumber="+script.baseLineNumber+" offset="+offset+" for "+this.compilation_unit_type+"\n");
-             var startTime = new Date().getTime();
-         }
-         if (lineCount > 100)
-             lineCount = 100; // isLineExecutable requires about 1ms per line, so it can only be called for toy programs
-
-         for (var i = 0; i <= lineCount; i++)
-         {
-             var scriptLineNo = i + script.baseLineNumber;  // the max is (i + script.baseLineNumber + script.lineExtent)
-             var mapLineNo = scriptLineNo - offset;
-             try
-             {
-                 if (script.isLineExecutable(scriptLineNo, this.pcmap_type))
-                     this.outerScriptLineMap.push(mapLineNo);
-             }
-             catch (e)
-             {
-                 // I guess not...
-             }
-
-             if (FBTrace.DBG_LINETABLE)
-             {
-                 var pcFromLine = script.lineToPc(scriptLineNo, this.pcmap_type);
-                 var lineFromPC = script.pcToLine(pcFromLine, this.pcmap_type);
-                 if (this.outerScriptLineMap.indexOf(mapLineNo) != -1)
-                     FBTrace.sysout("lib.SourceFile.addToLineTable ["+mapLineNo+"]="+script.tag+" for scriptLineNo="+scriptLineNo+" vs "+lineFromPC+"=lineFromPC; lineToPc="+pcFromLine+" with map="+(this.pcmap_type==PCMAP_PRETTYPRINT?"PP":"SOURCE")+"\n");
-                 else
-                     FBTrace.sysout("lib.SourceFile.addToLineTable not executable scriptLineNo="+scriptLineNo+" vs "+lineFromPC+"=lineFromPC; lineToPc="+pcFromLine+"\n");
-             }
-         }
-         if (FBTrace.DBG_LINETABLE)
-         {
-             var endTime = new Date().getTime();
-             var delta = endTime - startTime ;
-             if (delta > 0) FBTrace.sysout("SourceFile.addToLineTable processed "+lineCount+" lines in "+delta+" millisecs "+Math.round(lineCount/delta)+" lines per millisecond\n");
-             FBTrace.sysout("SourceFile.addToLineTable: "+this.toString()+"\n");
-         }
-     },
-
-     addToLineTableByPCLoop: function(script)
-     {
-         // This code is not called; it crashes FF3pre https://bugzilla.mozilla.org/show_bug.cgi?id=430205
-         if (!this.outerScriptLineMap)
-             this.outerScriptLineMap = {};
-
-         var lineCount = script.lineExtent;
-         var offset = this.getBaseLineOffset();
-         if (FBTrace.DBG_LINETABLE)
-         {
-             FBTrace.sysout("lib.SourceFile.addToLineTableByPCLoop script.tag:"+script.tag+" lineCount="+lineCount+" offset="+offset+" for "+this.compilation_unit_type+"\n");
-             var startTime = new Date().getTime();
-         }
-
-         for (var i = 0; i <= 10*lineCount; i++)
-         {
-             var lineFromPC = script.pcToLine(i, this.pcmap_type);
-             //FBTrace.sysout("lib.SourceFile.addToLineTableByPCLoop pc="+i+" line: "+lineFromPC+"\n");
-             this.outerScriptLineMap[lineFromPC] = script;
-             if (lineFromPC >= lineCount) break;
-         }
-
-         if (FBTrace.DBG_LINETABLE)
-         {
-             FBTrace.sysout("SourceFile.addToLineTableByPCLoop: "+this.toString()+"\n");
-             var endTime = new Date().getTime();
-             var delta = endTime - startTime ;
-             if (delta > 0) FBTrace.sysout("SourceFileaddToLineTableByPCLoop processed "+lineCount+" lines in "+delta+" millisecs "+Math.round(lineCount/delta)+" lines per millisecond\n");
-         }
-     },
-
-     hasScriptAtLineNumber: function(lineNo, mustBeExecutableLine)
-     {
-         var offset = this.getBaseLineOffset();
-
-         if (!this.innerScripts)
-             return; // eg URLOnly
-
-         var targetLineNo = lineNo + offset;  // lineNo is user-viewed number, targetLineNo is jsd number
-
-         var scripts = [];
-         for (var p in this.innerScripts)
-         {
-             var script = this.innerScripts[p];
-             if (mustBeExecutableLine && !script.isValid)
-                continue;
-
-             this.addScriptAtLineNumber(scripts, script, targetLineNo, mustBeExecutableLine, offset);
-
-             if (scripts.length)
-                return true;
-         }
-
-         if (this.outerScript && !(mustBeExecutableLine && !this.outerScript.isValid) )
-             this.addScriptAtLineNumber(scripts, this.outerScript, targetLineNo, mustBeExecutableLine, offset);
-
-         return (scripts.length > 0);
-     },
-
-     getScriptsAtLineNumber: function(lineNo, mustBeExecutableLine)
-     {
-         var offset = this.getBaseLineOffset();
-
-         if (!this.innerScripts)
-             return; // eg URLOnly
-
-         var targetLineNo = lineNo + offset;  // lineNo is user-viewed number, targetLineNo is jsd number
-
-         var scripts = [];
-         for (var p in this.innerScripts)
-         {
-             var script = this.innerScripts[p];
-             if (mustBeExecutableLine && !script.isValid) continue;
-             this.addScriptAtLineNumber(scripts, script, targetLineNo, mustBeExecutableLine, offset);
-         }
-
-         if (this.outerScript && !(mustBeExecutableLine && !this.outerScript.isValid) )
-             this.addScriptAtLineNumber(scripts, this.outerScript, targetLineNo, mustBeExecutableLine, offset);
-
-         if (FBTrace.DBG_LINETABLE)
-         {
-             if (scripts.length < 1)
-             {
-                 FBTrace.sysout("lib.getScriptsAtLineNumber no targetScript at "+lineNo," for sourceFile:"+this.toString());
-                 return false;
-             }
-             else
-             {
-                 FBTrace.sysout("getScriptsAtLineNumber offset "+offset+" for sourcefile: "+this.toString()+"\n");
-             }
-         }
-
-         return (scripts.length > 0) ? scripts : false;
-     },
-
-     addScriptAtLineNumber: function(scripts, script, targetLineNo, mustBeExecutableLine, offset)
-     {
-         // script.isValid will be true.
-         if (FBTrace.DBG_LINETABLE)
-             FBTrace.sysout("addScriptAtLineNumber trying "+script.tag+", is "+script.baseLineNumber+" <= "+targetLineNo +" <= "+ (script.baseLineNumber + script.lineExtent)+"? using offset = "+offset+"\n");
-
-         if (targetLineNo >= script.baseLineNumber)
-         {
-             if ( (script.baseLineNumber + script.lineExtent) >= targetLineNo)
-             {
-                 if (mustBeExecutableLine)
-                 {
-                     try
-                     {
-                         if (!script.isLineExecutable(targetLineNo, this.pcmap_type) )
-                         {
-                             if (FBTrace.DBG_LINETABLE)
-                                 FBTrace.sysout("getScriptsAtLineNumber tried "+script.tag+", not executable at targetLineNo:"+targetLineNo+" pcmap:"+this.pcmap_type+"\n");
-                             return;
-                         }
-                     }
-                     catch (e)
-                     {
-                         // Component returned failure code: 0x80040111 (NS_ERROR_NOT_AVAILABLE) [jsdIScript.isLineExecutable]
-                         return;
-                     }
-                 }
-                 scripts.push(script);
-                 if (FBTrace.DBG_LINETABLE)
-                 {
-                     var checkExecutable = "";
-                     if (mustBeExecutableLine)
-                         var checkExecutable = " isLineExecutable: "+script.isLineExecutable(targetLineNo, this.pcmap_type)+"@pc:"+script.lineToPc(targetLineNo, this.pcmap_type);
-                     FBTrace.sysout("getScriptsAtLineNumber found "+script.tag+", isValid: "+script.isValid+" targetLineNo:"+targetLineNo+checkExecutable+"\n");
-                 }
-             }
-         }
-     },
-
-     scriptsIfLineCouldBeExecutable: function(lineNo)  // script may not be valid
-     {
-         var scripts = this.getScriptsAtLineNumber(lineNo, true);
-         if (FBTrace.DBG_LINETABLE && !scripts) FBTrace.sysout("lib.scriptsIfLineCouldBeExecutable this.outerScriptLineMap", this.outerScriptLineMap);
-         if (!scripts && this.outerScriptLineMap && (this.outerScriptLineMap.indexOf(lineNo) != -1) )
-             return [this.outerScript];
-         return scripts;
-     },
-
-     /**/
-     isExecutableLine: function(lineNo)  // script may not be valid
-     {
-        /// TODO: xxxpedro sourceFile
-        return false;
-        
-         if (this.hasScriptAtLineNumber(lineNo, true))
-            return true;
-
-         if (this.outerScriptLineMap && (this.outerScriptLineMap.indexOf(lineNo) != -1))
-             return true;
-
-         return false;
-     },
-
-     /*hasScript: function(script)
-     {
-         if (this.outerScript && (this.outerScript.tag == script.tag) )
-             return true;
-         // XXXjjb Don't use indexOf or similar tests that rely on ===, since we are really working with
-         // wrappers around jsdIScript, not script themselves.  I guess.
-
-        return ( this.innerScripts && this.innerScripts.hasOwnProperty(script.tag) );
-     },
-
-     // these objects map JSD's values to correct values
-     getScriptAnalyzer: function(script)
-     {
-         if (script && this.outerScript && (script.tag == this.outerScript.tag) )
-             return this.getOuterScriptAnalyzer();
-         return new Firebug.SourceFile.NestedScriptAnalyzer(this);
-     },
-
-     // return.path: group/category label, return.name: item label
-     getObjectDescription: function()
-     {
-         return FBL.splitURLBase(this.href);
-     },
-
-     isEval: function()
-     {
-         return (this.compilation_unit_type == "eval-level") || (this.compilation_unit_type == "newFunction");
-     },
-
-     isEvent: function()
-     {
-         return (this.compilation_unit_type == "event");
-     },
-
-     /**/
-     loadScriptLines: function(context)  // array of lines
-     {
-         if (this.source)
-             return this.source;
-         else
-             return context.sourceCache.load(this.href);
-     }/*,
-
-     getOuterScriptAnalyzer: function()
-     {
-         FBTrace.sysout("getOuterScriptAnalyzer not overridden for "+sourceFile, this);
-     }
-     /**/
-
-};
-
-Firebug.SourceFile.summarizeSourceLineArray = function(sourceLines, size)
-{
-    var buf  = "";
-    for (var i = 0; i < sourceLines.length; i++)
-     {
-         var aLine = sourceLines[i].substr(0,240);  // avoid huge lines
-         buf += aLine.replace(/\s/, " ", "g");
-         if (buf.length > size || aLine.length > 240)
-             break;
-     }
-     return buf.substr(0, size);
-};
-
-
-Firebug.SourceFile.NestedScriptAnalyzer = function(sourceFile)
-{
-    this.sourceFile = sourceFile;
-};
-
-Firebug.SourceFile.NestedScriptAnalyzer.prototype =
-{
-    // Adjust JSD line numbers based on origin of script
-    getSourceLineFromFrame: function(context, frame)
-    {
-        if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("NestedScriptAnalyzer in "+this.sourceFile.compilation_unit_type+": frame.line  - this.sourceFile.getBaseLineOffset()",
-             frame.line +" - "+this.sourceFile.getBaseLineOffset());
-
-        return frame.line - (this.sourceFile.getBaseLineOffset());
-    },
-    // Interpret frame to give fn(args)
-    getFunctionDescription: function(script, context, frame)
-    {
-        if (frame)
-        {
-            var name = frame.name;
-            var args = FBL.getFunctionArgValues(frame);
-        }
-        else
-        {
-            var name = script.functionName;
-            var args = [];
-        }
-
-        if (name ==  "anonymous")
-        {
-            name = FBL.guessFunctionName(this.sourceFile.href, this.getBaseLineNumberByScript(script), context);
-        }
-
-        return {name: name, args: args};
-    },
-
-    // link to source for this script.
-    getSourceLinkForScript: function (script)
-    {
-        var line = this.getBaseLineNumberByScript(script);
-        return new FBL.SourceLink(this.sourceFile.href, line, "js");
-    },
-
-    getBaseLineNumberByScript: function(script)
-    {
-        return script.baseLineNumber - (this.sourceFile.getBaseLineOffset() - 1);
-    }
-};
-
-Firebug.SourceFile.addScriptsToSourceFile = function(sourceFile, outerScript, innerScripts)
-{
-    // Attach the innerScripts for use later
-    if (!sourceFile.innerScripts)
-         sourceFile.innerScripts = {};
-
-     var total = 0;
-     while (innerScripts.hasMoreElements())
-     {
-         var script = innerScripts.getNext();
-         ///if (!script || ( (script instanceof Ci.jsdIScript) && !script.tag) )
-         if (!script)
-         {
-             if (FBTrace.DBG_SOURCEFILES)
-                 FBTrace.sysout("addScriptsToSourceFile innerScripts.getNext FAILS "+sourceFile, script);
-             continue;
-         }
-         sourceFile.innerScripts[script.tag] = script;
-         if (FBTrace.DBG_SOURCEFILES)
-             total++;
-     }
-     if (FBTrace.DBG_SOURCEFILES)
-         FBTrace.sysout("addScriptsToSourceFile "+ total +" scripts, sourcefile="+sourceFile.toString(), sourceFile);
-};
-
-/*
-//------------
-Firebug.EvalLevelSourceFile = function(url, script, eval_expr, source, mapType, innerScriptEnumerator) // ctor
-{
-    this.href = url.href;
-    this.hrefKind = url.kind;
-     this.outerScript = script;
-     this.containingURL = script.fileName;
-     this.evalExpression = eval_expr;
-     this.sourceLength = source.length;
-     this.source = source;
-     this.pcmap_type = mapType;
-     Firebug.SourceFile.addScriptsToSourceFile(this, script, innerScriptEnumerator);
-};
-
-Firebug.EvalLevelSourceFile.prototype =
-    descend(new Firebug.SourceFile("eval-level"), // shared prototype
-{
-    getLine: function(context, lineNo)
-    {
-        return this.source[lineNo - 1];
-    },
-
-    getBaseLineOffset: function()
-    {
-        return this.outerScript.baseLineNumber - 1; // baseLineNumber always valid even after jsdIscript isValid false
-    },
-
-    getObjectDescription: function()
-    {
-         if (this.hrefKind == "source" || this.hrefKind == "data")
-             return FBL.splitURLBase(this.href);
-
-         if (!this.summary)
-         {
-             if (this.evalExpression)
-                 this.summary = Firebug.SourceFile.summarizeSourceLineArray(this.evalExpression.substr(0, 240), 120);
-             if (!this.summary)
-                 this.summary = "";
-             if (this.summary.length < 120)
-                 this.summary = "eval("+this.summary + "...)=" + Firebug.SourceFile.summarizeSourceLineArray(this.source, 120 - this.summary.length);
-         }
-         var containingFileDescription = FBL.splitURLBase(this.containingURL);
-         if (FBTrace.DBG_SOURCEFILES)
-             FBTrace.sysout("EvalLevelSourceFile this.evalExpression.substr(0, 240):"+(this.evalExpression?this.evalExpression.substr(0, 240):"null")+" summary", this.summary);
-         return {path: containingFileDescription.path, name: containingFileDescription.name+"/eval: "+this.summary };
-    },
-
-    getOuterScriptAnalyzer: function()
-    {
-        return new Firebug.EvalLevelSourceFile.OuterScriptAnalyzer(this);
-    }
-
-});
-
-Firebug.EvalLevelSourceFile.OuterScriptAnalyzer = function(sourceFile)
-{
-    this.sourceFile = sourceFile;
-};
-
-Firebug.EvalLevelSourceFile.OuterScriptAnalyzer.prototype =
-{
-    // Adjust JSD line numbers based on origin of script
-    getSourceLineFromFrame: function(context, frame)
-    {
-        return frame.line - this.sourceFile.getBaseLineOffset();
-    },
-    // Interpret frame to give fn(args)
-    getFunctionDescription: function(script, context, frame)
-    {
-        return {name: "eval", args: [this.evalExpression] };
-    },
-    getSourceLinkForScript: function (script)
-    {
-        return new FBL.SourceLink(this.sourceFile.href, 1, "js");
-    }
-};
-
-//------------
-Firebug.EventSourceFile = function(url, script, title, source, innerScriptEnumerator)
-{
-     this.href = url;
-     this.outerScript = script;
-     this.containingURL = script.fileName;
-     this.title = title;
-     this.source = source; // points to the sourceCache lines
-     this.sourceLength = source.length;
-     this.pcmap_type = PCMAP_PRETTYPRINT;
-
-     Firebug.SourceFile.addScriptsToSourceFile(this, script, innerScriptEnumerator);
-};
-
-Firebug.EventSourceFile.prototype =    descend(new Firebug.SourceFile("event"),  // prototypical inheritance
-{
-    getLine: function(context, lineNo)
-    {
-        return this.source[lineNo - 1];
-    },
-
-    getBaseLineOffset: function()
-    {
-        return 1;
-    },
-
-    getObjectDescription: function()
-    {
-        if (!this.summary)
-             this.summary = Firebug.SourceFile.summarizeSourceLineArray(this.source, 120);
-
-        var containingFileDescription = FBL.splitURLBase(this.containingURL);
-
-        return {path: containingFileDescription.path, name: containingFileDescription.name+"/event: "+this.summary };
-    },
-
-    getOuterScriptAnalyzer: function()
-    {
-        return new Firebug.EventSourceFile.OuterScriptAnalyzer(this);
-    }
-
-});
-
-Firebug.EventSourceFile.OuterScriptAnalyzer = function(sourceFile)
-{
-    this.sourceFile = sourceFile;
-};
-
-Firebug.EventSourceFile.OuterScriptAnalyzer.prototype =
-{
-    // Adjust JSD line numbers based on origin of script
-    getSourceLineFromFrame: function(context, frame)
-    {
-        var script = frame.script;
-        var line = script.pcToLine(frame.pc, PCMAP_PRETTYPRINT);
-        return line - 1;
-    },
-    // Interpret frame to give fn(args)
-    getFunctionDescription: function(script, context, frame)
-    {
-        if (frame)
-        {
-            var args = FBL.getFunctionArgValues(frame);
-            var name = getFunctionName(script, context, frame, true);
-        }
-        else
-        {
-            var args = [];
-            var name = getFunctionName(script, context);
-        }
-        return {name: name, args: args};
-    },
-    getSourceLinkForScript: function (script)
-    {
-        return new FBL.SourceLink(this.sourceFile.href, 1, "js");  // XXXjjb why do we need FBL.??
-    }
-};
-
-//------------
-Firebug.SourceFile.CommonBase =
-{
-    getSourceLength: function()
-    {
-        if (!this.sourceLength)
-            this.sourceLength = this.context.sourceCache.load(this.href).length;
-        return this.sourceLength;
-    },
-
-    getOuterScriptAnalyzer: function()
-    {
-        return Firebug.TopLevelSourceFile.OuterScriptAnalyzer;
-    }
-
-};
-//-----------
-Firebug.TopLevelSourceFile = function(url, outerScript, sourceLength, innerScriptEnumerator)
-{
-    this.href = url;
-    this.outerScript = outerScript;  // Beware may not be valid after we return!!
-    this.sourceLength = sourceLength;
-    this.pcmap_type = PCMAP_SOURCETEXT;
-
-    Firebug.SourceFile.addScriptsToSourceFile(this, outerScript, innerScriptEnumerator);
-};
-
-Firebug.TopLevelSourceFile.prototype = descend(new Firebug.SourceFile("top-level"), Firebug.SourceFile.CommonBase);
-
-
-Firebug.TopLevelSourceFile.OuterScriptAnalyzer = {
-    // Adjust JSD line numbers based on origin of script
-    getSourceLineFromFrame: function(context, frame)
-    {
-        return frame.line;
-    },
-    // Interpret frame to give fn(args)
-    getFunctionDescription: function(script, context, frame)
-    {
-        var file_name = FBL.getFileName(FBL.normalizeURL(script.fileName)); // this is more useful that just "top_level"
-        file_name = file_name ? file_name: "__top_level__";
-        return {name: file_name, args: []};
-    },
-    getSourceLinkForScript: function (script)
-    {
-        return FBL.SourceLink(FBL.normalizeURL(script.fileName), script.baseLineNumber, "js");
-    }
-};
-
-//-------
-
-Firebug.EnumeratedSourceFile = function(url) // we don't have the outer script and we delay source load.
-{
-    this.href = new String(url);  // may not be outerScript file name, eg this could be an enumerated eval
-    this.innerScripts = {};
-    this.pcmap_type = PCMAP_SOURCETEXT;
-};
-
-Firebug.EnumeratedSourceFile.prototype = descend(
-        new Firebug.SourceFile("enumerated"),
-        Firebug.SourceFile.CommonBase);
-
-//---------
-Firebug.NoScriptSourceFile = function(context, url) // Somehow we got the URL, but not the script
-{
-    this.href = url;  // we know this much
-    this.innerScripts = {};
-};
-
-Firebug.NoScriptSourceFile.prototype = descend(
-        new Firebug.SourceFile("URLOnly"),
-        Firebug.SourceFile.CommonBase);
-
-//---------// javascript in a .xul or .xml file, no outerScript
-Firebug.XULSourceFile = function(url, outerScript, innerScriptEnumerator)
-{
-    this.href = url;
-    this.pcmap_type = PCMAP_SOURCETEXT;
-    this.outerScript = outerScript;  // Beware may not be valid after we return!!
-
-    Firebug.SourceFile.addScriptsToSourceFile(this, outerScript, innerScriptEnumerator);
-};
-
-Firebug.XULSourceFile.prototype = descend(
-        new Firebug.SourceFile("xul"),
-        Firebug.SourceFile.CommonBase);
-
-//---------
-Firebug.ScriptTagAppendSourceFile = function(url, outerScript, sourceLength, innerScriptEnumerator) // element.appendChild(scriptTag)
-{
-    this.href = url;
-    this.outerScript = outerScript;  // Beware may not be valid after we return!!
-    this.sourceLength = sourceLength;
-    this.pcmap_type = PCMAP_SOURCETEXT;
-
-    Firebug.SourceFile.addScriptsToSourceFile(this, outerScript, innerScriptEnumerator);
-};
-
-Firebug.ScriptTagAppendSourceFile.prototype = descend(
-        new Firebug.SourceFile("scriptTagAppend"),
-        Firebug.SourceFile.CommonBase);
-
-/**/
-//-------------------
-
-Firebug.ScriptTagSourceFile = function(context, url, scriptTagNumber) // we don't have the outer script and we delay source load
-{
-    this.context = context;
-    this.href = url;  // we know this is not an eval
-    this.scriptTagNumber = scriptTagNumber;
-    this.innerScripts = {};
-    this.pcmap_type = PCMAP_SOURCETEXT;
-};
-
-Firebug.ScriptTagSourceFile.prototype = descend(
-        new Firebug.SourceFile("scriptTag"),
-        Firebug.SourceFile.CommonBase);
-
-//-------------------
-Firebug.SourceFile.getSourceFileByScript = function(context, script)
-{
-    if (!context.sourceFileMap)
-         return null;
-
-    // Other algorithms are possible:
-    //   We could store an index, context.sourceFileByTag
-    //   Or we could build a tree keyed by url, with SpiderMonkey script.fileNames at the top and our urls below
-    var lucky = context.sourceFileMap[script.fileName];  // we won't be lucky for file:/ urls, no normalizeURL applied
-    if (FBTrace.DBG_SOURCEFILES && lucky)
-        FBTrace.sysout("getSourceFileByScript trying to be lucky for "+
-            script.tag + " in "+lucky, script);
-
-    if (lucky && lucky.hasScript(script))
-        return lucky;
-
-    if (FBTrace.DBG_SOURCEFILES)
-        FBTrace.sysout("getSourceFileByScript looking for "+script.tag+"@"+script.fileName+" in "+
-            context.getName()+": ", context.sourceFileMap);
-
-    for (var url in context.sourceFileMap)
-    {
-        var sourceFile = context.sourceFileMap[url];
-        if (sourceFile.hasScript(script))
-            return sourceFile;
-    }
-};
-
-Firebug.SourceFile.getScriptAnalyzer = function(context, script)
-{
-    var sourceFile = Firebug.SourceFile.getSourceFileByScript(context, script);
-    if (FBTrace.DBG_STACK)
-         FBTrace.sysout("getScriptAnalyzer "+ (sourceFile?"finds sourceFile: ":"FAILS to find sourceFile"), sourceFile);
-     if (sourceFile)
-     {
-         var analyzer = sourceFile.getScriptAnalyzer(script);
-         if (FBTrace.DBG_STACK)
-             FBTrace.sysout("getScriptAnalyzer finds analyzer: ", analyzer);
-
-         return analyzer;
-     }
-     return undefined;
-};
-
-Firebug.SourceFile.getSourceFileAndLineByScript= function(context, script, frame)
-{
-    var sourceFile = Firebug.SourceFile.getSourceFileByScript(context, script);
-    if (sourceFile)
-    {
-        if (sourceFile.pcmap_type)
-            var line = script.pcToLine(1, sourceFile.pcmap_type);
-        else
-            var line = 1;
-
-        return { sourceFile: sourceFile, lineNo: line };
-    }
-};
-
-Firebug.SourceFile.guessEnclosingFunctionName = function(url, line, context)
-{
-    var sourceFile = context.sourceFileMap[url];
-    if (sourceFile)
-    {
-        var scripts = sourceFile.getScriptsAtLineNumber(line);
-        if (scripts)
-        {
-            var script = scripts[0]; // TODO try others?
-            var analyzer = sourceFile.getScriptAnalyzer(script);
-            line = analyzer.getBaseLineNumberByScript(script);
-        }
-    }
-    return FBL.guessFunctionName(url, line-1, context);
-};
-
-}});
-
-
-/* See license.txt for terms of usage */
-
-FBL.ns(function() { with (FBL) {
-
-
-///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/// TODO: xxxpedro debugger hack
-/// TODO: xxxpedro port to Firebug Lite
-Firebug.ActivableModule = Firebug.Module;
-Firebug.registerActivableModule = Firebug.registerModule;
-Firebug.Panel.isEnabled = function(){return true;};
-Firebug.ActivablePanel = Firebug.Panel;
-///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Firebug.registerModule(Firebug.Script);
 
 
 // ************************************************************************************************
+// Script Panel
 
-/**
- * @class Defines the API for SourceBoxDecorator and provides the default implementation.
- * Decorators are passed the source box on construction, called to create the HTML,
- * and called whenever the user scrolls the view.
- */
-Firebug.SourceBoxDecorator = function(sourceBox){};
+function ScriptPanel(){};
 
-Firebug.SourceBoxDecorator.sourceBoxCounter = 0;
-
-Firebug.SourceBoxDecorator.prototype =
-/** @lends Firebug.SourceBoxDecorator */
+ScriptPanel.prototype = extend(Firebug.Panel,
 {
-    onSourceBoxCreation: function(sourceBox)
-    {
-        // allow panel-document unique ids to be generated for lines.
-        sourceBox.uniqueId = ++Firebug.SourceBoxDecorator.sourceBoxCounter;
-    },
-    /* called on a delay after the view port is updated, eg vertical scroll
-     * The sourceBox will contain lines from firstRenderedLine to lastRenderedLine
-     * The user will be able to see sourceBox.firstViewableLine to sourceBox.lastViewableLine
-     */
-    decorate: function(sourceBox, sourceFile)
-    {
-        return;
+    name: "Script",
+    title: "Script",
+
+    selectIndex: 0, // index of the current selectNode's option
+    sourceIndex: -1, // index of the script node, based in doc.getElementsByTagName("script")
+
+    options: {
+        hasToolButtons: true
     },
 
-    /* called once as each line is being rendered.
-    * @param lineNo integer 1-maxLineNumbers
-    */
-    getUserVisibleLineNumber: function(sourceBox, lineNo)
-    {
-        return lineNo;
-    },
-
-    /* call once as each line is being rendered.
-    * @param lineNo integer 1-maxLineNumbers
-    */
-    getLineHTML: function(sourceBox, lineNo)
-    {
-        var html = escapeForSourceLine(sourceBox.lines[lineNo-1]);
-
-        // If the pref says so, replace tabs by corresponding number of spaces.
-        if (Firebug.replaceTabs > 0)
-        {
-            var space = new Array(Firebug.replaceTabs + 1).join(" ");
-            html = html.replace(/\t/g, space);
-        }
-
-        return html;
-    },
-
-    /*
-     * @return a string unique to the sourcebox and line number, valid in getElementById()
-     */
-    getLineId: function(sourceBox, lineNo)
-    {
-        return 'sb' + sourceBox.uniqueId + '-L' + lineNo;
-    }
-};
-
-// ************************************************************************************************
-
-/**
- * @panel Firebug.SourceBoxPanel: Intermediate level class for showing lines of source, eg Script Panel
- * Implements a 'viewport' to render only the lines the user is viewing or has recently viewed.
- * Scroll events or scrollToLine calls are converted to viewableRange line number range.
- * The range of lines is rendered, skipping any that have already been rendered. Then if the
- * new line range overlaps the old line range, done; else delete the old range.
- * That way the lines kept contiguous.
- * The rendering details are delegated to SourceBoxDecorator; each source line may be expanded into
- * more rendered lines.
- */
-Firebug.SourceBoxPanel = function() {};
-
-var SourceBoxPanelBase = extend(Firebug.MeasureBox, Firebug.ActivablePanel);
-Firebug.SourceBoxPanel = extend(SourceBoxPanelBase,
-/** @lends Firebug.SourceBoxPanel */
-{
-    ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    /// TODO: xxxpedro debugger hack
-    /// need to refactor the Firebug Lite initialization create/destroy, intitialize/shutodown, initializeUI order of calls
     create: function()
     {
-        /// TODO: xxxpedro
-        this.onResize =  bind(this.resizer, this);
-        this.sourceBoxes = {};
-        this.decorator = this.getDecorator();
-        
-        Firebug.ActivablePanel.create.apply(this, arguments);
-        
-        /// TODO: xxxpedro containerNode is not part of Firebug API
-        this.scrollingElement = this.containerNode;
-    },
-    
-    initialize: function(context, doc)
-    {
-        /// TODO: xxxpedro - need to refactor the Firebug Lite initialization create/destroy, intitialize/shutodown, initializeUI order of calls
-        ///this.onResize =  bind(this.resizer, this);
-        ///this.sourceBoxes = {};
-        ///this.decorator = this.getDecorator();
+        Firebug.Panel.create.apply(this, arguments);
 
-        Firebug.ActivablePanel.initialize.apply(this, arguments);
-    },
+        this.onChangeSelect = bind(this.onChangeSelect, this);
 
-    initializeNode: function(panelNode)
-    {
-        // TODO: xxxpedro
-        // since in Firebug Lite each Panel does not have an unique window for its
-        // content, we must listen to the Firebug.chrome.window instead in order to
-        // handle the resizing of the Panel's UI
-        this.resizeEventTarget = Firebug.chrome.window;
-        addEvent(this.resizeEventTarget, "resize", this.onResize);
-        ///this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
-        ///this.resizeEventTarget.addEventListener("resize", this.onResize, true);
-        this.attachToCache();
+        var doc = Firebug.browser.document;
+        var scripts = doc.getElementsByTagName("script");
+        var selectNode = this.selectNode = createElement("select");
 
-        Firebug.ActivablePanel.initializeNode.apply(this, arguments);
-    },
-
-    reattach: function(doc)
-    {
-        var oldEventTarget = this.resizeEventTarget;
-        oldEventTarget.removeEventListener("resize", this.onResize, true);
-        Firebug.Panel.reattach.apply(this, arguments);
-        
-        // TODO: xxxpedro
-        this.resizeEventTarget = Firebug.chrome.window;
-        addEvent(this.resizeEventTarget, "resize", this.onResize);
-        ///this.resizeEventTarget = Firebug.chrome.$('fbContentBox');
-        ///this.resizeEventTarget.addEventListener("resize", this.onResize, true);
-        this.attachToCache();
-    },
-
-    destroyNode: function()
-    {
-        Firebug.ActivablePanel.destroyNode.apply(this, arguments);
-        
-        removeEvent(this.resizeEventTarget, "resize", this.onResize);
-        ///this.resizeEventTarget.removeEventListener("resize", this.onResize, true);
-        this.detachFromCache();
-    },
-
-    attachToCache: function()
-    {
-        this.context.sourceCache.addListener(this);
-    },
-
-    detachFromCache: function()
-    {
-        this.context.sourceCache.removeListener(this);
-    },
-
-    onTextSizeChange: function(zoom)
-    {
-        this.removeAllSourceBoxes();  // clear so we start fresh with new text sizes
-    },
-
-    removeAllSourceBoxes: function()
-    {
-          this.sourceBoxes = {};
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    //  TabCache listener implementation
-
-    onStartRequest: function(context, request)
-    {
-
-    },
-
-    onStopRequest: function(context, request, responseText)
-    {
-        if (context === this.context)
+        for(var i=0, script; script=scripts[i]; i++)
         {
-            var url = request.URI.spec;
-            var sourceFile = getSourceFileByHref(url, context);
-            if (sourceFile)
-                this.removeSourceBoxBySourceFile(sourceFile);
-        }
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    /**
-     * Panel extension point.
-     * Called just before box is shown
-     */
-    updateSourceBox: function(sourceBox)
-    {
-
-    },
-
-    /* Panel extension point. Called on panel initialization
-     * @return Must implement SourceBoxDecorator API.
-     */
-    getDecorator: function()
-    {
-        return new Firebug.SourceBoxDecorator();
-    },
-
-     /* Panel extension point
-      * @return string eg "js" or "css"
-      */
-    getSourceType: function()
-    {
-        throw "SourceBox.getSourceType: Need to override in extender ";
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    disablePanel: function(module)
-    {
-        this.sourceBoxes = {};  // clear so we start fresh if enabled
-        Firebug.ActivablePanel.disablePanel.apply(this, arguments);
-    },
-
-    getSourceLinesFrom: function(selection)
-    {
-        // https://developer.mozilla.org/en/DOM/Selection
-        if (selection.isCollapsed)
-            return "";
-
-        var anchorSourceRow = getAncestorByClass(selection.anchorNode, "sourceRow");
-        var focusSourceRow = getAncestorByClass(selection.focusNode, "sourceRow");
-        if (anchorSourceRow == focusSourceRow)
-        {
-            return selection.toString();// trivial case
-        }
-        var buf = this.getSourceLine(anchorSourceRow, selection.anchorOffset);
-
-        var currentSourceRow = anchorSourceRow.nextSibling;
-        while(currentSourceRow && (currentSourceRow != focusSourceRow) && hasClass(currentSourceRow, "sourceRow"))
-        {
-            buf += this.getSourceLine(currentSourceRow);
-            currentSourceRow = currentSourceRow.nextSibling;
-        }
-        buf += this.getSourceLine(focusSourceRow, 0, selection.focusOffset);
-        return buf;
-    },
-
-    getSourceLine: function(sourceRow, beginOffset, endOffset)
-    {
-        var source = getChildByClass(sourceRow, "sourceRowText").textContent;
-        if (endOffset)
-            source = source.substring(beginOffset, endOffset);
-        else if (beginOffset)
-            source = source.substring(beginOffset);
-        else
-            source = source;
-
-        return source;
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    getSourceBoxBySourceFile: function(sourceFile)
-    {
-        if (sourceFile.href)
-        {
-            var sourceBox = this.getSourceBoxByURL(sourceFile.href);
-            if (sourceBox && sourceBox.repObject == sourceFile)
-                return sourceBox;
-            else
-                return null;  // cause a new one to be created
-        }
-    },
-
-    getSourceBoxByURL: function(url)
-    {
-        return url ? this.sourceBoxes[url] : null;
-    },
-
-    removeSourceBoxBySourceFile: function(sourceFile)
-    {
-        var sourceBox = this.getSourceBoxBySourceFile(sourceFile);
-        if (sourceBox)  // else we did not create one for this sourceFile
-        {
-            delete this.sourceBoxes[sourceFile.href];
-
-            if (sourceBox.parentNode === this.panelNode)
-                this.panelNode.removeChild(sourceBox);
-
-            if (this.selectedSourceBox === sourceBox) // need to update the view
-            {
-                delete this.selectedSourceBox;
-                delete this.location;
-                this.showSourceFile(sourceFile);
-            }
-        }
-    },
-
-    renameSourceBox: function(oldURL, newURL)
-    {
-        var sourceBox = this.sourceBoxes[oldURL];
-        if (sourceBox)
-        {
-            delete this.sourceBoxes[oldURL];
-            this.sourceBoxes[newURL] = sourceBox;
-        }
-    },
-
-    showSourceFile: function(sourceFile)
-    {
-        var sourceBox = this.getSourceBoxBySourceFile(sourceFile);
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("firebug.showSourceFile: "+sourceFile, sourceBox);
-        if (!sourceBox)
-        {
-            // Has the script tag mutation event arrived?
-            if (sourceFile.compilation_unit_type === "scriptTagAppend" && !sourceFile.source)
-            {
-                // prevent recursion, just give message if it does not arrive
-                sourceFile.source = ["script tag mutation event has not arrived"];
-                return;
-            }
-            sourceBox = this.createSourceBox(sourceFile);
-        }
-
-
-        this.showSourceBox(sourceBox);
-    },
-
-    /*
-     * Assumes that locations are sourceFiles, TODO lower class
-     */
-    showSourceLink: function(sourceLink)
-    {
-        var sourceFile = getSourceFileByHref(sourceLink.href, this.context);
-        if (sourceFile)
-        {
-            this.navigate(sourceFile);
-            if (sourceLink.line)
-            {
-                this.scrollToLine(sourceLink.href, sourceLink.line, this.jumpHighlightFactory(sourceLink.line, this.context));
-                dispatch(this.fbListeners, "onShowSourceLink", [this, sourceLink.line]);
-            }
-            if (sourceLink == this.selection)  // then clear it so the next link will scroll and highlight.
-                delete this.selection;
-        }
-    },
-
-    showSourceBox: function(sourceBox)
-    {
-        if (this.selectedSourceBox)
-            collapse(this.selectedSourceBox, true);
-
-        this.selectedSourceBox = sourceBox;
-        delete this.currentSearch;
-
-        if (sourceBox)
-        {
-            this.reView(sourceBox);
-            this.updateSourceBox(sourceBox);
-            collapse(sourceBox, false);
-        }
-    },
-
-    /* Private, do not call outside of this object
-    * A sourceBox is a div with additional operations and state.
-    * @param sourceFile there is at most one sourceBox for each sourceFile
-    */
-    createSourceBox: function(sourceFile)  // decorator(sourceFile, sourceBox)
-    {
-        var sourceBox = this.initializeSourceBox(sourceFile);
-
-        sourceBox.decorator = this.decorator;
-
-        // Framework connection
-        sourceBox.decorator.onSourceBoxCreation(sourceBox);
-
-        this.sourceBoxes[sourceFile.href] = sourceBox;
-
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("firebug.createSourceBox with "+sourceBox.maximumLineNumber+" lines for "+sourceFile+(sourceFile.href?" sourceBoxes":" anon "), sourceBox);
-
-        this.panelNode.appendChild(sourceBox);
-        this.setSourceBoxLineSizes(sourceBox);
-
-        return sourceBox;
-    },
-
-    getSourceFileBySourceBox: function(sourceBox)
-    {
-        return sourceBox.repObject;
-    },
-
-    initializeSourceBox: function(sourceFile)
-    {
-        var sourceBox = this.document.createElement("div");
-        setClass(sourceBox, "sourceBox");
-        collapse(sourceBox, true);
-
-        var lines = sourceFile.loadScriptLines(this.context);
-        if (!lines)
-        {
-            lines = ["Failed to load source for sourceFile "+sourceFile];
-        }
-
-        sourceBox.lines = lines;
-        sourceBox.repObject = sourceFile;
-
-        sourceBox.maximumLineNumber = lines.length;
-        sourceBox.maxLineNoChars = (sourceBox.maximumLineNumber + "").length;
-
-        sourceBox.getLineNode =  function(lineNo)
-        {
-            // XXXjjb this method is supposed to return null if the lineNo is not in the viewport
-            return $(this.decorator.getLineId(this, lineNo), this.ownerDocument);
-        };
-
-        var paddedSource =
-            "<div class='topSourcePadding'>" +
-                "<div class='sourceRow'><div class='sourceLine'></div><div class='sourceRowText'></div></div>"+
-            "</div>"+
-            "<div class='sourceViewport'></div>"+
-            "<div class='bottomSourcePadding'>"+
-                "<div class='sourceRow'><div class='sourceLine'></div><div class='sourceRowText'></div></div>"+
-            "</div>";
-
-        appendInnerHTML(sourceBox, paddedSource);
-
-        sourceBox.viewport = getChildByClass(sourceBox, 'sourceViewport');
-        return sourceBox;
-    },
-
-    setSourceBoxLineSizes: function(sourceBox)
-    {
-        var view = sourceBox.viewport;
-
-        var lineNoCharsSpacer = "";
-        for (var i = 0; i < sourceBox.maxLineNoChars; i++)
-              lineNoCharsSpacer += "0";
-
-        this.startMeasuring(view);
-        var size = this.measureText(lineNoCharsSpacer);
-        this.stopMeasuring();
-
-        sourceBox.lineHeight = size.height + 1;
-        sourceBox.lineNoWidth = size.width;
-
-        var view = sourceBox.viewport; // TODO some cleaner way
-        view.previousSibling.firstChild.firstChild.style.width = sourceBox.lineNoWidth + "px";
-        view.nextSibling.firstChild.firstChild.style.width = sourceBox.lineNoWidth +"px";
-
-        if (FBTrace.DBG_SOURCEFILES)
-        {
-            FBTrace.sysout("setSourceBoxLineSizes size for lineNoCharsSpacer "+lineNoCharsSpacer, size);
-            FBTrace.sysout("firebug.setSourceBoxLineSizes, this.scrollingElement.scrollTop "+this.scrollingElement.scrollTop+ " sourceBox.lineHeight: "+sourceBox.lineHeight+" sourceBox.lineNoWidth:"+sourceBox.lineNoWidth+"\n");
-        }
-    },
-
-    /*
-     * @return SourceLink to currently selected source file
-     */
-    getSourceLink: function(lineNo)
-    {
-        if (!this.selectedSourceBox)
-            return;
-        if (!lineNo)
-            lineNo = this.getCentralLine(this.selectedSourceBox);
-        return new SourceLink(this.selectedSourceBox.repObject.href, lineNo, this.getSourceType());
-    },
-
-    /* Select sourcebox with href, scroll lineNo into center, highlight lineNo with highlighter given
-     * @param href a URL, null means the selected sourcefile
-     * @param lineNo integer 1-maximumLineNumber
-     * @param highlighter callback, a function(sourceBox). sourceBox.centralLine will be lineNo
-     */
-    scrollToLine: function(href, lineNo, highlighter)
-    {
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("SourceBoxPanel.scrollToLine: "+lineNo+"@"+href+" with highlighter "+highlighter, highlighter);
-
-        if (this.context.scrollTimeout)
-        {
-            this.context.clearTimeout(this.context.scrollTimeout);
-            delete this.context.scrollTimeout;
-        }
-
-        if (href)
-        {
-            if (!this.selectedSourceBox || this.selectedSourceBox.repObject.href != href)
-            {
-                var sourceFile = this.context.sourceFileMap[href];
-                if (!sourceFile)
-                {
-                    if(FBTrace.DBG_SOURCEFILES)
-                        FBTrace.sysout("scrollToLine FAILS, no sourceFile for href "+href, this.context.sourceFileMap);
-                    return;
-                }
-                this.navigate(sourceFile);
-            }
-        }
-
-        this.context.scrollTimeout = this.context.setTimeout(bindFixed(function()
-        {
-            if (!this.selectedSourceBox)
-            {
-                if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("SourceBoxPanel.scrollTimeout no selectedSourceBox");
-                return;
-            }
-
-            this.selectedSourceBox.targetedLine = lineNo;
-
-            // At this time we know which sourcebox is selected but the viewport is not selected.
-            // We need to scroll, let the scroll handler set the viewport, then highlight any lines visible.
-            var skipScrolling = false;
-            if (this.selectedSourceBox.firstViewableLine && this.selectedSourceBox.lastViewableLine)
-            {
-                var linesFromTop = lineNo - this.selectedSourceBox.firstViewableLine;
-                var linesFromBot = this.selectedSourceBox.lastViewableLine - lineNo;
-                skipScrolling = (linesFromTop > 3 && linesFromBot > 3);
-                if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("SourceBoxPanel.scrollTimeout: skipScrolling: "+skipScrolling+" fromTop:"+linesFromTop+" fromBot:"+linesFromBot);
-            }
-            else  // the selectedSourceBox has not been built
-            {
-                if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("SourceBoxPanel.scrollTimeout, no viewable lines", this.selectedSourceBox);
-            }
-
-            if (!skipScrolling)
-            {
-                var viewRange = this.getViewRangeFromTargetLine(this.selectedSourceBox, lineNo);
-                this.selectedSourceBox.newScrollTop = this.getScrollTopFromViewRange(this.selectedSourceBox, viewRange);
-                if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("SourceBoxPanel.scrollTimeout: newScrollTop "+this.selectedSourceBox.newScrollTop+" vs old "+this.selectedSourceBox.scrollTop+" for "+this.selectedSourceBox.repObject.href);
-                this.selectedSourceBox.scrollTop = this.selectedSourceBox.newScrollTop; // *may* cause scrolling
-                if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("SourceBoxPanel.scrollTimeout: scrollTo "+lineNo+" scrollTop:"+this.selectedSourceBox.scrollTop+ " lineHeight: "+this.selectedSourceBox.lineHeight);
-            }
-
-            if (this.selectedSourceBox.highlighter)
-                this.applyDecorator(this.selectedSourceBox); // may need to highlight even if we don't scroll
-
-        }, this));
-
-        this.selectedSourceBox.highlighter = highlighter;  // clears if null
-    },
-
-    /*
-     * @return a highlighter function(sourceBox) that puts a class on the line for a time slice
-     */
-    jumpHighlightFactory: function(lineNo, context)
-    {
-        return function jumpHighlightIfInView(sourceBox)
-        {
-            var  lineNode = sourceBox.getLineNode(lineNo);
-            if (lineNode)
-            {
-                setClassTimed(lineNode, "jumpHighlight", context);
-                if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("jumpHighlightFactory on line "+lineNo+" lineNode:"+lineNode.innerHTML+"\n");
-            }
-            else
-            {
-                if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("jumpHighlightFactory no node at line "+lineNo, sourceBox);
-            }
-
-            return false; // not sticky
-        };
-    },
-
-    /*
-     * resize and scroll event handler
-     */
-    resizer: function(event)
-    {
-        // The resize target is Firebug as a whole. But most of the UI needs no special code for resize.
-        // But our SourceBoxPanel has viewport that will change size.
-        if (this.selectedSourceBox && this.visible)
-        {
-            if (FBTrace.DBG_SOURCEFILES)
-                FBTrace.sysout("resizer event: "+event.type, event);
-
-            this.reView(this.selectedSourceBox);
-        }
-    },
-
-    reView: function(sourceBox, clearCache)  // called for all scroll events, including any time this.scrollingElement.scrollTop is set
-    {
-        if (sourceBox.targetedLine)
-        {
-            sourceBox.targetLineNumber = sourceBox.targetedLine;
-            var viewRange = this.getViewRangeFromTargetLine(sourceBox, sourceBox.targetedLine);
-            delete sourceBox.targetedLine;
-        }
-        else
-        {
-            var viewRange = this.getViewRangeFromScrollTop(sourceBox, this.scrollingElement.scrollTop);
-        }
-
-        if (clearCache)
-        {
-            this.clearSourceBox(sourceBox);
-        }
-        else if (this.scrollingElement.scrollTop === sourceBox.lastScrollTop && sourceBox.clientHeight && sourceBox.clientHeight === sourceBox.lastClientHeight)
-        {
-            if (sourceBox.firstRenderedLine <= viewRange.firstLine && sourceBox.lastRenderedLine >= viewRange.lastLine)
-            {
-                if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("reView skipping sourceBox "+this.scrollingElement.scrollTop+"=scrollTop="+sourceBox.lastScrollTop+", "+ sourceBox.clientHeight+"=clientHeight="+sourceBox.lastClientHeight, sourceBox);
-                // skip work if nothing changes.
-                return;
-            }
-        }
-
-        dispatch(this.fbListeners, "onBeforeViewportChange", [this]);  // XXXjjb TODO where should this be?
-        this.buildViewAround(sourceBox, viewRange);
-
-        if (Firebug.uiListeners.length > 0)
-        {
-            var link = new SourceLink(sourceBox.repObject.href, sourceBox.centralLine, this.getSourceType());
-            dispatch(Firebug.uiListeners, "onViewportChange", [link]);
-        }
-
-        sourceBox.lastScrollTop = this.scrollingElement.scrollTop;
-        sourceBox.lastClientHeight = sourceBox.clientHeight;
-    },
-
-    buildViewAround: function(sourceBox, viewRange)
-    {
-        try
-        {
-            this.updateViewportCache(sourceBox, viewRange);
-        }
-        catch(exc)
-        {
-            if(FBTrace.DBG_ERRORS)
-                FBTrace.sysout("buildViewAround updateViewportCache FAILS "+exc, exc);
-        }
-
-        this.setViewportPadding(sourceBox, viewRange);
-
-        sourceBox.centralLine = Math.floor( (viewRange.lastLine + viewRange.firstLine)/2 );
-
-        this.applyDecorator(sourceBox);
-
-        return;
-    },
-
-    updateViewportCache: function(sourceBox, viewRange)
-    {
-        var cacheHit = this.insertedLinesOverlapCache(sourceBox, viewRange);
-
-        if (!cacheHit)
-        {
-            this.clearSourceBox(sourceBox);  // no overlap, remove old range
-            sourceBox.firstRenderedLine = viewRange.firstLine; // reset cached range
-            sourceBox.lastRenderedLine = viewRange.lastLine;
-        }
-        else  // cache overlap, expand range of cache
-        {
-            sourceBox.firstRenderedLine = Math.min(viewRange.firstLine, sourceBox.firstRenderedLine);
-            sourceBox.lastRenderedLine = Math.max(viewRange.lastLine, sourceBox.lastRenderedLine);
-        }
-        sourceBox.firstViewableLine = viewRange.firstLine;  // todo actually check that these are viewable
-        sourceBox.lastViewableLine = viewRange.lastLine;
-        sourceBox.numberOfRenderedLines = sourceBox.lastRenderedLine - sourceBox.firstRenderedLine + 1;
-
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("buildViewAround viewRange: "+viewRange.firstLine+"-"+viewRange.lastLine+" rendered: "+sourceBox.firstRenderedLine+"-"+sourceBox.lastRenderedLine, sourceBox);
-    },
-
-    /*
-     * Add lines from viewRange, but do not adjust first/lastRenderedLine.
-     * @return true if viewRange overlaps first/lastRenderedLine
-     */
-    insertedLinesOverlapCache: function(sourceBox, viewRange)
-    {
-        var cacheHit = false;
-        
-        var linesBefore = []; // lines to be prepended
-        var linesAfter = []; // lines to be appended
-    
-        for (var line = viewRange.firstLine; line <= viewRange.lastLine; line++)
-        {
-            if (line >= sourceBox.firstRenderedLine && line <= sourceBox.lastRenderedLine )
-            {
-                cacheHit = true;
+            // Don't show Firebug Lite source code in the list of options
+            if (Firebug.ignoreFirebugElements && script.getAttribute("firebugIgnore"))
                 continue;
-            }
 
-            var lineHTML = this.getSourceLineHTML(sourceBox, line);
+            var fileName = getFileName(script.src) || getFileName(doc.location.href);
+            var option = createElement("option", {value:i});
 
-            if (line < sourceBox.firstRenderedLine)
-            {
-                // if we are above the cache, queue lines to be prepended
-                linesBefore.push(lineHTML);
-            }
-            else
-            {
-                // if we are below the cache, queue lines to be appended
-                linesAfter.push(lineHTML);
-            }
-        }
-        
-        if (linesBefore.length > 0)
-        {
-            var topCacheLine = sourceBox.getLineNode(sourceBox.firstRenderedLine);
-            
-            // prepend all lines at once
-            appendInnerHTML(sourceBox.viewport, linesBefore.join(""), topCacheLine);
-        }
-        
-        if (linesAfter.length > 0)
-        {
-            // append all lines at once
-            appendInnerHTML(sourceBox.viewport, linesAfter.join(""), null);
-        }
-        
-        return cacheHit;
-    },
-
-    old_insertedLinesOverlapCache: function(sourceBox, viewRange)
-    {
-        var topCacheLine = null;
-        var cacheHit = false;
-        for (var line = viewRange.firstLine; line <= viewRange.lastLine; line++)
-        {
-            if (line >= sourceBox.firstRenderedLine && line <= sourceBox.lastRenderedLine )
-            {
-                cacheHit = true;
-                continue;
-            }
-
-            var lineHTML = this.getSourceLineHTML(sourceBox, line);
-
-            var ref = null;
-            if (line < sourceBox.firstRenderedLine)   // prepend if we are above the cache
-            {
-                if (!topCacheLine)
-                    topCacheLine = sourceBox.getLineNode(sourceBox.firstRenderedLine);
-                ref = topCacheLine;
-            }
-
-            var newElement = appendInnerHTML(sourceBox.viewport, lineHTML, ref);
-        }
-        return cacheHit;
-    },
-
-    clearSourceBox: function(sourceBox)
-    {
-        if (sourceBox.firstRenderedLine)
-        {
-            var topMostCachedElement = sourceBox.getLineNode(sourceBox.firstRenderedLine);  // eg 1
-            var totalCached = sourceBox.lastRenderedLine - sourceBox.firstRenderedLine + 1;   // eg 20 - 1 + 1 = 19
-            if (topMostCachedElement && totalCached)
-                this.removeLines(sourceBox, topMostCachedElement, totalCached);
-        }
-        sourceBox.lastRenderedLine = 0;
-        sourceBox.firstRenderedLine = 0;
-        sourceBox.numberOfRenderedLines = 0;
-    },
-
-    getSourceLineHTML: function(sourceBox, i)
-    {
-        var lineNo = sourceBox.decorator.getUserVisibleLineNumber(sourceBox, i);
-        var lineHTML = sourceBox.decorator.getLineHTML(sourceBox, i);
-        var lineId = sourceBox.decorator.getLineId(sourceBox, i);    // decorator lines may not have ids
-
-        var lineNoText = this.getTextForLineNo(lineNo, sourceBox.maxLineNoChars);
-
-        var theHTML =
-            '<div '
-               + (lineId ? ('id="' + lineId + '"') : "")
-               + ' class="sourceRow" role="presentation"><a class="'
-               +  'sourceLine' + '" role="presentation">'
-               + lineNoText
-               + '</a><span class="sourceRowText" role="presentation">'
-               + lineHTML
-               + '</span></div>';
-
-        return theHTML;
-    },
-
-    getTextForLineNo: function(lineNo, maxLineNoChars)
-    {
-        // Make sure all line numbers are the same width (with a fixed-width font)
-        var lineNoText = lineNo + "";
-        while (lineNoText.length < maxLineNoChars)
-            lineNoText = " " + lineNoText;
-
-        return lineNoText;
-    },
-
-    removeLines: function(sourceBox, firstRemoval, totalRemovals)
-    {
-        for(var i = 1; i <= totalRemovals; i++)
-        {
-            var nextSourceLine = firstRemoval;
-            firstRemoval = firstRemoval.nextSibling;
-            sourceBox.viewport.removeChild(nextSourceLine);
-        }
-    },
-
-    getCentralLine: function(sourceBox)
-    {
-        return sourceBox.centralLine;
-    },
-
-    getViewRangeFromTargetLine: function(sourceBox, targetLineNumber)
-    {
-        var viewRange = {firstLine: 1, centralLine: targetLineNumber, lastLine: 1};
-
-        var averageLineHeight = this.getAverageLineHeight(sourceBox);
-        var panelHeight = this.panelNode.clientHeight;
-        var linesPerViewport = Math.round((panelHeight / averageLineHeight) + 1);
-
-        viewRange.firstLine = Math.round(targetLineNumber - linesPerViewport / 2);
-
-        if (viewRange.firstLine <= 0)
-            viewRange.firstLine = 1;
-
-        viewRange.lastLine = viewRange.firstLine + linesPerViewport;
-
-        if (viewRange.lastLine > sourceBox.maximumLineNumber)
-            viewRange.lastLine = sourceBox.maximumLineNumber;
-
-        return viewRange;
-    },
-
-    /*
-     * Use the average height of source lines in the cache to estimate where the scroll bar points based on scrollTop
-     */
-    getViewRangeFromScrollTop: function(sourceBox, scrollTop)
-    {
-        var viewRange = {};
-        var averageLineHeight = this.getAverageLineHeight(sourceBox);
-        viewRange.firstLine = Math.floor(scrollTop / averageLineHeight + 1);
-
-        /// TODO: xxxpedro
-        // In Firebug Lite the "scroll container" is not the panelNode, but its parent.
-        var panelHeight = this.panelNode.parentNode.clientHeight;
-        ///var panelHeight = this.panelNode.clientHeight;
-        var viewableLines = Math.ceil((panelHeight / averageLineHeight) + 1);
-        viewRange.lastLine = viewRange.firstLine + viewableLines;
-        if (viewRange.lastLine > sourceBox.maximumLineNumber)
-            viewRange.lastLine = sourceBox.maximumLineNumber;
-
-        viewRange.centralLine = Math.floor((viewRange.lastLine - viewRange.firstLine)/2);
-
-        if (FBTrace.DBG_SOURCEFILES)
-        {
-            FBTrace.sysout("getViewRangeFromScrollTop scrollTop:"+scrollTop+" viewRange: "+viewRange.firstLine+"-"+viewRange.lastLine);
-            if (!this.noRecurse)
-            {
-                this.noRecurse = true;
-                var testScrollTop = this.getScrollTopFromViewRange(sourceBox, viewRange);
-                delete this.noRecurse;
-                FBTrace.sysout("getViewRangeFromScrollTop "+((scrollTop==testScrollTop)?"checks":(scrollTop+"=!scrollTop!="+testScrollTop)));
-            }
-        }
-
-        return viewRange;
-    },
-
-    /*
-     * inverse of the getViewRangeFromScrollTop.
-     * If the viewRange was set by targetLineNumber, then this value become the new scroll top
-     *    else the value will be the same as the scrollbar's given value of scrollTop.
-     */
-    getScrollTopFromViewRange: function(sourceBox, viewRange)
-    {
-        var averageLineHeight = this.getAverageLineHeight(sourceBox);
-        var scrollTop = Math.floor(averageLineHeight * (viewRange.firstLine - 1));
-
-        if (FBTrace.DBG_SOURCEFILES)
-        {
-            FBTrace.sysout("getScrollTopFromViewRange viewRange:"+viewRange.firstLine+"-"+viewRange.lastLine+" averageLineHeight: "+averageLineHeight+" scrollTop "+scrollTop);
-            if (!this.noRecurse)
-            {
-                this.noRecurse = true;
-                var testViewRange = this.getViewRangeFromScrollTop(sourceBox, scrollTop);
-                delete this.noRecurse;
-                var vrStr = viewRange.firstLine+"-"+viewRange.lastLine;
-                var tvrStr = testViewRange.firstLine+"-"+testViewRange.lastLine;
-                FBTrace.sysout("getScrollTopFromCenterLine "+((vrStr==tvrStr)? "checks" : vrStr+"=!viewRange!="+tvrStr));
-            }
-        }
-
-        return scrollTop;
-    },
-
-    /*
-     * The virtual sourceBox height is the averageLineHeight * max lines
-     * @return float
-     */
-    getAverageLineHeight: function(sourceBox)
-    {
-        var averageLineHeight = sourceBox.lineHeight;  // fall back to single line height
-
-        var renderedViewportHeight = sourceBox.viewport.clientHeight;
-        var numberOfRenderedLines = sourceBox.numberOfRenderedLines;
-        if (renderedViewportHeight && numberOfRenderedLines)
-            averageLineHeight = renderedViewportHeight / numberOfRenderedLines;
-
-        return averageLineHeight;
-    },
-
-    /*
-     * The virtual sourceBox = topPadding + sourceBox.viewport + bottomPadding
-     * The viewport grows as more lines are added to the cache
-     * The virtual sourceBox height is estimated from the average height lines in the viewport cache
-     */
-    getTotalPadding: function(sourceBox)
-    {
-        var numberOfRenderedLines = sourceBox.numberOfRenderedLines;
-        if (!numberOfRenderedLines)
-            return 0;
-
-        var max = sourceBox.maximumLineNumber;
-        var averageLineHeight = this.getAverageLineHeight(sourceBox);
-        // total box will be the average line height times total lines
-        var virtualSourceBoxHeight = Math.floor(max * averageLineHeight);
-        if (virtualSourceBoxHeight < sourceBox.clientHeight)
-        {
-            var scrollBarHeight = sourceBox.offsetHeight - sourceBox.clientHeight;
-            // the total - view-taken-up - scrollbar
-            var totalPadding = sourceBox.clientHeight - sourceBox.viewport.clientHeight - 1;
-        }
-        else
-            var totalPadding = virtualSourceBoxHeight - sourceBox.viewport.clientHeight;
-
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("getTotalPadding clientHeight:"+sourceBox.viewport.clientHeight+"  max: "+max+" gives total padding "+totalPadding);
-
-        return totalPadding;
-    },
-
-    setViewportPadding: function(sourceBox, viewRange)
-    {
-        var firstRenderedLineElement = sourceBox.getLineNode(sourceBox.firstRenderedLine);
-        if (!firstRenderedLineElement)
-        {
-            // It's not an error if the panel is disabled.
-            if (FBTrace.DBG_ERRORS && this.isEnabled())
-                FBTrace.sysout("setViewportPadding FAILS, no line at "+sourceBox.firstRenderedLine, sourceBox);
-            return;
-        }
-
-        var firstRenderedLineOffset = firstRenderedLineElement.offsetTop;
-        var firstViewRangeElement = sourceBox.getLineNode(viewRange.firstLine);
-        var firstViewRangeOffset = firstViewRangeElement.offsetTop;
-        var topPadding = this.scrollingElement.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset);
-        // Because of rounding when converting from pixels to lines, topPadding can be +/- lineHeight/2, round up
-        var averageLineHeight = this.getAverageLineHeight(sourceBox);
-        var linesOfPadding = Math.floor( (topPadding + averageLineHeight)/ averageLineHeight);
-        var topPadding = (linesOfPadding - 1)* averageLineHeight;
-
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("setViewportPadding this.scrollingElement.scrollTop - (firstViewRangeOffset - firstRenderedLineOffset): "+this.scrollingElement.scrollTop+"-"+"("+firstViewRangeOffset+"-"+firstRenderedLineOffset+")="+topPadding);
-        // we want the bottomPadding to take up the rest
-        var totalPadding = this.getTotalPadding(sourceBox);
-        if (totalPadding < 0)
-            var bottomPadding = Math.abs(totalPadding);
-        else
-            var bottomPadding = Math.floor(totalPadding - topPadding);
-
-        if (bottomPadding < 0)
-            bottomPadding = 0;
-
-        if(FBTrace.DBG_SOURCEFILES)
-        {
-            FBTrace.sysout("setViewportPadding viewport.offsetHeight: "+sourceBox.viewport.offsetHeight+" viewport.clientHeight "+sourceBox.viewport.clientHeight);
-            FBTrace.sysout("setViewportPadding sourceBox.offsetHeight: "+sourceBox.offsetHeight+" sourceBox.clientHeight "+sourceBox.clientHeight);
-            FBTrace.sysout("setViewportPadding scrollTop: "+this.scrollingElement.scrollTop+" firstRenderedLine "+sourceBox.firstRenderedLine+" bottom: "+bottomPadding+" top: "+topPadding);
-        }
-        var view = sourceBox.viewport;
-
-        // Set the size on the line number field so the padding is filled with same style as source lines.
-        view.previousSibling.style.height = topPadding + "px";
-        view.nextSibling.style.height = bottomPadding + "px";
-
-        //sourceRow
-        view.previousSibling.firstChild.style.height = topPadding + "px";
-        view.nextSibling.firstChild.style.height = bottomPadding + "px";
-
-        //sourceLine
-        view.previousSibling.firstChild.firstChild.style.height = topPadding + "px";
-        view.nextSibling.firstChild.firstChild.style.height = bottomPadding + "px";
-    },
-
-    applyDecorator: function(sourceBox)
-    {
-        if (this.context.sourceBoxDecoratorTimeout)
-        {
-            this.context.clearTimeout(this.context.sourceBoxDecoratorTimeout);
-            delete this.context.sourceBoxDecoratorTimeout;
-        }
-
-        // Run source code decorating on 150ms timeout, which is bigger than
-        // the period in which scroll events are fired. So, if the user is moving
-        // scroll-bar thumb (or quickly clicking on scroll-arrows), the source code is
-        // not decorated (the timeout cleared by the code above) and the scrolling is fast.
-        this.context.sourceBoxDecoratorTimeout = this.context.setTimeout(
-            bindFixed(this.asyncDecorating, this, sourceBox), 150);
-
-        if (this.context.sourceBoxHighlighterTimeout)
-        {
-            this.context.clearTimeout(this.context.sourceBoxHighlighterTimeout);
-            delete this.context.sourceBoxHighlighterTimeout;
-        }
-
-        // Source code highlighting is using different timeout: 0ms. When searching
-        // within the Script panel, the user expects immediate response.
-        this.context.sourceBoxHighlighterTimeout = this.context.setTimeout(
-            bindFixed(this.asyncHighlighting, this, sourceBox));
-    },
-
-    asyncDecorating: function(sourceBox)
-    {
-        try
-        {
-            sourceBox.decorator.decorate(sourceBox, sourceBox.repObject);
-
-            if (Firebug.uiListeners.length > 0)
-                dispatch(Firebug.uiListeners, "onApplyDecorator", [sourceBox]);
-
-            if (FBTrace.DBG_SOURCEFILES)
-                FBTrace.sysout("sourceBoxDecoratorTimeout "+sourceBox.repObject, sourceBox);
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("sourcebox applyDecorator FAILS "+exc, exc);
-        }
-    },
-
-    asyncHighlighting: function(sourceBox)
-    {
-        try
-        {
-            if (sourceBox.highlighter)
-            {
-                var sticky = sourceBox.highlighter(sourceBox);
-                if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("asyncHighlighting highlighter sticky:"+sticky,
-                        sourceBox.highlighter);
-
-                if (!sticky)
-                    delete sourceBox.highlighter;
-            }
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("sourcebox highlighter FAILS "+exc, exc);
-        }
-    }
-});
-
-// ************************************************************************************************
-}});
-
-
-/* See license.txt for terms of usage */
-
-FBL.ns(function() { with (FBL) {
-
-// ************************************************************************************************
-// Constants
-
-///const Cc = Components.classes;
-///const Ci = Components.interfaces;
-///const jsdIScript = Ci.jsdIScript;
-///const jsdIStackFrame = Ci.jsdIStackFrame;
-///const jsdIExecutionHook = Ci.jsdIExecutionHook;
-///const nsISupports = Ci.nsISupports;
-///const nsICryptoHash = Ci.nsICryptoHash;
-///const nsIURI = Ci.nsIURI;
-
-///const PCMAP_SOURCETEXT = jsdIScript.PCMAP_SOURCETEXT;
-///const PCMAP_PRETTYPRINT = jsdIScript.PCMAP_PRETTYPRINT;
-
-///const RETURN_VALUE = jsdIExecutionHook.RETURN_RET_WITH_VAL;
-///const RETURN_THROW_WITH_VAL = jsdIExecutionHook.RETURN_THROW_WITH_VAL;
-///const RETURN_CONTINUE = jsdIExecutionHook.RETURN_CONTINUE;
-///const RETURN_CONTINUE_THROW = jsdIExecutionHook.RETURN_CONTINUE_THROW;
-///const RETURN_ABORT = jsdIExecutionHook.RETURN_ABORT;
-///const RETURN_HOOK_ERROR = jsdIExecutionHook.RETURN_HOOK_ERROR;
-
-///const TYPE_THROW = jsdIExecutionHook.TYPE_THROW;
-///const TYPE_DEBUGGER_KEYWORD = jsdIExecutionHook.TYPE_DEBUGGER_KEYWORD;
-
-	
-///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/// TODO: xxxpedro debugger hack
-var fbs = {
-	registerClient: function(){},
-	unregisterClient: function(){},
-	unregisterDebugger: function(){}
-};
-
-FBL.getUniqueId = function(){};
-FBL.persistObjects = function(){};
-FBL.sourceFilesAsArray = function(){return [];};
-
-Firebug.ActivableModule.isAlwaysEnabled = function(){return true;};
-Firebug.ActivablePanel.destroyNode = function(){};
-///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-var STEP_OVER = 1;
-var STEP_INTO = 2;
-var STEP_OUT = 3;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-var tooltipTimeout = 300;
-
-var reLineNumber = /^[^\\]?#(\d*)$/;
-
-var reEval =  /\s*eval\s*\(([^)]*)\)/m;        // eval ( $1 )
-var reHTM = /\.[hH][tT][mM]/;
-var reFunction = /\s*Function\s*\(([^)]*)\)/m;
-var reTooMuchRecursion = /too\smuch\srecursion/;
-
-// ************************************************************************************************
-
-Firebug.Debugger = extend(Firebug.ActivableModule,
-{
-    dispatchName: "debugger",
-    fbs: fbs, // access to firebug-service in chromebug under browser.xul.DOM.Firebug.Debugger.fbs /*@explore*/
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Debugging
-
-    hasValidStack: function(context)
-    {
-        return context.stopped && context.currentFrame.isValid;
-    },
-
-    evaluate: function(js, context, scope)  // TODO remote: move to backend, proxy to front
-    {
-        var frame = context.currentFrame;
-        if (!frame)
-            return;
-
-        frame.scope.refresh(); // XXX what's this do?
-
-        var result = {};
-        var scriptToEval = js;
-
-        // This seem to be safe; eval'ing a getter property in content that tries to
-        // be evil and get Components.classes results in a permission denied error.
-        var ok = frame.eval(scriptToEval, "", 1, result);
-
-        var value = unwrapIValue(result.value);
-        if (ok)
-            return value;
-        else
-            throw value;
-    },
-
-    evaluateInCallingFrame: function(js, fileName, lineNo)
-    {
-        return this.halt(function evalInFrame(frame)
-        {
-            window.dump("evaluateInCallingFrame "+frame.script.fileName+" stack: "+getJSDStackDump(frame)+"\n");
-            var result = {};
-            var ok = frame.eval(js, fileName, lineNo, result);
-            var value = unwrapIValue(result.value);
-            if (ok)
-                return value;
-            else
-                throw value;
-        });
-    },
-
-    /*
-     * Used by autocomplete in commandLine
-     * @return array of global property names
-     */
-
-    getCurrentFrameKeys: function(context)  // TODO remote
-    {
-        var globals = keys(context.getGlobalScope().wrappedJSObject);  // return is safe
-
-        if (context.currentFrame)
-            return this.getFrameKeys(context.currentFrame, globals);
-
-        return globals;
-    },
-
-    /*
-     * private to Debugger, returns list of strings
-     */
-    getFrameKeys: function(frame, names)  // TODO backend
-    {
-        var listValue = {value: null}, lengthValue = {value: 0};
-        frame.scope.getProperties(listValue, lengthValue);
-
-        for (var i = 0; i < lengthValue.value; ++i)
-        {
-            var prop = listValue.value[i];
-            var name = unwrapIValue(prop.name);
-            names.push(name);
-        }
-        return names;
-    },
-
-    /* @Deprecated  see chrome.js */
-    focusWatch: function(context)  // TODO moved
-    {
-        return Firebug.chrome.focusWatch(context);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Private to Debugger
-
-    beginInternalOperation: function() // stop debugger operations like breakOnErrors
-    {
-        var state = {breakOnErrors: Firebug.breakOnErrors};
-        Firebug.breakOnErrors = false;
-        return state;
-    },
-
-    endInternalOperation: function(state)  // pass back the object given by beginInternalOperation
-    {
-        Firebug.breakOnErrors = state.breakOnErrors;
-        return true;
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    halt: function(fnOfFrame)
-    {
-        if(FBTrace.DBG_BP)
-            FBTrace.sysout('debugger.halt '+fnOfFrame);
-
-        return fbs.halt(this, fnOfFrame);
-    },
-
-    breakAsIfDebugger: function(frame)
-    {
-        var debuggr = fbs.findDebugger(frame); // should return 'this' but also sets this.breakContext
-        fbs.breakIntoDebugger(debuggr, frame, 3);
-    },
-
-    // This URL prefix is used to skip frames from chrome URLs. Note that sometimes chrome URLs
-    // are used even in web pages, but only in rare cases so don't worry about it.
-    // Don't be specific like: chrome://firebug/ since frames coming from extensions e.g.
-    // chrome://firecookie/ wouldn't be skipped then.
-    breakNowURLPrefix: "chrome://",
-
-    breakNow: function(context)
-    {
-        Firebug.Debugger.halt(function haltAnalysis(frame)
-        {
-            if (FBTrace.DBG_UI_LOOP)
-                FBTrace.sysout("debugger.breakNow: frame "+frame.script.fileName+" context "+context.getName(), getJSDStackDump(frame) );
-
-            for (; frame && frame.isValid; frame = frame.callingFrame)
-            {
-                var fileName = frame.script.fileName;
-                if (!fileName)
-                    continue;
-                else if (fileName.indexOf(Firebug.Debugger.breakNowURLPrefix) == 0)
-                    continue;
-                else if (fileName.indexOf("/modules/firebug-") != -1)
-                    continue;
-                else
-                    break;
-            }
-
-            if (frame)
-            {
-                Firebug.Debugger.breakContext = context;
-                Firebug.Debugger.onBreak(frame, "halt"); // I just made up a type that won't match TYPE_DEBUGGER_KEYWORD
-            }
-            else
-            {
-                if (FBTrace.DBG_UI_LOOP)
-                    FBTrace.sysout("debugger.breakNow: no frame that not starting with "+Firebug.Debugger.breakNowURLPrefix);
-            }
-        });
-    },
-
-    stop: function(context, frame, type, rv)
-    {
-        if (context.stopped)
-            return RETURN_CONTINUE;
-
-        if (!this.isAlwaysEnabled())
-            return RETURN_CONTINUE;
-
-        if (FBTrace.DBG_UI_LOOP)
-            FBTrace.sysout("debugger.stop "+context.getName()+" frame",frame);
-
-        context.stoppedFrame = frame;  // the frame we stopped in, don't change this elsewhere.
-        context.currentFrame = frame;  // the frame we show to user, depends on selection
-        context.stopped = true;
-
-        var hookReturn = dispatch2(this.fbListeners,"onStop",[context,frame, type,rv]);
-        if ( hookReturn && hookReturn >= 0 )
-        {
-            delete context.stopped;
-            delete context.stoppedFrame;
-            delete context.currentFrame;
-            if (FBTrace.DBG_UI_LOOP)
-                FBTrace.sysout("debugger.stop extension vetoed stop with hookReturn "+hookReturn);
-
-            return hookReturn;
-        }
-
-        try
-        {
-             this.freeze(context);
-            // We will pause here until resume is called
-            var depth = fbs.enterNestedEventLoop({onNest: bindFixed(this.startDebugging, this, context)});
-            // For some reason we don't always end up here
-            if (FBTrace.DBG_UI_LOOP) FBTrace.sysout("debugger.stop, depth:"+depth+" context:"+context.getName());
-        }
-        catch (exc)
-        {
-            // Just ignore exceptions that happened while in the nested loop
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("debugger exception in nested event loop: "+exc, exc);
-            else     // else /*@explore*/
-                ERROR("debugger exception in nested event loop: "+exc+"\n");
-        }
-        finally
-        {
-            this.thaw(context);
-        }
-
-        this.stopDebugging(context);
-
-        dispatch(this.fbListeners,"onResume",[context]);
-
-        if (context.aborted)
-        {
-            delete context.aborted;
-            return RETURN_ABORT;
-        }
-        else if (Firebug.rerun)
-        {
-            setTimeout(function reExecute()
-            {
-                var rerun = context.savedRerun = Firebug.rerun;
-                delete Firebug.rerun;
-
-                if (FBTrace.DBG_UI_LOOP)
-                    FBTrace.sysout("Firebug.debugger.reExecute ", {rerun: rerun});
-                // fire the prestored script
-
-                function successConsoleFunction(result, context)
-                {
-                    if (FBTrace.DBG_UI_LOOP)
-                        FBTrace.sysout("Firebug.debugger.reExecute success", result);
-                    dispatch(Firebug.Debugger.fbListeners, "onRerunComplete", [true, result]);
-                }
-                function exceptionFunction(result, context)
-                {
-                    if (FBTrace.DBG_ERRORS)
-                        FBTrace.sysout("Firebug.debugger.reExecute FAILED "+result, result);
-                    dispatch(Firebug.Debugger.fbListeners, "onRerunComplete", [failed, result]);
-                }
-                Firebug.CommandLine.evaluate("window._firebug.rerunFunction()", context, null, context.window, successConsoleFunction, exceptionFunction);
-
-            });
-
-            if (FBTrace.DBG_UI_LOOP)
-                FBTrace.sysout("Firebug.debugger.reExecute return "+RETURN_HOOK_ERROR);
-
-            return RETURN_HOOK_ERROR;
-        }
-        else
-            return RETURN_CONTINUE;
-    },
-
-    rerun: function(context)
-    {
-        if(!context.stopped)
-        {
-            FBTrace.sysout("debugger.rerun FAILS: not stopped");
-            return;
-        }
-
-        if (Firebug.rerun)
-        {
-            FBTrace.sysout("debugger.rerun FAILS: Firebug.rerun in progress");
-            return;
-        }
-
-        Firebug.rerun = this.getRerun(context);
-
-        // now continue but abort the current call stack.
-        this.resume(context);  // the Firebug.rerun will signal abort stack
-    },
-
-    getRerun: function(context)
-    {
-        if (FBTrace.DBG_UI_LOOP)
-                FBTrace.sysout("debugger.rerun for "+context.getName());
-        try
-        {
-            // walk back to the oldest frame, but not top level
-            var frame = context.stoppedFrame;
-            while (frame.callingFrame && frame.callingFrame.script.functionName)
-            {
-                frame = frame.callingFrame;
-
-                if (frame.script.functionName == "_firebugRerun") // re-reRun
-                {
-                    if (FBTrace.DBG_UI_LOOP)
-                        FBTrace.sysout("getRerun re-rerun ", context.savedRerun);
-                    return context.savedRerun;
-                }
-            }
-
-            // In this oldest frame we have element.onclick(event) or window.foo()
-            // We want to cause the page to run this again after we abort this call stack.
-            //
-            function getStoreRerunInfoScript(fnName)
-            {
-                var str = "if (!window._firebug)window._firebug={};\n";
-                str += "window._firebug.rerunThis = this;\n";
-                str += "window._firebug.rerunArgs = [];\n";
-                str += "if (arguments && arguments.length) for (var i = 0; i < arguments.length; i++) window._firebug.rerunArgs.push(arguments[i]);\n";
-                str += "window._firebug.rerunFunctionName = "+fnName+";\n";
-                str +="window._firebug.rerunFunction = function _firebugRerun() { "+fnName+".apply(window._firebug.rerunThis, window._firebug.rerunArgs); }";
-                return str;
-            }
-
-            var rerun = {};
-
-            var fnName = getFunctionName(frame.script, context, frame, true);
-            rerun.script = getStoreRerunInfoScript(fnName);
-            var jsdFunctionName = frame.script.functionName;
-
-            // now run the script that stores the rerun info in the page
-            var result = {};
-            var ok = frame.eval(rerun.script, context.window.location + "/RerunScript", 1, result);
-
-            // If the eval goes off somewhere wacky, the frame may be invalid by this point.
-            if (FBTrace.DBG_UI_LOOP)
-                FBTrace.sysout("debugger.rerun "+ok+" and result: "+result+" for "+context.getName(), {result: result, rerun: rerun, functionName: jsdFunctionName});
-        }
-        catch(exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("debugger.rerun FAILS for "+context.getName()+" because "+exc, {exc:exc, rerun: rerun});
-        }
-
-        return rerun;
-    },
-
-    resume: function(context)
-    {
-        if (FBTrace.DBG_UI_LOOP)
-            FBTrace.sysout("debugger.resume, context.stopped:"+context.stopped+"\n");
-
-        // this will cause us to return to just after the enterNestedEventLoop call
-        var depth = fbs.exitNestedEventLoop();
-        if (FBTrace.DBG_UI_LOOP) FBTrace.sysout("debugger.resume, depth:"+depth+"\n");
-    },
-
-    abort: function(context)
-    {
-        if (context.stopped)
-        {
-            context.aborted = true;
-            this.thaw(context);
-            this.resume(context);
-            fbs.unPause(true);
-        }
-    },
-
-    stepOver: function(context)
-    {
-        if (!context.stoppedFrame || !context.stoppedFrame.isValid)
-            return;
-
-        fbs.step(STEP_OVER, context.stoppedFrame, this);
-        this.resume(context);
-    },
-
-    stepInto: function(context)
-    {
-        if (!context.stoppedFrame || !context.stoppedFrame.isValid)
-            return;
-
-        fbs.step(STEP_INTO, context.stoppedFrame, this);
-        this.resume(context);
-    },
-
-    stepOut: function(context)
-    {
-        if (!context.stoppedFrame || !context.stoppedFrame.isValid)
-            return;
-
-        fbs.step(STEP_OUT, context.stoppedFrame);
-        this.resume(context);
-    },
-
-    suspend: function(context)
-    {
-        if (context.stopped)
-            return;
-        fbs.suspend(this, context);
-    },
-
-    unSuspend: function(context)
-    {
-        fbs.stopStepping();  // TODO per context
-    },
-
-    runUntil: function(context, sourceFile, lineNo)
-    {
-        if (FBTrace.DBG_UI_LOOP)
-            FBTrace.sysout("runUntil "+lineNo+" @"+sourceFile);
-
-        if (!context.stoppedFrame || !context.stoppedFrame.isValid)
-            return;
-
-        fbs.runUntil(sourceFile, lineNo, context.stoppedFrame, this);
-        this.resume(context);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    freeze: function(context)
-    {
-        var executionContext = context.stoppedFrame.executionContext;
-        try {
-            executionContext.scriptsEnabled = false;
-            this.suppressEventHandling(context);
-            context.isFrozen = true;
-
-            // https://developer.mozilla.org/en/XUL_Tutorial/Focus_and_Selection#Getting_the_currently_focused_element
-            if (context.window.document.commandDispatcher)
-            {
-                context.saveFocus = context.window.document.commandDispatcher.focusedElement;
-                if (context.saveFocus)
-                {
-                    context.discardBlurEvents = function(event)
-                    {
-                        if (FBTrace.DBG_UI_LOOP)
-                            FBTrace.sysout("debugger.freeze discard blur event "+context.discardOneMore+" while focus is "+context.window.document.commandDispatcher.focusedElement, event);
-                        event.preventDefault();
-                        event.stopPropagation();
-                        if (context.discardOneMore)
-                        {
-                            context.window.removeEventListener('blur', context.discardBlurEvents, true);
-                            delete context.discardOneMore;
-                            delete context.saveFocus;
-                        }
-                    },
-
-                    context.window.addEventListener('blur', context.discardBlurEvents, true);
-                }
-
-            }
-
-            if (FBTrace.DBG_UI_LOOP)
-            {
-                FBTrace.sysout("debugger.freeze context.saveFocus "+context.saveFocus, context.saveFocus);
-                FBTrace.sysout("debugger.freeze try to disable scripts "+(context.eventSuppressor?"and events":"but not events")+" in "+context.getName()+" executionContext.tag "+executionContext.tag+".scriptsEnabled: "+executionContext.scriptsEnabled);
-            }
-        }
-        catch (exc)
-        {
-            // This attribute is only valid for contexts which implement nsIScriptContext.
-            if (FBTrace.DBG_UI_LOOP) FBTrace.sysout("debugger.freeze, freeze exception "+exc+" in "+context.getName(), exc);
-        }
-    },
-
-    suppressEventHandling: function(context)
-    {
-        if (context.window instanceof Ci.nsIInterfaceRequestor)
-        {
-            context.eventSuppressor = context.window.getInterface(Ci.nsIDOMWindowUtils);
-            if (context.eventSuppressor)
-                context.eventSuppressor.suppressEventHandling(true);
-        }
-    },
-
-    thaw: function(context)
-    {
-        try {
-            if (context.isFrozen)
-                delete context.isFrozen;
-            else
-                return; // bail, we did not freeze this context
-
-                var executionContext = context.stoppedFrame.executionContext;
-            if (executionContext.isValid)
-            {
-                this.unsuppressEventHandling(context);
-
-                // Before we release JS, put the focus back
-                if (context.saveFocus)
-                {
-                    context.window.focus();
-                    context.saveFocus.focus();
-                    context.discardOneMore = true;
-                }
-
-                if (FBTrace.DBG_UI_LOOP)
-                {
-                    var nowFocused = context.window.document.commandDispatcher ? context.window.document.commandDispatcher.focusedElement : null;
-                    FBTrace.sysout("debugger.thaw context.saveFocus "+context.saveFocus+" vs "+nowFocused, context.saveFocus);
-            }
-
-                executionContext.scriptsEnabled = true;
-            }
-            else
-            {
-                if (FBTrace.DBG_UI_LOOP)
-                    FBTrace.sysout("debugger.thaw "+executionContext.tag+" executionContext is not valid");
-            }
-            if (FBTrace.DBG_UI_LOOP)
-                FBTrace.sysout("debugger.thaw try to enable scripts "+(context.eventSuppressor?"with events suppressed":"events enabled")+" in "+context.getName()+" executionContext.tag "+executionContext.tag+".scriptsEnabled: "+executionContext.scriptsEnabled);
-        } catch (exc) {
-            if (FBTrace.DBG_UI_LOOP) FBTrace.sysout("debugger.stop, scriptsEnabled = true exception:", exc);
-        }
-    },
-
-    unsuppressEventHandling: function(context)
-    {
-        if (context.eventSuppressor)
-        {
-            context.eventSuppressor.suppressEventHandling(false);
-            delete context.eventSuppressor;
-        }
-    },
-
-    toggleFreezeWindow: function(context)
-    {
-        if (!context.stopped) // then we need to break into debugger to get the executionContext
-        {
-            Firebug.Debugger.halt(function grabContext(frame)
-            {
-                context.stoppedFrame = frame;
-                Firebug.Debugger.doToggleFreezeWindow(context);
-                delete context.stoppedFrame;
-            });
-
-            Firebug.Debugger.toggleReportTopLevel(context);
-            Firebug.Debugger.suspend(context);
-        }
-        else
-        {
-            Firebug.Debugger.doToggleFreezeWindow(context);
-        }
-    },
-
-    doToggleFreezeWindow: function(context)
-    {
-        if (context.isFrozen)
-            Firebug.Debugger.unsuppressEventHandling(context);
-        else
-            Firebug.Debugger.suppressEventHandling(context);
-    },
-
-    toggleReportTopLevel: function(context)
-    {
-        if (context.reportTopLevel)
-            fbs.setTopLevelHook(null);
-        else
-        {
-            fbs.setTopLevelHook(Firebug.Debugger, function reportTopLevel(frame)
-            {
-                Firebug.Console.logFormatted(["Javascript entered", frame.script.fileName, frame.line], context, "info");
-            });
-        }
-    },
-    setBreakOnNextCause: function(context, frame)  // TODO this should be in the panel (front end)
-    {
-        var sourceFile = Firebug.SourceFile.getSourceFileByScript(context, frame.script);
-        var analyzer = sourceFile.getScriptAnalyzer(frame.script);
-        var lineNo = analyzer.getSourceLineFromFrame(context, frame);
-
-        context.breakingCause = {
-                title: $STR("Break On Next"),
-                message: $STR("Disable converts pause to disabled breakpoint"), //xxxHonza localization
-                skipAction: function addSkipperAndGo()
-                {
-                    // a breakpoint that never hits, but prevents debugger keyword (see fbs.onDebugger as well)
-                    var bp = fbs.setBreakpoint(sourceFile, lineNo, null, Firebug.Debugger);
-                    fbs.disableBreakpoint(sourceFile.href, lineNo);
-                    if (FBTrace.DBG_BP)
-                        FBTrace.sysout("debugger.setBreakOnNextCause converted to disabled bp "+sourceFile.href+"@"+lineNo+" tag: "+frame.script.tag, bp);
-
-                    Firebug.Debugger.resume(context);
-                },
-                okAction: function justGo()
-                {
-                    Firebug.Debugger.resume(context);
-                }
+            option.appendChild(Firebug.chrome.document.createTextNode(fileName));
+            selectNode.appendChild(option);
         };
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Breakpoints
-
-    setBreakpoint: function(sourceFile, lineNo)
-    {
-        fbs.setBreakpoint(sourceFile, lineNo, null, Firebug.Debugger);
-    },
-
-    clearBreakpoint: function(sourceFile, lineNo)
-    {
-        fbs.clearBreakpoint(sourceFile.href, lineNo);
-    },
-
-    setErrorBreakpoint: function(sourceFile, line)
-    {
-        fbs.setErrorBreakpoint(sourceFile, line, Firebug.Debugger);
-    },
-
-    clearErrorBreakpoint: function(sourceFile, line)
-    {
-        fbs.clearErrorBreakpoint(sourceFile.href, line, Firebug.Debugger);
-    },
-
-    clearAllBreakpoints: function(context)
-    {
-        if (context)
-        {
-            var sourceFiles = sourceFilesAsArray(context.sourceFileMap);
-            fbs.clearAllBreakpoints(sourceFiles, Firebug.Debugger);
-        }
-        else
-        {
-            fbs.enumerateBreakpoints(null, {call: function(url, lineNo, bp) // null means all urls
-            {
-                if (bp.debuggerName !== Firebug.Debugger.debuggerName) // skip breakpoints of other debuggers.
-                    return;
-
-                if (Firebug.filterSystemURLs) // then there are not system urls, clear all
-                    fbs.clearBreakpoint(url, lineNo);
-                else
-                {
-                    if (!isSystemURL(url))  // if there are system urls, leave them
-                        fbs.clearBreakpoint(url, lineNo);
-                }
-            }});
-        }
-    },
-
-    enableAllBreakpoints: function(context)
-    {
-        if (FBTrace.DBG_BP)
-            FBTrace.sysout("enableAllBreakpoints sourceFileMap:", context.sourceFileMap);
-        for (var url in context.sourceFileMap)
-        {
-            fbs.enumerateBreakpoints(url, {call: function(url, lineNo)
-            {
-                fbs.enableBreakpoint(url, lineNo);
-            }});
-        }
-    },
-
-    disableAllBreakpoints: function(context)
-    {
-        for (var url in context.sourceFileMap)
-        {
-            fbs.enumerateBreakpoints(url, {call: function(url, lineNo)
-            {
-                fbs.disableBreakpoint(url, lineNo);
-            }});
-        }
-    },
-
-    getBreakpointCount: function(context)
-    {
-        var count = 0;
-        for (var url in context.sourceFileMap)
-        {
-            fbs.enumerateBreakpoints(url,
-            {
-                call: function(url, lineNo)
-                {
-                    ++count;
-                }
-            });
-
-            fbs.enumerateErrorBreakpoints(url,
-            {
-                call: function(url, lineNo)
-                {
-                    ++count;
-                }
-            });
-        }
-        return count;
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Debugging and monitoring
-
-    traceAll: function(context)
-    {
-        fbs.traceAll(sourceURLsAsArray(context), this);
-    },
-
-    untraceAll: function(context)
-    {
-        fbs.untraceAll(this);
-    },
-
-    monitorFunction: function(fn, mode)
-    {
-        if (typeof(fn) == "function" || fn instanceof Function)
-        {
-            var script = findScriptForFunctionInContext(Firebug.currentContext, fn);
-            if (script)
-                this.monitorScript(fn, script, mode);
-            else
-                Firebug.Console.logFormatted(["Firebug unable to locate jsdIScript for function", fn], Firebug.currentContext, "info");
-        }
-        else
-        {
-            Firebug.Console.logFormatted(["Firebug.Debugger.monitorFunction requires a function", fn], Firebug.currentContext, "info");
-        }
-    },
-
-    unmonitorFunction: function(fn, mode)
-    {
-        if (typeof(fn) == "function" || fn instanceof Function)
-        {
-            var script = findScriptForFunctionInContext(Firebug.currentContext, fn);
-            if (script)
-                this.unmonitorScript(fn, script, mode);
-        }
-    },
-
-    monitorScript: function(fn, script, mode)
-    {
-        var scriptInfo = Firebug.SourceFile.getSourceFileAndLineByScript(Firebug.currentContext, script);
-        if (scriptInfo)
-        {
-            if (mode == "debug")
-                this.setBreakpoint(scriptInfo.sourceFile, scriptInfo.lineNo);
-            else if (mode == "monitor")
-                fbs.monitor(scriptInfo.sourceFile, scriptInfo.lineNo, Firebug.Debugger);
-        }
-    },
-
-    unmonitorScript: function(fn, script, mode)
-    {
-        var scriptInfo = Firebug.SourceFile.getSourceFileAndLineByScript(Firebug.currentContext, script);
-        if (scriptInfo)
-        {
-            if (mode == "debug")
-                this.clearBreakpoint(scriptInfo.sourceFile, scriptInfo.lineNo);
-            else if (mode == "monitor")
-                fbs.unmonitor(scriptInfo.sourceFile.href, scriptInfo.lineNo);
-        }
-    },
-
-    traceCalls: function(context, fn)
-    {
-        if (typeof(fn) == "function" || fn instanceof Function)
-        {
-            var script = findScriptForFunctionInContext(context, fn);
-            if (script)
-                this.traceScriptCalls(context, script);
-            else
-            {
-                if (FBTrace.DBG_ERRORS)
-                    FBTrace.sysout("debugger.traceCalls no script found for "+fn, fn);
-            }
-        }
-    },
-
-    untraceCalls: function(context, fn)
-    {
-        if (typeof(fn) == "function" || fn instanceof Function)
-        {
-            var script = findScriptForFunctionInContext(context, fn);
-            if (script)
-                this.untraceScriptCalls(context, script);
-        }
-    },
-
-    traceScriptCalls: function(context, script)
-    {
-        var scriptInfo = Firebug.SourceFile.getSourceFileAndLineByScript(context, script);
-        if (scriptInfo)
-            fbs.traceCalls(scriptInfo.sourceFile, scriptInfo.lineNo, Firebug.Debugger);
-    },
-
-    untraceScriptCalls: function(context, script)
-    {
-        var scriptInfo = Firebug.SourceFile.getSourceFileAndLineByScript(context, script);
-        if (scriptInfo)
-            fbs.untraceCalls(scriptInfo.sourceFile, scriptInfo.lineNo, Firebug.Debugger);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // UI Stuff
-
-    /*
-     * Called when a nestedEventLoop begins
-     */
-    startDebugging: function(context)
-    {
-        if (FBTrace.DBG_UI_LOOP) FBTrace.sysout("startDebugging enter context.stopped:"+context.stopped+" for context: "+context.getName()+"\n");
-        try {
-
-            fbs.lockDebugger();
-
-            context.executingSourceFile = Firebug.SourceFile.getSourceFileByScript(context, context.stoppedFrame.script);
-
-            if (!context.executingSourceFile)  // bail out, we don't want the user stuck in debug with out source.
-            {
-                if (FBTrace.DBG_UI_LOOP)
-                    FBTrace.sysout("startDebugging resuming, no sourceFile for "+context.stoppedFrame.script.fileName, context.stoppedFrame.script.functionSource);
-                this.resume(context);
-                return;
-            }
-
-            var currentBreakable = Firebug.chrome.getGlobalAttribute("cmd_breakOnNext", "breakable");
-
-            if (FBTrace.DBG_BP)
-                FBTrace.sysout("debugger.startDebugging; currentBreakable "+currentBreakable+" in " + context.getName());
-
-            if (currentBreakable == "false") // then we are armed but we broke
-                Firebug.chrome.setGlobalAttribute("cmd_breakOnNext", "breakable", "true");
-
-            if (context != Firebug.currentContext || Firebug.isDetached())
-                Firebug.selectContext(context);  // Make Firebug.currentContext = context and sync the UI
-
-            if (Firebug.isMinimized()) // then open the UI to show we are stopped
-                Firebug.unMinimize();
-
-            this.syncCommands(context);
-            this.syncListeners(context);
-
-            // Update Break on Next lightning.
-            var panel = context.getPanel("script", true);
-            Firebug.Breakpoint.updatePanelTab(panel, false);
-            Firebug.chrome.syncPanel("script");  // issue 3463
-            Firebug.chrome.select(context.stoppedFrame, "script", null, true);
-            Firebug.chrome.focus();
-        }
-        catch(exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("Resuming debugger: error during debugging loop: "+exc, exc);
-            Firebug.Console.log("Resuming debugger: error during debugging loop: "+exc);
-            this.resume(context);
-        }
-
-        dispatch(this.fbListeners, "onStartDebugging", [context]);
-
-        if (FBTrace.DBG_UI_LOOP) FBTrace.sysout("startDebugging exit context.stopped:"+context.stopped+" for context: "+context.getName()+"\n");
-    },
-
-    /*
-     * Called in the main event loop, from jsd, after we have exited the nested event loop
-     */
-
-    stopDebugging: function(context)
-    {
-        if (FBTrace.DBG_UI_LOOP) FBTrace.sysout("stopDebugging enter context: "+context.getName()+"\n");
-        try
-        {
-            fbs.unlockDebugger();
-
-            // If the user reloads the page while the debugger is stopped, then
-            // the current context will be destroyed just before
-            if (context && context.window && !context.aborted)
-            {
-                delete context.stopped;
-                delete context.stoppedFrame;
-                delete context.currentFrame;
-                context.executingSourceFile = null;
-                delete context.breakLineNumber;
-
-                var chrome = Firebug.chrome;
-
-                this.syncCommands(context);
-                this.syncListeners(context);
-
-                var panel = context.getPanel("script", true);
-                if (panel && panel == Firebug.chrome.getSelectedPanel())
-                    panel.showNoStackFrame(); // unhighlight and remove toolbar-status line
-
-                if (panel)
-                    panel.highlight(false);
-
-                chrome.syncSidePanels();  // after main panel is all updated.
-            }
-            else
-            {
-                if (FBTrace.DBG_UI_LOOP)
-                    FBTrace.sysout("debugger.stopDebugging else "+context.getName()+" "+safeGetWindowLocation(context.window));
-            }
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_UI_LOOP) FBTrace.sysout("debugger.stopDebugging FAILS", exc);
-            // If the window is closed while the debugger is stopped,
-            // then all hell will break loose here
-            ERROR(exc);
-        }
-    },
-
-    syncCommands: function(context)
-    {
-        var chrome = Firebug.chrome;
-        if (!chrome)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("debugger.syncCommand, context with no chrome: "+context.getGlobalScope());
-            return;
-        }
-
-        if (context.stopped)
-        {
-            chrome.setGlobalAttribute("fbDebuggerButtons", "stopped", "true");
-            chrome.setGlobalAttribute("cmd_rerun", "disabled", "false");
-            chrome.setGlobalAttribute("cmd_resumeExecution", "disabled", "false");
-            chrome.setGlobalAttribute("cmd_stepOver", "disabled", "false");
-            chrome.setGlobalAttribute("cmd_stepInto", "disabled", "false");
-            chrome.setGlobalAttribute("cmd_stepOut", "disabled", "false");
-        }
-        else
-        {
-            chrome.setGlobalAttribute("fbDebuggerButtons", "stopped", "false");
-            chrome.setGlobalAttribute("cmd_rerun", "disabled", "true");
-            chrome.setGlobalAttribute("cmd_stepOver", "disabled", "true");
-            chrome.setGlobalAttribute("cmd_stepInto", "disabled", "true");
-            chrome.setGlobalAttribute("cmd_stepOut", "disabled", "true");
-            chrome.setGlobalAttribute("cmd_resumeExecution", "disabled", "true");
-        }
-    },
-
-    syncListeners: function(context)
-    {
-        var chrome = Firebug.chrome;
-
-        if (context.stopped)
-            this.attachListeners(context, chrome);
-        else
-            this.detachListeners(context, chrome);
-    },
-
-    attachListeners: function(context, chrome)
-    {
-        this.keyListeners =
-        [
-            chrome.keyCodeListen("F8", null, bind(this.resume, this, context), true),
-            chrome.keyListen("/", isControl, bind(this.resume, this, context)),
-            chrome.keyCodeListen("F10", null, bind(this.stepOver, this, context), true),
-            chrome.keyListen("'", isControl, bind(this.stepOver, this, context)),
-            chrome.keyCodeListen("F11", null, bind(this.stepInto, this, context)),
-            chrome.keyListen(";", isControl, bind(this.stepInto, this, context)),
-            chrome.keyCodeListen("F11", isShift, bind(this.stepOut, this, context)),
-            chrome.keyListen(",", isControlShift, bind(this.stepOut, this, context))
-        ];
-    },
-
-    detachListeners: function(context, chrome)
-    {
-        if (this.keyListeners)
-        {
-            for (var i = 0; i < this.keyListeners.length; ++i)
-                chrome.keyIgnore(this.keyListeners[i]);
-            delete this.keyListeners;
-        }
-    },
-
-    showPanel: function(browser, panel)
-    {
-        if (panel && panel.name == "script") // this test on name is a sign that this code belongs in panel.show()
-        {
-            this.syncCommands(panel.context);
-            this.ableWatchSidePanel(panel.context);
-            if (FBTrace.DBG_PANELS) FBTrace.sysout("debugger.showPanel this.location:"+this.location);
-        }
-    },
-
-    suspendFirebug: function()
-    {
-        Firebug.suspendFirebug();
-    },
-
-    resumeFirebug: function()
-    {
-        Firebug.resumeFirebug();
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    supportsWindow: function(win)
-    {
-        if (!this.isAlwaysEnabled())
-            return false;
-
-        var context = ( (win && TabWatcher) ? TabWatcher.getContextByWindow(win) : null);
-
-        this.breakContext = context;
-        return !!context;
-    },
-
-    supportsGlobal: function(frameWin) // This is call from fbs for almost all fbs operations
-    {
-        var context = ( (frameWin && TabWatcher) ? TabWatcher.getContextByWindow(frameWin) : null);
-        if (!context)
-            return false;
-
-        context.jsDebuggerActive = true;
-
-        if (!Firebug.Console.injector.isAttached(context, frameWin))
-        {
-            var win = frameWin.wrappedJSObject ? frameWin.wrappedJSObject : frameWin;
-            this.injectConsole(context, win);
-        }
-        else
-        {
-            if (FBTrace.DBG_CONSOLE)
-                FBTrace.sysout("debugger.supportsGlobal console isAttached to "+safeGetWindowLocation(frameWin)+" in  "+context.getName());
-        }
-
-        this.breakContext = context;
-        //FBTrace.sysout("debugger.js this.breakContext "+this.breakContext.getName());
-        return true;
-    },
-
-    injectConsole: function(context, frameWin)
-    {
-        if (Firebug.Console.isAlwaysEnabled())
-        {
-            // This is how the console is injected ahead of JS running on the page
-            fbs.filterConsoleInjections = true;
-            try
-            {
-                var consoleReady = Firebug.Console.isReadyElsePreparing(context, frameWin);
-            }
-            catch(exc)
-            {
-                if (FBTrace.DBG_ERRORS)
-                    FBTrace.sysout("debugger.supportsGlobal injectConsole FAILS: "+exc, exc);
-            }
-            finally
-            {
-                fbs.filterConsoleInjections = false;
-            }
-            if (FBTrace.DBG_CONSOLE)
-                FBTrace.sysout("debugger.supportsGlobal injectConsole consoleReady:"+consoleReady+" jsDebuggerActive: "+context.jsDebuggerActive, frameWin);
-        }
-        else
-        {
-            if (FBTrace.DBG_CONSOLE)
-                FBTrace.sysout("debugger.supportsGlobal injectConsole console NOT enabled ", frameWin);
-        }
-    },
-
-    onLock: function(state)
-    {
-        // XXXjoe For now, trying to see if it's ok to have multiple contexts
-        // debugging simultaneously - otherwise we need this
-        //if (this.context != this.debugContext)
-        {
-            // XXXjoe Disable step/continue buttons
-        }
-    },
-
-    onBreak: function(frame, type)
-    {
-        try {
-            var context = this.breakContext;
-
-            if (FBTrace.DBG_BP || (!context && FBTrace.DBG_FBS_ERRORS) )
-                FBTrace.sysout("debugger.onBreak breakContext: " + (context ? context.getName() : " none!"), getJSDStackDump(frame) );
-
-            delete this.breakContext;
-
-            if (!context)
-                return RETURN_CONTINUE;
-
-            if (type == TYPE_DEBUGGER_KEYWORD)
-            {
-                if (frame.functionName === 'firebugDebuggerTracer')
-                    return this.debuggerTracer(context, frame);
-                else
-                    this.setDebuggerKeywordCause(context, frame);
-            }
-
-            return this.stop(context, frame, type);
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_ERRORS || FBTrace.DBG_BP)
-                FBTrace.sysout("debugger.onBreak FAILS", exc);
-            throw exc;
-        }
-    },
-
-    debuggerTracer: function(context, frame)
-    {
-        var trace = FBL.getCorrectedStackTrace(frame, context);
-        if (FBTrace.DBG_ERRORLOG)
-            FBTrace.sysout("debugger.firebugDebuggerTracer corrected trace.frames "+trace.frames.length, trace.frames);
-        if (trace)
-        {
-            trace.frames = trace.frames.slice(1); // drop the firebugDebuggerTracer and reorder
-            if (FBTrace.DBG_ERRORLOG)
-                FBTrace.sysout("debugger.firebugDebuggerTracer dropped tracer trace.frames "+trace.frames.length, trace.frames);
-
-            if (context.window.wrappedJSObject._firebugStackTrace == "requested")
-            {
-                trace.frames = trace.frames.slice(1);  // drop console.error() see consoleInjected.js
-                if (FBTrace.DBG_ERRORLOG)
-                    FBTrace.sysout("debugger.firebugDebuggerTracer requested trace.frames "+trace.frames.length, trace.frames);
-                context.stackTrace = trace;
-            }
-            else
-                Firebug.Console.log(trace, context, "stackTrace");
-        }
-
-        if(FBTrace.DBG_BP)
-            FBTrace.sysout("debugger.onBreak "+(trace?"debugger trace":" debugger no trace!"));
-
-        return RETURN_CONTINUE;
-    },
-    /*
-     * for |debugger;| keyword offer the skip/continue dialog (optionally?)
-     */
-    setDebuggerKeywordCause: function(context, frame)
-    {
-        var sourceFile = Firebug.SourceFile.getSourceFileByScript(context, frame.script);
-        if (!sourceFile)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("debugger.setDebuggerKeywordCause FAILS, no sourceFile for "+frame.script.tag+"@"+frame.script.fileName+" in "+context.getName());
-            return;
-        }
-
-        var analyzer = sourceFile.getScriptAnalyzer(frame.script);
-        var lineNo = analyzer.getSourceLineFromFrame(context, frame);
-
-        context.breakingCause = {
-                title: $STR("debugger keyword"),
-                message: $STR("Disable converts keyword to disabled breakpoint"), //xxxHonza localization
-                skipAction: function addSkipperAndGo()
-                {
-                    // a breakpoint that never hits, but prevents debugger keyword (see fbs.onDebugger as well)
-                    var bp = fbs.setBreakpoint(sourceFile, lineNo, null, Firebug.Debugger);
-                    fbs.disableBreakpoint(sourceFile.href, lineNo);
-                    if (FBTrace.DBG_BP)
-                        FBTrace.sysout("debugger.onBreak converted to disabled bp "+sourceFile.href+"@"+lineNo+" tag: "+frame.script.tag, bp);
-
-                    Firebug.Debugger.resume(context);
-                },
-                okAction: function justGo()
-                {
-                    Firebug.Debugger.resume(context);
-                }
-        };
-    },
-
-    onThrow: function(frame, rv)
-    {
-        // onThrow is called for throw and for any catch that does not succeed.
-        var context = this.breakContext;
-        delete this.breakContext;
-
-        if (!context)
-        {
-            FBTrace.sysout("debugger.onThrow, no context, try to get from frame\n");
-            context = this.getContextByFrame(frame);
-        }
-        if (FBTrace.DBG_BP) FBTrace.sysout("debugger.onThrow context:"+(context?context.getName():"undefined")+"\n");
-        if (!context)
-            return RETURN_CONTINUE_THROW;
-
-        if (!fbs.trackThrowCatch)
-            return RETURN_CONTINUE_THROW;
-
-        try
-        {
-            var isCatch = this.isCatchFromPreviousThrow(frame, context);
-            if (!isCatch)
-            {
-                context.thrownStackTrace = getCorrectedStackTrace(frame, context);
-                if (FBTrace.DBG_BP) FBTrace.sysout("debugger.onThrow reset context.thrownStackTrace", context.thrownStackTrace.frames);
-            }
-            else
-            {
-                if (FBTrace.DBG_BP) FBTrace.sysout("debugger.onThrow isCatch\n");
-            }
-        }
-        catch  (exc)
-        {
-            FBTrace.sysout("onThrow FAILS: "+exc+"\n");
-        }
-
-        if (dispatch2(this.fbListeners,"onThrow",[context, frame, rv]))
-            return this.stop(context, frame, TYPE_THROW, rv);
-        return RETURN_CONTINUE_THROW;
-    },
-
-    isCatchFromPreviousThrow: function(frame, context)
-    {
-        if (context.thrownStackTrace)
-        {
-            var trace = context.thrownStackTrace.frames;
-            if (trace.length > 1)  // top of stack is [0]
-            {
-                var curFrame = frame;
-                var curFrameSig = curFrame.script.tag +"."+curFrame.pc;
-                for (var i = 1; i < trace.length; i++)
-                {
-                    var preFrameSig = trace[i].signature();
-                    if (FBTrace.DBG_ERRORS && FBTrace.DBG_STACK) FBTrace.sysout("debugger.isCatchFromPreviousThrow "+curFrameSig+"=="+preFrameSig+"\n");
-                    if (curFrameSig == preFrameSig)
-                    {
-                        return true;  // catch from previous throw (or do we need to compare whole stack?
-                    }
-                }
-                // We looked at the previous stack and did not match the current frame
-            }
-        }
-       return false;
-    },
-
-    onMonitorScript: function(frame)
-    {
-        var context = this.breakContext;
-        delete this.breakContext;
-
-        if (!context)
-            context = this.getContextByFrame(frame);
-        if (!context)
-            return RETURN_CONTINUE;
-
-        frame = getStackFrame(frame, context);
-
-        dispatch(this.fbListeners,"onMonitorScript",[context, frame]);
-    },
-
-    onFunctionCall: function(context, frame, depth, calling)
-    {
-        if (!context)
-            context = this.getContextByFrame(frame);
-        if (!context)
-            return RETURN_CONTINUE;
-
-        frame = getStackFrame(frame, context);
-
-        dispatch(this.fbListeners,"onFunctionCall",[context, frame, depth, calling]);
-
-        return context;  // returned as first arg on next call from same trace
-    },
-
-    onError: function(frame, error)
-    {
-        var context = this.breakContext;
-        delete this.breakContext;
-
-        try
-        {
-            if (FBTrace.DBG_ERRORS) FBTrace.sysout("debugger.onError: "+error.errorMessage+" in "+(context?context.getName():"no context"), error);
 
-            if (reTooMuchRecursion.test(error.errorMessage))
-                frame = fbs.discardRecursionFrames(frame);
-
-            Firebug.errorStackTrace = getCorrectedStackTrace(frame, context);
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("debugger.onError errorStackTrace ", Firebug.errorStackTrace);
-
-            delete context.breakingCause;
-
-            if (Firebug.breakOnErrors)
-            {
-                var sourceFile = Firebug.SourceFile.getSourceFileByScript(context, frame.script);
-                if (!sourceFile)
-                {
-                    if (FBTrace.DBG_ERRORS)
-                        FBTrace.sysout("debugger.breakon Errors no sourceFile for "+frame.script.tag+"@"+frame.script.fileName);
-                    return;
-                }
-                var analyzer = sourceFile.getScriptAnalyzer(frame.script);
-                var lineNo = analyzer.getSourceLineFromFrame(context, frame);
-
-                var doBreak = true;
-                fbs.enumerateBreakpoints(sourceFile.href, {call: function(url, line, props, scripts) {
-                    if (FBTrace.DBG_FBS_BP)
-                        FBTrace.sysout("debugger.breakon Errors bp "+url+"@"+line+" scripts "+(scripts?scripts.length:"none"));
-                    if(line === lineNo)
-                        doBreak = false;
-                }});
-
-                if (FBTrace.DBG_BP)
-                    FBTrace.sysout("debugger.breakon Errors "+doBreak+" for "+sourceFile.href+"@"+lineNo);
-
-                if (doBreak)
-                {
-                    context.breakingCause = {
-                        title: $STR("Break on Error"),
-                        message: error.message,
-                        copyAction: bindFixed(FirebugReps.ErrorMessage.copyError,
-                            FirebugReps.ErrorMessage, error),
-                        skipAction: function addSkipperAndGo()
-                        {
-                            // a breakpoint that never hits, but prevents BON for errors
-                            var bp = fbs.setBreakpoint(sourceFile, lineNo, null, Firebug.Debugger);
-                            fbs.disableBreakpoint(sourceFile.href, lineNo);
-                            if (FBTrace.DBG_BP)
-                                FBTrace.sysout("debugger.breakon Errors set "+sourceFile.href+"@"+lineNo+" tag: "+frame.script.tag, bp);
-
-                            Firebug.Debugger.resume(context);
-                        },
-                        okAction: function justGo()
-                        {
-                            Firebug.Debugger.resume(context);
-                        }
-                    };
-                }
-            }
-        }
-        catch (exc)
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("debugger.onError getCorrectedStackTrace FAILED: "+exc, exc);
-        }
-
-        var hookReturn = dispatch2(this.fbListeners,"onError",[context, frame, error]);
-
-        if (!context.breakingCause)
-            return 0;
-
-        if (Firebug.breakOnErrors)
-        {
-            // Switch of Break on Next tab lightning.
-            var panel = context.getPanel("console", true);
-            //Firebug.Breakpoint.updatePanelTab(panel, false);
-
-            return -1;  // break
-        }
-
-        if (hookReturn)
-            return hookReturn;
-
-        return -2; /* let firebug service decide to break or not */
-    },
-
-    onUncaughtException: function(errorInfo)
-    {
-        var context = this.breakContext;
-        delete this.breakContext;
-
-        Firebug.Errors.logScriptError(context, errorInfo, false);
-        return -2;
-    },
-
-    onXULScriptCreated: function(frame, outerScript, innerScriptEnumerator)
-    {
-        try
-        {
-            var context = this.breakContext;
-            delete this.breakContext;
-
-            var sourceFile = context.sourceFileMap[outerScript.fileName];
-            if (sourceFile)
-            {
-                if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("debugger.onXULScriptCreated reuse sourcefile="+sourceFile.toString()+" -> "+context.getName()+" ("+context.uid+")"+"\n");
-                Firebug.SourceFile.addScriptsToSourceFile(sourceFile, null, innerScriptEnumerator);
-            }
-            else
-            {
-                sourceFile = new Firebug.XULSourceFile(outerScript.fileName, outerScript, innerScriptEnumerator);
-                this.watchSourceFile(context, sourceFile);
-            }
-
-            if (FBTrace.DBG_SOURCEFILES)
-                FBTrace.sysout("debugger.onXULScriptCreated script.fileName="+outerScript.fileName+" in "+context.getName()+" "+sourceFile);
-
-            dispatch(this.fbListeners,"onXULScriptCreated",[context, frame, sourceFile.href]);
-            return sourceFile;
-        }
-        catch (e)
-        {
-            if (FBTrace.DBG_TOPLEVEL || FBTrace.DBG_ERRORS)
-                FBTrace.sysout("onXULScriptCreated FaILS "+e, e);
-        }
-    },
-
-    onEvalScriptCreated: function(frame, outerScript, innerScripts)
-    {
-        try
-        {
-            if (FBTrace.DBG_EVAL) FBTrace.sysout("debugger.onEvalLevelScript script.fileName="+outerScript.fileName+"\n");
-            var context = this.breakContext;
-            delete this.breakContext;
-
-            var sourceFile = this.getEvalLevelSourceFile(frame, context, innerScripts);
-
-            if (FBTrace.DBG_EVAL)
-                FBTrace.sysout("debugger.onEvalScriptCreated url="+sourceFile.href, FBL.getCorrectedStackTrace(frame, context));
-
-            dispatch(this.fbListeners,"onEvalScriptCreated",[context, frame, sourceFile.href]);
-            return sourceFile;
-        }
-        catch (e)
-        {
-            if (FBTrace.DBG_EVAL || FBTrace.DBG_ERRORS)
-                FBTrace.sysout("onEvalScriptCreated FaILS ", e);
-        }
-    },
-
-    onEventScriptCreated: function(frame, outerScript, innerScripts)
-    {
-        if (FBTrace.DBG_EVENTS) FBTrace.sysout("debugger.onEventScriptCreated script.fileName="+outerScript.fileName+"\n");
-        var context = this.breakContext;
-        delete this.breakContext;
-
-        var script = frame.script;
-        var creatorURL = normalizeURL(frame.script.fileName);
-        var innerScriptArray = [];
-        try {
-            var source = script.functionSource;
-
-            while (innerScripts.hasMoreElements())
-            {
-                var inner = innerScripts.getNext();
-                source += "\n"+inner.functionSource;
-                innerScriptArray.push(inner);
-            }
-
-        } catch (exc) {
-            /*Bug 426692 */
-            var source = creatorURL + "/"+getUniqueId();
-        }
-
-        var lines = splitLines(source);
-
-        var urlDescribed = this.getDynamicURL(context, normalizeURL(frame.script.fileName), lines, "event");
-        var url = urlDescribed.href;
-
-        context.sourceCache.invalidate(url);
-        context.sourceCache.storeSplitLines(url, lines);
-
-        var sourceFile = new Firebug.EventSourceFile(url, frame.script, "event:"+script.functionName+"."+script.tag, lines, new ArrayEnumerator(innerScriptArray));
-        this.watchSourceFile(context, sourceFile);
-
-        if (FBTrace.DBG_EVENTS)
-            FBTrace.sysout("debugger.onEventScriptCreated url="+sourceFile.href+"\n");
-
-        if (FBTrace.DBG_EVENTS)
-             FBTrace.sysout("debugger.onEventScriptCreated sourceFileMap:", context.sourceFileMap);
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("debugger.onEventScriptCreated sourcefile="+sourceFile.toString()+" -> "+context.getName()+"\n");
-
-        dispatch(this.fbListeners,"onEventScriptCreated",[context, frame, url]);
-        return sourceFile;
-    },
-
-    // We just compiled a bunch of JS, eg a script tag in HTML.  We are about to run the outerScript.
-    onTopLevelScriptCreated: function(frame, outerScript, innerScripts)
-    {
-        if (FBTrace.DBG_TOPLEVEL) FBTrace.sysout("debugger("+this.debuggerName+").onTopLevelScriptCreated script.fileName="+outerScript.fileName+"\n");
-        var context = this.breakContext;
-        delete this.breakContext;
-
-        // This is our only chance to get the linetable for the outerScript since it will run and be GC next.
-        var script = frame.script;
-        var url = normalizeURL(script.fileName);
-
-        if (FBTrace.DBG_TOPLEVEL) FBTrace.sysout("debugger.onTopLevelScriptCreated frame.script.tag="+frame.script.tag+" has url="+url);
-
-        var isInline = false;
-        /* The primary purpose here was to deal with http://code.google.com/p/fbug/issues/detail?id=2912
-         * This approach could be applied to inline scripts, so I'll leave the code here until we decide.
-        iterateWindows(context.window, function isInlineScriptTag(win)
-        {
-            var location = safeGetWindowLocation(win);
-            if (location === url)
-            {
-                isInline = true;
-                return isInline;
-            }
-        });
-    */
-        if (FBTrace.DBG_TOPLEVEL) FBTrace.sysout("debugger.onTopLevelScriptCreated has inLine:"+isInline+" url="+url);
-
-        if (isInline) // never true see above
-        {
-            var href = url +"/"+context.dynamicURLIndex++;
-            sourceFile = new Firebug.ScriptTagAppendSourceFile(href, script, script.lineExtent, innerScripts);
-            this.watchSourceFile(context, sourceFile);
-            context.pendingScriptTagSourceFile = sourceFile;
-        }
-        else
-        {
-            var sourceFile = context.sourceFileMap[url];
-            if (sourceFile && (sourceFile instanceof Firebug.TopLevelSourceFile) )  // Multiple script tags in HTML or duplicate .js file names.
-            {
-                    if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("debugger.onTopLevelScriptCreated reuse sourcefile="+sourceFile.toString()+" -> "+context.getName()+" ("+context.uid+")"+"\n");
-                    if (!sourceFile.outerScript || !sourceFile.outerScript.isValid)
-                        sourceFile.outerScript = outerScript;
-                    Firebug.SourceFile.addScriptsToSourceFile(sourceFile, outerScript, innerScripts);
-            }
-            else
-            {
-                sourceFile = new Firebug.TopLevelSourceFile(url, script, script.lineExtent, innerScripts);
-                this.watchSourceFile(context, sourceFile);
-                if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("debugger.onTopLevelScriptCreated create sourcefile="+sourceFile.toString()+" -> "+context.getName()+" ("+context.uid+")"+"\n");
-            }
-        }
-
-        dispatch(this.fbListeners,"onTopLevelScriptCreated",[context, frame, sourceFile.href]);
-        return sourceFile;
-    },
-
-    getContextByFrame: function(frame)
-    {
-        if (FBTrace.DBG_BP)
-            FBTrace.sysout("debugger.getContextByFrame");
-        var win = fbs.getOutermostScope(frame);
-        return win ? TabWatcher.getContextByWindow(win) : null;
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    watchSourceFile: function(context, sourceFile)
-    {
-        context.addSourceFile(sourceFile);  // store in the context and notify listeners
-        //fbs.watchSourceFile(sourceFile);    // tell the service to watch this file
-    },
-
-    unwatchSourceFile: function(context, sourceFile)
-    {
-        //fbs.unwatchSourceFile(sourceFile);
-        context.removeSourceFile(sourceFile);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    onToggleBreakpoint: function(url, lineNo, isSet, props)
-    {
-        if (props.debuggerName != this.debuggerName) // then not for us
-        {
-            if (FBTrace.DBG_BP) FBTrace.sysout("debugger("+this.debuggerName+").onToggleBreakpoint ignoring toggle for "+props.debuggerName+" target "+lineNo+"@"+url+"\n");
-            return;
-        }
-
-        var found = false;
-        for (var i = 0; i < TabWatcher.contexts.length; ++i)
-        {
-            var context = TabWatcher.contexts[i];
-            var sourceFile = context.sourceFileMap[url];
-            if (sourceFile) {
-                if (FBTrace.DBG_BP)
-                    FBTrace.sysout("debugger("+this.debuggerName+").onToggleBreakpoint found context "+context.getName());
-
-                if (!isSet && context.dynamicURLhasBP)
-                    this.checkDynamicURLhasBP(context);
-
-                var panel = context.getPanel("script", true);
-                if (!panel)
-                {
-                    if (FBTrace.DBG_ERRORS)
-                        FBTrace.sysout("onToggleBreakpoint no panel in context "+context.getName());
-                    continue;
-                }
-
-                panel.context.invalidatePanels("breakpoints");
-
-                var sourceBox = panel.getSourceBoxByURL(url);
-                if (!sourceBox)
-                {
-                    if (FBTrace.DBG_BP)
-                        FBTrace.sysout("debugger("+this.debuggerName+").onToggleBreakpoint context "+i+" script panel no sourcebox for url: "+url, panel.sourceBoxes);
-                    continue;
-                }
-
-                var row = sourceBox.getLineNode(lineNo);
-                if (FBTrace.DBG_BP)
-                    FBTrace.sysout(i+") onToggleBreakpoint getLineNode="+row+" lineNo="+lineNo+" context:"+context.getName()+"\n");
-                if (!row)
-                    continue;  // we *should* only be called for lines in the viewport...
-
-                row.setAttribute("breakpoint", isSet);
-                if (isSet && props)
-                {
-                    row.setAttribute("condition", props.condition ? "true" : "false");
-                    if (props.condition)  // issue 1371
-                    {
-                        var watchPanel = this.ableWatchSidePanel(context);
-
-                        if (watchPanel)
-                        {
-                            watchPanel.addWatch(props.condition);
-                        }
-                        else
-                        {
-                            if (FBTrace.DBG_ERRORS)
-                                FBTrace.sysout("onToggleBreakpoint no watch panel in context "+context.getName());
-                        }
-                    }
-                    row.setAttribute("disabledBreakpoint", new Boolean(props.disabled).toString());
-                }
-                else
-                {
-                    row.removeAttribute("condition");
-                    if (props.condition)
-                    {
-                        var watchPanel = this.ableWatchSidePanel(context);
-                        watchPanel.removeWatch(props.condition);
-                        watchPanel.rebuild();
-                    }
-                    row.removeAttribute("disabledBreakpoint");
-                }
-                dispatch(this.fbListeners, "onToggleBreakpoint", [context, url, lineNo, isSet]);
-                found = true;
-                continue;
-            }
-        }
-        if (FBTrace.DBG_BP && !found)
-            FBTrace.sysout("debugger("+this.debuggerName+").onToggleBreakpoint no find context");
-    },
-
-    onToggleErrorBreakpoint: function(url, lineNo, isSet)
-    {
-        for (var i = 0; i < TabWatcher.contexts.length; ++i)
-        {
-            var context = TabWatcher.contexts[i];
-            var panel = context.getPanel("console", true);
-            if (panel)
-            {
-                panel.context.invalidatePanels("breakpoints");
-
-                for (var row = panel.panelNode.firstChild; row; row = row.nextSibling)
-                {
-                    var error = row.firstChild.repObject;
-                    if (error instanceof ErrorMessage && error.href == url && error.lineNo == lineNo)
-                    {
-                        if (isSet)
-                            setClass(row.firstChild, "breakForError");
-                        else
-                            removeClass(row.firstChild, "breakForError");
-
-                        dispatch(this.fbListeners, "onToggleErrorBreakpoint", [context, url, lineNo, isSet]);
-                    }
-                }
-            }
-        }
-    },
-
-    onToggleMonitor: function(url, lineNo, isSet)
-    {
-        for (var i = 0; i < TabWatcher.contexts.length; ++i)
-        {
-            var panel = TabWatcher.contexts[i].getPanel("console", true);
-            if (panel)
-                panel.context.invalidatePanels("breakpoints");
-        }
-    },
-
-    checkDynamicURLhasBP: function (context)
-    {
-        context.dynamicURLhasBP = false;
-        for (var url in context.sourceFileMap)
-        {
-             var sourceFile = context.sourceFileMap[url];
-               if (sourceFile.isEval() || sourceFile.isEvent())
-               {
-                   fbs.enumerateBreakpoints(url, {call: function setDynamicIfSet(url, lineNo)
-                   {
-                       context.dynamicURLhasBP = true;
-                   }});
-               }
-               if (context.dynamicURLhasBP)
-                   break;
-        }
-        if (FBTrace.DBG_SOURCEFILES || FBTrace.DBG_BP)
-            FBTrace.sysout("debugger.checkDynamicURLhasBP "+context.dynamicURLhasBP);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // XXXjjb this code is not called, because I found the scheme for detecting Function too complex.
-    // I'm leaving it here to remind us that we need to support new Function().
-    onFunctionConstructor: function(frame, ctor_script)
-    {
-       try
-        {
-            var context = this.breakContext;
-            delete this.breakContext;
-
-            var sourceFile = this.createSourceFileForFunctionConstructor(frame, ctor_script, context);
-
-            if (FBTrace.DBG_EVAL)
-            {
-                FBTrace.sysout("debugger.onFunctionConstructor tag="+ctor_script.tag+" url="+sourceFile.href+"\n");
-                FBTrace.sysout( traceToString(FBL.getCorrectedStackTrace(frame, context))+"\n" );
-            }
-
-            dispatch(this.fbListeners,"onFunctionConstructor",[context, frame, ctor_script, sourceFile.href]);
-            return sourceFile.href;
-        }
-        catch(exc)
-        {
-            ERROR("debugger.onFunctionConstructor failed: "+exc);
-            if (FBTrace.DBG_EVAL)
-                FBTrace.sysout("debugger.onFunctionConstructor failed: ",exc);
-            return null;
-        }
-
-    },
-
-    createSourceFileForFunctionConstructor: function(caller_frame, ctor_script, context)
-    {
-        var ctor_expr = null; // this.getConstructorExpression(caller_frame, context);
-        if (FBTrace.DBG_EVAL) FBTrace.sysout("createSourceFileForFunctionConstructor ctor_expr:"+ctor_expr+"\n");
-        if (ctor_expr)
-            var source  = this.getEvalBody(caller_frame, "lib.createSourceFileForFunctionConstructor ctor_expr", 1, ctor_expr);
-        else
-            var source = " bah createSourceFileForFunctionConstructor"; //ctor_script.functionSource;
-
-        if (FBTrace.DBG_EVAL) FBTrace.sysout("createSourceFileForFunctionConstructor source:"+source+"\n");
-        var url = this.getDynamicURL(context, normalizeURL(caller_frame.script.fileName), source, "Function");
-
-        var lines = context.sourceCache.store(url.href, source);
-        var sourceFile = new Firebug.FunctionConstructorSourceFile(url, caller_frame.script, ctor_expr, lines.length);
-        this.watchSourceFile(context, sourceFile);
-
-        if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("debugger.onNewFunction sourcefile="+sourceFile.toString()+" -> "+context.getName()+"\n");
-
-        return sourceFile;
-    },
-
-    getConstructorExpression: function(caller_frame, context)
-    {
-        // We believe we are just after the ctor call.
-        var decompiled_lineno = getLineAtPC(caller_frame, context);
-        if (FBTrace.DBG_EVAL) FBTrace.sysout("debugger.getConstructoreExpression decompiled_lineno:"+decompiled_lineno+"\n");
-
-        var decompiled_lines = splitLines(caller_frame.script.functionSource);  // TODO place in sourceCache?
-        if (FBTrace.DBG_EVAL) FBTrace.sysout("debugger.getConstructoreExpression decompiled_lines:",decompiled_lines);
-
-        var candidate_line = decompiled_lines[decompiled_lineno - 1]; // zero origin
-        if (FBTrace.DBG_EVAL) FBTrace.sysout("debugger.getConstructoreExpression candidate_line:"+candidate_line+"\n");
-
-        if (candidate_line && candidate_line != null)
-            {
-                var m = reFunction.exec(candidate_line);
-                if (m)
-                    var arguments =  m[1];     // TODO Lame: need to count parens, with escapes and quotes
-            }
-        if (FBTrace.DBG_EVAL) FBTrace.sysout("debugger.getConstructoreExpression arguments:"+arguments+"\n");
-        if (arguments) // need to break down commas and get last arg.
-        {
-                var lastComma = arguments.lastIndexOf(',');
-                return arguments.substring(lastComma+1);  // if -1 then 0
-        }
-        return null;
-    },
-
-    // end of guilt trip
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    // Called by debugger.onEval() to store eval() source.
-    // The frame has the blank-function-name script and it is not the top frame.
-    // The frame.script.fileName is given by spidermonkey as file of the first eval().
-    // The frame.script.baseLineNumber is given by spidermonkey as the line of the first eval() call
-    // The source that contains the eval() call is the source of our caller.
-    // If our caller is a file, the source of our caller is at frame.script.baseLineNumber
-    // If our caller is an eval, the source of our caller is TODO Check Test Case
-    getEvalLevelSourceFile: function(frame, context, innerScripts)
-    {
-        var eval_expr = this.getEvalExpression(frame, context);
-        if (FBTrace.DBG_EVAL) FBTrace.sysout("getEvalLevelSourceFile eval_expr:"+eval_expr+"\n");
-
-        if (eval_expr && !Firebug.decompileEvals)
-        {
-            var source  = this.getEvalBody(frame, "lib.getEvalLevelSourceFile.getEvalBody", 1, eval_expr);
-            var mapType = PCMAP_SOURCETEXT;
-        }
-        else
-        {
-            var source = frame.script.functionSource; // XXXms - possible crash on OSX FF2
-            var mapType = PCMAP_PRETTYPRINT;
-        }
-
-        var lines = splitLines(source);
-
-        if (FBTrace.DBG_EVAL)
-            FBTrace.sysout("getEvalLevelSourceFile "+lines.length+ "lines, mapType:"+((mapType==PCMAP_SOURCETEXT)?"SOURCE":"PRETTY")+" source:"+source+"\n");
-
-        var url = this.getDynamicURL(context, normalizeURL(frame.script.fileName), lines, "eval");
-
-        context.sourceCache.invalidate(url.href);
-        context.sourceCache.storeSplitLines(url.href, lines);
-
-        var sourceFile = new Firebug.EvalLevelSourceFile(url, frame.script, eval_expr, lines, mapType, innerScripts);
-        this.watchSourceFile(context, sourceFile);
-
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("debugger.getEvalLevelSourceFile sourcefile="+sourceFile.toString()+" -> "+context.getName()+"\n");
-
-        return sourceFile;
-    },
-
-    getDynamicURL: function(context, callerURL, lines, kind)
-    {
-        var url = this.getURLFromLastLine(context, lines);
-        if (url)
-            return url;
-
-        var url = this.getSequentialURL(context, callerURL, kind);
-        if (url)
-            return url;
-
-        var url = this.getURLFromMD5(callerURL, lines, kind);
-        if (url)
-            return url;
-
-        var url = this.getDataURLForScript(callerURL, lines);
-        if (url)
-            return url;
-
-        return url;
-    },
-
-    getURLFromLastLine: function(context, lines)
-    {
-        var url = null;
-        // Ignores any trailing whitespace in |source|
-        var reURIinComment = /\/\/@\ssourceURL=\s*(\S*?)\s*$/m;
-        var m = reURIinComment.exec(lines[lines.length - 1]);
-        if (m)
-        {
-            // add context info to the sourceURL so eval'd sources are grouped correctly in the source file list
-            if (m[1] && m[1].indexOf('://') == -1) {
-                var loc = context.window.location;
-                if (m[1].charAt(0) != '/') m[1] = '/'+m[1]; // prepend leading slash if necessary
-                m[1] = loc.protocol + '//' + loc.host + m[1]; // prepend protocol and host
-            }
-
-            var href = new String(m[1]);
-
-            url = {href: href, kind: "source"};
-            if (FBTrace.DBG_SOURCEFILES)
-                FBTrace.sysout("debugger.getURLFromLastLine "+url.href, url);
-        }
-        else
-        {
-            if (FBTrace.DBG_SOURCEFILES)
-                FBTrace.sysout("debugger.getURLFromLastLine no match"+lines[lines.length - 1]);
-        }
-        return url;
-    },
-
-    getSequentialURL: function(context, callerURL, kind)
-    {
-        var url = null;
-        if (!context.dynamicURLhasBP)
-        {
-            // If no breakpoints live in dynamic code then we don't need to compare
-            // the previous and reloaded source. In that case let's use a cheap URL.
-            var href = new String(callerURL + (kind ? "/"+kind+"/" : "/nokind/")+"seq/" +(context.dynamicURLIndex++));
-            url = {href: href, kind: "seq"};
-            if (FBTrace.DBG_SOURCEFILES || isNaN(context.dynamicURLIndex) )
-                FBTrace.sysout("debugger.getSequentialURL context:"+context.getName()+" url:"+url.href+" index: "+context.dynamicURLIndex, url);
-        }
-        return url;
-    },
-
-    getURLFromMD5: function(callerURL, lines, kind)
-    {
-        this.hash_service.init(this.nsICryptoHash.MD5);
-        var source = lines.join('\n'); // we could double loop, would that be any faster?
-        byteArray = [];
-        for (var j = 0; j < source.length; j++)
-        {
-            byteArray.push( source.charCodeAt(j) );
-        }
-        this.hash_service.update(byteArray, byteArray.length);
-        var hash = this.hash_service.finish(true);
-
-        // encoding the hash should be ok, it should be information-preserving? Or at least reversable?
-        var href= new String(callerURL + (kind ? "/"+kind+"/" : "/nokind/")+"MD5/" + encodeURIComponent(hash));
-        url = {href: href, kind: "MD5"};
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("debugger.getURLFromMD5 "+url.href, url);
-        return url;
+        this.toolButtonsNode.appendChild(selectNode);
     },
-
-    getDataURLForScript: function(callerURL, lines)
-    {
-        var url = null;
-        var href = null;
-        if (!source)
-            href = "eval."+script.tag;
-        else
-        {
-            // data:text/javascript;fileName=x%2Cy.js;baseLineNumber=10,<the-url-encoded-data>
-            href = new String("data:text/javascript;");
-            href += "fileName="+encodeURIComponent(callerURL);
-            var source = lines.join('\n');
-            //url +=  ";"+ "baseLineNumber="+encodeURIComponent(script.baseLineNumber) +
-            href +="," + encodeURIComponent(source);
-        }
-        url = {href:href, kind:"data"};
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("debugger.getDataURLForScript "+url.href, url);
-        return url;
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    getEvalExpression: function(frame, context)
-    {
-        var expr = this.getEvalExpressionFromEval(frame, context);  // eval in eval
-
-        return (expr) ? expr : this.getEvalExpressionFromFile(normalizeURL(frame.script.fileName), frame.script.baseLineNumber, context);
-    },
-
-    getEvalExpressionFromFile: function(url, lineNo, context)
-    {
-        if (context && context.sourceCache)
-        {
-            var in_url = FBL.reJavascript.exec(url);
-            if (in_url)
-            {
-                var m = reEval.exec(in_url[1]);
-                if (m)
-                    return m[1];
-                else
-                    return null;
-            }
-
-            var htm = reHTM.exec(url);
-            if (htm) {
-                lineNo = lineNo + 1; // embedded scripts seem to be off by one?  XXXjjb heuristic
-            }
-            // Walk backwards from the first line in the function until we find the line which
-            // matches the pattern above, which is the eval call
-            var line = "";
-            for (var i = 0; i < 3; ++i)
-            {
-                line = context.sourceCache.getLine(url, lineNo-i) + line;
-                if (line && line != null)
-                {
-                    var m = reEval.exec(line);
-                    if (m)
-                        return m[1];
-                }
-            }
-        }
-        return null;
-    },
-
-    getEvalExpressionFromEval: function(frame, context)
-    {
-        var callingFrame = frame.callingFrame;
-        var sourceFile = Firebug.SourceFile.getSourceFileByScript(context, callingFrame.script);
-        if (sourceFile)
-        {
-            if (FBTrace.DBG_EVAL) {
-                FBTrace.sysout("debugger.getEvalExpressionFromEval sourceFile.href="+sourceFile.href+"\n");
-                FBTrace.sysout("debugger.getEvalExpressionFromEval callingFrame.pc="+callingFrame.pc
-                    +" callingFrame.script.baseLineNumber="+callingFrame.script.baseLineNumber+"\n");
-            }
-            var lineNo = callingFrame.script.pcToLine(callingFrame.pc, PCMAP_SOURCETEXT);
-            lineNo = lineNo - callingFrame.script.baseLineNumber + 1;
-            var url  = sourceFile.href;
-
-            if (FBTrace.DBG_EVAL && !context.sourceCache)
-                FBTrace.sysout("debugger.getEvalExpressionFromEval context.sourceCache null??\n");
-
-            // Walk backwards from the first line in the function until we find the line which
-            // matches the pattern above, which is the eval call
-            var line = "";
-            for (var i = 0; i < 3; ++i)
-            {
-                line = context.sourceCache.getLine(url, lineNo-i) + line;
-                if (FBTrace.DBG_EVAL)
-                    FBTrace.sysout("debugger.getEvalExpressionFromEval lineNo-i="+lineNo+"-"+i+"="+(lineNo-i)+" line:"+line+"\n");
-                if (line && line != null)
-                {
-                    var m = reEval.exec(line);
-                    if (m)
-                        return m[1];     // TODO Lame: need to count parens, with escapes and quotes
-                }
-            }
-        }
-        return null;
-    },
-
-    getEvalBody: function(frame, asName, asLine, evalExpr)
-    {
-        if (evalExpr  && !Firebug.decompileEvals)
-        {
-            var result_src = {};
-            var evalThis = "new String("+evalExpr+");";
-            var evaled = frame.eval(evalThis, asName, asLine, result_src);
-
-            if (evaled)
-            {
-                var src = unwrapIValue(result_src.value);
-                return src;
-            }
-            else
-            {
-                var source;
-                if(evalExpr == "function(p,a,c,k,e,r")
-                    source = "/packer/ JS compressor detected";
-                else
-                    source = frame.script.functionSource;
-                return source+" /* !eval("+evalThis+")) */";
-            }
-        }
-        else
-        {
-            return frame.script.functionSource; // XXXms - possible crash on OSX FF2
-        }
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // extends Module
 
     initialize: function()
     {
-        Firebug.clientID = this.registerClient(Firebug);
-        ///this.nsICryptoHash = Components.interfaces["nsICryptoHash"];
+        // we must render the code first, so the persistent state can be restore
+        this.selectSourceCode(this.selectIndex);
 
-        this.debuggerName =  window.location.href +"-@-"+FBL.getUniqueId();
-        this.toString = function() { return this.debuggerName; };
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("debugger.initialize "+ this.debuggerName);
+        Firebug.Panel.initialize.apply(this, arguments);
 
-        ///this.hash_service = CCSV("@mozilla.org/security/hash;1", "nsICryptoHash");
-
-        ///$("cmd_breakOnErrors").setAttribute("checked", Firebug.breakOnErrors);
-        ///$("cmd_decompileEvals").setAttribute("checked", Firebug.decompileEvals);
-
-        this.wrappedJSObject = this;  // how we communicate with fbs
-
-        // This is a service operation, a way of encapsulating fbs which is in turn implementing this
-        // simple service. We could implment a whole component for this service, but it hardly makes sense.
-        Firebug.broadcast = function encapsulateFBSBroadcast(message, args)
-        {
-            fbs.broadcast(message, args);
-        };
-
-        this.onFunctionCall = bind(this.onFunctionCall, this);
-
-        Firebug.ActivableModule.initialize.apply(this, arguments);
-    },
-
-    internationalizeUI: function(doc)
-    {
-        var elements = ["fbRerunButton", "fbContinueButton", "fbStepIntoButton", "fbStepOverButton",
-            "fbStepOutButton"];
-
-        for (var i=0; i<elements.length; i++)
-        {
-            var element = doc.getElementById(elements[i]);
-            if (element.hasAttribute("label"))
-                FBL.internationalize(element, "label");
-
-            if (element.hasAttribute("tooltiptext"))
-                FBL.internationalize(element, "tooltiptext");
-        }
-    },
-
-    /*
-     * per-XUL window registration; this method just allows us to keep fbs in this file.
-     * @param clientAPI an object that implements functions called by fbs for clients.
-     */
-    registerClient: function(clientAPI)
-    {
-        return fbs.registerClient(clientAPI);
-    },
-
-    unregisterClient: function(clientAPI)
-    {
-        fbs.unregisterClient(clientAPI);
-    },
-
-    enable: function()
-    {
-        if (FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("debugger.Firebug.Debugger.enable; " + this.enabled);
-
-        //if (this.isAlwaysEnabled())
-        //    this.registerDebugger(); // allow callbacks for jsd
-    },
-
-    disable: function()
-    {
-        if (FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("debugger.Firebug.Debugger.disable; " + this.enabled);
-
-        //this.unregisterDebugger();
-    },
-
-    initializeUI: function()
-    {
-        Firebug.ActivableModule.initializeUI.apply(this, arguments);
-        this.filterButton = $("fbScriptFilterMenu");
-        this.filterMenuUpdate();
-        Firebug.setIsJSDActive(fbs.isJSDActive()); // jsd may be active before this XUL window was opened
-    },
-
-    initContext: function(context, persistedState)
-    {
-        if (persistedState)
-            context.dynamicURLhasBP = persistedState.dynamicURLhasBP;
-
-        context.dynamicURLIndex = 1; // any dynamic urls need to be unique to the context.
-
-        context.jsDebuggerActive = false;
-
-        Firebug.ActivableModule.initContext.apply(this, arguments);
-    },
-
-    reattachContext: function(browser, context)
-    {
-        this.filterButton = Firebug.chrome.$("fbScriptFilterMenu");  // connect to the button in the new window, not 'window'
-        this.filterMenuUpdate();
-        Firebug.ActivableModule.reattachContext.apply(this, arguments);
-    },
-
-    loadedContext: function(context)
-    {
-        var watchPanel = this.ableWatchSidePanel(context);
-        var needNow = watchPanel && watchPanel.watches;
-        var watchPanelState = Firebug.getPanelState({name: "watches", context: context});
-        var needPersistent = watchPanelState && watchPanelState.watches;
-        if (needNow || needPersistent)
-        {
-            Firebug.CommandLine.isReadyElsePreparing(context);
-            if (watchPanel)
-            {
-                context.setTimeout(function refreshWatchesAfterCommandLineReady()
-                {
-                    watchPanel.refresh();
-                });
-            }
-        }
-
-        // context.watchScriptAdditions = bind(this.watchScriptAdditions, this, context);
-
-        // context.window.document.addEventListener("DOMNodeInserted", context.watchScriptAdditions, false);
-
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("debugger("+this.debuggerName+").loadedContext enabled on load: "+context.onLoadWindowContent+" context.sourceFileMap", context.sourceFileMap);
-    },
-
-    /*
-     * A DOM Mutation Event handler for script tag additions
-     * FAILS see http://code.google.com/p/fbug/issues/detail?id=2912
-     */
-    watchScriptAdditions: function(event, context)
-    {
-        if (event.type !== "DOMNodeInserted")
-            return;
-        if (event.target.tagName.toLowerCase() !== "script")
-            return;
-        FBTrace.sysout("debugger.watchScriptAdditions ", event.target.innerHTML);
-        var location = safeGetWindowLocation(context.window);
-
-        FBL.jsd.enumerateScripts({enumerateScript: function(script)
-        {
-            if (normalizeURL(script.fileName) === location)
-            {
-                var sourceFile = Firebug.SourceFile.getSourceFileByScript(context, script);
-                FBTrace.sysout('debugger.watchScriptAdditions '+script.tag+" in "+(sourceFile?sourceFile.href:"NONE")+" "+script.functionSource, script.functionSource);
-                // The dynamically added script tags via element.appendChild do not show up.
-            }
-        }});
-
-        if (context.pendingScriptTagSourceFile)
-        {
-            var sourceFile = context.pendingScriptTagSourceFile;
-            sourceFile.scriptTag = event.target;
-            sourceFile.source = splitLines(event.target.innerHTML);
-
-            var panel = context.getPanel("script", true);
-            if (panel)
-                panel.removeSourceBoxBySourceFile(sourceFile);
-
-            FBTrace.sysout("debugger.watchScriptAdditions connected tag to sourcefile", sourceFile);
-
-            delete context.pendingScriptTagSourceFile;
-        }
-    },
-
-    unwatchWindow: function(context, win)  // clean up the source file map in case the frame is being reloaded.
-    {
-        var scriptTags = win.document.getElementsByTagName("script");
-        for (var i = 0; i < scriptTags.length; i++)
-        {
-            var src = scriptTags[i].getAttribute("src");
-            src = src ? src : safeGetWindowLocation(win);
-
-            // If the src is not in the source map, try to use absolute url.
-            if (!context.sourceFileMap[src])
-                src = absoluteURL(src, win.location.href);
-
-            delete context.sourceFileMap[src];
-
-            if (FBTrace.DBG_SOURCEFILES)
-                FBTrace.sysout("debugger.unWatchWindow; delete sourceFileMap entry for " + src);
-        }
-        if (scriptTags.length > 0)
-            context.invalidatePanels('script');
-    },
-
-    destroyContext: function(context, persistedState)
-    {
-        Firebug.ActivableModule.destroyContext.apply(this, arguments);
-
-        context.window.document.removeEventListener("DOMNodeInserted", context.watchScriptAdditions, false);
-
-        if (context.stopped)
-        {
-            // the abort will call resume, but the nestedEventLoop would continue the load...
-            this.abort(context);
-        }
-
-        if(persistedState)
-        {
-            if (context.dynamicURLhasBP)
-                persistedState.dynamicURLhasBP = context.dynamicURLhasBP;
-            else
-                delete persistedState.dynamicURLhasBP;
-        }
-    },
-
-    updateOption: function(name, value)
-    {
-        if (name == "breakOnErrors")
-            $("cmd_breakOnErrors").setAttribute("checked", value);
-        else if (name == "decompileEvals")
-            $("cmd_decompileEvals").setAttribute("checked", value);
-    },
-
-    getObjectByURL: function(context, url)
-    {
-        var sourceFile = getSourceFileByHref(url, context);
-        if (sourceFile)
-            return new SourceLink(sourceFile.href, 0, "js");
+        addEvent(this.selectNode, "change", this.onChangeSelect);
     },
 
     shutdown: function()
     {
-        this.unregisterClient(Firebug);
-        fbs.unregisterDebugger(this);
-    },
+        removeEvent(this.selectNode, "change", this.onChangeSelect);
 
-    registerDebugger: function() // 1.3.1 safe for multiple calls
-    {
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("registerDebugger this.registered: "+this.registered);
-
-        if (this.registered)
-            return;
-
-        this.registered = true;
-
-        var check = fbs.registerDebugger(this);  //  this will eventually set 'jsd' on the statusIcon
-
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("debugger.registerDebugger "+check+" debuggers");
-    },
-
-    unregisterDebugger: function() // 1.3.1 safe for multiple calls
-    {
-        if (FBTrace.DBG_INITIALIZE)
-            FBTrace.sysout("debugger.unregisterDebugger this.registered: "+this.registered);
-
-        if (!this.registered)
-            return;
-
-        // stay registered if we are profiling across a reload.
-        if (Firebug.Profiler.isProfiling())
-            return;
-
-        var check = fbs.unregisterDebugger(this);
-
-        this.registered = false;
-
-        if (FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("debugger.unregisterDebugger: "+check+" debuggers");
-    },
-
-    onSourceFileCreated: function(context, sourceFile)
-    {
-        // This event can come at any time, eg by frame reloads or ajax,
-        // so we need to update the display.
-        context.invalidatePanels("script", "breakpoints");
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // extends ActivableModule
-
-    onObserverChange: function(observer)
-    {
-        if (this.hasObservers())
-            this.activateDebugger();
-        else
-            this.deactivateDebugger();
-    },
-
-    activateDebugger: function()
-    {
-        this.registerDebugger();
-
-        if (Firebug.currentContext && !fbs.isJSDActive())
-            fbs.unPause();
-
-        if (FBTrace.DBG_PANELS || FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("debugger.activate;");
-    },
-
-    deactivateDebugger: function()
-    {
-        if (this.dependents && this.dependents.length > 0)
-        {
-            for(var i = 0; i < this.dependents.length; i++)
-            {
-                if (this.dependents[i].isAlwaysEnabled())
-                {
-                    // TODO getName() for modules required.
-                    var name = this.dependents[0].dispatchName;
-
-                    // Log message into the console to inform the user
-                    if (Firebug.currentContext)
-                        Firebug.Console.log("Cannot disable the script panel, " + name +
-                            " panel requires it", Firebug.currentContext);
-
-                    if (FBTrace.DBG_PANELS)
-                        FBTrace.sysout("debugger.onPanelDisable rejected: " + name +
-                            " dependent, with panelName: " + panelName);
-                    return;
-                }
-            }
-        }
-
-        // else no dependents enabled:
-        this.unregisterDebugger();
-
-        if (FBTrace.DBG_PANELS || FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("debugger.deactivate");
-
-        // this.clearAllBreakpoints();  //XXXjjb I don't think we want to clear breakpoints here, just turn off jsd if no registered debuggers
-    },
-
-    onDependentModuleChange: function(dependentAddedOrRemoved)
-    {
-        if (this.dependents.length > 0) // then we have dependents now
-        {
-            if (!this.isAlwaysEnabled()) // then we need to enable
-            {
-                this.activateDebugger();
-                if (Firebug.currentContext)
-                    Firebug.Console.log("enabling javascript debugger to support "+dependentAddedOrRemoved.dispatchName, Firebug.currentContext);
-            }
-        }
-
-        // xxxHonza, XXXjjb: what about else? In case there are no dependants we could perhaps
-        // disable again...
-    },
-
-    onSuspendingFirebug: function()
-    {
-        var anyStopped = TabWatcher.iterateContexts(function isAnyStopped(context)
-        {
-            return context.stopped;
-        });
-
-        return anyStopped;
-    },
-
-    onSuspendFirebug: function()
-    {
-        if (!Firebug.Debugger.isAlwaysEnabled())
-            return;
-
-        var paused = fbs.pause();  // can be called multiple times.
-
-        if (FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("debugger.onSuspendFirebug paused: "+paused+" isAlwaysEnabled " +
-                Firebug.Debugger.isAlwaysEnabled()+"\n");
-
-        if (!paused)  // then we failed to suspend, undo
-            return true;
-
-        return false;
-    },
-
-    onResumeFirebug: function()
-    {
-        if (!Firebug.Debugger.isAlwaysEnabled())
-            return;
-
-        var unpaused = fbs.unPause();
-
-        if (FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("debugger.onResumeFirebug unpaused: "+unpaused+" isAlwaysEnabled " +
-                Firebug.Debugger.isAlwaysEnabled());
-
-        if (FBTrace.DBG_ERRORS && !this.registered && Firebug.Debugger.isAlwaysEnabled())
-            FBTrace.sysout("debugger.onResumeFirebug but debugger " +
-                Firebug.Debugger.debuggerName+" not registered! *** ");
-    },
-
-    ableWatchSidePanel: function(context)
-    {
-        if (Firebug.Console.isAlwaysEnabled())
-        {
-            var watchPanel = context.getPanel("watches", true);
-            if (watchPanel)
-                return watchPanel;
-        }
-
-        return null;
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // Menu in toolbar.
-
-    onScriptFilterMenuTooltipShowing: function(tooltip, context)
-    {
-        if (FBTrace.DBG_OPTIONS)
-            FBTrace.sysout("onScriptFilterMenuTooltipShowing not implemented");
-    },
-
-    onScriptFilterMenuCommand: function(event, context)
-    {
-        var menu = event.target;
-        Firebug.setPref(Firebug.servicePrefDomain, "scriptsFilter", menu.value);
-        Firebug.Debugger.filterMenuUpdate();
-    },
-
-    menuFullLabel:
-    {
-        /// TODO: xxxpedro should use quotes to avoid error when compressing with YUICompressor
-        "static": $STR("ScriptsFilterStatic"),
-        evals: $STR("ScriptsFilterEval"),
-        events: $STR("ScriptsFilterEvent"),
-        all: $STR("ScriptsFilterAll")
-    },
-
-    menuShortLabel:
-    {
-        /// TODO: xxxpedro should use quotes to avoid error when compressing with YUICompressor
-        "static": $STR("ScriptsFilterStaticShort"),
-        evals: $STR("ScriptsFilterEvalShort"),
-        events: $STR("ScriptsFilterEventShort"),
-        all: $STR("ScriptsFilterAllShort")
-    },
-
-    onScriptFilterMenuPopupShowing: function(menu, context)
-    {
-        if (this.menuTooltip)
-            this.menuTooltip.fbEnabled = false;
-
-        var items = menu.getElementsByTagName("menuitem");
-        var value = this.filterButton.value;
-
-        for (var i=0; i<items.length; i++)
-        {
-            var option = items[i].value;
-            if (!option)
-                continue;
-
-            if (option == value)
-                items[i].setAttribute("checked", "true");
-
-            items[i].label = Firebug.Debugger.menuFullLabel[option];
-        }
-
-        return true;
-    },
-
-    onScriptFilterMenuPopupHiding: function(tooltip, context)
-    {
-        if (this.menuTooltip)
-            this.menuTooltip.fbEnabled = true;
-
-        return true;
-    },
-
-    filterMenuUpdate: function()
-    {
-        var value = Firebug.getPref(Firebug.servicePrefDomain, "scriptsFilter");
-        this.filterButton.value = value;
-        this.filterButton.label = this.menuShortLabel[value];
-        this.filterButton.removeAttribute("disabled");
-        this.filterButton.setAttribute("value", value);
-        if (FBTrace.DBG_OPTIONS)
-            FBTrace.sysout("debugger.filterMenuUpdate value: "+value+" label:"+this.filterButton.label+'\n');
-    }
-});
-
-// ************************************************************************************************
-
-Firebug.ScriptPanel = function() {};
-
-/*
- * object used to markup Javascript source lines.
- * In the namespace Firebug.ScriptPanel.
- */
-Firebug.ScriptPanel.decorator = extend(new Firebug.SourceBoxDecorator,
-{
-    decorate: function(sourceBox, sourceFile)
-    {
-        this.markExecutableLines(sourceBox);
-        this.setLineBreakpoints(sourceBox.repObject, sourceBox);
-    },
-
-    markExecutableLines: function(sourceBox)
-    {
-        var sourceFile = sourceBox.repObject;
-        if (FBTrace.DBG_BP || FBTrace.DBG_LINETABLE)
-            FBTrace.sysout("debugger.markExecutableLines START: "+sourceFile.toString(), sourceFile.getLineRanges());
-
-        var lineNo = sourceBox.firstViewableLine;
-        while( lineNode = sourceBox.getLineNode(lineNo) )
-        {
-            if (lineNode.alreadyMarked)
-            {
-                lineNo++;
-                continue;
-            }
-
-            var script = sourceFile.isExecutableLine(lineNo, true);
-
-            if (FBTrace.DBG_LINETABLE) FBTrace.sysout("debugger.markExecutableLines ["+lineNo+"]="+(script?script.tag:"X")+"\n");
-            if (script)
-                lineNode.setAttribute("executable", "true");
-            else
-                lineNode.removeAttribute("executable");
-
-            lineNode.alreadyMarked = true;
-
-            if (lineNo > sourceBox.lastViewableLine)
-                break;
-
-            lineNo++;
-        }
-
-        if (FBTrace.DBG_BP || FBTrace.DBG_LINETABLE)
-            FBTrace.sysout("debugger.markExecutableLines DONE: "+sourceFile.toString()+"\n");
-    },
-
-    setLineBreakpoints: function(sourceFile, sourceBox)
-    {
-        /// TODO: xxxpedro debugger.js
-        return;
-        
-        fbs.enumerateBreakpoints(sourceFile.href, {call: function(url, line, props, scripts)
-        {
-            var scriptRow = sourceBox.getLineNode(line);
-            if (scriptRow)
-            {
-                scriptRow.setAttribute("breakpoint", "true");
-                if (props.disabled)
-                    scriptRow.setAttribute("disabledBreakpoint", "true");
-                if (props.condition)
-                    scriptRow.setAttribute("condition", "true");
-            }
-            if (FBTrace.DBG_LINETABLE)
-                FBTrace.sysout("debugger.setLineBreakpoints found "+scriptRow+" for "+line+"@"+sourceFile.href+"\n");
-        }});
-    }
-});
-
-// ************************************************************************************************
-
-Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
-{
-    /*
-    * Framework connection
-    */
-    updateSourceBox: function(sourceBox)
-    {
-        if (this.scrollInfo && (this.scrollInfo.location == this.location))
-            this.scrollToLine(this.location, this.scrollInfo.previousCenterLine);
-        delete this.scrollInfo;
-    },
-
-    /*
-    * Framework connection
-    */
-    getSourceType: function()
-    {
-        return "js";
-    },
-
-    /*
-     * Framework connection
-     */
-    getDecorator: function(sourceBox)
-    {
-        return Firebug.ScriptPanel.decorator;
-    },
-
-    create: function()
-    {
-        /// TODO: xxxpedro hack
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        var doc = Firebug.chrome.document;
-        var styleSheet = createStyleSheet(doc, Env.Location.skinDir + "debugger.css");
-        addStyleSheet(doc, styleSheet);
-        
-        var tempContext = new Firebug.TabContext(window, Firebug.browser, Firebug.chrome, {});
-        this.context = extend(Firebug.browser, tempContext);
-        
-        // TODO: xxxpedro IE portability of the following methods
-        this.context.setTimeout = Firebug.browser.setTimeout; 
-        this.context.clearTimeout = Firebug.browser.clearTimeout; 
-        this.context.setInterval = Firebug.browser.setInterval; 
-        this.context.clearInterval = Firebug.browser.clearInterval; 
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    	
-    	Firebug.SourceBoxPanel.create.apply(this, arguments);
-    },
-    
-    initialize: function(context, doc)
-    {
-        this.location = null;
-        Firebug.SourceBoxPanel.initialize.apply(this, arguments);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    showFunction: function(fn)
-    {
-        var sourceLink = findSourceForFunction(fn, this.context);
-        if (sourceLink)
-        {
-            this.showSourceLink(sourceLink);
-        }
-        else
-        {
-            if (FBTrace.DBG_ERRORS) FBTrace.sysout("no sourcelink for function"); // want to avoid the debugger panel if possible
-        }
-    },
-
-    showSourceLink: function(sourceLink)
-    {
-        var sourceFile = getSourceFileByHref(sourceLink.href, this.context);
-        if (sourceFile)
-        {
-            this.navigate(sourceFile);
-            if (sourceLink.line)
-            {
-                this.scrollToLine(sourceLink.href, sourceLink.line, this.jumpHighlightFactory(sourceLink.line, this.context));
-                dispatch(this.fbListeners, "onShowSourceLink", [this, sourceLink.line]);
-            }
-            if (sourceLink == this.selection)  // then clear it so the next link will scroll and highlight.
-                delete this.selection;
-        }
-    },
-
-    highlightExecutionLine: function()
-    {
-        var highlightingAttribute = "exe_line";
-        if (this.executionLine)  // could point to any node in any sourcebox, private to this function
-            this.executionLine.removeAttribute(highlightingAttribute);
-
-        var sourceBox = this.selectedSourceBox;
-        var lineNode = sourceBox.getLineNode(this.executionLineNo);
-        this.executionLine = lineNode;  // if null, clears
-
-        if (sourceBox.breakCauseBox)
-        {
-            sourceBox.breakCauseBox.hide();
-            delete sourceBox.breakCauseBox;
-        }
-
-        if (this.executionLine)
-        {
-            lineNode.setAttribute(highlightingAttribute, "true");
-            if (this.context.breakingCause && !this.context.breakingCause.shown)
-            {
-                this.context.breakingCause.shown = true;
-                var cause = this.context.breakingCause;
-                if (cause)
-                {
-                    var sourceLine = getChildByClass(lineNode, "sourceLine");
-                    sourceBox.breakCauseBox = new Firebug.Breakpoint.BreakNotification(this.document, cause);
-                    sourceBox.breakCauseBox.show(sourceLine, this, "not an editor, yet?");
-                }
-            }
-        }
-
-        if (FBTrace.DBG_BP || FBTrace.DBG_STACK || FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("sourceBox.highlightExecutionLine lineNo: "+this.executionLineNo+" lineNode="+lineNode+" in "+sourceBox.repObject.href);
-
-        return (this.executionLineNo > 0); // sticky if we have a valid line
-    },
-
-    showStackFrameXB: function(frameXB)
-    {
-        if (this.context.stopped)
-        {
-            this.setCurrentStackFrame(frameXB);
-            this.showExecutingSourceFile(frameXB.sourceFile, frameXB);
-        }
-        else
-            this.showNoStackFrame();
-    },
-
-    showStackFrame: function(frame)
-    {
-        if (!frame || (frame && !frame.isValid))
-        {
-            if (FBTrace.DBG_STACK) FBTrace.sysout("showStackFrame no valid frame\n");
-            this.showNoStackFrame();
-            return;
-        }
-
-        var sourceFile = Firebug.SourceFile.getSourceFileByScript(this.context, frame.script);
-        if (!sourceFile)
-        {
-            if (FBTrace.DBG_STACK) FBTrace.sysout("showStackFrame no sourceFile in context "+this.context.getName()+"for frame.script: "+frame.script.fileName);
-            this.showNoStackFrame();
-            return;
-        }
-
-        this.setCurrentStackFrame(frame);
-
-        this.showExecutingSourceFile(sourceFile, frame);
-    },
-
-    showExecutingSourceFile: function(sourceFile, frame)
-    {
-        this.context.executingSourceFile = sourceFile;
-        this.executionFile = sourceFile;
-        if (this.executionFile)
-        {
-            var url = this.executionFile.href;
-            var analyzer = this.executionFile.getScriptAnalyzer(frame.script);
-            this.executionLineNo = analyzer.getSourceLineFromFrame(this.context, frame);  // TODo implement for each type
-
-            if (FBTrace.DBG_STACK)
-                FBTrace.sysout("showStackFrame executionFile:"+this.executionFile+"@"+this.executionLineNo+"\n");
-
-            if (this.context.breakingCause)
-                this.context.breakingCause.lineNo = this.executionLineNo;
-
-            this.scrollToLine(url, this.executionLineNo, bind(this.highlightExecutionLine, this) );
-            this.context.throttle(this.updateInfoTip, this);
-            return;
-        }
-        else
-        {
-            if (FBTrace.DBG_STACK) FBTrace.sysout("showStackFrame no getSourceFileByScript for tag="+frame.script.tag+"\n");
-            this.showNoStackFrame();
-        }
-    },
-
-    showNoStackFrame: function()
-    {
-        this.executionFile = null;
-        this.executionLineNo = -1;
-
-        if (this.selectedSourceBox)
-            this.highlightExecutionLine();  // clear highlight
-
-        var panelStatus = Firebug.chrome.getPanelStatusElements();
-        panelStatus.clear(); // clear stack on status bar
-        this.updateInfoTip();
-
-        var watchPanel = this.context.getPanel("watches", true);
-        if (watchPanel)
-            watchPanel.showEmptyMembers();
-    },
-
-    /*
-     * set the UI's current selected frame from any type of frame. This is the frame to use for evals
-     * @param frame: native or XB frame
-     */
-
-    setCurrentStackFrame: function(frame)
-    {
-        if (frame instanceof Ci.jsdIStackFrame)
-            this.context.currentFrame = frame;  // TODO XB reverse this so the XB frame is current
-        else if (frame instanceof StackFrame)
-            this.context.currentFrame = frame.getNativeFrame();
-    },
-
-    toggleBreakpoint: function(lineNo)
-    {
-        var sourceFile = this.getSourceFileBySourceBox(this.selectedSourceBox);
-        var lineNode = this.selectedSourceBox.getLineNode(lineNo);
-
-        if (!sourceFile && FBTrace.DBG_ERRORS)
-            FBTrace.sysout("toggleBreakpoint no sourceFile! ", this);
-        if (FBTrace.DBG_BP)
-            FBTrace.sysout("debugger.toggleBreakpoint lineNo="+lineNo+" sourceFile.href:"+sourceFile.href+" lineNode.breakpoint:"+(lineNode?lineNode.getAttribute("breakpoint"):"(no lineNode)")+"\n", this.selectedSourceBox);
-
-        if (lineNode.getAttribute("breakpoint") == "true")
-            fbs.clearBreakpoint(sourceFile.href, lineNo);
-        else
-            fbs.setBreakpoint(sourceFile, lineNo, null, Firebug.Debugger);
-    },
-
-    toggleDisableBreakpoint: function(lineNo)
-    {
-        var sourceFile = this.getSourceFileBySourceBox(this.selectedSourceBox);
-        var lineNode = this.selectedSourceBox.getLineNode(lineNo);
-        if (lineNode.getAttribute("disabledBreakpoint") == "true")
-            fbs.enableBreakpoint(sourceFile.href, lineNo);
-        else
-            fbs.disableBreakpoint(sourceFile.href, lineNo);
-    },
-
-    editBreakpointCondition: function(lineNo)
-    {
-        var sourceRow = this.selectedSourceBox.getLineNode(lineNo);
-        var sourceLine = getChildByClass(sourceRow, "sourceLine");
-        var condition = fbs.getBreakpointCondition(this.location.href, lineNo);
-
-        if (condition)
-        {
-            var watchPanel = this.context.getPanel("watches", true);
-            watchPanel.removeWatch(condition);
-            watchPanel.rebuild();
-        }
-
-        Firebug.Editor.startEditing(sourceLine, condition);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    addSelectionWatch: function()
-    {
-        var watchPanel = this.context.getPanel("watches", true);
-        if (watchPanel)
-        {
-            var selection = this.document.defaultView.getSelection();
-            var source = this.getSourceLinesFrom(selection);
-            watchPanel.addWatch(source);
-        }
-    },
-
-    copySource: function()
-    {
-        var selection = this.document.defaultView.getSelection();
-        var source = this.getSourceLinesFrom(selection);
-        copyToClipboard(source);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    updateInfoTip: function()
-    {
-        var infoTip = this.panelBrowser.infoTip;
-        if (infoTip && this.infoTipExpr)
-            this.populateInfoTip(infoTip, this.infoTipExpr);
-    },
-
-    populateInfoTip: function(infoTip, expr)
-    {
-        if (!expr || isJavaScriptKeyword(expr))
-            return false;
-
-        var self = this;
-        // If the evaluate fails, then we report an error and don't show the infoTip
-        Firebug.CommandLine.evaluate(expr, this.context, null, this.context.getGlobalScope(),
-            function success(result, context)
-            {
-                var rep = Firebug.getRep(result, context);
-                var tag = rep.shortTag ? rep.shortTag : rep.tag;
-
-                if (FBTrace.DBG_STACK)
-                    FBTrace.sysout("populateInfoTip result is "+result, result);
-
-                tag.replace({object: result}, infoTip);
-
-                Firebug.chrome.contextMenuObject = result;  // for context menu select()
-
-                self.infoTipExpr = expr;
-            },
-            function failed(result, context)
-            {
-                self.infoTipExpr = "";
-            }
-        );
-        return (self.infoTipExpr == expr);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // UI event listeners
-
-    onMouseDown: function(event)
-    {
-        var target = event.target || event.srcElement;
-        // Don't interfere with clicks made into a notification editor.
-        if (getAncestorByClass(target, "breakNotification"))
-            return;
-
-        var sourceLine = getAncestorByClass(target, "sourceLine");
-        if (!sourceLine)
-            return;
-
-        var sourceRow = sourceLine.parentNode;
-        var sourceFile = sourceRow.parentNode.repObject;
-        var lineNo = parseInt(sourceLine.textContent);
-
-        if (isLeftClick(event))
-            this.toggleBreakpoint(lineNo);
-        else if (isShiftClick(event))
-            this.toggleDisableBreakpoint(lineNo);
-        else if (isControlClick(event) || isMiddleClick(event))
-        {
-            Firebug.Debugger.runUntil(this.context, sourceFile, lineNo, Firebug.Debugger);
-            cancelEvent(event);
-        }
-    },
-
-    onContextMenu: function(event)
-    {
-        var sourceLine = getAncestorByClass(event.target || event.srcElement, "sourceLine");
-        if (!sourceLine)
-            return;
-
-        var lineNo = parseInt(sourceLine.textContent);
-        this.editBreakpointCondition(lineNo);
-        cancelEvent(event);
-    },
-
-    onMouseOver: function(event)
-    {
-        var sourceLine = getAncestorByClass(event.target || event.srcElement, "sourceLine");
-        if (sourceLine)
-        {
-            if (this.hoveredLine)
-                removeClass(this.hoveredLine.parentNode, "hovered");
-
-            this.hoveredLine = sourceLine;
-
-            if (sourceLine)
-                setClass(sourceLine.parentNode, "hovered");
-        }
-    },
-
-    onMouseOut: function(event)
-    {
-        var sourceLine = getAncestorByClass(event.relatedTarget, "sourceLine");
-        if (!sourceLine)
-        {
-            if (this.hoveredLine)
-                removeClass(this.hoveredLine.parentNode, "hovered");
-
-            delete this.hoveredLine;
-        }
-    },
-
-    onScroll: function(event)
-    {
-        ///var scrollingElement = event.target || event.srcElement;
-        this.reView(this.selectedSourceBox);
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // extends Panel
-
-    name: "script2",
-    title: "New Script",
-    
-    searchable: true,
-    breakable: true,
-    enableA11y: true,
-    order: 40,
-
-    initialize: function(context, doc)
-    {
-        this.onMouseDown = bind(this.onMouseDown, this);
-        this.onContextMenu = bind(this.onContextMenu, this);
-        this.onMouseOver = bind(this.onMouseOver, this);
-        this.onMouseOut = bind(this.onMouseOut, this);
-        this.onScroll = bind(this.onScroll, this);
-
-        this.panelSplitter = $("fbPanelSplitter");
-        this.sidePanelDeck = $("fbSidePanelDeck");
-
-        Firebug.SourceBoxPanel.initialize.apply(this, arguments);
-        
-        
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        // TODO: xxxpedro hack
-        //debugger;
-        this.panelNode.style.fontFamily = "monospace";
-        Firebug.chrome.$ = function(id){return $(id, Firebug.chrome.document); };
-        Firebug.uiListeners = Firebug.uiListeners || [];
-        Firebug.ActivablePanel.initializeNode = function(){};
-        Firebug.Panel.initializeNode = function(){};
-        
-        this.document = Firebug.chrome.document;
-        this.initializeNode();
-        
-        var url = Env.Location.app;
-        var source = new Firebug.ScriptTagSourceFile(this.context, url, 0);
-        this.showSourceFile(source);
-        //this.updateLocation(source);
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        
-    },
-    
-    /// TODO: xxxpedro refactor Firebug Lite initialization
-    shutdown: function()
-    {
-        if (this.selectedSourceBox)
-            this.clearSourceBox(this.selectedSourceBox);
-        
-        this.destroyNode();
-        
-        Firebug.SourceBoxPanel.shutdown.apply(this, arguments);
-    },
-
-    destroy: function(state)
-    {
-        /// TODO: xxxpedro debugger persists
-        state = state || {};
-        
-        delete this.selection; // We want the location (sourcefile) to persist, not the selection (eg stackFrame).
-        persistObjects(this, state);
-
-        /// TODO: xxxpedro debugger persists
-        ///state.location = this.location;
-
-        var sourceBox = this.selectedSourceBox;
-        if (sourceBox)
-        {
-            state.previousCenterLine = sourceBox.centerLine;
-            delete this.selectedSourceBox;
-        }
-
-        Firebug.SourceBoxPanel.destroy.apply(this, arguments);
+        Firebug.Panel.shutdown.apply(this, arguments);
     },
 
     detach: function(oldChrome, newChrome)
     {
-        if (this.selectedSourceBox)
-            this.lastSourceScrollTop = this.selectedSourceBox.scrollTop;
+        Firebug.Panel.detach.apply(this, arguments);
 
-        if (this.context.stopped)
-        {
-            Firebug.Debugger.detachListeners(this.context, oldChrome);
-            Firebug.Debugger.attachListeners(this.context, newChrome);
-        }
+        var oldPanel = oldChrome.getPanel("Script");
+        var index = oldPanel.selectIndex;
 
-        Firebug.Debugger.syncCommands(this.context);
-
-        Firebug.SourceBoxPanel.detach.apply(this, arguments);
+        this.selectNode.selectedIndex = index;
+        this.selectIndex = index;
+        this.sourceIndex = -1;
     },
 
-    reattach: function(doc)
+    onChangeSelect: function(event)
     {
-        Firebug.SourceBoxPanel.reattach.apply(this, arguments);
+        var select = this.selectNode;
 
-        setTimeout(bind(function delayScrollToLastTop()
-        {
-            if (this.lastSourceScrollTop)
-            {
-                this.selectedSourceBox.scrollTop = this.lastSourceScrollTop;
-                delete this.lastSourceScrollTop;
-            }
-        }, this));
-    },
+        this.selectIndex = select.selectedIndex;
 
-    initializeNode: function(oldPanelNode)
-    {
-        this.tooltip = this.document.createElement("div");
-        setClass(this.tooltip, "scriptTooltip");
-        this.tooltip.setAttribute('aria-live', 'polite');
-        obscure(this.tooltip, true);
-        this.panelNode.appendChild(this.tooltip);
-
-        ///this.panelNode.addEventListener("mousedown", this.onMouseDown, true);
-        ///this.panelNode.addEventListener("contextmenu", this.onContextMenu, false);
-        ///this.panelNode.addEventListener("mouseover", this.onMouseOver, false);
-        ///this.panelNode.addEventListener("mouseout", this.onMouseOut, false);
-        ///this.panelNode.addEventListener("scroll", this.onScroll, true);
-        addEvent(this.panelNode, "mousedown", this.onMouseDown);
-        addEvent(this.panelNode, "contextmenu", this.onContextMenu);
-        addEvent(this.panelNode, "mouseover", this.onMouseOver);
-        addEvent(this.panelNode, "mouseout", this.onMouseOut);
-        //addEvent(this.panelNode, "scroll", this.onScroll, true);
-        addEvent(this.scrollingElement, "scroll", this.onScroll, true);
-        
-        Firebug.SourceBoxPanel.initializeNode.apply(this, arguments);
-    },
-
-    destroyNode: function()
-    {
-        if (this.tooltipTimeout)
-            clearTimeout(this.tooltipTimeout);
-
-        ///this.panelNode.removeEventListener("mousedown", this.onMouseDown, true);
-        ///this.panelNode.removeEventListener("contextmenu", this.onContextMenu, false);
-        ///this.panelNode.removeEventListener("mouseover", this.onMouseOver, false);
-        ///this.panelNode.removeEventListener("mouseout", this.onMouseOut, false);
-        ///this.panelNode.removeEventListener("scroll", this.onScroll, true);
-        removeEvent(this.panelNode, "mousedown", this.onMouseDown);
-        removeEvent(this.panelNode, "contextmenu", this.onContextMenu);
-        removeEvent(this.panelNode, "mouseover", this.onMouseOver);
-        removeEvent(this.panelNode, "mouseout", this.onMouseOut);
-        removeEvent(this.scrollingElement, "scroll", this.onScroll, true);
-
-        Firebug.SourceBoxPanel.destroyNode.apply(this, arguments);
-    },
-
-    clear: function()
-    {
-        clearNode(this.panelNode);
-    },
-
-    showWarning: function()
-    {
-        // Fill the panel node with a warning if needed
-        var aLocation = this.getDefaultLocation();
-        var jsEnabled = Firebug.getPref("javascript", "enabled");
-        if (FBL.fbs.activitySuspended && !this.context.stopped)
-        {
-            // Make sure that the content of the panel is restored as soon as
-            // the debugger is resumed.
-            this.restored = false;
-            this.activeWarningTag = WarningRep.showActivitySuspended(this.panelNode);
-        }
-        else if (!jsEnabled)
-            this.activeWarningTag = WarningRep.showNotEnabled(this.panelNode);
-        else if (this.context.allScriptsWereFiltered)
-            this.activeWarningTag = WarningRep.showFiltered(this.panelNode);
-        else if (aLocation && !this.context.jsDebuggerActive)
-            this.activeWarningTag = WarningRep.showInactive(this.panelNode);
-        else if (!aLocation) // they were not filtered, we just had none
-            this.activeWarningTag = WarningRep.showNoScript(this.panelNode);
-        else
-            return false;
-
-        return true;
-    },
-
-    /// TODO: xxxpedro debugger 
-    ishow: function(state)
-    {
-        var enabled = Firebug.Debugger.isAlwaysEnabled();
-
-        if (!enabled)
+        var option = select.options[select.selectedIndex];
+        if (!option)
             return;
 
-        var active = !this.showWarning();
+        var selectedSourceIndex = parseInt(option.value);
 
-        if (active)
+        this.renderSourceCode(selectedSourceIndex);
+    },
+
+    selectSourceCode: function(index)
+    {
+        var select = this.selectNode;
+        select.selectedIndex = index;
+
+        var option = select.options[index];
+        if (!option)
+            return;
+
+        var selectedSourceIndex = parseInt(option.value);
+
+        this.renderSourceCode(selectedSourceIndex);
+    },
+
+    renderSourceCode: function(index)
+    {
+        if (this.sourceIndex != index)
         {
-            this.location = this.getDefaultLocation();
-
-            if (this.context.loaded)
+            var renderProcess = function renderProcess(src)
             {
-                if (!this.restored)
+                var html = [],
+                    hl = 0;
+
+                src = isIE && !isExternal ?
+                        src+'\n' :  // IE put an extra line when reading source of local resources
+                        '\n'+src;
+
+                // find the number of lines of code
+                src = src.replace(/\n\r|\r\n/g, "\n");
+                var match = src.match(/[\n]/g);
+                var lines=match ? match.length : 0;
+
+                // render the full source code + line numbers html
+                html[hl++] = '<div><div class="sourceBox" style="left:';
+                html[hl++] = 35 + 7*(lines+'').length;
+                html[hl++] = 'px;"><pre class="sourceCode">';
+                html[hl++] = escapeHTML(src);
+                html[hl++] = '</pre></div><div class="lineNo">';
+
+                // render the line number divs
+                for(var l=1, lines; l<=lines; l++)
                 {
-                    delete this.location;  // remove the default location if any
-                    restoreLocation(this, state);
-                    this.restored = true;
-                }
-                else // we already restored
-                {
-                    if (!this.selectedSourceBox)  // but somehow we did not make a sourcebox?
-                        this.navigate(this.location);
-                    else  // then we can sync the location to the sourcebox
-                        this.location = this.selectedSourceBox.repObject;
+                    html[hl++] = '<div line="';
+                    html[hl++] = l;
+                    html[hl++] = '">';
+                    html[hl++] = l;
+                    html[hl++] = '</div>';
                 }
 
-                if (state && this.location)  // then we are restoring and we have a location, so scroll when we can
-                    this.scrollInfo = { location: this.location, previousCenterLine: state.previousCenterLine};
-            }
-            else // show default
+                html[hl++] = '</div></div>';
+
+                updatePanel(html);
+            };
+
+            var updatePanel = function(html)
             {
-                this.navigate(this.location);
-            }
+                self.panelNode.innerHTML = html.join("");
 
-            this.highlight(this.context.stopped);
+                // IE needs this timeout, otherwise the panel won't scroll
+                setTimeout(function(){
+                    self.synchronizeUI();
+                },0);
+            };
 
-            var breakpointPanel = this.context.getPanel("breakpoints", true);
-            if (breakpointPanel)
-                breakpointPanel.refresh();
-        }
-
-        collapse(Firebug.chrome.$("fbToolbar"), !active);
-
-        // These buttons are visible only if debugger is enabled.
-        this.showToolbarButtons("fbLocationSeparator", active);
-        this.showToolbarButtons("fbDebuggerButtons", active);
-        this.showToolbarButtons("fbLocationButtons", active);
-        this.showToolbarButtons("fbScriptButtons", active);
-        this.showToolbarButtons("fbStatusButtons", active);
-
-        // Additional debugger panels are visible only if debugger
-        // is active.
-        this.panelSplitter.collapsed = !active;
-        this.sidePanelDeck.collapsed = !active;
-    },
-
-    /// TODO: xxxpedro debugger 
-    ihide: function(state)
-    {
-        this.highlight(this.context.stopped);
-
-        var panelStatus = Firebug.chrome.getPanelStatusElements();
-        FBL.hide(panelStatus, false);
-
-        delete this.infoTipExpr;
-    },
-
-    search: function(text, reverse)
-    {
-        var sourceBox = this.selectedSourceBox;
-        if (!text || !sourceBox)
-        {
-            delete this.currentSearch;
-            return false;
-        }
-
-        // Check if the search is for a line number
-        var m = reLineNumber.exec(text);
-        if (m)
-        {
-            if (!m[1])
-                return true; // Don't beep if only a # has been typed
-
-            var lineNo = parseInt(m[1]);
-            if (!isNaN(lineNo) && (lineNo > 0) && (lineNo < sourceBox.lines.length) )
+            var onFailure = function()
             {
-                this.scrollToLine(sourceBox.repObject.href, lineNo,  this.jumpHighlightFactory(lineNo, this.context));
-                return true;
-            }
-        }
+                FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, self.panelNode);
+            };
 
-        var curDoc = this.searchCurrentDoc(!Firebug.searchGlobal, text, reverse);
-        if (!curDoc && Firebug.searchGlobal)
-        {
-            return this.searchOtherDocs(text, reverse);
-        }
-        return curDoc;
-    },
+            var self = this;
 
-    searchOtherDocs: function(text, reverse)
-    {
-        var scanRE = Firebug.Search.getTestingRegex(text);
+            var doc = Firebug.browser.document;
+            var script = doc.getElementsByTagName("script")[index];
+            var url = getScriptURL(script);
+            var isExternal = url && url != doc.location.href;
 
-        var self = this;
-
-        function scanDoc(sourceFile) {
-            var lines = sourceFile.loadScriptLines(self.context);
-            if (!lines)
-                return;
-            // we don't care about reverse here as we are just looking for existence,
-            // if we do have a result we will handle the reverse logic on display
-            for (var i = 0; i < lines.length; i++) {
-                if (scanRE.test(lines[i]))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (this.navigateToNextDocument(scanDoc, reverse))
-        {
-            return this.searchCurrentDoc(true, text, reverse);
-        }
-    },
-
-    searchCurrentDoc: function(wrapSearch, text, reverse)
-    {
-        var sourceBox = this.selectedSourceBox;
-
-        var lineNo = null;
-        if (this.currentSearch && text == this.currentSearch.text)
-            lineNo = this.currentSearch.findNext(wrapSearch, reverse, Firebug.Search.isCaseSensitive(text));
-        else
-        {
-            this.currentSearch = new SourceBoxTextSearch(sourceBox);
-            lineNo = this.currentSearch.find(text, reverse, Firebug.Search.isCaseSensitive(text));
-        }
-
-        if (lineNo || lineNo === 0)
-        {
-            // this lineNo is an zero-based index into sourceBox.lines. Add one for user line numbers
-            this.scrollToLine(sourceBox.repObject.href, lineNo, this.jumpHighlightFactory(lineNo+1, this.context));
-            dispatch(this.fbListeners, 'onScriptSearchMatchFound', [this, text, sourceBox.repObject, lineNo]);
-
-            return true;
-        }
-        else
-        {
-            dispatch(this.fbListeners, 'onScriptSearchMatchFound', [this, text, null, null]);
-            return false;
-        }
-    },
-
-    getSearchOptionsMenuItems: function()
-    {
-        return [
-            Firebug.Search.searchOptionMenu("search.Case Sensitive", "searchCaseSensitive"),
-            Firebug.Search.searchOptionMenu("search.Multiple Files", "searchGlobal"),
-            Firebug.Search.searchOptionMenu("search.Use Regular Expression", "searchUseRegularExpression")
-        ];
-    },
-
-    supportsObject: function(object, type)
-    {
-        if( object instanceof jsdIStackFrame
-            || object instanceof Firebug.SourceFile
-            || (object instanceof SourceLink && object.type == "js")
-            || typeof(object) == "function"
-            || object instanceof StackFrame)
-            return 1;
-        else return 0;
-    },
-
-    hasObject: function(object)
-    {
-        FBTrace.sysout("debugger.hasObject in "+this.context.getName()+" SourceLink: "+(object instanceof SourceLink), object);
-        if (object instanceof Firebug.SourceFile)
-            return (object.href in this.context.sourceFileMap);
-        else if (object instanceof SourceLink)
-            return (object.href in this.context.sourceFileMap);
-        else if (object instanceof jsdIStackFrame)
-            return (normalizeURL(object.script.fileName) in this.context.sourceFileMap);
-        else if (object instanceof "function")
-            return false; //TODO
-    },
-
-    refresh: function()  // delete any sourceBox-es that are not in sync with sourceFiles
-    {
-        for(var url in this.sourceBoxes)
-        {
-            if (this.sourceBoxes.hasOwnProperty(url))
-            {
-                var sourceBox = this.sourceBoxes[url];
-                var sourceFile = this.context.sourceFileMap[url];
-                if (!sourceFile || sourceFile != sourceBox.repObject) // then out of sync
-                {
-                   var victim = this.sourceBoxes[url];
-                   delete this.sourceBoxes[url];
-                   if (this.selectedSourceBox == victim)
-                   {
-                        collapse(this.selectedSourceBox, true);
-                        delete this.selectedSourceBox;
-                   }
-                   if (FBTrace.DBG_SOURCEFILES)
-                       FBTrace.sysout("debugger.refresh deleted sourceBox for "+url);
-                }
-            }
-        }
-
-        // then show() has not run, but we have to refresh, so do the default.
-        if (!this.selectedSourceBox)
-            this.navigate();
-    },
-
-    updateLocation: function(sourceFile)
-    {
-        if (!sourceFile)
-            return;  // XXXjjb do we need to show a blank?
-
-        // Since our last use of the sourceFile we may have compiled or recompiled the source
-        var updatedSourceFile = this.context.sourceFileMap[sourceFile.href];
-        if (!updatedSourceFile)
-            updatedSourceFile = this.getDefaultLocation();
-        if (!updatedSourceFile)
-            return;
-
-        if (this.activeWarningTag)
-        {
-            clearNode(this.panelNode);
-            delete this.activeWarningTag;
-
-            // The user was seeing the warning, but selected a file to show in the script panel.
-            // The removal of the warning leaves the panel without a clientHeight, so
-            //  the old sourcebox will be out of sync. Just remove it and start over.
-            this.removeAllSourceBoxes();
-        }
-
-        this.showSourceFile(updatedSourceFile);
-        dispatch(this.fbListeners, "onUpdateScriptLocation", [this, updatedSourceFile]);
-    },
-
-    updateSelection: function(object)
-    {
-        if (FBTrace.DBG_PANELS)
-        {
-            FBTrace.sysout("debugger updateSelection object:"+object+" of type "+typeof(object)+"\n");
-            if (object instanceof jsdIStackFrame)
-                FBTrace.sysout("debugger updateSelection this.showStackFrame(object)", object);
-            else if (object instanceof Firebug.SourceFile)
-                FBTrace.sysout("debugger updateSelection this.navigate(object)", object);
-            else if (object instanceof SourceLink)
-                FBTrace.sysout("debugger updateSelection this.showSourceLink(object)", object);
-            else if (typeof(object) == "function")
-                FBTrace.sysout("debugger updateSelection this.showFunction(object)", object);
-            else if (object instanceof StackFrame)
-                FBTrace.sysout("debugger updateSelection this.showStackFrameXB(object)", object);
-            else
-                FBTrace.sysout("debugger updateSelection this.showStackFrame(null)", object);
-        }
-
-        if (object instanceof jsdIStackFrame)
-            this.showStackFrame(object);
-        else if (object instanceof Firebug.SourceFile)
-            this.navigate(object);
-        else if (object instanceof SourceLink)
-            this.showSourceLink(object);
-        else if (typeof(object) == "function")
-            this.showFunction(object);
-        else if (object instanceof StackFrame)
-            this.showStackFrameXB(object);
-        else
-            this.showStackFrame(null);
-    },
-
-    showThisSourceFile: function(sourceFile)
-    {
-        //-----------------------------------123456789
-        if (sourceFile.href.substr(0, 9) == "chrome://")
-            return false;
-
-           if (sourceFile.isEval() && !this.showEvals)
-               return false;
-
-        if (sourceFile.isEvent() && !this.showEvents)
-            return false;
-
-        return true;
-    },
-
-    getLocationList: function()
-    {
-        var context = this.context;
-
-        if (!context.onLoadWindowContent) // then context was not active during load
-            this.updateScriptFiles(context);
-
-        var allSources = sourceFilesAsArray(context.sourceFileMap);
-
-        if (!allSources.length)
-            return [];
-
-        if (Firebug.showAllSourceFiles)
-        {
-            if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("debugger getLocationList "+context.getName()+" allSources", allSources);
-            return allSources;
-        }
-
-        var filter = Firebug.getPref(Firebug.servicePrefDomain, "scriptsFilter");
-        this.showEvents = (filter == "all" || filter == "events");
-        this.showEvals = (filter == "all" || filter == "evals");
-
-        var list = [];
-        for (var i = 0; i < allSources.length; i++)
-        {
-            if (this.showThisSourceFile(allSources[i]))
-                list.push(allSources[i]);
-        }
-
-        if (!list.length && allSources.length)
-            this.context.allScriptsWereFiltered = true;
-        else
-            delete this.context.allScriptsWereFiltered;
-
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("debugger.getLocationList enabledOnLoad:"+context.onLoadWindowContent+" all:"+allSources.length+" filtered:"+list.length, list);
-        return list;
-    },
-
-    updateScriptFiles: function(context, eraseSourceFileMap)  // scan windows for 'script' tags (only if debugger is not enabled)
-    {
-        var oldMap = eraseSourceFileMap ? null : context.sourceFileMap;
-
-        if (FBTrace.DBG_SOURCEFILES)
-            FBTrace.sysout("updateScriptFiles oldMap "+oldMap);
-
-        function addFile(url, scriptTagNumber, dependentURL)
-        {
-            if (oldMap && url in oldMap)
-            {
-                var sourceFile = oldMap[url];
-                sourceFile.dependentURL = dependentURL;
-                context.addSourceFile(sourceFile);
-                return false;
-            }
-            else
-            {
-                var sourceFile = new Firebug.ScriptTagSourceFile(context, url, scriptTagNumber);
-                sourceFile.dependentURL = dependentURL;
-                context.addSourceFile(sourceFile);
-                return true;
-            }
-        }
-
-        iterateWindows(context.window, function updateEachWin(win)
-        {
-            if (FBTrace.DBG_SOURCEFILES)
-                FBTrace.sysout("updateScriptFiles iterateWindows: "+win.location.href, " documentElement: "+win.document.documentElement);
-            if (!win.document.documentElement)
-                return;
-
-            var url = normalizeURL(win.location.href);
-
-            if (url)
-            {
-                if (!context.sourceFileMap.hasOwnProperty(url))
-                {
-                    var URLOnly = new Firebug.NoScriptSourceFile(context, url);
-                    context.addSourceFile(URLOnly);
-                    if (FBTrace.DBG_SOURCEFILES) FBTrace.sysout("updateScriptFiles created NoScriptSourceFile for URL:"+url, URLOnly);
-                }
-            }
-
-            var baseUrl = win.location.href;
-            var bases = win.document.documentElement.getElementsByTagName("base");
-            if (bases && bases[0])
-            {
-                baseUrl = bases[0].href;
-            }
-
-            var scripts = win.document.documentElement.getElementsByTagName("script");
-            for (var i = 0; i < scripts.length; ++i)
-            {
-                var scriptSrc = scripts[i].getAttribute('src'); // for XUL use attribute
-                var url = scriptSrc ? absoluteURL(scriptSrc, baseUrl) : win.location.href;
-                url = normalizeURL(url ? url : win.location.href);
-                var added = addFile(url, i, (scriptSrc?win.location.href:null));
-                if (FBTrace.DBG_SOURCEFILES)
-                    FBTrace.sysout("updateScriptFiles "+(scriptSrc?"inclusion":"inline")+" script #"+i+"/"+scripts.length+(added?" adding ":" readded ")+url+" to context="+context.getName()+"\n");
-            }
-        });
-
-        if (FBTrace.DBG_SOURCEFILES)
-        {
-            FBTrace.sysout("updateScriptFiles sourcefiles:", sourceFilesAsArray(context.sourceFileMap));
-        }
-    },
-
-    getDefaultLocation: function()
-    {
-        var sourceFiles = this.getLocationList();
-        if (!sourceFiles.length)
-            return null;
-
-        if (this.context)
-        {
-            var url = this.context.getWindowLocation();
-            for (var i = 0; i < sourceFiles.length; i++)
-            {
-                if (url == sourceFiles[i].href)
-                    return sourceFiles[i];
-            }
-            return sourceFiles[0];
-        }
-        else
-            return sourceFiles[0];
-    },
-
-    getDefaultSelection: function()
-    {
-        return this.getDefaultLocation();
-    },
-
-    getTooltipObject: function(target)
-    {
-        // Target should be A element with class = sourceLine
-        if ( hasClass(target, 'sourceLine') )
-        {
-            var lineNo = parseInt(target.innerHTML);
-
-            if ( isNaN(lineNo) )
-                return;
-            var scripts = this.location.scriptsIfLineCouldBeExecutable(lineNo);
-            if (scripts)
-            {
-                var str = "scripts ";
-                for(var i = 0; i < scripts.length; i++)
-                    str += scripts[i].tag +" ";
-                return str;
-            }
-            else
-                return new String("no executable script at "+lineNo);
-        }
-        return null;
-    },
-
-    getPopupObject: function(target)
-    {
-        // Don't show popup over the line numbers, we show the conditional breakpoint
-        // editor there instead
-        var sourceLine = getAncestorByClass(target, "sourceLine");
-        if (sourceLine)
-            return;
-
-        var sourceRow = getAncestorByClass(target, "sourceRow");
-        if (!sourceRow)
-            return;
-
-        var lineNo = parseInt(sourceRow.firstChild.textContent);
-        var scripts = findScripts(this.context, this.location.href, lineNo);
-        return scripts; // gee I wonder what will happen?
-    },
-
-    showInfoTip: function(infoTip, target, x, y, rangeParent, rangeOffset)
-    {
-        var frame = this.context.currentFrame;
-        if (!frame)
-            return;
-
-        var sourceRowText = getAncestorByClass(target, "sourceRowText");
-        if (!sourceRowText)
-            return;
-
-        // see http://code.google.com/p/fbug/issues/detail?id=889
-        // idea from: Jonathan Zarate's rikaichan extension (http://www.polarcloud.com/rikaichan/)
-        if (!rangeParent)
-            return;
-        rangeOffset = rangeOffset || 0;
-        var expr = getExpressionAt(rangeParent.data, rangeOffset);
-        if (!expr || !expr.expr)
-            return;
-
-        if (expr.expr == this.infoTipExpr)
-            return true;
-        else
-            return this.populateInfoTip(infoTip, expr.expr);
-    },
-
-    getObjectPath: function(frame)
-    {
-        frame = this.context.currentFrame;
-
-        if (FBTrace.DBG_STACK)
-            FBTrace.sysout("debugger.getObjectPath "+((frame && frame.isValid)?("frame is good:"+frame.script.fileName+"@"+frame.line):(frame?"frame invalid":"no frame")), this.selection);
-
-        var frames = [];
-        for (; frame; frame = getCallingFrame(frame))
-            frames.push(frame);
-
-        return frames;
-    },
-
-    getObjectLocation: function(sourceFile)
-    {
-        return sourceFile.href;
-    },
-
-    // return.path: group/category label, return.name: item label
-    getObjectDescription: function(sourceFile)
-    {
-        return sourceFile.getObjectDescription();
-    },
-
-    getOptionsMenuItems: function()
-    {
-        var context = this.context;
-
-        return [
-            optionMenu("DecompileEvals", "decompileEvals"),
-            serviceOptionMenu("ShowAllSourceFiles", "showAllSourceFiles"),
-            // 1.2: always check last line; optionMenu("UseLastLineForEvalName", "useLastLineForEvalName"),
-            // 1.2: always use MD5 optionMenu("UseMD5ForEvalName", "useMD5ForEvalName")
-            serviceOptionMenu("TrackThrowCatch", "trackThrowCatch"),
-            //"-",
-            //1.2 option on toolbar this.optionMenu("DebuggerEnableAlways", enableAlwaysPref)
-        ];
-    },
-
-    optionMenu: function(label, option)
-    {
-        var checked = Firebug.getPref(prefDomain, option);
-        return {label: label, type: "checkbox", checked: checked,
-            command: bindFixed(Firebug.setPref, Firebug, prefDomain, option, !checked) };
-    },
-
-    getContextMenuItems: function(fn, target)
-    {
-        if (getAncestorByClass(target, "sourceLine"))
-            return;
-
-        var sourceRow = getAncestorByClass(target, "sourceRow");
-        if (!sourceRow)
-            return;
-
-        var sourceLine = getChildByClass(sourceRow, "sourceLine");
-        var lineNo = parseInt(sourceLine.textContent);
-
-        var items = [];
-
-        var selection = this.document.defaultView.getSelection();
-        if (selection.toString())
-        {
-            items.push(
-                {label: "CopySourceCode", command: bind(this.copySource, this) },
-                "-",
-                {label: "AddWatch", command: bind(this.addSelectionWatch, this) }
-            );
-        }
-
-        var hasBreakpoint = sourceRow.getAttribute("breakpoint") == "true";
-
-        items.push(
-            "-",
-            {label: "SetBreakpoint", type: "checkbox", checked: hasBreakpoint,
-                command: bindFixed(this.toggleBreakpoint, this, lineNo) }
-        );
-        if (hasBreakpoint)
-        {
-            var isDisabled = fbs.isBreakpointDisabled(this.location.href, lineNo);
-            items.push(
-                {label: "DisableBreakpoint", type: "checkbox", checked: isDisabled,
-                    command: bindFixed(this.toggleDisableBreakpoint, this, lineNo) }
-            );
-        }
-        items.push(
-            {label: "EditBreakpointCondition",
-                command: bindFixed(this.editBreakpointCondition, this, lineNo) }
-        );
-
-        if (this.context.stopped)
-        {
-            var sourceRow = getAncestorByClass(target, "sourceRow");
-            if (sourceRow)
-            {
-                var sourceFile = getAncestorByClass(sourceRow, "sourceBox").repObject;
-                var lineNo = parseInt(sourceRow.firstChild.textContent);
-
-                var debuggr = Firebug.Debugger;
-                items.push(
-                    "-",
-                    {label: "Continue",
-                        command: bindFixed(debuggr.resume, debuggr, this.context) },
-                    {label: "StepOver",
-                        command: bindFixed(debuggr.stepOver, debuggr, this.context) },
-                    {label: "StepInto",
-                        command: bindFixed(debuggr.stepInto, debuggr, this.context) },
-                    {label: "StepOut",
-                        command: bindFixed(debuggr.stepOut, debuggr, this.context) },
-                    {label: "RunUntil",
-                        command: bindFixed(debuggr.runUntil, debuggr, this.context,
-                        sourceFile, lineNo) }
-                );
-            }
-        }
-
-        return items;
-    },
-
-    getEditor: function(target, value)
-    {
-        if (!this.conditionEditor)
-            this.conditionEditor = new Firebug.Breakpoint.ConditionEditor(this.document);
-
-        return this.conditionEditor;
-    },
-
-    breakOnNext: function(enabled)
-    {
-        if (enabled)
-            Firebug.Debugger.suspend(this.context);
-        else
-            Firebug.Debugger.unSuspend(this.context);
-    },
-
-    getBreakOnNextTooltip: function(armed)
-    {
-        return (armed ? $STR("script.Disable Break On Next") : $STR("script.Break On Next"));
-    },
-
-    shouldBreakOnNext: function()
-    {
-        var stepMode = fbs.getStepMode();
-        return stepMode && (stepMode == "STEP_SUSPEND");
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    // extends ActivablePanel
-
-    /**
-     * Support for panel activation.
-     */
-    onActivationChanged: function(enable)
-    {
-        if (FBTrace.DBG_CONSOLE || FBTrace.DBG_ACTIVATION)
-            FBTrace.sysout("console.ScriptPanel.onActivationChanged; " + enable);
-
-        if (enable)
-            Firebug.Debugger.addObserver(this);
-        else
-            Firebug.Debugger.removeObserver(this);
-    }
-});
-
-// ************************************************************************************************
-
-/**
- * @domplate Displays various warning messages within the Script panel.
- */
-Firebug.ScriptPanel.WarningRep = domplate(Firebug.Rep,
-{
-    tag:
-        DIV({"class": "disabledPanelBox"},
-            H1({"class": "disabledPanelHead"},
-                SPAN("$pageTitle")
-            ),
-            P({"class": "disabledPanelDescription", style: "margin-top: 15px;"},
-                SPAN("$suggestion")
-            )
-        ),
-
-    enableScriptTag:
-        SPAN({"class": "objectLink", onclick: "$onEnableScript", style: "color: blue"},
-            $STR("script.button.enable_javascript")
-        ),
-
-    focusDebuggerTag:
-        SPAN({"class": "objectLink", onclick: "$onFocusDebugger", style: "color: blue"},
-            $STR("script.button.Go to that page")
-        ),
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    onEnableScript: function(event)
-    {
-        Firebug.setPref("javascript", "enabled", true);
-
-        var panel = Firebug.getElementPanel(event.target);
-        panel.context.window.location.reload();
-    },
-
-    onFocusDebugger: function(event)
-    {
-        iterateBrowserWindows("navigator:browser", function(win)
-        {
-            return win.TabWatcher.iterateContexts(function(context)
-            {
-                if (context.stopped)
-                {
-                     win.Firebug.focusBrowserTab(context.window);
-                     return true;
-                }
-            });
-        });
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    showInactive: function(parentNode)
-    {
-        var args = {
-            pageTitle: $STR("script.warning.inactive_during_page_load"),
-            suggestion: $STR("script.suggestion.inactive_during_page_load")
-        };
-        return this.tag.replace(args, parentNode, this);
-    },
-
-    showNotEnabled: function(parentNode)
-    {
-        var args = {
-            pageTitle: $STR("script.warning.javascript_not_enabled"),
-            suggestion: $STR("script.suggestion.javascript_not_enabled")
-        };
-
-        var box = this.tag.replace(args, parentNode, this);
-        this.enableScriptTag.append({}, box, this);
-
-        return box;
-    },
-
-    showFiltered: function(parentNode)
-    {
-        var args = {
-            pageTitle: $STR("script.warning.all_scripts_filtered"),
-            suggestion: $STR("script.suggestion.all_scripts_filtered")
-        };
-        return this.tag.replace(args, parentNode, this);
-    },
-
-    showNoScript: function(parentNode)
-    {
-        var args = {
-            pageTitle: $STR("script.warning.no_javascript"),
-            suggestion: $STR("script.suggestion.no_javascript")
-        };
-        return this.tag.replace(args, parentNode, this);
-    },
-
-    showActivitySuspended: function(parentNode)
-    {
-        var args = {
-            pageTitle: $STR("script.warning.debugger_active"),
-            suggestion: $STR("script.suggestion.debugger_active")
-        };
-
-        var box = this.tag.replace(args, parentNode, this);
-        this.focusDebuggerTag.append({}, box, this);
-
-        return box;
-    }
-});
-
-var WarningRep = Firebug.ScriptPanel.WarningRep;
-
-// ************************************************************************************************
-
-Firebug.Debugger.Breakpoint = function(name, href, lineNumber, checked, sourceLine, isFuture)
-{
-    this.name = name;
-    this.href = href;
-    this.lineNumber = lineNumber;
-    this.checked = checked;
-    this.sourceLine = sourceLine;
-    this.isFuture = isFuture;
-};
-
-// ************************************************************************************************
-
-Firebug.DebuggerListener =
-{
-    /*
-     * Called before pausing JSD to allow listeners to prevent the pause
-     * @param rejection an array, push boolean true to cause rejection.
-     */
-    onPauseJSDRequested: function(rejection)
-    {
-    },
-
-    /*
-     * @param active the current value of  (jsd && jsd.isOn && (jsd.pauseDepth == 0) )
-     * @param why a string explaining the change
-     */
-    onJSDActivate: function(active, why)  // start or unPause
-    {
-
-    },
-
-    /*
-     * @param active the current value of  (jsd && jsd.isOn && (jsd.pauseDepth == 0) )
-     * @param why a string explaining the change
-     */
-    onJSDDeactivate: function(active, why) // stop or pause
-    {
-
-    },
-
-    onStop: function(context, frame, type, rv)
-    {
-    },
-
-    onResume: function(context)
-    {
-    },
-
-    onThrow: function(context, frame, rv)
-    {
-        return false; /* continue throw */
-    },
-
-    onError: function(context, frame, error)
-    {
-    },
-
-    onEventScriptCreated: function(context, frame, url, sourceFile)
-    {
-    },
-
-    onTopLevelScriptCreated: function(context, frame, url, sourceFile)
-    {
-    },
-
-    onEvalScriptCreated: function(context, frame, url, sourceFile)
-    {
-    },
-
-    onFunctionConstructor: function(context, frame, ctor_script, url, sourceFile)
-    {
-    }
-};
-
-// ************************************************************************************************
-
-
-
-// Recursively look for obj in container using array of visited objects
-function findObjectPropertyPath(containerName, container, obj, visited)
-{
-    if (!container || !obj || !visited)
-        return false;
-
-    var referents = [];
-    visited.push(container);
-    for (var p in container)
-    {
-        if (container.hasOwnProperty(p))
-        {
-            var candidate = null;
             try
             {
-                candidate = container[p];
-            }
-            catch(exc)
-            {
-                // eg sessionStorage
-            }
-
-            if (candidate === obj) // then we found a property pointing to our obj
-            {
-                referents.push(new Referent(containerName, container, p, obj));
-            }
-            else // recurse
-            {
-                var candidateType = typeof (candidate);
-                if (candidateType === 'object' || candidateType === 'function')
+                if (isExternal)
                 {
-                    if (visited.indexOf(candidate) === -1)
-                    {
-                        var refsInChildren = findObjectPropertyPath(p, candidate, obj, visited);
-                        if (refsInChildren.length)
-                        {
-                            // As we unwind the recursion we tack on layers of the path.
-                            for (var i = 0; i < refsInChildren.length; i++)
-                            {
-                                var refInChildren = refsInChildren[i];
-                                refInChildren.prependPath(containerName, container);
-                                referents.push(refInChildren);
-                                FBTrace.sysout(" Did prependPath with p "+p+" gave "+referents[referents.length - 1].getObjectPathExpression(), referents[referents.length - 1]);
+                    Ajax.request({url: url, onSuccess: renderProcess, onFailure: onFailure});
+                }
+                else
+                {
+                    var src = script.innerHTML;
+                    renderProcess(src);
+                }
+            }
+            catch(e)
+            {
+                onFailure();
+            }
 
-                            }
-                        }
-                    }
-                    //else we already looked at that object.
-                } // else the object has no properties
+            this.sourceIndex = index;
+        }
+    }
+});
+
+Firebug.registerPanel(ScriptPanel);
+
+
+// ************************************************************************************************
+
+
+var getScriptURL = function getScriptURL(script)
+{
+    var reFile = /([^\/\?#]+)(#.+)?$/;
+    var rePath = /^(.*\/)/;
+    var reProtocol = /^\w+:\/\//;
+    var path = null;
+    var doc = Firebug.browser.document;
+
+    var file = reFile.exec(script.src);
+
+    if (file)
+    {
+        var fileName = file[1];
+        var fileOptions = file[2];
+
+        // absolute path
+        if (reProtocol.test(script.src)) {
+            path = rePath.exec(script.src)[1];
+
+        }
+        // relative path
+        else
+        {
+            var r = rePath.exec(script.src);
+            var src = r ? r[1] : script.src;
+            var backDir = /^((?:\.\.\/)+)(.*)/.exec(src);
+            var reLastDir = /^(.*\/)[^\/]+\/$/;
+            path = rePath.exec(doc.location.href)[1];
+
+            // "../some/path"
+            if (backDir)
+            {
+                var j = backDir[1].length/3;
+                var p;
+                while (j-- > 0)
+                    path = reLastDir.exec(path)[1];
+
+                path += backDir[2];
+            }
+
+            else if(src.indexOf("/") != -1)
+            {
+                // "./some/path"
+                if(/^\.\/./.test(src))
+                {
+                    path += src.substring(2);
+                }
+                // "/some/path"
+                else if(/^\/./.test(src))
+                {
+                    var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
+                    path = domain[1] + src;
+                }
+                // "some/path"
+                else
+                {
+                    path += src;
+                }
             }
         }
     }
-    FBTrace.sysout(" Returning "+referents.length+ " referents", referents);
 
-    return referents;
-}
-// ************************************************************************************************
+    var m = path && path.match(/([^\/]+)\/$/) || null;
 
-function getCallingFrame(frame)
-{
-    try
+    if (path && m)
     {
-        do
-        {
-            frame = frame.callingFrame;
-            if (!(Firebug.filterSystemURLs && isSystemURL(normalizeURL(frame.script.fileName))))
-                return frame;
-        }
-        while (frame);
+        return path + fileName;
     }
-    catch (exc)
-    {
-    }
-    return null;
-}
+};
 
-function getFrameWindow(frame)
+var getFileName = function getFileName(path)
 {
-    var result = {};
-    if (frame.eval("window", "", 1, result))
-    {
-        var win = unwrapIValue(result.value);
-        return getRootWindow(win);
-    }
-}
+    if (!path) return "";
 
-function ArrayEnumerator(array)
-{
-    this.index = 0;
-    this.array = array;
-    this.hasMoreElements = function()
-    {
-        return (this.index < array.length);
-    };
-    this.getNext = function()
-    {
-        return this.array[++this.index];
-    };
-}
+    var match = path && path.match(/[^\/]+(\?.*)?(#.*)?$/);
 
-// ************************************************************************************************
+    return match && match[0] || path;
+};
 
-Firebug.registerActivableModule(Firebug.Debugger);
-Firebug.registerPanel(Firebug.ScriptPanel);
 
 // ************************************************************************************************
 }});
-
 
 /* See license.txt for terms of usage */
 
@@ -35266,7 +27776,7 @@ var DirTablePlate = domplate(Firebug.Rep,
                 FOR("member", "$object|memberIterator", RowTag)
             )
         ),
-        
+
     watchTag:
         TABLE({"class": domTableClass, cellpadding: 0, cellspacing: 0,
                _toggles: "$toggles", _domPanel: "$domPanel", onclick: "$onClick", role : 'tree'},
@@ -35298,7 +27808,7 @@ var DirTablePlate = domplate(Firebug.Rep,
     {
         if (!isLeftClick(event))
             return;
-        
+
         var target = event.target || event.srcElement;
 
         var row = getAncestorByClass(target, "memberRow");
@@ -35331,7 +27841,7 @@ var DirTablePlate = domplate(Firebug.Rep,
                 }
             }
         }
-        
+
         return false;
     },
 
@@ -35453,7 +27963,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         expandMembers(members, this.toggles, 0, 0);
 
         this.showMembers(members, update, scrollTop);
-        
+
         //TODO: xxxpedro statusbar
         if (!this.parentPanel)
             updateStatusBar(this);
@@ -35488,18 +27998,18 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         // Insert the first slice immediately
         //var slice = members.splice(0, insertSliceSize);
         //var result = rowTag.insertRows({members: slice}, tbody.lastChild);
-        
+
         //var setSize = members.length;
         //var rowCount = 1;
-        
+
         var panel = this;
         var result;
-        
+
         //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
         var timeouts = [];
-        
+
         var delay = 0;
-        
+
         // enable to measure rendering performance
         var renderStart = new Date().getTime();
         while (members.length)
@@ -35512,22 +28022,22 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                     // "iteration number" approach insted of "duration time"?
                     // avoid error in IE8
                     if (!tbody.lastChild) return;
-                    
+
                     result = rowTag.insertRows({members: slice}, tbody.lastChild);
-                    
+
                     //rowCount += insertSliceSize;
                     //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
-    
+
                     if ((panelNode.scrollHeight+panelNode.offsetHeight) >= priorScrollTop)
                         panelNode.scrollTop = priorScrollTop;
-                    
-                    
+
+
                     // enable to measure rendering performance
                     //if (isLast) alert(new Date().getTime() - renderStart + "ms");
-                    
-                    
+
+
                 }, delay));
-    
+
                 delay += insertInterval;
             }
         }
@@ -35586,16 +28096,16 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         // Insert the first slice immediately
         //var slice = members.splice(0, insertSliceSize);
         //var result = rowTag.insertRows({members: slice}, tbody.lastChild);
-        
+
         //var setSize = members.length;
         //var rowCount = 1;
-        
+
         var panel = this;
         var result;
-        
+
         //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
         var timeouts = [];
-        
+
         var delay = 0;
         var _insertSliceSize = insertSliceSize;
         var _insertInterval = insertInterval;
@@ -35603,7 +28113,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         // enable to measure rendering performance
         var renderStart = new Date().getTime();
         var lastSkip = renderStart, now;
-        
+
         while (members.length)
         {
             with({slice: members.splice(0, _insertSliceSize), isLast: !members.length})
@@ -35612,31 +28122,31 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                 var _rowTag = rowTag;
                 var _panelNode = panelNode;
                 var _priorScrollTop = priorScrollTop;
-                
+
                 timeouts.push(this.context.setTimeout(function()
                 {
                     // TODO: xxxpedro can this be a timing error related to the
                     // "iteration number" approach insted of "duration time"?
                     // avoid error in IE8
                     if (!_tbody.lastChild) return;
-                    
+
                     result = _rowTag.insertRows({members: slice}, _tbody.lastChild);
-                    
+
                     //rowCount += _insertSliceSize;
                     //dispatch([Firebug.A11yModel], 'onMemberRowSliceAdded', [panel, result, rowCount, setSize]);
-    
+
                     if ((_panelNode.scrollHeight + _panelNode.offsetHeight) >= _priorScrollTop)
                         _panelNode.scrollTop = _priorScrollTop;
-                    
-                    
+
+
                     // enable to measure rendering performance
-                    //alert("gap: " + (new Date().getTime() - lastSkip)); 
+                    //alert("gap: " + (new Date().getTime() - lastSkip));
                     //lastSkip = new Date().getTime();
-                    
+
                     //if (isLast) alert("new: " + (new Date().getTime() - renderStart) + "ms");
-                    
+
                 }, delay));
-    
+
                 delay += _insertInterval;
             }
         }
@@ -35664,7 +28174,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         this.timeouts = timeouts;
     },
     /**/
-    
+
     showEmptyMembers: function()
     {
         FirebugReps.Warning.tag.replace({object: "NoMembersWarning"}, this.panelNode);
@@ -35688,7 +28198,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
     getPathObject: function(index)
     {
         var object = this.objectPath[index];
-        
+
         if (object instanceof Property)
             return object.getObject();
         else
@@ -35876,10 +28386,10 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
     onMouseMove: function(event)
     {
         var target = event.srcElement || event.target;
-        
+
         var object = getAncestorByClass(target, "objectLink-element");
         object = object ? object.repObject : null;
-        
+
         if(object && instanceOf(object, "Element") && object.nodeType == 1)
         {
             if(object != lastHighlightedObject)
@@ -35890,7 +28400,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         }
         else
             Firebug.Inspector.hideBoxModel();
-        
+
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -35900,7 +28410,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
     {
         // TODO: xxxpedro
         this.context = Firebug.browser;
-        
+
         this.objectPath = [];
         this.propertyPath = [];
         this.viewPath = [];
@@ -35908,20 +28418,20 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         this.toggles = {};
 
         Firebug.Panel.create.apply(this, arguments);
-        
+
         this.panelNode.style.padding = "0 1px";
     },
-    
+
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
-        
+
         addEvent(this.panelNode, "mousemove", this.onMouseMove);
     },
-    
+
     shutdown: function()
     {
         removeEvent(this.panelNode, "mousemove", this.onMouseMove);
-        
+
         Firebug.Panel.shutdown.apply(this, arguments);
     },
 
@@ -35945,7 +28455,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.destroy.apply(this, arguments);
     },
     /**/
-    
+
     ishow: function(state)
     {
         if (this.context.loaded && !this.selection)
@@ -35961,7 +28471,7 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                 this.propertyPath = state.propertyPath;
 
             var defaultObject = this.getDefaultSelection(this.context);
-            var selectObject = defaultObject; 
+            var selectObject = defaultObject;
 
             if (state.firstSelection)
             {
@@ -36067,11 +28577,11 @@ Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
                     if (this.panelNode.scrollTop)
                         previousView.scrollTop = this.panelNode.scrollTop;
 
-                    var start = previousIndex + 1, 
+                    var start = previousIndex + 1,
                         // Opera needs the length argument in splice(), otherwise
                         // it will consider that only one element should be removed
                         length = this.objectPath.length - start;
-                    
+
                     this.objectPath.splice(start, length);
                     this.propertyPath.splice(start, length);
                     this.viewPath.splice(start, length);
@@ -36245,22 +28755,22 @@ var updateStatusBar = function(panel)
 {
     var path = panel.propertyPath;
     var index = panel.pathIndex;
-    
+
     var r = [];
-    
+
     for (var i=0, l=path.length; i<l; i++)
     {
         r.push(i==index ? '<a class="fbHover fbButton fbBtnSelected" ' : '<a class="fbHover fbButton" ');
         r.push('pathIndex=');
         r.push(i);
-        
+
         if(isIE6)
             r.push(' href="javascript:void(0)"');
-        
+
         r.push('>');
         r.push(i==0 ? "window" : path[i] || "Object");
         r.push('</a>');
-        
+
         if(i < l-1)
             r.push('<span class="fbStatusSeparator">&gt;</span>');
     }
@@ -36278,18 +28788,18 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     {
         var target = event.srcElement || event.target;
         var element = getAncestorByClass(target, "fbHover");
-        
+
         if(element)
         {
             var pathIndex = element.getAttribute("pathIndex");
-            
+
             if(pathIndex)
             {
                 this.select(this.getPathObject(pathIndex));
             }
         }
     },
-    
+
     selectRow: function(row, target)
     {
         if (!target)
@@ -36339,21 +28849,21 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     title: "DOM",
     searchable: true,
     statusSeparator: ">",
-    
+
     options: {
         hasToolButtons: true,
         hasStatusBar: true
-    },    
+    },
 
     create: function()
     {
         Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
-        
+
         this.onClick = bind(this.onClick, this);
-        
+
         //TODO: xxxpedro
         this.onClickStatusBar = bind(this.onClickStatusBar, this);
-        
+
         this.panelNode.style.padding = "0 1px";
     },
 
@@ -36361,25 +28871,25 @@ DOMMainPanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     {
         //this.panelNode.addEventListener("click", this.onClick, false);
         //dispatch([Firebug.A11yModel], 'onInitializeNode', [this, 'console']);
-        
+
         Firebug.DOMBasePanel.prototype.initialize.apply(this, arguments);
-        
+
         addEvent(this.panelNode, "click", this.onClick);
-        
-        // TODO: xxxpedro dom 
+
+        // TODO: xxxpedro dom
         this.ishow();
-        
+
         //TODO: xxxpedro
-        addEvent(this.statusBarNode, "click", this.onClickStatusBar);        
+        addEvent(this.statusBarNode, "click", this.onClickStatusBar);
     },
 
     shutdown: function()
     {
         //this.panelNode.removeEventListener("click", this.onClick, false);
         //dispatch([Firebug.A11yModel], 'onDestroyNode', [this, 'console']);
-        
+
         removeEvent(this.panelNode, "click", this.onClick);
-        
+
         Firebug.DOMBasePanel.prototype.shutdown.apply(this, arguments);
     }/*,
 
@@ -36453,8 +28963,8 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
 
         // IE function prototype is not listed in (for..in)
         if (isIE && isFunction(object))
-            addMember("user", userProps, "prototype", object.prototype, level);            
-            
+            addMember("user", userProps, "prototype", object.prototype, level);
+
         for (var name in insecureObject)  // enumeration is safe
         {
             if (ignoreVars[name] == 1)  // javascript.options.strict says ignoreVars is undefined.
@@ -36497,7 +29007,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
                 if(getterFunction && !setterFunction)
                     prefix = "get ";
                 /**/
-                
+
                 var prefix = "";
 
                 if (name in domMembers && !(name in domConstantMap))
@@ -36531,7 +29041,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
     Firebug.showDOMProps = true;
     Firebug.showDOMFuncs = true;
     Firebug.showDOMConstants = true;
-    
+
     if (Firebug.showUserProps)
     {
         userProps.sort(sortName);
@@ -36583,7 +29093,7 @@ function expandMembers(members, toggles, offset, level)  // recursion starts wit
             var args = [i+1, 0];
             args.push.apply(args, newMembers);
             members.splice.apply(members, args);
-            
+
             /*
             if (FBTrace.DBG_DOM)
             {
@@ -36622,10 +29132,10 @@ var hasProperties = function hasProperties(ob)
         for (var name in ob)
             return true;
     } catch (exc) {}
-    
+
     // IE function prototype is not listed in (for..in)
     if (isFunction(ob)) return true;
-    
+
     return false;
 }
 
@@ -36640,7 +29150,7 @@ var addMember = function addMember(type, props, name, value, level, order)
     var tag = rep.shortTag ? rep.shortTag : rep.tag;
 
     var ErrorCopy = function(){}; //TODO: xxxpedro
-    
+
     var valueType = typeof(value);
     var hasChildren = hasProperties(value) && !(value instanceof ErrorCopy) &&
         (isFunction(value) || (valueType == "object" && value != null)
@@ -36770,7 +29280,7 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         //Firebug.chrome.clearStatusPath();
 
         var object = target.repObject;
-        
+
         if (instanceOf(object, "Element"))
         {
             Firebug.HTML.selectTreeNode(ElementCache(object));
@@ -36788,12 +29298,12 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     {
         /*
         var target = event.srcElement || event.target;
-        
+
         var object = getAncestorByClass(target, "objectLink");
         object = object ? object.repObject : null;
-        
+
         if(!object) return;
-        
+
         if (instanceOf(object, "Element"))
         {
             Firebug.HTML.selectTreeNode(ElementCache(object));
@@ -36804,8 +29314,8 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
             Firebug.chrome.getPanel("DOM").select(object, true);
         }
         /**/
-        
-        
+
+
         var target = event.srcElement || event.target;
         var repNode = Firebug.getRepNode(target);
         if (repNode)
@@ -36826,44 +29336,44 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
     name: "DOMSidePanel",
     parentPanel: "HTML",
     title: "DOM",
-    
+
     options: {
         hasToolButtons: true
     },
-    
+
     isInitialized: false,
-    
+
     create: function()
     {
         Firebug.DOMBasePanel.prototype.create.apply(this, arguments);
-        
+
         this.onClick = bind(this.onClick, this);
     },
-    
+
     initialize: function(){
         Firebug.DOMBasePanel.prototype.initialize.apply(this, arguments);
-        
+
         addEvent(this.panelNode, "click", this.onClick);
-        
+
         // TODO: xxxpedro css2
         var selection = ElementCache.get(FirebugChrome.selectedHTMLElementId);
         if (selection)
             this.select(selection, true);
     },
-    
+
     shutdown: function()
     {
         removeEvent(this.panelNode, "click", this.onClick);
-        
+
         Firebug.DOMBasePanel.prototype.shutdown.apply(this, arguments);
     },
-    
+
     reattach: function(oldChrome)
     {
         //this.isInitialized = oldChrome.getPanel("DOM").isInitialized;
         this.toggles = oldChrome.getPanel("DOMSidePanel").toggles;
     }
-    
+
 });
 
 Firebug.registerPanel(DOMSidePanel);
@@ -36894,9 +29404,9 @@ this.initialize = function()
 {
     if (!this.messageQueue)
         this.messageQueue = [];
-    
+
     for (var name in traceOptions)
-        this[name] = traceOptions[name]; 
+        this[name] = traceOptions[name];
 };
 
 // ************************************************************************************************
@@ -36920,10 +29430,10 @@ this.dumpStack = function()
 this.flush = function(module)
 {
     this.module = module;
-    
+
     var queue = this.messageQueue;
     this.messageQueue = [];
-    
+
     for (var i = 0; i < queue.length; ++i)
         this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
 };
@@ -36939,13 +29449,13 @@ this.logFormatted = function(objects, className)
 {
     var html = this.DBG_TIMESTAMP ? [getTimestamp(), " | "] : [];
     var length = objects.length;
-    
+
     for (var i = 0; i < length; ++i)
     {
         appendText(" ", html);
-        
+
         var object = objects[i];
-        
+
         if (i == 0)
         {
             html.push("<b>");
@@ -36955,21 +29465,21 @@ this.logFormatted = function(objects, className)
         else
             appendText(object, html);
     }
-    
-    return this.logRow(html, className);    
+
+    return this.logRow(html, className);
 };
 
 this.logRow = function(message, className)
 {
     var panel = this.getPanel();
-    
+
     if (panel && panel.panelNode)
         this.writeMessage(message, className);
     else
     {
         this.messageQueue.push([message, className]);
     }
-    
+
     return this.LOG_COMMAND;
 };
 
@@ -36978,9 +29488,9 @@ this.writeMessage = function(message, className)
     var container = this.getPanel().containerNode;
     var isScrolledToBottom =
         container.scrollTop + container.offsetHeight >= container.scrollHeight;
-    
+
     this.writeRow.call(this, message, className);
-    
+
     if (isScrolledToBottom)
         container.scrollTop = container.scrollHeight - container.offsetHeight;
 };
@@ -37011,7 +29521,7 @@ function getTimestamp()
     var now = new Date();
     var ms = "" + (now.getMilliseconds() / 1000).toFixed(3);
     ms = ms.substr(2);
-    
+
     return now.toLocaleTimeString() + "." + ms;
 };
 
@@ -37070,7 +29580,7 @@ Firebug.Trace = extend(Firebug.Module,
     {
         return Firebug.chrome ? Firebug.chrome.getPanel("Trace") : null;
     },
-    
+
     clear: function()
     {
         this.getPanel().panelNode.innerHTML = "";
@@ -37089,2235 +29599,42 @@ TracePanel.prototype = extend(Firebug.Panel,
 {
     name: "Trace",
     title: "Trace",
-    
+
     options: {
         hasToolButtons: true,
         innerHTMLSync: true
     },
-    
+
     create: function(){
         Firebug.Panel.create.apply(this, arguments);
-        
+
         this.clearButton = new Button({
             caption: "Clear",
-            title: "Clear FBTrace logs",            
+            title: "Clear FBTrace logs",
             owner: Firebug.Trace,
             onClick: Firebug.Trace.clear
         });
     },
-    
+
     initialize: function(){
         Firebug.Panel.initialize.apply(this, arguments);
-        
+
         this.clearButton.initialize();
+    },
+
+    shutdown: function()
+    {
+        this.clearButton.shutdown();
+
+        Firebug.Panel.shutdown.apply(this, arguments);
     }
-    
+
 });
 
 Firebug.registerPanel(TracePanel);
 
 // ************************************************************************************************
 }});
-
-// !!! DO NOT EDIT THIS FILE (GENERATED) !!!
-// this file was generated from codemirror subdirectory by `rake sandbox` task
-
-
-//  Copyright (c) 2007-2010 Marijn Haverbeke
-// 
-//  This software is provided 'as-is', without any express or implied
-//  warranty. In no event will the authors be held liable for any
-//  damages arising from the use of this software.
-// 
-//  Permission is granted to anyone to use this software for any
-//  purpose, including commercial applications, and to alter it and
-//  redistribute it freely, subject to the following restrictions:
-// 
-//  1. The origin of this software must not be misrepresented; you must
-//     not claim that you wrote the original software. If you use this
-//     software in a product, an acknowledgment in the product
-//     documentation would be appreciated but is not required.
-// 
-//  2. Altered source versions must be plainly marked as such, and must
-//     not be misrepresented as being the original software.
-// 
-//  3. This notice may not be removed or altered from any source
-//     distribution.
-// 
-//  Marijn Haverbeke
-//  marijnh@gmail.com
-
-
-var codemirror = (function() {
-var Editor = {};var indentUnit = 2;var window=this;
-/* A few useful utility functions. */
-
-// Capture a method on an object.
-function method(obj, name) {
-  return function() {obj[name].apply(obj, arguments);};
-}
-
-// The value used to signal the end of a sequence in iterators.
-this.StopIteration = {toString: function() {return "StopIteration"}};
-
-// Apply a function to each element in a sequence.
-this.forEach = function(iter, f) {
-  if (iter.next) {
-    try {while (true) f(iter.next());}
-    catch (e) {if (e != StopIteration) throw e;}
-  }
-  else {
-    for (var i = 0; i < iter.length; i++)
-      f(iter[i]);
-  }
-}
-
-// Map a function over a sequence, producing an array of results.
-function map(iter, f) {
-  var accum = [];
-  forEach(iter, function(val) {accum.push(f(val));});
-  return accum;
-}
-
-// Create a predicate function that tests a string againsts a given
-// regular expression. No longer used but might be used by 3rd party
-// parsers.
-function matcher(regexp){
-  return function(value){return regexp.test(value);};
-}
-
-// Test whether a DOM node has a certain CSS class. Much faster than
-// the MochiKit equivalent, for some reason.
-function hasClass(element, className){
-  var classes = element.className;
-  return classes && new RegExp("(^| )" + className + "($| )").test(classes);
-}
-
-// Insert a DOM node after another node.
-function insertAfter(newNode, oldNode) {
-  var parent = oldNode.parentNode;
-  parent.insertBefore(newNode, oldNode.nextSibling);
-  return newNode;
-}
-
-function removeElement(node) {
-  if (node.parentNode)
-    node.parentNode.removeChild(node);
-}
-
-function clearElement(node) {
-  while (node.firstChild)
-    node.removeChild(node.firstChild);
-}
-
-// Check whether a node is contained in another one.
-function isAncestor(node, child) {
-  while (child = child.parentNode) {
-    if (node == child)
-      return true;
-  }
-  return false;
-}
-
-// The non-breaking space character.
-var nbsp = "\u00a0";
-var matching = {"{": "}", "[": "]", "(": ")",
-                "}": "{", "]": "[", ")": "("};
-
-// Standardize a few unportable event properties.
-function normalizeEvent(event) {
-  if (!event.stopPropagation) {
-    event.stopPropagation = function() {this.cancelBubble = true;};
-    event.preventDefault = function() {this.returnValue = false;};
-  }
-  if (!event.stop) {
-    event.stop = function() {
-      this.stopPropagation();
-      this.preventDefault();
-    };
-  }
-
-  if (event.type == "keypress") {
-    event.code = (event.charCode == null) ? event.keyCode : event.charCode;
-    event.character = String.fromCharCode(event.code);
-  }
-  return event;
-}
-
-// Portably register event handlers.
-function addEventHandler(node, type, handler, removeFunc) {
-  function wrapHandler(event) {
-    handler(normalizeEvent(event || window.event));
-  }
-  if (typeof node.addEventListener == "function") {
-    node.addEventListener(type, wrapHandler, false);
-    if (removeFunc) return function() {node.removeEventListener(type, wrapHandler, false);};
-  }
-  else {
-    node.attachEvent("on" + type, wrapHandler);
-    if (removeFunc) return function() {node.detachEvent("on" + type, wrapHandler);};
-  }
-}
-
-function nodeText(node) {
-  return node.textContent || node.innerText || node.nodeValue || "";
-}
-
-function nodeTop(node) {
-  var top = 0;
-  while (node.offsetParent) {
-    top += node.offsetTop;
-    node = node.offsetParent;
-  }
-  return top;
-}
-
-function isBR(node) {
-  var nn = node.nodeName;
-  return nn == "BR" || nn == "br";
-}
-function isSpan(node) {
-  var nn = node.nodeName;
-  return nn == "SPAN" || nn == "span";
-}
-
-// A framework for simple tokenizers. Takes care of newlines and
-// white-space, and of getting the text from the source stream into
-// the token object. A state is a function of two arguments -- a
-// string stream and a setState function. The second can be used to
-// change the tokenizer's state, and can be ignored for stateless
-// tokenizers. This function should advance the stream over a token
-// and return a string or object containing information about the next
-// token, or null to pass and have the (new) state be called to finish
-// the token. When a string is given, it is wrapped in a {style, type}
-// object. In the resulting object, the characters consumed are stored
-// under the content property. Any whitespace following them is also
-// automatically consumed, and added to the value property. (Thus,
-// content is the actual meaningful part of the token, while value
-// contains all the text it spans.)
-
-function tokenizer(source, state) {
-  // Newlines are always a separate token.
-  function isWhiteSpace(ch) {
-    // The messy regexp is because IE's regexp matcher is of the
-    // opinion that non-breaking spaces are no whitespace.
-    return ch != "\n" && /^[\s\u00a0]*$/.test(ch);
-  }
-
-  var tokenizer = {
-    state: state,
-
-    take: function(type) {
-      if (typeof(type) == "string")
-        type = {style: type, type: type};
-
-      type.content = (type.content || "") + source.get();
-      if (!/\n$/.test(type.content))
-        source.nextWhile(isWhiteSpace);
-      type.value = type.content + source.get();
-      return type;
-    },
-
-    next: function () {
-      if (!source.more()) throw StopIteration;
-
-      var type;
-      if (source.equals("\n")) {
-        source.next();
-        return this.take("whitespace");
-      }
-      
-      if (source.applies(isWhiteSpace))
-        type = "whitespace";
-      else
-        while (!type)
-          type = this.state(source, function(s) {tokenizer.state = s;});
-
-      return this.take(type);
-    }
-  };
-  return tokenizer;
-}
-
-/* Tokenizer for JavaScript code */
-
-var tokenizeJavaScript = (function() {
-  // Advance the stream until the given character (not preceded by a
-  // backslash) is encountered, or the end of the line is reached.
-  function nextUntilUnescaped(source, end) {
-    var escaped = false;
-    while (!source.endOfLine()) {
-      var next = source.next();
-      if (next == end && !escaped)
-        return false;
-      escaped = !escaped && next == "\\";
-    }
-    return escaped;
-  }
-
-  // A map of JavaScript's keywords. The a/b/c keyword distinction is
-  // very rough, but it gives the parser enough information to parse
-  // correct code correctly (we don't care that much how we parse
-  // incorrect code). The style information included in these objects
-  // is used by the highlighter to pick the correct CSS style for a
-  // token.
-  var keywords = function(){
-    function result(type, style){
-      return {type: type, style: "js-" + style};
-    }
-    // keywords that take a parenthised expression, and then a
-    // statement (if)
-    var keywordA = result("keyword a", "keyword");
-    // keywords that take just a statement (else)
-    var keywordB = result("keyword b", "keyword");
-    // keywords that optionally take an expression, and form a
-    // statement (return)
-    var keywordC = result("keyword c", "keyword");
-    var operator = result("operator", "keyword");
-    var atom = result("atom", "atom");
-    return {
-      "if": keywordA, "while": keywordA, "with": keywordA,
-      "else": keywordB, "do": keywordB, "try": keywordB, "finally": keywordB,
-      "return": keywordC, "break": keywordC, "continue": keywordC, "new": keywordC, "delete": keywordC, "throw": keywordC,
-      "in": operator, "typeof": operator, "instanceof": operator,
-      "var": result("var", "keyword"), "function": result("function", "keyword"), "catch": result("catch", "keyword"),
-      "for": result("for", "keyword"), "switch": result("switch", "keyword"),
-      "case": result("case", "keyword"), "default": result("default", "keyword"),
-      "true": atom, "false": atom, "null": atom, "undefined": atom, "NaN": atom, "Infinity": atom
-    };
-  }();
-
-  // Some helper regexps
-  var isOperatorChar = /[+\-*&%=<>!?|]/;
-  var isHexDigit = /[0-9A-Fa-f]/;
-  var isWordChar = /[\w\$_]/;
-
-  // Wrapper around jsToken that helps maintain parser state (whether
-  // we are inside of a multi-line comment and whether the next token
-  // could be a regular expression).
-  function jsTokenState(inside, regexp) {
-    return function(source, setState) {
-      var newInside = inside;
-      var type = jsToken(inside, regexp, source, function(c) {newInside = c;});
-      var newRegexp = type.type == "operator" || type.type == "keyword c" || type.type.match(/^[\[{}\(,;:]$/);
-      if (newRegexp != regexp || newInside != inside)
-        setState(jsTokenState(newInside, newRegexp));
-      return type;
-    };
-  }
-
-  // The token reader, intended to be used by the tokenizer from
-  // tokenize.js (through jsTokenState). Advances the source stream
-  // over a token, and returns an object containing the type and style
-  // of that token.
-  function jsToken(inside, regexp, source, setInside) {
-    function readHexNumber(){
-      source.next(); // skip the 'x'
-      source.nextWhileMatches(isHexDigit);
-      return {type: "number", style: "js-atom"};
-    }
-
-    function readNumber() {
-      source.nextWhileMatches(/[0-9]/);
-      if (source.equals(".")){
-        source.next();
-        source.nextWhileMatches(/[0-9]/);
-      }
-      if (source.equals("e") || source.equals("E")){
-        source.next();
-        if (source.equals("-"))
-          source.next();
-        source.nextWhileMatches(/[0-9]/);
-      }
-      return {type: "number", style: "js-atom"};
-    }
-    // Read a word, look it up in keywords. If not found, it is a
-    // variable, otherwise it is a keyword of the type found.
-    function readWord() {
-      source.nextWhileMatches(isWordChar);
-      var word = source.get();
-      var known = keywords.hasOwnProperty(word) && keywords.propertyIsEnumerable(word) && keywords[word];
-      return known ? {type: known.type, style: known.style, content: word} :
-      {type: "variable", style: "js-variable", content: word};
-    }
-    function readRegexp() {
-      nextUntilUnescaped(source, "/");
-      source.nextWhileMatches(/[gi]/);
-      return {type: "regexp", style: "js-string"};
-    }
-    // Mutli-line comments are tricky. We want to return the newlines
-    // embedded in them as regular newline tokens, and then continue
-    // returning a comment token for every line of the comment. So
-    // some state has to be saved (inside) to indicate whether we are
-    // inside a /* */ sequence.
-    function readMultilineComment(start){
-      var newInside = "/*";
-      var maybeEnd = (start == "*");
-      while (true) {
-        if (source.endOfLine())
-          break;
-        var next = source.next();
-        if (next == "/" && maybeEnd){
-          newInside = null;
-          break;
-        }
-        maybeEnd = (next == "*");
-      }
-      setInside(newInside);
-      return {type: "comment", style: "js-comment"};
-    }
-    function readOperator() {
-      source.nextWhileMatches(isOperatorChar);
-      return {type: "operator", style: "js-operator"};
-    }
-    function readString(quote) {
-      var endBackSlash = nextUntilUnescaped(source, quote);
-      setInside(endBackSlash ? quote : null);
-      return {type: "string", style: "js-string"};
-    }
-
-    // Fetch the next token. Dispatches on first character in the
-    // stream, or first two characters when the first is a slash.
-    if (inside == "\"" || inside == "'")
-      return readString(inside);
-    var ch = source.next();
-    if (inside == "/*")
-      return readMultilineComment(ch);
-    else if (ch == "\"" || ch == "'")
-      return readString(ch);
-    // with punctuation, the type of the token is the symbol itself
-    else if (/[\[\]{}\(\),;\:\.]/.test(ch))
-      return {type: ch, style: "js-punctuation"};
-    else if (ch == "0" && (source.equals("x") || source.equals("X")))
-      return readHexNumber();
-    else if (/[0-9]/.test(ch))
-      return readNumber();
-    else if (ch == "/"){
-      if (source.equals("*"))
-      { source.next(); return readMultilineComment(ch); }
-      else if (source.equals("/"))
-      { nextUntilUnescaped(source, null); return {type: "comment", style: "js-comment"};}
-      else if (regexp)
-        return readRegexp();
-      else
-        return readOperator();
-    }
-    else if (isOperatorChar.test(ch))
-      return readOperator();
-    else
-      return readWord();
-  }
-
-  // The external interface to the tokenizer.
-  return function(source, startState) {
-    return tokenizer(source, startState || jsTokenState(false, true));
-  };
-})();
-
-/* Parse function for JavaScript. Makes use of the tokenizer from
- * tokenizejavascript.js. Note that your parsers do not have to be
- * this complicated -- if you don't want to recognize local variables,
- * in many languages it is enough to just look for braces, semicolons,
- * parentheses, etc, and know when you are inside a string or comment.
- *
- * See manual.html for more info about the parser interface.
- */
-
-this.JSParser = Editor.Parser = (function() {
-  // Token types that can be considered to be atoms.
-  var atomicTypes = {"atom": true, "number": true, "variable": true, "string": true, "regexp": true};
-  // Setting that can be used to have JSON data indent properly.
-  var json = false;
-  // Constructor for the lexical context objects.
-  function JSLexical(indented, column, type, align, prev, info) {
-    // indentation at start of this line
-    this.indented = indented;
-    // column at which this scope was opened
-    this.column = column;
-    // type of scope ('vardef', 'stat' (statement), 'form' (special form), '[', '{', or '(')
-    this.type = type;
-    // '[', '{', or '(' blocks that have any text after their opening
-    // character are said to be 'aligned' -- any lines below are
-    // indented all the way to the opening character.
-    if (align != null)
-      this.align = align;
-    // Parent scope, if any.
-    this.prev = prev;
-    this.info = info;
-  }
-
-  // My favourite JavaScript indentation rules.
-  function indentJS(lexical) {
-    return function(firstChars) {
-      var firstChar = firstChars && firstChars.charAt(0), type = lexical.type;
-      var closing = firstChar == type;
-      if (type == "vardef")
-        return lexical.indented + 4;
-      else if (type == "form" && firstChar == "{")
-        return lexical.indented;
-      else if (type == "stat" || type == "form")
-        return lexical.indented + indentUnit;
-      else if (lexical.info == "switch" && !closing)
-        return lexical.indented + (/^(?:case|default)\b/.test(firstChars) ? indentUnit : 2 * indentUnit);
-      else if (lexical.align)
-        return lexical.column - (closing ? 1 : 0);
-      else
-        return lexical.indented + (closing ? 0 : indentUnit);
-    };
-  }
-
-  // The parser-iterator-producing function itself.
-  function parseJS(input, basecolumn) {
-    // Wrap the input in a token stream
-    var tokens = tokenizeJavaScript(input);
-    // The parser state. cc is a stack of actions that have to be
-    // performed to finish the current statement. For example we might
-    // know that we still need to find a closing parenthesis and a
-    // semicolon. Actions at the end of the stack go first. It is
-    // initialized with an infinitely looping action that consumes
-    // whole statements.
-    var cc = [json ? expressions : statements];
-    // Context contains information about the current local scope, the
-    // variables defined in that, and the scopes above it.
-    var context = null;
-    // The lexical scope, used mostly for indentation.
-    var lexical = new JSLexical((basecolumn || 0) - indentUnit, 0, "block", false);
-    // Current column, and the indentation at the start of the current
-    // line. Used to create lexical scope objects.
-    var column = 0;
-    var indented = 0;
-    // Variables which are used by the mark, cont, and pass functions
-    // below to communicate with the driver loop in the 'next'
-    // function.
-    var consume, marked;
-  
-    // The iterator object.
-    var parser = {next: next, copy: copy};
-
-    function next(){
-      // Start by performing any 'lexical' actions (adjusting the
-      // lexical variable), or the operations below will be working
-      // with the wrong lexical state.
-      while(cc[cc.length - 1].lex)
-        cc.pop()();
-
-      // Fetch a token.
-      var token = tokens.next();
-
-      // Adjust column and indented.
-      if (token.type == "whitespace" && column == 0)
-        indented = token.value.length;
-      column += token.value.length;
-      if (token.content == "\n"){
-        indented = column = 0;
-        // If the lexical scope's align property is still undefined at
-        // the end of the line, it is an un-aligned scope.
-        if (!("align" in lexical))
-          lexical.align = false;
-        // Newline tokens get an indentation function associated with
-        // them.
-        token.indentation = indentJS(lexical);
-      }
-      // No more processing for meaningless tokens.
-      if (token.type == "whitespace" || token.type == "comment")
-        return token;
-      // When a meaningful token is found and the lexical scope's
-      // align is undefined, it is an aligned scope.
-      if (!("align" in lexical))
-        lexical.align = true;
-
-      // Execute actions until one 'consumes' the token and we can
-      // return it.
-      while(true) {
-        consume = marked = false;
-        // Take and execute the topmost action.
-        cc.pop()(token.type, token.content);
-        if (consume){
-          // Marked is used to change the style of the current token.
-          if (marked)
-            token.style = marked;
-          // Here we differentiate between local and global variables.
-          else if (token.type == "variable" && inScope(token.content))
-            token.style = "js-localvariable";
-          return token;
-        }
-      }
-    }
-
-    // This makes a copy of the parser state. It stores all the
-    // stateful variables in a closure, and returns a function that
-    // will restore them when called with a new input stream. Note
-    // that the cc array has to be copied, because it is contantly
-    // being modified. Lexical objects are not mutated, and context
-    // objects are not mutated in a harmful way, so they can be shared
-    // between runs of the parser.
-    function copy(){
-      var _context = context, _lexical = lexical, _cc = cc.concat([]), _tokenState = tokens.state;
-  
-      return function copyParser(input){
-        context = _context;
-        lexical = _lexical;
-        cc = _cc.concat([]); // copies the array
-        column = indented = 0;
-        tokens = tokenizeJavaScript(input, _tokenState);
-        return parser;
-      };
-    }
-
-    // Helper function for pushing a number of actions onto the cc
-    // stack in reverse order.
-    function push(fs){
-      for (var i = fs.length - 1; i >= 0; i--)
-        cc.push(fs[i]);
-    }
-    // cont and pass are used by the action functions to add other
-    // actions to the stack. cont will cause the current token to be
-    // consumed, pass will leave it for the next action.
-    function cont(){
-      push(arguments);
-      consume = true;
-    }
-    function pass(){
-      push(arguments);
-      consume = false;
-    }
-    // Used to change the style of the current token.
-    function mark(style){
-      marked = style;
-    }
-
-    // Push a new scope. Will automatically link the current scope.
-    function pushcontext(){
-      context = {prev: context, vars: {"this": true, "arguments": true}};
-    }
-    // Pop off the current scope.
-    function popcontext(){
-      context = context.prev;
-    }
-    // Register a variable in the current scope.
-    function register(varname){
-      if (context){
-        mark("js-variabledef");
-        context.vars[varname] = true;
-      }
-    }
-    // Check whether a variable is defined in the current scope.
-    function inScope(varname){
-      var cursor = context;
-      while (cursor) {
-        if (cursor.vars[varname])
-          return true;
-        cursor = cursor.prev;
-      }
-      return false;
-    }
-  
-    // Push a new lexical context of the given type.
-    function pushlex(type, info) {
-      var result = function(){
-        lexical = new JSLexical(indented, column, type, null, lexical, info)
-      };
-      result.lex = true;
-      return result;
-    }
-    // Pop off the current lexical context.
-    function poplex(){
-      if (lexical.type == ")")
-        indented = lexical.indented;
-      lexical = lexical.prev;
-    }
-    poplex.lex = true;
-    // The 'lex' flag on these actions is used by the 'next' function
-    // to know they can (and have to) be ran before moving on to the
-    // next token.
-  
-    // Creates an action that discards tokens until it finds one of
-    // the given type.
-    function expect(wanted){
-      return function expecting(type){
-        if (type == wanted) cont();
-        else if (wanted == ";") pass();
-        else cont(arguments.callee);
-      };
-    }
-
-    // Looks for a statement, and then calls itself.
-    function statements(type){
-      return pass(statement, statements);
-    }
-    function expressions(type){
-      return pass(expression, expressions);
-    }
-    // Dispatches various types of statements based on the type of the
-    // current token.
-    function statement(type){
-      if (type == "var") cont(pushlex("vardef"), vardef1, expect(";"), poplex);
-      else if (type == "keyword a") cont(pushlex("form"), expression, statement, poplex);
-      else if (type == "keyword b") cont(pushlex("form"), statement, poplex);
-      else if (type == "{") cont(pushlex("}"), block, poplex);
-      else if (type == ";") cont();
-      else if (type == "function") cont(functiondef);
-      else if (type == "for") cont(pushlex("form"), expect("("), pushlex(")"), forspec1, expect(")"), poplex, statement, poplex);
-      else if (type == "variable") cont(pushlex("stat"), maybelabel);
-      else if (type == "switch") cont(pushlex("form"), expression, pushlex("}", "switch"), expect("{"), block, poplex, poplex);
-      else if (type == "case") cont(expression, expect(":"));
-      else if (type == "default") cont(expect(":"));
-      else if (type == "catch") cont(pushlex("form"), pushcontext, expect("("), funarg, expect(")"), statement, poplex, popcontext);
-      else pass(pushlex("stat"), expression, expect(";"), poplex);
-    }
-    // Dispatch expression types.
-    function expression(type){
-      if (atomicTypes.hasOwnProperty(type)) cont(maybeoperator);
-      else if (type == "function") cont(functiondef);
-      else if (type == "keyword c") cont(expression);
-      else if (type == "(") cont(pushlex(")"), expression, expect(")"), poplex, maybeoperator);
-      else if (type == "operator") cont(expression);
-      else if (type == "[") cont(pushlex("]"), commasep(expression, "]"), poplex, maybeoperator);
-      else if (type == "{") cont(pushlex("}"), commasep(objprop, "}"), poplex, maybeoperator);
-      else cont();
-    }
-    // Called for places where operators, function calls, or
-    // subscripts are valid. Will skip on to the next action if none
-    // is found.
-    function maybeoperator(type, value){
-      if (type == "operator" && /\+\+|--/.test(value)) cont(maybeoperator);
-      else if (type == "operator") cont(expression);
-      else if (type == ";") pass();
-      else if (type == "(") cont(pushlex(")"), commasep(expression, ")"), poplex, maybeoperator);
-      else if (type == ".") cont(property, maybeoperator);
-      else if (type == "[") cont(pushlex("]"), expression, expect("]"), poplex, maybeoperator);
-    }
-    // When a statement starts with a variable name, it might be a
-    // label. If no colon follows, it's a regular statement.
-    function maybelabel(type){
-      if (type == ":") cont(poplex, statement);
-      else pass(maybeoperator, expect(";"), poplex);
-    }
-    // Property names need to have their style adjusted -- the
-    // tokenizer thinks they are variables.
-    function property(type){
-      if (type == "variable") {mark("js-property"); cont();}
-    }
-    // This parses a property and its value in an object literal.
-    function objprop(type){
-      if (type == "variable") mark("js-property");
-      if (atomicTypes.hasOwnProperty(type)) cont(expect(":"), expression);
-    }
-    // Parses a comma-separated list of the things that are recognized
-    // by the 'what' argument.
-    function commasep(what, end){
-      function proceed(type) {
-        if (type == ",") cont(what, proceed);
-        else if (type == end) cont();
-        else cont(expect(end));
-      }
-      return function commaSeparated(type) {
-        if (type == end) cont();
-        else pass(what, proceed);
-      };
-    }
-    // Look for statements until a closing brace is found.
-    function block(type){
-      if (type == "}") cont();
-      else pass(statement, block);
-    }
-    // Variable definitions are split into two actions -- 1 looks for
-    // a name or the end of the definition, 2 looks for an '=' sign or
-    // a comma.
-    function vardef1(type, value){
-      if (type == "variable"){register(value); cont(vardef2);}
-      else cont();
-    }
-    function vardef2(type, value){
-      if (value == "=") cont(expression, vardef2);
-      else if (type == ",") cont(vardef1);
-    }
-    // For loops.
-    function forspec1(type){
-      if (type == "var") cont(vardef1, forspec2);
-      else if (type == ";") pass(forspec2);
-      else if (type == "variable") cont(formaybein);
-      else pass(forspec2);
-    }
-    function formaybein(type, value){
-      if (value == "in") cont(expression);
-      else cont(maybeoperator, forspec2);
-    }
-    function forspec2(type, value){
-      if (type == ";") cont(forspec3);
-      else if (value == "in") cont(expression);
-      else cont(expression, expect(";"), forspec3);
-    }
-    function forspec3(type) {
-      if (type == ")") pass();
-      else cont(expression);
-    }
-    // A function definition creates a new context, and the variables
-    // in its argument list have to be added to this context.
-    function functiondef(type, value){
-      if (type == "variable"){register(value); cont(functiondef);}
-      else if (type == "(") cont(pushcontext, commasep(funarg, ")"), statement, popcontext);
-    }
-    function funarg(type, value){
-      if (type == "variable"){register(value); cont();}
-    }
-  
-    return parser;
-  }
-
-  return {
-    make: parseJS,
-    electricChars: "{}:",
-    configure: function(obj) {
-      if (obj.json != null) json = obj.json;
-    }
-  };
-})();
-
-/* Simple parser for CSS */
-
-this.CSSParser = Editor.Parser = (function() {
-  var tokenizeCSS = (function() {
-    function normal(source, setState) {
-      var ch = source.next();
-      if (ch == "@") {
-        source.nextWhileMatches(/\w/);
-        return "css-at";
-      }
-      else if (ch == "/" && source.equals("*")) {
-        setState(inCComment);
-        return null;
-      }
-      else if (ch == "<" && source.equals("!")) {
-        setState(inSGMLComment);
-        return null;
-      }
-      else if (ch == "=") {
-        return "css-compare";
-      }
-      else if (source.equals("=") && (ch == "~" || ch == "|")) {
-        source.next();
-        return "css-compare";
-      }
-      else if (ch == "\"" || ch == "'") {
-        setState(inString(ch));
-        return null;
-      }
-      else if (ch == "#") {
-        source.nextWhileMatches(/\w/);
-        return "css-hash";
-      }
-      else if (ch == "!") {
-        source.nextWhileMatches(/[ \t]/);
-        source.nextWhileMatches(/\w/);
-        return "css-important";
-      }
-      else if (/\d/.test(ch)) {
-        source.nextWhileMatches(/[\w.%]/);
-        return "css-unit";
-      }
-      else if (/[,.+>*\/]/.test(ch)) {
-        return "css-select-op";
-      }
-      else if (/[;{}:\[\]]/.test(ch)) {
-        return "css-punctuation";
-      }
-      else {
-        source.nextWhileMatches(/[\w\\\-_]/);
-        return "css-identifier";
-      }
-    }
-
-    function inCComment(source, setState) {
-      var maybeEnd = false;
-      while (!source.endOfLine()) {
-        var ch = source.next();
-        if (maybeEnd && ch == "/") {
-          setState(normal);
-          break;
-        }
-        maybeEnd = (ch == "*");
-      }
-      return "css-comment";
-    }
-
-    function inSGMLComment(source, setState) {
-      var dashes = 0;
-      while (!source.endOfLine()) {
-        var ch = source.next();
-        if (dashes >= 2 && ch == ">") {
-          setState(normal);
-          break;
-        }
-        dashes = (ch == "-") ? dashes + 1 : 0;
-      }
-      return "css-comment";
-    }
-
-    function inString(quote) {
-      return function(source, setState) {
-        var escaped = false;
-        while (!source.endOfLine()) {
-          var ch = source.next();
-          if (ch == quote && !escaped)
-            break;
-          escaped = !escaped && ch == "\\";
-        }
-        if (!escaped)
-          setState(normal);
-        return "css-string";
-      };
-    }
-
-    return function(source, startState) {
-      return tokenizer(source, startState || normal);
-    };
-  })();
-
-  function indentCSS(inBraces, inRule, base) {
-    return function(nextChars) {
-      if (!inBraces || /^\}/.test(nextChars)) return base;
-      else if (inRule) return base + indentUnit * 2;
-      else return base + indentUnit;
-    };
-  }
-
-  // This is a very simplistic parser -- since CSS does not really
-  // nest, it works acceptably well, but some nicer colouroing could
-  // be provided with a more complicated parser.
-  function parseCSS(source, basecolumn) {
-    basecolumn = basecolumn || 0;
-    var tokens = tokenizeCSS(source);
-    var inBraces = false, inRule = false, inDecl = false;;
-
-    var iter = {
-      next: function() {
-        var token = tokens.next(), style = token.style, content = token.content;
-
-        if (style == "css-hash")
-          style = token.style =  inRule ? "css-colorcode" : "css-identifier";
-        if (style == "css-identifier") {
-          if (inRule) token.style = "css-value";
-          else if (!inBraces && !inDecl) token.style = "css-selector";
-        }
-
-        if (content == "\n")
-          token.indentation = indentCSS(inBraces, inRule, basecolumn);
-
-        if (content == "{" && inDecl == "@media")
-          inDecl = false;
-        else if (content == "{")
-          inBraces = true;
-        else if (content == "}")
-          inBraces = inRule = inDecl = false;
-        else if (content == ";")
-          inRule = inDecl = false;
-        else if (inBraces && style != "css-comment" && style != "whitespace")
-          inRule = true;
-        else if (!inBraces && style == "css-at")
-          inDecl = content;
-
-        return token;
-      },
-
-      copy: function() {
-        var _inBraces = inBraces, _inRule = inRule, _tokenState = tokens.state;
-        return function(source) {
-          tokens = tokenizeCSS(source, _tokenState);
-          inBraces = _inBraces;
-          inRule = _inRule;
-          return iter;
-        };
-      }
-    };
-    return iter;
-  }
-
-  return {make: parseCSS, electricChars: "}"};
-})();
-
-/* This file defines an XML parser, with a few kludges to make it
- * useable for HTML. autoSelfClosers defines a set of tag names that
- * are expected to not have a closing tag, and doNotIndent specifies
- * the tags inside of which no indentation should happen (see Config
- * object). These can be disabled by passing the editor an object like
- * {useHTMLKludges: false} as parserConfig option.
- */
-
-this.XMLParser = Editor.Parser = (function() {
-  var Kludges = {
-    autoSelfClosers: {"br": true, "img": true, "hr": true, "link": true, "input": true,
-                      "meta": true, "col": true, "frame": true, "base": true, "area": true},
-    doNotIndent: {"pre": true, "!cdata": true}
-  };
-  var NoKludges = {autoSelfClosers: {}, doNotIndent: {"!cdata": true}};
-  var UseKludges = Kludges;
-  var alignCDATA = false;
-
-  // Simple stateful tokenizer for XML documents. Returns a
-  // MochiKit-style iterator, with a state property that contains a
-  // function encapsulating the current state. See tokenize.js.
-  var tokenizeXML = (function() {
-    function inText(source, setState) {
-      var ch = source.next();
-      if (ch == "<") {
-        if (source.equals("!")) {
-          source.next();
-          if (source.equals("[")) {
-            if (source.lookAhead("[CDATA[", true)) {
-              setState(inBlock("xml-cdata", "]]>"));
-              return null;
-            }
-            else {
-              return "xml-text";
-            }
-          }
-          else if (source.lookAhead("--", true)) {
-            setState(inBlock("xml-comment", "-->"));
-            return null;
-          }
-          else if (source.lookAhead("DOCTYPE", true)) {
-            source.nextWhileMatches(/[\w\._\-]/);
-            setState(inBlock("xml-doctype", ">"));
-            return "xml-doctype";
-          }
-          else {
-            return "xml-text";
-          }
-        }
-        else if (source.equals("?")) {
-          source.next();
-          source.nextWhileMatches(/[\w\._\-]/);
-          setState(inBlock("xml-processing", "?>"));
-          return "xml-processing";
-        }
-        else {
-          if (source.equals("/")) source.next();
-          setState(inTag);
-          return "xml-punctuation";
-        }
-      }
-      else if (ch == "&") {
-        while (!source.endOfLine()) {
-          if (source.next() == ";")
-            break;
-        }
-        return "xml-entity";
-      }
-      else {
-        source.nextWhileMatches(/[^&<\n]/);
-        return "xml-text";
-      }
-    }
-
-    function inTag(source, setState) {
-      var ch = source.next();
-      if (ch == ">") {
-        setState(inText);
-        return "xml-punctuation";
-      }
-      else if (/[?\/]/.test(ch) && source.equals(">")) {
-        source.next();
-        setState(inText);
-        return "xml-punctuation";
-      }
-      else if (ch == "=") {
-        return "xml-punctuation";
-      }
-      else if (/[\'\"]/.test(ch)) {
-        setState(inAttribute(ch));
-        return null;
-      }
-      else {
-        source.nextWhileMatches(/[^\s\u00a0=<>\"\'\/?]/);
-        return "xml-name";
-      }
-    }
-
-    function inAttribute(quote) {
-      return function(source, setState) {
-        while (!source.endOfLine()) {
-          if (source.next() == quote) {
-            setState(inTag);
-            break;
-          }
-        }
-        return "xml-attribute";
-      };
-    }
-
-    function inBlock(style, terminator) {
-      return function(source, setState) {
-        while (!source.endOfLine()) {
-          if (source.lookAhead(terminator, true)) {
-            setState(inText);
-            break;
-          }
-          source.next();
-        }
-        return style;
-      };
-    }
-
-    return function(source, startState) {
-      return tokenizer(source, startState || inText);
-    };
-  })();
-
-  // The parser. The structure of this function largely follows that of
-  // parseJavaScript in parsejavascript.js (there is actually a bit more
-  // shared code than I'd like), but it is quite a bit simpler.
-  function parseXML(source) {
-    var tokens = tokenizeXML(source), token;
-    var cc = [base];
-    var tokenNr = 0, indented = 0;
-    var currentTag = null, context = null;
-    var consume;
-    
-    function push(fs) {
-      for (var i = fs.length - 1; i >= 0; i--)
-        cc.push(fs[i]);
-    }
-    function cont() {
-      push(arguments);
-      consume = true;
-    }
-    function pass() {
-      push(arguments);
-      consume = false;
-    }
-
-    function markErr() {
-      token.style += " xml-error";
-    }
-    function expect(text) {
-      return function(style, content) {
-        if (content == text) cont();
-        else {markErr(); cont(arguments.callee);}
-      };
-    }
-
-    function pushContext(tagname, startOfLine) {
-      var noIndent = UseKludges.doNotIndent.hasOwnProperty(tagname) || (context && context.noIndent);
-      context = {prev: context, name: tagname, indent: indented, startOfLine: startOfLine, noIndent: noIndent};
-    }
-    function popContext() {
-      context = context.prev;
-    }
-    function computeIndentation(baseContext) {
-      return function(nextChars, current) {
-        var context = baseContext;
-        if (context && context.noIndent)
-          return current;
-        if (alignCDATA && /<!\[CDATA\[/.test(nextChars))
-          return 0;
-        if (context && /^<\//.test(nextChars))
-          context = context.prev;
-        while (context && !context.startOfLine)
-          context = context.prev;
-        if (context)
-          return context.indent + indentUnit;
-        else
-          return 0;
-      };
-    }
-
-    function base() {
-      return pass(element, base);
-    }
-    var harmlessTokens = {"xml-text": true, "xml-entity": true, "xml-comment": true, "xml-processing": true, "xml-doctype": true};
-    function element(style, content) {
-      if (content == "<") cont(tagname, attributes, endtag(tokenNr == 1));
-      else if (content == "</") cont(closetagname, expect(">"));
-      else if (style == "xml-cdata") {
-        if (!context || context.name != "!cdata") pushContext("!cdata");
-        if (/\]\]>$/.test(content)) popContext();
-        cont();
-      }
-      else if (harmlessTokens.hasOwnProperty(style)) cont();
-      else {markErr(); cont();}
-    }
-    function tagname(style, content) {
-      if (style == "xml-name") {
-        currentTag = content.toLowerCase();
-        token.style = "xml-tagname";
-        cont();
-      }
-      else {
-        currentTag = null;
-        pass();
-      }
-    }
-    function closetagname(style, content) {
-      if (style == "xml-name") {
-        token.style = "xml-tagname";
-        if (context && content.toLowerCase() == context.name) popContext();
-        else markErr();
-      }
-      cont();
-    }
-    function endtag(startOfLine) {
-      return function(style, content) {
-        if (content == "/>" || (content == ">" && UseKludges.autoSelfClosers.hasOwnProperty(currentTag))) cont();
-        else if (content == ">") {pushContext(currentTag, startOfLine); cont();}
-        else {markErr(); cont(arguments.callee);}
-      };
-    }
-    function attributes(style) {
-      if (style == "xml-name") {token.style = "xml-attname"; cont(attribute, attributes);}
-      else pass();
-    }
-    function attribute(style, content) {
-      if (content == "=") cont(value);
-      else if (content == ">" || content == "/>") pass(endtag);
-      else pass();
-    }
-    function value(style) {
-      if (style == "xml-attribute") cont(value);
-      else pass();
-    }
-
-    return {
-      indentation: function() {return indented;},
-
-      next: function(){
-        token = tokens.next();
-        if (token.style == "whitespace" && tokenNr == 0)
-          indented = token.value.length;
-        else
-          tokenNr++;
-        if (token.content == "\n") {
-          indented = tokenNr = 0;
-          token.indentation = computeIndentation(context);
-        }
-
-        if (token.style == "whitespace" || token.type == "xml-comment")
-          return token;
-
-        while(true){
-          consume = false;
-          cc.pop()(token.style, token.content);
-          if (consume) return token;
-        }
-      },
-
-      copy: function(){
-        var _cc = cc.concat([]), _tokenState = tokens.state, _context = context;
-        var parser = this;
-        
-        return function(input){
-          cc = _cc.concat([]);
-          tokenNr = indented = 0;
-          context = _context;
-          tokens = tokenizeXML(input, _tokenState);
-          return parser;
-        };
-      }
-    };
-  }
-
-  return {
-    make: parseXML,
-    electricChars: "/",
-    configure: function(config) {
-      if (config.useHTMLKludges != null)
-        UseKludges = config.useHTMLKludges ? Kludges : NoKludges;
-      if (config.alignCDATA)
-        alignCDATA = config.alignCDATA;
-    }
-  };
-})();
-
-this.HTMLMixedParser = Editor.Parser = (function() {
-
-  // tags that trigger seperate parsers
-  var triggers = {
-    "script": "JSParser",
-    "style":  "CSSParser"
-  };
-
-  function checkDependencies() {
-    var parsers = ['XMLParser'];
-    for (var p in triggers) parsers.push(triggers[p]);
-    for (var i in parsers) {
-      if (!window[parsers[i]]) throw new Error(parsers[i] + " parser must be loaded for HTML mixed mode to work.");
-    }
-    XMLParser.configure({useHTMLKludges: true});
-  }
-
-  function parseMixed(stream) {
-    checkDependencies();
-    var htmlParser = XMLParser.make(stream), localParser = null, inTag = false;
-    var iter = {next: top, copy: copy};
-
-    function top() {
-      var token = htmlParser.next();
-      if (token.content == "<")
-        inTag = true;
-      else if (token.style == "xml-tagname" && inTag === true)
-        inTag = token.content.toLowerCase();
-      else if (token.content == ">") {
-        if (triggers[inTag]) {
-          var parser = window[triggers[inTag]];
-          iter.next = local(parser, "</" + inTag);
-        }
-        inTag = false;
-      }
-      return token;
-    }
-    function local(parser, tag) {
-      var baseIndent = htmlParser.indentation();
-      localParser = parser.make(stream, baseIndent + indentUnit);
-      return function() {
-        if (stream.lookAhead(tag, false, false, true)) {
-          localParser = null;
-          iter.next = top;
-          return top();
-        }
-
-        var token = localParser.next();
-        var lt = token.value.lastIndexOf("<"), sz = Math.min(token.value.length - lt, tag.length);
-        if (lt != -1 && token.value.slice(lt, lt + sz).toLowerCase() == tag.slice(0, sz) &&
-            stream.lookAhead(tag.slice(sz), false, false, true)) {
-          stream.push(token.value.slice(lt));
-          token.value = token.value.slice(0, lt);
-        }
-
-        if (token.indentation) {
-          var oldIndent = token.indentation;
-          token.indentation = function(chars) {
-            if (chars == "</")
-              return baseIndent;
-            else
-              return oldIndent(chars);
-          };
-        }
-
-        return token;
-      };
-    }
-
-    function copy() {
-      var _html = htmlParser.copy(), _local = localParser && localParser.copy(),
-          _next = iter.next, _inTag = inTag;
-      return function(_stream) {
-        stream = _stream;
-        htmlParser = _html(_stream);
-        localParser = _local && _local(_stream);
-        iter.next = _next;
-        inTag = _inTag;
-        return iter;
-      };
-    }
-    return iter;
-  }
-
-  return {
-    make: parseMixed,
-    electricChars: "{}/:",
-    configure: function(obj) {
-      if (obj.triggers) triggers = obj.triggers;
-    }
-  };
-
-})();
-
-/* String streams are the things fed to parsers (which can feed them
- * to a tokenizer if they want). They provide peek and next methods
- * for looking at the current character (next 'consumes' this
- * character, peek does not), and a get method for retrieving all the
- * text that was consumed since the last time get was called.
- *
- * An easy mistake to make is to let a StopIteration exception finish
- * the token stream while there are still characters pending in the
- * string stream (hitting the end of the buffer while parsing a
- * token). To make it easier to detect such errors, the stringstreams
- * throw an exception when this happens.
- */
-
-// Make a stringstream stream out of an iterator that returns strings.
-// This is applied to the result of traverseDOM (see codemirror.js),
-// and the resulting stream is fed to the parser.
-this.stringStream = function(source){
-  // String that's currently being iterated over.
-  var current = "";
-  // Position in that string.
-  var pos = 0;
-  // Accumulator for strings that have been iterated over but not
-  // get()-ed yet.
-  var accum = "";
-  // Make sure there are more characters ready, or throw
-  // StopIteration.
-  function ensureChars() {
-    while (pos == current.length) {
-      accum += current;
-      current = ""; // In case source.next() throws
-      pos = 0;
-      try {current = source.next();}
-      catch (e) {
-        if (e != StopIteration) throw e;
-        else return false;
-      }
-    }
-    return true;
-  }
-
-  return {
-    // peek: -> character
-    // Return the next character in the stream.
-    peek: function() {
-      if (!ensureChars()) return null;
-      return current.charAt(pos);
-    },
-    // next: -> character
-    // Get the next character, throw StopIteration if at end, check
-    // for unused content.
-    next: function() {
-      if (!ensureChars()) {
-        if (accum.length > 0)
-          throw "End of stringstream reached without emptying buffer ('" + accum + "').";
-        else
-          throw StopIteration;
-      }
-      return current.charAt(pos++);
-    },
-    // get(): -> string
-    // Return the characters iterated over since the last call to
-    // .get().
-    get: function() {
-      var temp = accum;
-      accum = "";
-      if (pos > 0){
-        temp += current.slice(0, pos);
-        current = current.slice(pos);
-        pos = 0;
-      }
-      return temp;
-    },
-    // Push a string back into the stream.
-    push: function(str) {
-      current = current.slice(0, pos) + str + current.slice(pos);
-    },
-    lookAhead: function(str, consume, skipSpaces, caseInsensitive) {
-      function cased(str) {return caseInsensitive ? str.toLowerCase() : str;}
-      str = cased(str);
-      var found = false;
-
-      var _accum = accum, _pos = pos;
-      if (skipSpaces) this.nextWhileMatches(/[\s\u00a0]/);
-
-      while (true) {
-        var end = pos + str.length, left = current.length - pos;
-        if (end <= current.length) {
-          found = str == cased(current.slice(pos, end));
-          pos = end;
-          break;
-        }
-        else if (str.slice(0, left) == cased(current.slice(pos))) {
-          accum += current; current = "";
-          try {current = source.next();}
-          catch (e) {break;}
-          pos = 0;
-          str = str.slice(left);
-        }
-        else {
-          break;
-        }
-      }
-
-      if (!(found && consume)) {
-        current = accum.slice(_accum.length) + current;
-        pos = _pos;
-        accum = _accum;
-      }
-
-      return found;
-    },
-
-    // Utils built on top of the above
-    // more: -> boolean
-    // Produce true if the stream isn't empty.
-    more: function() {
-      return this.peek() !== null;
-    },
-    applies: function(test) {
-      var next = this.peek();
-      return (next !== null && test(next));
-    },
-    nextWhile: function(test) {
-      var next;
-      while ((next = this.peek()) !== null && test(next))
-        this.next();
-    },
-    matches: function(re) {
-      var next = this.peek();
-      return (next !== null && re.test(next));
-    },
-    nextWhileMatches: function(re) {
-      var next;
-      while ((next = this.peek()) !== null && re.test(next))
-        this.next();
-    },
-    equals: function(ch) {
-      return ch === this.peek();
-    },
-    endOfLine: function() {
-      var next = this.peek();
-      return next == null || next == "\n";
-    }
-  };
-};
-
-   return this;
-})();
-
-
-FBL.ns(function() {
-    with (FBL) {
-    
-Firebug.uiListeners = [];
-var extensions = [];
-append(Firebug, {
-    registerExtension: function()  // TODO remove
-    {
-        extensions.push.apply(extensions, arguments);
-
-        for (var i = 0; i < arguments.length; ++i)
-            TabWatcher.addListener(arguments[i]);
-
-        for (var j = 0; j < arguments.length; j++)
-            Firebug.uiListeners.push(arguments[j]);
-    },
-
-    unregisterExtension: function()  // TODO remove
-    {
-        for (var i = 0; i < arguments.length; ++i)
-        {
-            TabWatcher.removeListener(arguments[i]);
-            remove(Firebug.uiListeners, arguments[i]);
-            remove(extensions, arguments[i])
-        }
-    }
-});
-
-
-        // some people reported that rainbow was initialised twice
-        // see http://getsatisfaction.com/xrefresh/topics/too_many_recursions_problem_with_rainbow
-        // this is a hack how to prevent it
-        if (!FBL.rainbowInitialised) {
-            FBL.rainbowInitialised = true;
-            
-            var rainbowPrefService = {getService:function(){}};
-            var Components = {};
-            
-            var MAX_LINE_LENGTH = 500;
-
-            var Cc = {};
-            var Ci = {};
-
-            // test for feature added in r686 (http://code.google.com/p/fbug/source/detail?r=686)
-            // note: previous rainbow did break firebug without this test
-            var cssPanelAvailable = !!Firebug.CSSStyleSheetPanel;
-            if (!cssPanelAvailable) {
-                var consoleService = Cc['@mozilla.org/consoleservice;1'].getService(Components.interfaces.nsIConsoleService);
-                consoleService.logStringMessage("FireRainbow requires Firebug 1.3+ (your have "+Firebug.getVersion()+").");
-                consoleService.logStringMessage('Please update your Firebug extension to the latest version (http://getfirebug.com).');
-            } else {
-//                 const nsIPrefBranch = Ci.nsIPrefBranch;
-//                 const nsIPrefBranch2 = Ci.nsIPrefBranch2;
-// 
-//                 const rainbowPrefService = Cc["@mozilla.org/preferences-service;1"];
-//                 const rainbowPrefs = rainbowPrefService.getService(nsIPrefBranch2);
-// 
-//                 const rainbowWebsite = "http://firerainbow.binaryage.com";
-//                 const rainbowPrefDomain = "extensions.rainbow";
-
-                var currentCodeVersion = 2;
-
-                if (Firebug.TraceModule) {
-                    Firebug.TraceModule.DBG_FIRERAINBOW = false;
-                    var type = rainbowPrefs.getPrefType('extensions.firebug.DBG_FIRERAINBOW');
-                    if (type!=nsIPrefBranch.PREF_BOOL) try {
-                        rainbowPrefs.setBoolPref('extensions.firebug.DBG_FIRERAINBOW', false);
-                    } catch(e) {}
-                }
-
-                var dbg = function() {
-                    if (FBTrace && FBTrace.DBG_FIRERAINBOW) { 
-                        FBTrace.sysout.apply(this, arguments);
-                    }
-                };
-                
-                var buildToken = function(style, val) {
-                    return '<span class="' + style + '">' + escapeForSourceLine(val) + '</span>';
-                };
-                
-                var processTokenStream = function(stream) {
-                    // stream is array of pairs
-                    // apply coloring to the line
-                    var pieces = [];
-                    for(var i=0; i<stream.length; i++) {
-                        var token = stream[i];
-                        pieces.push(buildToken(token[0], token[1]));
-                    }
-                    
-                    var output = pieces.join('').replace(/\n/g, '');
-                    // if the pref says so, replace tabs by corresponding number of spaces.
-                    if (Firebug.replaceTabs > 0) {
-                        var space = new Array(Firebug.replaceTabs + 1).join(" ");
-                        output = output.replace(/\t/g, space);
-                    }
-                    
-                    return output;
-                };
-
-                ////////////////////////////////////////////////////////////////////////
-                // Firebug.FireRainbowExtension
-                //
-                Firebug.FireRainbowExtension = extend(Firebug.Extension, {
-                    // this is called whenever script viewport is about to be rendered
-                    onApplyDecorator: function(sourceBox) {
-                        // patch sourcebox render functionality
-                        if (!sourceBox.rainbowPatched) {
-                            sourceBox.rainbowPatched = true;
-                            
-                            if (sourceBox.getLineAsHTML) { // Firebug 1.3 and 1.4 path
-                                // 1. I use Firebug.Extension.onApplyDecorator mechanism to get called
-                                // for every sourceBox which is about be displayed
-                                // 2. first time a source box is seen, I patch sourceBox.getLineAsHTML
-                                // with my "slightly smarter" version
-                                // 3. for given sourceBox I trigger "daemon process", which starts
-                                // coloring off-screen buffer of all lines (not just visible ones) =>
-                                // sourceBox.colorizedLines
-                                // 
-                                // Every time Firebug needs to render lines, it calls getLineAsHTML on
-                                // sourceBox, so it calls my version of that function and I return
-                                // colorized line in case I have it ready.
-                                // 
-                                // Note: In the case daemon just crossed actual viewport, I'm trying to
-                                // force source panel to refresh it's content calling
-                                // scriptPanel.reView(sourceBox);.
-                                // This is tricky, because reView has implemented several layers of
-                                // caching, continuously being added with newer versions, which makes my
-                                // life harder :-)
-                                // If anyone knows better a function to call, I would be happy to make
-                                // this more robust.
-                                if (!sourceBox._rainbowOriginalGetLineAsHTML) {
-                                    sourceBox._rainbowOriginalGetLineAsHTML = sourceBox.getLineAsHTML;
-                                    sourceBox.getLineAsHTML = function(lineNo) {
-                                        if (this.colorizedLines) {
-                                            var line = this.colorizedLines[lineNo];
-                                            if (line!==undefined) return line;
-                                        }
-                                        return this._rainbowOriginalGetLineAsHTML(lineNo);
-                                    };
-                                }
-                            }
-                            
-                            if (sourceBox.decorator) { // Firebug 1.5 path
-                                // here I patch getLineHTML and using similar technique like for Firebug 1.3 and 1.4
-                                // when firebug needs to render lines it asks getLineHTML to provide HTML version of every line
-                                // this is quite fast and reasonably smooth when scrolling
-                                
-                                // Note: In Firebug 1.5 call to scriptPanel.reView(sourceBox, true) invalidates cache, so it is guaranteed to redraw the view
-                                if (!sourceBox.decorator._rainbowOriginalGetLineHTML) {
-                                    sourceBox.decorator._rainbowOriginalGetLineHTML = sourceBox.decorator.getLineHTML;
-                                    sourceBox.decorator.getLineHTML = function(sourceBox, lineNo) {
-                                        if (sourceBox.colorizedLines) {
-                                            var line = sourceBox.colorizedLines[lineNo-1];
-                                            if (line!==undefined) return line;
-                                        }
-                                        return this._rainbowOriginalGetLineHTML(sourceBox, lineNo);
-                                    };
-                                }
-                            }
-                        }
-                        // prevent recursion in case we call reView
-                        if (sourceBox.preventRainbowRecursion) {
-                            sourceBox.preventRainbowRecursion = undefined;
-                            return;
-                        }
-                        // start coloring (if not already in progress or done)
-                        Firebug.FireRainbowModule.colorizeSourceBox(sourceBox);
-                    }
-                });
-                
-                ////////////////////////////////////////////////////////////////////////
-                // Firebug.FireRainbowModule
-                //
-                Firebug.FireRainbowModule = extend(Firebug.Module, {
-                    valid: false,
-                    pings: 0,
-                    styleLibrary: {},
-                    defaultTheme: ".panelNode-script{background-color:#FFFFFF;color:black;font-family:Monaco,Monospace,Courier New !important;font-size:11px;} .sourceRow.hovered{background-color:#EEEEEE;} .sourceLine{background:#EEEEEE none no-repeat scroll 2px 0;border-bottom:1px solid #EEEEEE;border-right:1px solid #CCCCCC;color:#888888;} .sourceLine:hover{text-decoration:none;} .scriptTooltip{background:LightYellow none repeat scroll 0 0;border:1px solid #CBE087;color:#000000;} .sourceRow[exeline=\"true\"]{background-color:lightgoldenrodyellow;outline-color:#D9D9B6;outline-style:solid;outline-width:1px;} .xml-text{color:black;} .whitespace{color:black;} .xml-punctuation{color:gray;} .xml-tagname{color:blue;} .xml-attname{color:darkred;} .xml-attribute{color:darkgreen;} .css-at{color:darkred;} .css-string{color:red;} .css-punctuation{color:midnightblue;} .js-keyword{color:blue;} .js-variable{color:black;} .js-operator{color:black;} .js-punctuation{color:darkBlue;} .js-variabledef{color:darkslategray;} .js-localvariable{color:darkslateBlue;} .js-property{color:teal;} .js-string{color:darkgreen;} .js-atom{color:saddleBrown;} .xml-comment{color:gray;} .css-identifier{color:midnightBlue;} .css-select-op{color:cadetblue;} .css-unit{color:orangered;} .css-value{color:black;} .css-colorcode{color:magenta;} .js-comment{color:gray;} .js-regexp{color:magenta;} .xml-entity{color:darkgoldenrod;} .xml-error{color:orangered;} .css-comment{color:gray;}",
-
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    initialize: function() {
-                        
-                        this.actualScriptPanel = Firebug.chrome.getPanel("script2");
-                        
-                        /*
-                        var doc = Firebug.chrome.document;
-                        //var url = Env.Location.baseDir + "content/firerainbow/chrome/skin/rainbow.css";
-                        var url = Env.Location.baseDir + "content/firerainbow/themes/codemirror.css";
-                        var style = createStyleSheet(doc, url);
-                        addStyleSheet(doc, style);
-                        /**/
-                        
-                        var doc = Firebug.chrome.document;
-                        var style = createElement("style");
-                        var rules = document.createTextNode(this.defaultTheme);
-
-                        style.type = "text/css";
-                        if(style.styleSheet)
-                        {
-                            style.styleSheet.cssText = rules.nodeValue;
-                        }
-                        else
-                        {
-                            style.appendChild(rules);
-                        }
-                        addStyleSheet(doc, style);
-                        /**/
-                        
-                        return Firebug.Module.initialize.apply(this, arguments);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    showPanel: function(browser, panel) {
-                        if (!this.valid) return;
-                        dbg("Rainbow: showPanel", panel);
-                        var isScriptPanel = panel && panel.name == "script";
-                        this.actualScriptPanel = isScriptPanel?panel:undefined;
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    initContext: function(context) {
-                        dbg("Rainbow: initContext", context);
-                        Firebug.Module.initContext.apply(this, arguments);
-                        this.hookPanel(context);
-                        this.valid = true;
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    reattachContext: function(browser, context) {
-                        Firebug.Module.reattachContext.apply(this, arguments);
-                        this.hookPanel(context);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // convert old code to be compatible with current rainbow
-                    convertOldCode: function(code, version) {
-                        switch (version) {
-                            case 1: return code.replace(/\.(\w+)\s*\{/g, ".js-$1 {"); // conversion for mixed html coloring
-                        }
-                        return code;
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    getCodeVersion: function(code) {
-                        var vc = code.match(/\/\* version:(.*) \*\//);
-                        if (!vc) return 1;
-                        return parseInt(vc[1], 10);
-                    },
-                    colorizeSourceBox: function(sourceBox) {
-                        dbg("Rainbow: colorizeSourceBox", sourceBox);
-                        this.pingDaemon(sourceBox);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    hookPanel: function(context) {
-                        dbg("Rainbow: hookPanel", context);
-                        var chrome = context ? context.chrome : FirebugChrome;
-                        var code = this.getPref('coloring');
-                        var version = this.getCodeVersion(code);
-                        if (version<currentCodeVersion) {
-                            // backward compatibility with old rainbow versions
-                            code = this.convertOldCode(code, version);
-                            this.storeCode(code);
-                        }
-                        this.panelBar1 = chrome.$("fbPanelBar1");
-                        this.initSyntaxColoring(this.panelBar1);
-                        this.applySyntaxColoring(code, this.panelBar1);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    storeCode: function(code) {
-                        code = "/* version:"+currentCodeVersion+" */\n"+code;
-                        this.setPref('coloring', code);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    startDaemon: function(sourceBox) {
-                        dbg("Rainbow: startDaemon", sourceBox);
-                        //var webWorkersEnabled = !this.getPref('disableWebWorkers', false);
-                        var webWorkersEnabled = false;
-                        if (webWorkersEnabled && typeof Worker !== "undefined") {
-                            this.startDaemonAsWorkerThread(sourceBox);
-                        } else {
-                            this.startDaemonOnUIThread(sourceBox);
-                        }
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    stopDaemon: function() {
-                        dbg("Rainbow: stopDaemon");
-                        if (this.parserWorker) {
-                            dbg("Rainbow: stopDaemonAsWorkerThread");
-                            this.parserWorker.terminate();
-                            this.parserWorker = undefined;
-                        }
-                        if (this.daemonTimer) {
-                            dbg("Rainbow: stopDaemonOnUIThread");
-                            clearInterval(this.daemonTimer);
-                            this.daemonTimer = undefined;
-                            this.currentSourceBox = undefined;
-                        }
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    startDaemonAsWorkerThread: function(sourceBox) {
-                        // daemon is here to perform colorization in background
-                        // this is origianl daemon rewrite using web workers
-                        if (this.currentSourceBox===sourceBox) return;
-
-                        this.stopDaemon(); // never let run two or more daemons concruently!
-
-                        // find active source box - here we will keep daemon state (parser state)
-                        if (!sourceBox) return;
-                        if (!sourceBox.lines) return;
-                        if (sourceBox.colorized) return; // already colorized
-                        
-                        dbg("Rainbow: startDaemonAsWorkerThread", sourceBox);
-                        
-                        this.currentSourceBox = sourceBox;
-                        if (sourceBox.lineToBeColorized==undefined) sourceBox.lineToBeColorized = 0;
-                        if (!sourceBox.colorizedLines) sourceBox.colorizedLines = [];
-                        
-                        var refresh = function() {
-                            // do review to be sure actual view gets finaly colorized
-                            if (that.actualScriptPanel) {
-                                sourceBox.preventRainbowRecursion = true;
-                                dbg("Rainbow: reView!", sourceBox);
-                                that.actualScriptPanel.lastScrollTop = that.actualScriptPanel.lastScrollTop || 0;
-                                that.actualScriptPanel.lastScrollTop -= 1; // fight reView's "reView no change to scrollTop" optimization
-                                sourceBox.firstViewableLine = -1; // overcome another layer of reView optimization added in Firebug 1.4
-                                that.actualScriptPanel.reView(sourceBox, true);
-                            }
-                        };
-                        
-                        var that = this;
-                        var worker = new Worker('chrome://firerainbow/content/worker.js');
-                        worker.onmessage = function(e) {
-                            dbg("Rainbow: got worker message "+e.data.msg, e.data);
-                            switch (e.data.msg) {
-                                case 'progress':
-                                    sourceBox.colorizedLines[e.data.line] = processTokenStream(e.data.stream);
-                                    if (e.data.line==sourceBox.lastViewableLine) {
-                                        // just crossed actual view, force refresh!
-                                        refresh();
-                                    }
-                                    break;
-                                case 'done': 
-                                    that.parserWorker = undefined;
-                                    sourceBox.colorized = true;
-                                    that.styleLibrary = e.data.styleLibrary;
-                                    refresh();
-                                    break;
-                            }
-                        };
-                        worker.onerror = function(e) {
-                            dbg("Rainbow: worker error", e);
-                            // stop daemon in this exceptional case
-                            that.stopDaemon();
-                            sourceBox.colorized = true;
-                            sourceBox.colorizationFailed = true;
-                            return;
-                        };
-                        worker.postMessage({
-                            command: 'run',
-                            lines: sourceBox.lines
-                        });
-                        this.parserWorker = worker;
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    startDaemonOnUIThread: function(sourceBox) {
-                        // daemon is here to perform colorization in background
-                        // the goal is not to block Firebug functionality and don't hog CPU for too long
-                        // daemonInterval and tokensPerCall properties define how intensive this background process should be
-                        if (this.currentSourceBox===sourceBox) return;
-
-                        this.stopDaemon(); // never let run two or more daemons concruently!
-
-                        // find active source box - here we will keep daemon state (parser state)
-                        if (!sourceBox) return;
-                        if (!sourceBox.lines) return;
-                        if (sourceBox.colorized) return; // already colorized
-
-                        dbg("Rainbow: startDaemonOnUIThread", sourceBox);
-                        var that = this;
-                        
-                        this.currentSourceBox = sourceBox;
-                        if (sourceBox.lineToBeColorized==undefined) sourceBox.lineToBeColorized = 0;
-                        if (!sourceBox.colorizedLines) sourceBox.colorizedLines = [];
-
-                        // init daemon state
-                        var nextLine = null;
-
-                        if (!sourceBox.parser) {
-                            var firstLine = "";
-                            var lineNo = 0;
-                            while (lineNo<sourceBox.lines.length) {
-                                firstLine = sourceBox.lines[lineNo];
-                                firstLine = firstLine.replace(/^\s*|\s*$/g,"");
-                                if (firstLine!="") break;
-                                lineNo++;
-                            }
-                            // determine what parser to use
-                            var parser = codemirror.JSParser;
-                            // use HTML mixed parser if you encounter these substrings on first line
-                            if (firstLine.indexOf('<!DOCTYPE')!=-1 || firstLine.indexOf("<html")!=-1 || 
-                                firstLine.indexOf("<body")!=-1 || firstLine.indexOf("<head")!=-1) parser = codemirror.HTMLMixedParser;
-                            sourceBox.parser = parser.make(codemirror.stringStream({
-                                next: function() {
-                                    if (nextLine===null) throw codemirror.StopIteration;
-                                    var result = nextLine;
-                                    nextLine = null;
-                                    return result;
-                                }
-                            }));
-                        }
-
-                        var tokensPerCall = this.getPref('tokensPerCall', 500);
-                        var daemonInterval = this.getPref('daemonInterval', 100);
-                        
-                        var refresh = function() {
-                            // do review to be sure actual view gets finaly colorized
-                            if (that.actualScriptPanel) {
-                                sourceBox.preventRainbowRecursion = true;
-                                dbg("Rainbow: reView!", sourceBox);
-                                that.actualScriptPanel.lastScrollTop = that.actualScriptPanel.lastScrollTop || 0;
-                                that.actualScriptPanel.lastScrollTop -= 1; // fight reView's "reView no change to scrollTop" optimization
-                                sourceBox.firstViewableLine = -1; // overcome another layer of reView optimization added in Firebug 1.4
-                                that.actualScriptPanel.reView(sourceBox, true);
-                            }
-                        };
-
-                        var finish = function() {
-                            refresh();
-                            that.stopDaemon();
-                            sourceBox.colorized = true;
-                            // free up memory
-                            sourceBox.parser = undefined;
-                        };
-
-                        // run daemon
-                        this.daemonTimer = setInterval(
-                            function() {
-                                try {
-                                    var tokenQuota = tokensPerCall;
-                                    var startLine = sourceBox.lineToBeColorized;
-                                    while (true) {
-                                        if (!sourceBox.hasLine) {
-                                            // finish if no more lines
-                                            if (sourceBox.lineToBeColorized >= sourceBox.lines.length) {
-                                                return finish();
-                                            }
-                                            
-                                            // extract line code from node
-                                            // note: \n is important to simulate multi line text in stream (for example multi-line comments depend on this)
-                                            nextLine = sourceBox.lines[sourceBox.lineToBeColorized]+"\n";
-
-                                            sourceBox.parsedLine = [];
-                                            sourceBox.hasLine = true;
-                                        }
-                                        
-                                        codemirror.forEach(sourceBox.parser,
-                                            function(token) {
-                                                // colorize token
-                                                var val = token.value;
-                                                sourceBox.parsedLine.push([token.style, val]);
-                                                that.styleLibrary[token.style] = true;
-                                                if (--tokenQuota==0) {
-                                                    throw StopIteration;
-                                                }
-                                            }
-                                        );
-                                        
-                                        if (!tokenQuota) {
-                                            return;
-                                        }
-                                    
-                                        sourceBox.colorizedLines.push(processTokenStream(sourceBox.parsedLine));
-
-                                        if (sourceBox.lineToBeColorized==sourceBox.lastViewableLine) {
-                                            // just crossed actual view, force refresh!
-                                            refresh();
-                                            startLine = null;
-                                        }
-    
-                                        // move for next line
-                                        sourceBox.lineToBeColorized++;
-                                        sourceBox.hasLine = false;
-                                    }
-                                } catch (ex) {
-                                    dbg("Rainbow: exception", ex);
-                                    // stop daemon in this exceptional case
-                                    that.stopDaemon();
-                                    sourceBox.colorized = true;
-                                    sourceBox.colorizationFailed = true;
-                                    // free up memory
-                                    sourceBox.parser = undefined;
-                                    return;
-                                }
-                            },
-                        daemonInterval);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    pingDaemon: function(sourceBox) {
-                        this.valid = true;
-                        
-                        if (!this.valid) return;
-                        
-                        // trivial implementation of buffered deferred triggering of daemon
-                        this.pings++;
-                        var pingMarker = this.pings;
-                        var that = this;
-                        setTimeout(function(){
-                            if (that.pings!=pingMarker) return;
-                            that.startDaemon(sourceBox);
-                        }, 200);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // initializes syntax coloring helpers for panel
-                    initSyntaxColoring: function(panelBar) {
-                        // here we append <style id='rainbow-style-sheet' type='text/css'>/* Syntax coloring */</style> into head element
-                        // this style element we will use to apply coloring rules to all script boxes in the panel
-                        if (this.lookupStyleElement(panelBar)) return; // already done
-
-                        var browser = panelBar.browser;
-                        var doc = browser.contentDocument;
-
-                        var styleElement = doc.createElement("style");
-                        styleElement.setAttribute("id", "rainbow-style-sheet");
-                        styleElement.setAttribute("type", "text/css");
-                        styleElement.appendChild(doc.createTextNode('/* Syntax coloring */'));
-
-                        var headElement;
-                        var headElementList = doc.getElementsByTagName("head");
-                        if (headElementList.length) headElement = headElementList[0]; else headElement = doc.documentElement;
-                        headElement.appendChild(styleElement);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // returns our rainbow-style-sheet element from given panel
-                    lookupStyleElement: function(panelBar) {
-                        var browser = panelBar.browser;
-                        var doc = browser.contentDocument;
-                        var styleElement = doc.getElementById('rainbow-style-sheet');
-                        return styleElement;
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // applies new coloring rules to given panel
-                    applySyntaxColoring: function(code, panelBar) {
-                        var styleElement = this.lookupStyleElement(panelBar);
-                        if (!styleElement) return;
-                        styleElement.innerHTML = '';
-                        var browser = panelBar.browser;
-                        var doc = browser.contentDocument;
-                        styleElement.appendChild(doc.createTextNode(code));
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // serializes CSS rules and stores them into coloring property (save)
-                    saveSyntaxColoring: function(rules) {
-                        var code = rules;
-                        if (typeof code != 'string') {
-                            var s = [];
-                            for (var i=0; i<rules.length; i++) {
-                                var rule = rules[i];
-                                s.push(rule.selector);
-                                s.push('{');
-                                for (var j=0; j<rule.props.length; j++) {
-                                    var prop = rule.props[j];
-                                    if (prop.disabled) continue;
-                                    s.push(prop.name);
-                                    s.push(':');
-                                    s.push(prop.value);
-                                    if (prop.important) s.push(' !important');
-                                    s.push(';');
-                                }
-                                s.push('}');
-                            }
-                            code = s.join('');
-                        }
-                        this.storeCode(code);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // opens dialog to import color theme (color theme is just a piece of CSS)
-                    importTheme: function() {
-                        var params = {
-                            out:null
-                        };
-                        window.openDialog("chrome://firerainbow/content/import.xul", "", "chrome, dialog, modal, resizable=yes", params).focus();
-                        if (params.out) {
-                            var code = params.out.code;
-                            this.applySyntaxColoring(code, this.panelBar1);
-                            this.saveSyntaxColoring(code);
-                            this.invalidatePanels();
-                        }
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    generateCodeFromLibrary: function() {
-                        var niceColors = ["red", "blue", "magenta", "brown", "black", 
-                                          "darkgreen", "blueviolet", "cadetblue", "crimson", "darkgoldenrod",
-                                          "darkgrey", "darkslateblue", "firebrick", "midnightblue", "orangered", "navy"];
-                        var code = ".panelNode-script { font-family: Monaco, Monospace, Courier New !important; font-size: 11px; background-color: #fff; color: black; }";
-                        code += " .sourceRow.hovered { background-color: #EEEEEE; }";
-                        code += " .sourceLine { border-bottom: 1px solid #EEEEEE; border-right: 1px solid #CCCCCC; background: #EEEEEE no-repeat 2px 0px; color: #888888; }";
-                        code += " .sourceLine:hover { text-decoration: none; }";
-                        code += " .scriptTooltip { border: 1px solid #CBE087; background: LightYellow; color: #000000; }";
-                        code += " .sourceRow[exeLine=\"true\"] { outline: 1px solid #D9D9B6; background-color: lightgoldenrodyellow; }";
-
-                        for (var x in this.styleLibrary) {
-                            if (this.styleLibrary.hasOwnProperty(x)) {
-                                var color = niceColors[Math.floor(Math.random()*niceColors.length)];
-                                code += " ."+x+" { color: "+color+"; }";
-                            }
-                        }
-                        return code;
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // generates template color theme based on visited scripts
-                    randomizeTheme: function() {
-                        var code = this.generateCodeFromLibrary();
-                        this.applySyntaxColoring(code, this.panelBar1);
-                        this.saveSyntaxColoring(code);
-                        this.invalidatePanels();
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // resets to default rainbow coloring theme
-                    resetToDefaultTheme: function() {
-                        var code = this.defaultTheme;
-                        this.applySyntaxColoring(code, this.panelBar1);
-                        this.saveSyntaxColoring(code);
-                        this.invalidatePanels();
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    // opens rainbow website in a new tab
-                    visitWebsite: function() {
-                        openNewTab(rainbowWebsite);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    getPref: function(name, def) {
-                        return def || 0;
-                        var prefName = rainbowPrefDomain + "." + name;
-
-                        var type = rainbowPrefs.getPrefType(prefName);
-                        if (type == nsIPrefBranch.PREF_STRING)
-                            return rainbowPrefs.getCharPref(prefName);
-                        else if (type == nsIPrefBranch.PREF_INT)
-                            return rainbowPrefs.getIntPref(prefName);
-                        else if (type == nsIPrefBranch.PREF_BOOL)
-                            return rainbowPrefs.getBoolPref(prefName);
-                        return def;
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    setPref: function(name, value) {
-                        var prefName = rainbowPrefDomain + "." + name;
-
-                        var type = rainbowPrefs.getPrefType(prefName);
-                        if (type == nsIPrefBranch.PREF_STRING)
-                            rainbowPrefs.setCharPref(prefName, value);
-                        else if (type == nsIPrefBranch.PREF_INT)
-                            rainbowPrefs.setIntPref(prefName, value);
-                        else if (type == nsIPrefBranch.PREF_BOOL)
-                            rainbowPrefs.setBoolPref(prefName, value);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    clearPref: function(name) {
-                        var prefName = rainbowPrefDomain + "." + name;
-                        return rainbowPrefs.clearUserPref(prefName);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    invalidatePanels: function() {
-                        for (var i = 0; i < TabWatcher.contexts.length; ++i) {
-                            var panel = TabWatcher.contexts[i].getPanel("script", true);
-                            if (!panel) continue;
-                            panel.context.invalidatePanels("rainbow");
-                            panel.refresh();
-                        }
-                    }
-                });
-
-                /////////////////////////////////////////////////////////////////////////////////////////
-                /////////////////////////////////////////////////////////////////////////////////////////
-                /////////////////////////////////////////////////////////////////////////////////////////
-
-                Firebug.FireRainbowSyntaxColoringEditorPanel = function() {};
-                Firebug.FireRainbowSyntaxColoringEditorPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,{
-                    name: "rainbow",
-                    title: "Colors",
-                    parentPanel: "script",
-                    order: 1000,
-
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    initialize: function() {
-                        Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    destroy: function(state) {
-                        Firebug.CSSStyleSheetPanel.prototype.destroy.apply(this, arguments);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    lookupStyleSheet: function(browser) {
-                        var doc = browser.contentDocument;
-                        var styleElement = doc.getElementById('rainbow-style-sheet');
-                        if (!styleElement) return;
-                        return styleElement.sheet;
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    markChange: function() {
-                        Firebug.CSSStyleSheetPanel.prototype.markChange.apply(this, arguments);
-                        var that = this;
-                        setTimeout(function () {
-                            var browser = that.context.chrome.getPanelBrowser(that.parentPanel);
-                            var sheet = that.lookupStyleSheet(browser);
-                            if (!sheet) return;
-                            var rules = that.getStyleSheetRules(that.context, sheet);
-                            Firebug.FireRainbowModule.saveSyntaxColoring(rules);
-                        }, 1000);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    refresh: function() {
-                        this.show();
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    show: function() {
-                        var browser = this.context.chrome.getPanelBrowser(this.parentPanel);
-                        var sheet = this.lookupStyleSheet(browser);
-                        if (!sheet) return;
-                        this.updateLocation(sheet);
-                    },
-                    /////////////////////////////////////////////////////////////////////////////////////////
-                    getOptionsMenuItems: function() {
-                        return [
-                            {
-                                label: 'Import Color Theme ...',
-                                nol10n: true,
-                                command: bind(Firebug.FireRainbowModule.importTheme, Firebug.FireRainbowModule)
-                            },{
-                                label: 'Randomize Color Theme',
-                                nol10n: true,
-                                command: bind(Firebug.FireRainbowModule.randomizeTheme, Firebug.FireRainbowModule)
-                            },{
-                                label: 'Reset to default Color Theme',
-                                nol10n: true,
-                                command: bind(Firebug.FireRainbowModule.resetToDefaultTheme, Firebug.FireRainbowModule)
-                            },'-',{
-                                label: 'Visit FireRainbow Website ...',
-                                nol10n: true,
-                                command: bind(Firebug.FireRainbowModule.visitWebsite, Firebug.FireRainbowModule)
-                            }
-                        ];
-                    }
-                });
-
-                Firebug.registerModule(Firebug.FireRainbowModule);
-                Firebug.registerExtension(Firebug.FireRainbowExtension);
-                Firebug.registerPanel(Firebug.FireRainbowSyntaxColoringEditorPanel);
-            }
-        }
-    }
-});
 
 /* See license.txt for terms of usage */
 
@@ -39352,16 +29669,16 @@ append(Firebug,
             setTimeout(function(){Firebug.extend(fn);},100);
         }
     },
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Registration
 
     registerModule: function()
     {
         registerModule.apply(Firebug, arguments);
-        
+
         modules.push.apply(modules, arguments);
-        
+
         dispatch(modules, "initialize", []);
 
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.registerModule");
@@ -39370,15 +29687,16 @@ append(Firebug,
     registerPanel: function()
     {
         registerPanel.apply(Firebug, arguments);
-        
+
         panelTypes.push.apply(panelTypes, arguments);
 
         for (var i = 0, panelType; panelType = arguments[i]; ++i)
         {
+            // TODO: xxxpedro investigate why Dev Panel throws an error
             if (panelType.prototype.name == "Dev") continue;
-            
+
             panelTypeMap[panelType.prototype.name] = arguments[i];
-            
+
             var parentPanelName = panelType.prototype.parentPanel;
             if (parentPanelName)
             {
@@ -39389,18 +29707,18 @@ append(Firebug,
                 var panelName = panelType.prototype.name;
                 var chrome = Firebug.chrome;
                 chrome.addPanel(panelName);
-                
+
                 // tab click handler
                 var onTabClick = function onTabClick()
-                { 
+                {
                     chrome.selectPanel(panelName);
                     return false;
                 };
-                
-                chrome.addController([chrome.panelMap[panelName].tabNode, "mousedown", onTabClick]);                
+
+                chrome.addController([chrome.panelMap[panelName].tabNode, "mousedown", onTabClick]);
             }
         }
-        
+
         if (FBTrace.DBG_INITIALIZE)
             for (var i = 0; i < arguments.length; ++i)
                 FBTrace.sysout("Firebug.registerPanel", arguments[i].prototype.name);
@@ -39417,10 +29735,10 @@ append(Firebug,
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
-FirebugChrome.Skin = 
+FirebugChrome.Skin =
 {
     CSS: '.obscured{left:-999999px !important;}.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{font-size:11px;min-width:100px;text-align:center;}.infoTipCaption{font-size:11px;font:Monaco,monospace;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
-    HTML: 'undefined'
+    HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbWindowButtons"><a id="fbWindow_btDeactivate" class="fbSmallButton fbHover" title="Deactivate Firebug for this web page">&nbsp;</a><a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a><a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div><textarea id="fbLargeCommandLine" class="fbFitHeight"></textarea><div id="fbLargeCommandButtons"><a id="fbCommand_btRun" class="fbButton fbHover">Run</a><a id="fbCommand_btClear" class="fbButton fbHover">Clear</a><a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/><a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors">2 errors</span></span></span>'
 };
 
 // ************************************************************************************************

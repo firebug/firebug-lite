@@ -1,0 +1,37 @@
+<html>
+    <head>
+        <script type="text/javascript" src="../../build/firebug-lite-debug.js"></script>
+        <script type="text/javascript" src="../fbtest/fbtest.js"></script>
+        <script type="text/javascript">
+        
+        FBTest.runTestOnLoad(function()
+        {
+            FBTest.stop();
+            
+            var xhr = FBL.Ajax.getXHRObject();
+            xhr.open("GET", "test.txt", true);
+            xhr.send();
+
+            setTimeout(function(){
+
+                var panel = FBTest.getPanel("Console").panelNode;
+                var elements = FBL.getElementsByClass(panel, "logRow-spy");
+                FBTest.ok(elements.length == 1, "Exists a log entry for the XHR request");
+                
+                FBTest.start();
+
+            }, 50);
+        });
+        
+        </script>
+        <link rel="stylesheet" href="../fbtest/fbtest.css" type="text/css" media="screen">
+    </head>
+    <body>
+    	<h1 id="qunit-header">Async test example</h1>
+    	<h2 id="qunit-banner"></h2>
+    	<div id="qunit-testrunner-toolbar"></div>
+    	<h2 id="qunit-userAgent"></h2>
+    	<ol id="qunit-tests"></ol>
+    	<div id="qunit-fixture">test markup</div>
+    </body>
+</html>
