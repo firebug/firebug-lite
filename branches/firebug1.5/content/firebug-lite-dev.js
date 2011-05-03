@@ -519,8 +519,8 @@ function loadModules() {
 
     var sufix = isApplicationContext ? "#app" : "";
 
-    var useDocWrite = isIE || isSafari;
-    //var useDocWrite = isIE;
+    var useDocWrite = true;
+    //var useDocWrite = isIE || isSafari;
 
     var moduleURL, script;
     var scriptTags = [];
