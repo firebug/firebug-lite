@@ -7,14 +7,14 @@
 <link href="gui.css" rel="stylesheet" type="text/css" />
 <link href="firebug.css" rel="stylesheet" type="text/css" />
 
-<script type="text/javascript" src="../../zcontent/firebug-lite-dev.js"></script>
+<script type="text/javascript" src="../../../zbuild/firebug-lite-debug.js"></script>
 <script type="text/javascript" src="include/measure.js"></script>
 <script type="text/javascript" src="include/flexBox.js"></script>
 <script>
 window.onload = function()
 {
     var useIFrame = location.href.indexOf("#iframe") != -1;
-    
+
     if (useIFrame)
     {
         var panels = [
@@ -40,95 +40,11 @@ window.onload = function()
     }
     
     var root = document.getElementById("fbContentBox");
-    var flexBox = new FlexBox(root);
-    
-    flexBox.reflow();
+    var flexBox = new FlexBox(root, true);
     
     // avoid FOUC
     root.style.visibility = "visible";
-    
-    // IE6 only
-    // TODO: check if we can remove this
-    setTimeout(function(){
-        flexBox.reflow();
-    },0);
-    
-    
-    /*
-    // v1 ----------------------------------------------------------------------
-    window.onresize = function()
-    {
-        flexBox.reflow();
-    }
-    /**/
-    
-    /*
-    // v2 ----------------------------------------------------------------------
-    var timer;
-    
-    var resizeHandler = function()
-    {
-        if (timer)
-        {
-            clearTimeout(timer);
-            timer = null;
-        }
-        
-        flexBox.reflow();
-    };
-    
-    window.onresize = function()
-    {
-        if (!timer)
-        {
-            timer = setTimeout(resizeHandler, 50);
-        }
-    }
-    /**/
-    
-    // v3 ----------------------------------------------------------------------
-    /*
-    var lastReflow = 0;
-    window.onresize = function()
-    {
-        if (new Date().getTime() - lastReflow > 50)
-        {
-            flexBox.reflow();
-            
-            lastReflow = new Date().getTime();
-        }
-    }
-    /**/
-    
-    // v4 ----------------------------------------------------------------------
-    var timer;
-    var lastReflow = 0;
-    window.onresize = function()
-    {
-        if (new Date().getTime() - lastReflow > 50)
-        {
-            if (timer)
-            {
-                clearTimeout(timer);
-                timer = null;
-            }
-            
-            flexBox.reflow();
-            
-            lastReflow = new Date().getTime();
-        }
-        else
-        {
-            if (timer)
-            {
-                clearTimeout(timer);
-                timer = null;
-            }
-            
-            timer = setTimeout(flexBox.reflow, 50);
-        }
-    }
-    
+
 }
 </script>
 </head>

@@ -19,17 +19,26 @@ var debug = false;
 
 // TODO: better browser detection
 var supportsFlexBox = !document.all;
-        
+var _isIE6 = navigator.userAgent.indexOf("MSIE 6") != -1
+
 // ************************************************************************************************
 
-function FlexBox(root)
+function FlexBox(root, listenWindowResize)
 {
     if (supportsFlexBox && !debug)
     {
         return;
     }
     
-    this.reflow = function()
+    setClass(root, "boxFix");
+
+    var win = root.contentWindow || window;
+    var measure = new Measure(win);
+    
+    var reflowTimer;
+    var lastReflow = 0;
+
+    var reflow = this.reflow = function()
     {
         var result;
         var object;
@@ -42,11 +51,9 @@ function FlexBox(root)
                 }
             ];
         
-        setClass(root, "boxFix");
-        
         while (object = objects.shift())
         {
-            result = reflowBox(root, object);
+            result = reflowBox(root, object, measure);
             
             if (result.length > 0)
             {
@@ -54,18 +61,56 @@ function FlexBox(root)
             }
         }
     }
+    
+    this.resizeHandler = function()
+    {
+        if (new Date().getTime() - lastReflow > 50)
+        {
+            if (reflowTimer)
+            {
+                clearTimeout(reflowTimer);
+                reflowTimer = null;
+            }
+
+            reflow();
+
+            lastReflow = new Date().getTime();
+        }
+        else
+        {
+            if (reflowTimer)
+            {
+                clearTimeout(reflowTimer);
+                reflowTimer = null;
+            }
+
+            reflowTimer = setTimeout(reflow, 50);
+        }
+    }
+    
+    if (listenWindowResize)
+    {
+        var onunload = function(){
+            removeEvent(win, "resize", this.resizeHandler);
+            removeEvent(win, "unload", onunload);
+        };
+        
+        addEvent(win, "resize", this.resizeHandler);
+        addEvent(win, "unload", onunload);
+    }
+    
+    reflow();
 }
 
 FlexBox.prototype.reflow = function(){};
 
+FlexBox.prototype.resizeHandler = function(){};
+
 // ************************************************************************************************
 
-function reflowBox(root, boxObject)
+function reflowBox(root, boxObject, measure)
 {
-    var win = window;
-    var isIE6 = win.navigator.userAgent.indexOf("MSIE 6") != -1;
-    
-    var measure = new Measure(win);
+    var isIE6 = _isIE6;
     
     var box = boxObject.element;
     
@@ -253,6 +298,23 @@ function reflowBox(root, boxObject)
             if (isVertical)
             {
                 element.style.height = space + "px";
+                
+                // xxxpedro in IE6 the 100% width of an iframe with border will exceede
+                // the with of its offsetParent... don't ask me why
+                // not sure though if this is the best way to solve it
+                if (isIE6 && element.nodeName.toLowerCase() == "iframe")
+                {
+                    // reusing className variable for the sake of saving memory
+                    className = element.currentStyle.position;
+                    element.style.display = "none";
+                    // reusing boxSpace variable for the sake of saving memory
+                    boxSpace = element.offsetParent.offsetWidth;
+                    element.style.display = "block";
+
+                    border = measure.getMeasureBox(element, "border");
+                    
+                    element.style.width = (boxSpace - 2*border.left - 2*border.right) + "px";
+                }
             }
             else
             {
@@ -296,6 +358,22 @@ var setClass = function(node, name)
 {
     if (node && (' '+node.className+' ').indexOf(' '+name+' ') == -1)
         node.className += " " + name;
+};
+
+var addEvent = function(object, name, handler, useCapture)
+{
+    if (object.addEventListener)
+        object.addEventListener(name, handler, useCapture);
+    else
+        object.attachEvent("on"+name, handler);
+};
+
+var removeEvent = function(object, name, handler, useCapture)
+{
+    if (object.removeEventListener)
+        object.removeEventListener(name, handler, useCapture);
+    else
+        object.detachEvent("on"+name, handler);
 };
 
 // ************************************************************************************************
