@@ -300,7 +300,7 @@ function reflowBox(root, boxObject, measure)
                 element.style.height = space + "px";
                 
                 // xxxpedro in IE6 the 100% width of an iframe with border will exceede
-                // the with of its offsetParent... don't ask me why
+                // the width of its offsetParent... don't ask me why
                 // not sure though if this is the best way to solve it
                 if (isIE6 && element.nodeName.toLowerCase() == "iframe")
                 {
