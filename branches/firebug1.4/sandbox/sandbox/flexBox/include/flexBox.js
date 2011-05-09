@@ -19,7 +19,7 @@ var debug = false;
 
 // TODO: better browser detection
 var supportsFlexBox = !document.all;
-var _isIE6 = navigator.userAgent.indexOf("MSIE 6") != -1
+var isIE6 = navigator.userAgent.indexOf("MSIE 6") != -1;
 
 // ************************************************************************************************
 
@@ -60,42 +60,50 @@ function FlexBox(root, listenWindowResize)
                 objects = objects.concat(result);
             }
         }
-    }
+    };
     
-    this.resizeHandler = function()
-    {
-        if (new Date().getTime() - lastReflow > 50)
-        {
-            if (reflowTimer)
-            {
-                clearTimeout(reflowTimer);
-                reflowTimer = null;
-            }
+    var resizeHandler = this.resizeHandler = isIE6 ?
+    		// IE6 requires an special resizeHandler to make
+    		// the rendering smoother
+    		(function()
+    	    {
+    	        if (new Date().getTime() - lastReflow > 50)
+    	        {
+    	            if (reflowTimer)
+    	            {
+    	                clearTimeout(reflowTimer);
+    	                reflowTimer = null;
+    	            }
 
-            reflow();
+    	            reflow();
 
-            lastReflow = new Date().getTime();
-        }
-        else
-        {
-            if (reflowTimer)
-            {
-                clearTimeout(reflowTimer);
-                reflowTimer = null;
-            }
+    	            lastReflow = new Date().getTime();
+    	        }
+    	        else
+    	        {
+    	            if (reflowTimer)
+    	            {
+    	                clearTimeout(reflowTimer);
+    	                reflowTimer = null;
+    	            }
 
-            reflowTimer = setTimeout(reflow, 50);
-        }
-    }
+    	            reflowTimer = setTimeout(reflow, 50);
+    	        }
+    	    })
+    		:
+			// Other IE versions
+    		(function(){
+    			reflow();
+			}); 
     
     if (listenWindowResize)
     {
         var onunload = function(){
-            removeEvent(win, "resize", this.resizeHandler);
+            removeEvent(win, "resize", resizeHandler);
             removeEvent(win, "unload", onunload);
         };
         
-        addEvent(win, "resize", this.resizeHandler);
+        addEvent(win, "resize", resizeHandler);
         addEvent(win, "unload", onunload);
     }
     
@@ -110,7 +118,7 @@ FlexBox.prototype.resizeHandler = function(){};
 
 function reflowBox(root, boxObject, measure)
 {
-    var isIE6 = _isIE6;
+    var _isIE6 = isIE6;
     
     var box = boxObject.element;
     
@@ -147,7 +155,7 @@ function reflowBox(root, boxObject, measure)
     var measureBeforeProperty;
     var measureAfterProperty;
     
-    if (isIE6)
+    if (_isIE6)
     {
         fixIE6BackgroundImageCache();
     }
@@ -243,7 +251,7 @@ function reflowBox(root, boxObject, measure)
         
         // We are setting the height of horizontal boxes in IE6, so we need to 
         // temporary hide the elements otherwise we will get the wrong measures
-        if (isIE6)
+        if (_isIE6)
         {
             className = box.className;
             box.className = className + " boxFixHideContents";
@@ -302,7 +310,7 @@ function reflowBox(root, boxObject, measure)
                 // xxxpedro in IE6 the 100% width of an iframe with border will exceede
                 // the width of its offsetParent... don't ask me why
                 // not sure though if this is the best way to solve it
-                if (isIE6 && element.nodeName.toLowerCase() == "iframe")
+                if (_isIE6 && element.nodeName.toLowerCase() == "iframe")
                 {
                     // reusing className variable for the sake of saving memory
                     className = element.currentStyle.position;
@@ -313,18 +321,18 @@ function reflowBox(root, boxObject, measure)
 
                     border = measure.getMeasureBox(element, "border");
                     
-                    element.style.width = (boxSpace - 2*border.left - 2*border.right) + "px";
+                    element.style.width = Math.max(0, boxSpace - 2*border.left - 2*border.right) + "px";
                 }
             }
             else
             {
-                setClass(element, "boxFixPos")
+                setClass(element, "boxFixPos");
                 
                 element.style.left = computedSpace + "px";
                 element.style.width = space + "px";
                 
                 // boxObject.height IE6 only
-                if (isIE6)
+                if (_isIE6)
                 {
                     // TODO: figure out how to solve the problem with minimumSpace
                     object.height = boxObject.height || box.offsetHeight;

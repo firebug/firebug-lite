@@ -9,11 +9,13 @@
     color: #000;
     padding: 4px 6px 4px 7px;
     cursor: default;
+    font-size: 11px;
+    line-height: 14px;
 }
 
 .fbButton:hover {
     color: #333;
-    background: #f5f5ef url(buttonBg2.png);
+    background: #f5f5ef url(buttonBg.png);
     padding: 3px 5px 3px 6px;
     border: 1px solid #fff;
     border-bottom: 1px solid #bbb;
@@ -21,7 +23,7 @@
 }
 
 .fbBtnPressed {
-    background: #e3e3db url(buttonBgHover2.png) !important;
+    background: #e3e3db url(buttonBgHover.png) !important;
     padding: 3px 4px 2px 6px !important;
     margin: 1px 0 0 1px !important;
     border: 1px solid #ACA899 !important;

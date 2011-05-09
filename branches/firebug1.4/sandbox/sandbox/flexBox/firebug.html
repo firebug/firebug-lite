@@ -31,7 +31,7 @@ window.onload = function()
             var id = panel.id;
             var className = panel.className;
             iframe.setAttribute("src", "panel.html");
-            iframe.setAttribute("frameborder", 0);
+            iframe.setAttribute("frameBorder", 0);
             panel.parentNode.replaceChild(iframe, panel);
             
             iframe.id = id;
@@ -50,7 +50,7 @@ window.onload = function()
 </head>
 <body>
 
-    <div id="fbContentBox" class="vbox nohideSidePanelBar">
+    <div id="fbContentBox" class="vbox xhideSidePanelBar xhideCommandPopup">
 
         <div id="fbPanelBar1-tabBox" class="panelTabBox">
         
@@ -96,7 +96,9 @@ window.onload = function()
             <div id="fbPanelDeck" class="vbox boxFlex">
             
                 <div id="fbToolbar">
-                    <a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a>
+                	<div id="fbToolbarContent" class="boxContent">
+                    	<a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a>
+                    </div>
                 </div>
                 
                 <div id="fbPanelBar1-content" class="boxFlex boxScroll">
@@ -128,7 +130,7 @@ window.onload = function()
             <div id="fbSidePanelDeck" class="vbox">
             
                 <div id="fbPanelBar2-panelTabsBox">
-                    <div id="fbPanelBar2-panelTabs" class="boxContent sidePanelTabs">
+                    <div id="fbPanelBar2-panelTabs" class="boxContent">
                         <span class="panelTab sel">Style<span class="panelOptions">▼</span></span>
                         <span class="panelTab">Layout<span class="panelOptions">▼</span></span>
                     </div>

@@ -58,7 +58,8 @@ html, body {
 
 #fbToolbar,
 #fbPanelBar2-panelTabsBox {
-    height: 26px;
+    height: 28px;
+    
     position: relative;
     
     background: url("tabBg.png") repeat-x scroll 0 3px #FBFDFF;
@@ -66,24 +67,15 @@ html, body {
     _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg.png');
 }
 
-#fbPanelBar2-panelTabs {
-    height: 20px;
-    padding: 3px 0 3px 1px;
-    
+#fbToolbarContent {
     white-space: nowrap;
-    
-    background: url("tabBg.png") repeat-x scroll 0 3px #FBFDFF;
-    _background-image: none !important; 
-    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg.png');
+    padding: 3px 2px 2px;
 }
 
-
-
-#fbToolbar {
-    height: 21px;
-    padding: 3px 2px 2px 2px;
+#fbPanelBar2-panelTabs {
+    white-space: nowrap;
+    padding: 3px 2px 2px;
 }
-
 
 /* *************************************************************************************************
  Panel Container boxes
@@ -139,7 +131,8 @@ html, body {
 #fbCommandBox {
     border-top: 1px solid #ccc;
     background: #fff;
-    height: 18px;        
+    height: 18px;
+    position: relative;
 }
 
 
@@ -154,12 +147,13 @@ html, body {
 }
 
 #fbPanelSplitter {
-    height: 26px;
+    height: 28px;
+    position: relative;
 }
 
 #fbPanelSplitterTop {
     width: 4px;
-    height: 26px;
+    height: 28px;
     
     background: url("tabBg.png") repeat-x scroll center 3px #FBFDFF;
     _background-image: none !important; 
@@ -168,12 +162,12 @@ html, body {
 
 #fbPanelSplitterHandler {
     width: 4px;
-    height: 26px;
+    height: 24px;
+    top: 4px;
+    left: 1px;
     position: absolute;
     
-    background: url("splitter.png") no-repeat 1px 3px;
-    _background-image: none !important; 
-    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=crop src='splitter.png');
+    background: url("splitter.gif") no-repeat;
 }
 
 #fbCommandPopupSplitter,
@@ -298,6 +292,7 @@ html, body {
     color: #888;
     font-family: Lucida Grande,Tahoma,sans-serif;
     font-size: 11px;
+    line-height: 14px;
     -moz-border-radius: 4px 4px 0 0;
     border-radius: 4px 4px 0 0;
 }
@@ -316,7 +311,7 @@ html, body {
     display: inline;
     font-family: monospace;
     padding-left: 20px;
-    background: url(applications-system3.png) no-repeat 4px 0;
+    background: url(panelOptions.png) no-repeat 4px 0;
     cursor: default;
     line-height: 12px;
     position: relative;
@@ -354,14 +349,17 @@ html, body {
 }
 
 #fbCommandLine {
-    position: relative;
+    position: absolute;
     top: 1px;
-    width: 100%;
+    _top: 2px; /* IE6 */
+    left: 0;
+	width: 100%;
     border: 0;
     height: 16px;
+    line-height: 16px;
     padding: 0 0 0 28px;
     margin: 0;
-    font: 11px Monaco,monospace;
+    font: 12px Monaco,monospace;
     z-index: 1;
     outline: none;
 }
@@ -373,6 +371,11 @@ html, body {
 
 .hideSidePanelBar #fbPanelSplitterBox,
 .hideSidePanelBar #fbSidePanelDeck {
+    display: none;
+}
+
+.hideCommandPopup #fbCommandPopupSplitter,
+.hideCommandPopup #fbCommandPopup {
     display: none;
 }
 
