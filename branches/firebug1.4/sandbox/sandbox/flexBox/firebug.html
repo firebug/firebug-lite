@@ -7,7 +7,7 @@
 <link href="gui.css" rel="stylesheet" type="text/css" />
 <link href="firebug.css" rel="stylesheet" type="text/css" />
 
-<script type="text/javascript" src="../../../zbuild/firebug-lite-debug.js"></script>
+<script type="text/javascript" src="../../../zcontent/firebug-lite-dev.js"></script>
 <script type="text/javascript" src="include/measure.js"></script>
 <script type="text/javascript" src="include/flexBox.js"></script>
 <script>
@@ -30,17 +30,16 @@ window.onload = function()
             var iframe = document.createElement("iframe");
             var id = panel.id;
             var className = panel.className;
+            iframe.id = id;
+            iframe.className = className; 
             iframe.setAttribute("src", "panel.html");
             iframe.setAttribute("frameBorder", 0);
             panel.parentNode.replaceChild(iframe, panel);
-            
-            iframe.id = id;
-            iframe.className = className; 
         }
     }
     
     var root = document.getElementById("fbContentBox");
-    var flexBox = new FlexBox(root, true);
+    var flexBox = window.flexBox = new FlexBox(root, true);
     
     // avoid FOUC
     root.style.visibility = "visible";
@@ -120,8 +119,8 @@ window.onload = function()
                 
             </div>
             
-            <div id="fbPanelSplitterBox">
-                <div id="fbPanelSplitter" class="boxContent">
+            <div id="fbPanelSplitter" class="fbSplitter" data-target="fbSidePanelDeck" data-spacer="fbPanelDeck">
+                <div id="fbPanelSplitterContent" class="boxContent">
                     <div id="fbPanelSplitterHandler">&nbsp;</div>
                     <div id="fbPanelSplitterTop">&nbsp;</div>
                 </div>
@@ -161,7 +160,7 @@ window.onload = function()
             
         </div>
         
-        <div id="fbCommandPopupSplitter">
+        <div id="fbCommandPopupSplitter" class="fbSplitter" data-target="fbCommandPopup" data-spacer="fbPanelPane">
             <div id="fbCommandPopupSplitterContent" class="boxContent"></div>
         </div>
         

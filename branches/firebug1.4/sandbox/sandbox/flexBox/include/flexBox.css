@@ -72,18 +72,35 @@
     width: 100%;
 }
 
-.boxFixHideContents .boxFlex,
-.boxFixHideContents .boxFlex1,
-.boxFixHideContents .boxFlex2 {
+.boxFixIgnoreContents .boxFlex,
+.boxFixIgnoreContents .boxFlex1,
+.boxFixIgnoreContents .boxFlex2 {
     position: absolute;
 }
 
+/* *************************************************************************************************
+ splitter frame
+************************************************************************************************* */
+
+.splitterFrame {
+    position: absolute;
+    display: block;
+	top: 0;
+	left: 0;
+    z-index: 2147483550;
+    
+    background-image: url(transparentPixel.gif);
+    /*
+    background-color: #def; 
+    opacity: 0.5; 
+    _filter: alpha(opacity=50);/**/
+}
 
 /* *************************************************************************************************
  iframe box fix
 ************************************************************************************************* */
 
-iframe.boxScroll {
+.boxFix iframe.boxScroll {
     /* IE need this to properly resize the iframe using flexBox */
     display: block;
     
@@ -91,4 +108,8 @@ iframe.boxScroll {
     the the iframe won't fit the proper space and the horizontal scrollbar 
     will be visible when not needed */
     height: 100%; width: 100%;
+    
+    /*
+    border-left: 0 !important;
+    border-right: 0 !important;/**/
 }

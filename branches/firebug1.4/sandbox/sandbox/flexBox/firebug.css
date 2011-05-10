@@ -140,13 +140,13 @@ html, body {
  Splitters
 ************************************************************************************************* */
 
-#fbPanelSplitterBox {
+#fbPanelSplitter {
     background: #E5E7E9;
     cursor: e-resize;
     width: 4px;
 }
 
-#fbPanelSplitter {
+#fbPanelSplitterContent {
     height: 28px;
     position: relative;
 }
@@ -369,7 +369,7 @@ html, body {
  TO ORGANIZE
 ************************************************************************************************* */
 
-.hideSidePanelBar #fbPanelSplitterBox,
+.hideSidePanelBar #fbPanelSplitter,
 .hideSidePanelBar #fbSidePanelDeck {
     display: none;
 }
