@@ -432,27 +432,21 @@ function getBoxOrientation(element)
 
 function reflowBoxes(flexBox, root)
 {
-    var object;
+    var parentBoxObject;
+    var childBoxObject;
+    var childElement;
 
-    var element;
-    var boxSpace;
-    var space;
     var flex;
-
+    var space;
+    var boxSpace;
+    var extraSpace;
     var padding;
     var border;
-    var extraSpace;
 
-    var className;
     var match;
 
-    var _isIE6 = isIE6;
-
     var measure = flexBox.measure;
-
     var parentBoxObjects = flexBox.parentBoxObjects;
-
-    var parentBoxObject;
 
     for (var index = 0; parentBoxObject = parentBoxObjects[index]; index++)
     {
@@ -471,21 +465,19 @@ function reflowBoxes(flexBox, root)
 
         for (var i = 0, childs = parentElement.childNodes, length = childs.length; i < length; i++)
         {
-            element = childs[i];
+            childElement = childs[i];
 
             // ignore non-element nodes
-            if (element.nodeType != 1)
+            if (childElement.nodeType != 1)
                 continue;
 
-            className = " " + element.className + " ";
-
-            padding = measure.getMeasureBox(element, "padding");
-            border = measure.getMeasureBox(element, "border");
+            padding = measure.getMeasureBox(childElement, "padding");
+            border = measure.getMeasureBox(childElement, "border");
 
             extraSpace = padding[orientation.before] + padding[orientation.after] + 
                     border[orientation.before] + border[orientation.after];
 
-            if (match = /\bboxFlex(\d?)\b/.exec(className))
+            if (match = /\bboxFlex(\d?)\b/.exec(childElement.className))
             {
                 flex = match[1] - 0 || 1;
                 space = null;
@@ -495,7 +487,7 @@ function reflowBoxes(flexBox, root)
             }
             else
             {
-                boxSpace = element[orientation.offset];
+                boxSpace = childElement[orientation.offset];
 
                 space = boxSpace - extraSpace;
                 space = Math.max(space, 0);
@@ -506,23 +498,23 @@ function reflowBoxes(flexBox, root)
                 minimumSpace += boxSpace;
             }
 
-            object =
+            childBoxObject =
             {
-            element : element,
-            flex : flex,
-            extra : {},
-            layout : layout
+                element : childElement,
+                flex : flex,
+                extra : {},
+                layout : layout
             };
 
-            object[orientation.dimension] = space;
-            object.extra[orientation.dimension] = extraSpace;
+            childBoxObject[orientation.dimension] = space;
+            childBoxObject.extra[orientation.dimension] = extraSpace;
 
-            children.push(object);
+            children.push(childBoxObject);
 
             // if it is a box, then we need to layout it
-            if (getBoxOrientation(element))
+            if (getBoxOrientation(childElement))
             {
-                parentBoxObjects.push(object);
+                parentBoxObjects.push(childBoxObject);
             }
         }
 
