@@ -89,7 +89,9 @@
 	left: 0;
     z-index: 2147483550;
     
-    background-image: url(transparentPixel.gif);
+    /* IE6 needs a transparent background otherwise it won't capture mouse events */
+    _background-image: url(transparentPixel.gif);
+    
     /*
     background-color: #def; 
     opacity: 0.5; 
