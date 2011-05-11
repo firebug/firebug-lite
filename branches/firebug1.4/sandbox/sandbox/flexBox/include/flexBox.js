@@ -145,9 +145,9 @@ FlexBox.prototype.reflow = function()
 
     var object =
     {
-    element : root,
-    flex : null,
-    extra : {}
+        element : root,
+        flex : null,
+        extra : {}
     };
 
     this.parentBoxObjects = [ object ];
@@ -532,26 +532,23 @@ function reflowBoxes(flexBox, root)
 
 function renderBoxes(flexBox, root)
 {
-    var object;
-
-    var element;
-    var boxSpace;
-    var space;
+    var parentBoxObject;
+    var childBoxObject;
+    var childElement;
+    
     var flex;
-
+    var space;
+    var boxSpace;
+    var extraSpace;
     var padding;
     var border;
-    var extraSpace;
 
     var totalSpace;
     var freeSpace;
 
     var _isIE6 = isIE6;
-
     var measure = flexBox.measure;
-
     var parentBoxObjects = flexBox.parentBoxObjects;
-    var parentBoxObject;
 
     // render each box, followed by its children
     for (var index = 0; parentBoxObject = parentBoxObjects[index]; index++)
@@ -563,7 +560,7 @@ function renderBoxes(flexBox, root)
         // restore data from the parentBoxObjects cache
 
         var parentElement = parentBoxObject.element;
-        var objects = parentBoxObject.children;
+        var children = parentBoxObject.children;
         var orientation = getBoxOrientation(parentElement);
         
         var flexSum = parentBoxObject.layout.flexSum;
@@ -604,13 +601,13 @@ function renderBoxes(flexBox, root)
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // processing box children
 
-        for (var i = 0, length = objects.length; i < length; i++)
+        for (var i = 0, length = children.length; i < length; i++)
         {
-            object = objects[i];
+            childBoxObject = children[i];
 
-            element = object.element;
-            flex = object.flex;
-            extraSpace = object.extra[orientation.dimension];
+            childElement = childBoxObject.element;
+            flex = childBoxObject.flex;
+            extraSpace = childBoxObject.extra[orientation.dimension];
 
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // calculating child size
@@ -635,13 +632,13 @@ function renderBoxes(flexBox, root)
                 }
 
                 // save the value
-                object[orientation.dimension] = space;
+                childBoxObject[orientation.dimension] = space;
             }
             // if it is not a flexible child, then we already have its dimension calculated
             else
             {
                 // use the value calculated at the last reflow() operation
-                space = object[orientation.dimension];
+                space = childBoxObject[orientation.dimension];
             }
 
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -652,48 +649,48 @@ function renderBoxes(flexBox, root)
                 if (orientation.isVertical)
                 {
                     // if it's a child of a vertical box, then we only need to adjust the height...
-                    element.style.height = space + "px";
+                    childElement.style.height = space + "px";
 
                     // unless...
 
                     // xxxpedro 100% width of an iframe with border will exceed the width of 
                     // its offsetParent... don't ask me why. not sure though if this 
                     // is the best way to solve it
-                    if (element.nodeName.toLowerCase() == "iframe")
+                    if (childElement.nodeName.toLowerCase() == "iframe")
                     {
-                        border = measure.getMeasureBox(element, "border");
+                        border = measure.getMeasureBox(childElement, "border");
 
                         // in IE6 we need to hide the iframe in order to get the correct 
                         // width of its parentNode
-                        if (isIE6)
+                        if (_isIE6)
                         {
-                            element.style.display = "none";
-                            boxSpace = element.parentNode.offsetWidth;
-                            element.style.display = "block";
+                            childElement.style.display = "none";
+                            boxSpace = childElement.parentNode.offsetWidth;
+                            childElement.style.display = "block";
                         }
                         else
                         {
-                            boxSpace = element.parentNode.offsetWidth;
+                            boxSpace = childElement.parentNode.offsetWidth;
                         }
 
                         // remove the border space
-                        element.style.width = 
+                        childElement.style.width = 
                                 Math.max(0, boxSpace - border.left - border.right) + "px";
                     }
                 }
                 else
                 {
-                    setClass(element, "boxFixPos");
+                    setClass(childElement, "boxFixPos");
 
-                    element.style.left = computedSpace + "px";
-                    element.style.width = space + "px";
+                    childElement.style.left = computedSpace + "px";
+                    childElement.style.width = space + "px";
 
                     // parentBoxObject.height IE6 only
                     if (_isIE6)
                     {
                         // TODO: figure out how to solve the problem with minimumSpace
-                        object.height = parentBoxObject.height || parentElement.offsetHeight;
-                        element.style.height = object.height + "px";
+                        childBoxObject.height = parentBoxObject.height || parentElement.offsetHeight;
+                        childElement.style.height = childBoxObject.height + "px";
                     }
                 }
             }
