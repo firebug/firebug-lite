@@ -91,11 +91,6 @@
     
     /* IE6 needs a transparent background otherwise it won't capture mouse events */
     _background-image: url(transparentPixel.gif);
-    
-    /*
-    background-color: #def; 
-    opacity: 0.5; 
-    _filter: alpha(opacity=50);/**/
 }
 
 /* *************************************************************************************************

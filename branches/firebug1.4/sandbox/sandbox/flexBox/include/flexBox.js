@@ -13,6 +13,9 @@
         - cache?
 
 
+rename parentBox* to containerBox* ?
+     getBoxObject() seems to be confuse
+
 
 getPosition - relative to what?
 
@@ -21,7 +24,8 @@ scrolling in-browser iframe Chrome different computation than Splitter
 
 */
 
-//(function(){
+(function(){
+
 // ************************************************************************************************
 // turning debugging on makes CSS3-flexBox-supported browsers to use FlexBox class to resize
 // the elements via JavaScript instead of CSS, allowing the FlexBox functions to be debugabe
@@ -47,7 +51,7 @@ function FlexBox(root, listenWindowResize)
 
     this.measure = new Measure(win);
 
-    this.parentBoxObjects = [];
+    this.boxObjects = [];
 
     this.root = root;
 
@@ -63,50 +67,16 @@ function FlexBox(root, listenWindowResize)
 
     var self = this;
 
-    var resizeTimer;
-    var lastResize = 0;
-
     this.render = function()
     {
-        renderBoxes(this, root);
+        renderBoxes(this);
     };
 
     var resizeHandler = this.resizeHandler = isIE6 ?
-    // IE6 requires an special resizeHandler to make
-    // the rendering smoother
-    (function()
-    {
-        if (new Date().getTime() - lastResize > 50)
-        {
-            if (resizeTimer)
-            {
-                clearTimeout(resizeTimer);
-                resizeTimer = null;
-            }
-
-            self.render();
-
-            lastResize = new Date().getTime();
-        }
-        else
-        {
-            if (resizeTimer)
-            {
-                clearTimeout(resizeTimer);
-                resizeTimer = null;
-            }
-
-            resizeTimer = setTimeout(function delayedFlexBoxResize()
-            {
-                self.render();
-            }, 50);
-        }
-    }) :
-    // Other IE versions
-    (function()
-    {
-        self.render();
-    });
+            // IE6 requires an special resizeHandler to make the rendering smoother
+            lazyExecution(self.render, self) :
+            // Other browsers can handle
+            (function(){ self.render(); });
 
     if (listenWindowResize)
     {
@@ -127,8 +97,7 @@ function FlexBox(root, listenWindowResize)
     if (isIE6)
     {
         fixIE6BackgroundImageCache();
-        setTimeout(function delayedFlexBoxReflow()
-        {
+        setTimeout(function delayedFlexBoxReflow(){
             self.invalidate();
         }, 50);
     }
@@ -137,7 +106,7 @@ function FlexBox(root, listenWindowResize)
 //************************************************************************************************
 //FlexBox Class members
 
-FlexBox.prototype.parentBoxObjects = null;
+FlexBox.prototype.boxObjects = null;
 
 FlexBox.prototype.reflow = function()
 {
@@ -150,9 +119,9 @@ FlexBox.prototype.reflow = function()
         extra : {}
     };
 
-    this.parentBoxObjects = [ object ];
+    this.boxObjects = [ object ];
 
-    reflowBoxes(this, root);
+    reflowBoxes(this);
 };
 
 FlexBox.prototype.render = function()
@@ -166,33 +135,136 @@ FlexBox.prototype.invalidate = function()
     this.render();
 };
 
-FlexBox.prototype.destroy = function()
-{
-    this.root = null;
-
-    var parentBoxObjects = this.parentBoxObjects;
-    var parentBoxObject;
-
-    while (parentBoxObject = parentBoxObjects.pop())
-    {
-        parentBoxObject.element = null;
-        parentBoxObject.extra = null;
-        parentBoxObject.layout = null;
-    }
-
-    this.parentBoxObjects = null;
-};
-
 FlexBox.prototype.resizeHandler = function()
 {
 };
 
-FlexBox.prototype.getBoxObject = function(element)
+FlexBox.prototype.destroy = function()
 {
-    // TODO: implement this? is it necessary to help splitters?
+    function cleanObject(object)
+    {
+        delete object.element;
+        delete object.extra;
+        delete object.orientation;
+        delete object.children;
+        delete object.layout;
+    }
+    
+    this.root = null;
+
+    var boxObjects = this.boxObjects;
     var boxObject;
 
-    return boxObject;
+    while (boxObject = boxObjects.pop())
+    {
+        var childBoxObject;
+        var children = boxObject.children;
+        
+        while (childBoxObject = children.pop())
+        {
+            cleanObject(childBoxObject);
+            childBoxObject = null;
+        }
+        
+        cleanObject(boxObject);
+        boxObject = null;
+        children = null;
+    }
+
+    this.boxObjects = null;
+};
+
+//************************************************************************************************
+// FlexBox helpers
+
+FlexBox.prototype.getBoxOrientation = function(element)
+{
+    var orient = (element.className.match(/\b(v|h)box\b/) || [ 0, 0 ])[1];
+
+    var type = orient == "v" ? "vertical" : orient == "h" ? "horizontal" : null;
+
+    var orientation = null;
+
+    if (type == "vertical")
+    {
+        orientation =
+        {
+            isVertical: true,
+            dimension: "height",
+            offset: "offsetHeight",
+            before: "top",
+            after: "bottom",
+            mousePosition: "clientY"
+        };
+    }
+    else if (type == "horizontal")
+    {
+        orientation =
+        {
+            isHorizontal: true,
+            dimension: "width",
+            offset: "offsetWidth",
+            before: "left",
+            after: "right",
+            mousePosition: "clientX"
+        };
+    }
+
+    return orientation;
+};
+
+FlexBox.prototype.getBoxObject = function(element)
+{
+    var boxObject;
+    var boxObjects = this.boxObjects;
+    
+    for (var i = 0; boxObject = boxObjects[i]; i++)
+    {
+        if (boxObject.element == element)
+            return boxObject;
+    }
+
+    return null;
+};
+
+FlexBox.prototype.getParentBoxObject = function(element)
+{
+    do
+    {
+        element = element.parentNode;
+    }
+    while (element && element.nodeType == 1 && !this.getBoxOrientation(element));
+    
+    return this.getBoxObject(element);
+};
+
+FlexBox.prototype.getChildObject = function(element, boxObject)
+{
+    var childObject;
+    var boxObjectFound = false;
+    
+    if (this.getBoxOrientation(element))
+    {
+        return this.getBoxObject(element);
+    }
+    
+    if (!boxObject)
+    {
+        boxObject = this.getBoxObject(element, true);
+    }
+    
+    if (!boxObject) return null;
+
+    for (var i = 0, children = boxObject.children; childObject = children[i]; i++)
+    {
+        if (childObject.element == element)
+        {
+            boxObjectFound = true;
+            break;
+        }
+    }
+    
+    return boxObjectFound ? childObject : null;
 };
 
 //************************************************************************************************
@@ -247,7 +319,6 @@ window.Splitter = function Splitter(flexBox, splitter, target, spacer)
 Splitter.prototype.onSplitterMouseDown = function(e)
 {
     cancelEvent(e, true);
-    //console.log(e);
 
     var flexBox = this.flexBox;
     var splitterFrame = this.splitterFrame;
@@ -258,23 +329,33 @@ Splitter.prototype.onSplitterMouseDown = function(e)
     var winSize = measure.getWindowSize();
     var target = this.target;
     var self = this;
+    
+    var orientation = flexBox.getParentBoxObject(target).orientation;
+    var halfSplitterSize = Math.floor(this.splitter[orientation.offset]/2);
 
-    //console.log(measure.getElementPosition(this.target));
-
-    //var box = measure.getElementBox(root);
-
-    openSplitterFrame(this);
+    openSplitterFrame(this, orientation);
 
     this.splitterFrame.onmousemove = function(event)
     {
-        //console.log(event);
         event = window.event || event;
         cancelEvent(event, true);
 
-        var clientX = event.clientX;
+        var boxObject = flexBox.getParentBoxObject(target);
+        var orientation = boxObject.orientation;
+        
+        var fixedSpace = boxObject.layout.fixedSpace;
+        var targetSize = target[orientation.offset];
+        var maxSize = boxObject.element[orientation.offset] + targetSize - fixedSpace;
+        
+        var mousePosition = event[orientation.mousePosition];
 
-        //console.log(clientX, winSize.width, Math.max(0, winSize.width-clientX));
-        target.style.width = Math.max(0, winSize.width - clientX - 2) + "px";
+        var targetPosition = flexBox.measure.getElementPosition(target);
+        var positionDiff = mousePosition - targetPosition[orientation.before] + halfSplitterSize;
+        
+        var size = targetSize - positionDiff;
+        size = Math.min(maxSize, size);
+        size = Math.max(0, size);
+        target.style[orientation.dimension] = size + "px";
 
         if (isIE6)
         {
@@ -285,8 +366,6 @@ Splitter.prototype.onSplitterMouseDown = function(e)
         }
         else
             flexBox.invalidate();
-
-        //openSplitterFrame(self);
     };
 
     this.splitterFrame.onmouseup = function(event)
@@ -294,7 +373,6 @@ Splitter.prototype.onSplitterMouseDown = function(e)
         event = window.event || event;
         cancelEvent(event, true);
 
-        //console.log(event);
         closeSplitterFrame(self);
 
         try
@@ -317,12 +395,12 @@ Splitter.prototype.onSplitterMouseDown = function(e)
     };
 };
 
-function openSplitterFrame(splitter)
+function openSplitterFrame(splitter, orientation)
 {
     var flexBox = splitter.flexBox;
     var root = flexBox.root;
     var splitterFrame = splitter.splitterFrame;
-
+    
     var box = flexBox.measure.getElementBox(root);
     for (var prop in box)
     {
@@ -331,14 +409,16 @@ function openSplitterFrame(splitter)
 
     if (debug)
     {
-        //splitterFrame.style.background = "#def";
-        //splitterFrame.style.opacity = 0.5;
+        splitterFrame.style.background = "#def";
+        splitterFrame.style.opacity = 0.5;
+        
+        if (isIE6)
+            splitterFrame.style.filter = "alpha(opacity=50)";
     }
 
-    splitterFrame.style.cursor = "e-resize";
+    splitterFrame.style.cursor = orientation.isVertical ? "n-resize" : "e-resize";
 
     root.parentNode.insertBefore(splitterFrame, root);
-    //root.appendChild(splitterFrame);
 }
 
 function closeSplitterFrame(splitter)
@@ -349,7 +429,6 @@ function closeSplitterFrame(splitter)
     splitterFrame.style.cursor = "inherit";
 
     root.parentNode.removeChild(splitterFrame);
-    //root.removeChild(splitterFrame);
 }
 
 //************************************************************************************************
@@ -360,6 +439,8 @@ function lazyExecution(_function, _this, _arguments)
     var executionTimer;
     var lastExecution = 0;
     var thisObject = _this ? _this : _function.prototype ? _function.prototype : _function;
+    
+    _arguments = _arguments || [];
 
     return function()
     {
@@ -367,7 +448,7 @@ function lazyExecution(_function, _this, _arguments)
         {
             if (executionTimer)
             {
-                clearTimeout(resizeTimer);
+                clearTimeout(executionTimer);
                 executionTimer = null;
             }
 
@@ -391,48 +472,11 @@ function lazyExecution(_function, _this, _arguments)
     };
 }
 
-//************************************************************************************************
-// FlexBox helpers
-
-function getBoxOrientation(element)
-{
-    var orient = (element.className.match(/\b(v|h)box\b/) || [ 0, 0 ])[1];
-
-    var type = orient == "v" ? "vertical" : orient == "h" ? "horizontal" : null;
-
-    var orientation = null;
-
-    if (type == "vertical")
-    {
-        orientation =
-        {
-            isVertical: true,
-            dimension : "height",
-            offset : "offsetHeight",
-            before : "top",
-            after : "bottom"
-        };
-    }
-    else if (type == "horizontal")
-    {
-        orientation =
-        {
-            isHorizontal: true,
-            dimension : "width",
-            offset : "offsetWidth",
-            before : "left",
-            after : "right"
-        };
-    }
-
-    return orientation;
-}
-
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-function reflowBoxes(flexBox, root)
+function reflowBoxes(flexBox)
 {
-    var parentBoxObject;
+    var boxObject;
     var childBoxObject;
     var childElement;
 
@@ -446,13 +490,13 @@ function reflowBoxes(flexBox, root)
     var match;
 
     var measure = flexBox.measure;
-    var parentBoxObjects = flexBox.parentBoxObjects;
+    var boxObjects = flexBox.boxObjects;
 
-    for (var index = 0; parentBoxObject = parentBoxObjects[index]; index++)
+    for (var index = 0; boxObject = boxObjects[index]; index++)
     {
-        var parentElement = parentBoxObject.element;
+        var parentElement = boxObject.element;
 
-        var orientation = getBoxOrientation(parentElement);
+        var orientation = flexBox.getBoxOrientation(parentElement);
         if (!orientation)
             continue;
 
@@ -512,9 +556,9 @@ function reflowBoxes(flexBox, root)
             children.push(childBoxObject);
 
             // if it is a box, then we need to layout it
-            if (getBoxOrientation(childElement))
+            if (flexBox.getBoxOrientation(childElement))
             {
-                parentBoxObjects.push(childBoxObject);
+                boxObjects.push(childBoxObject);
             }
         }
 
@@ -522,17 +566,17 @@ function reflowBoxes(flexBox, root)
         layout.minimumSpace = minimumSpace;
         layout.fixedSpace = fixedSpace;
 
-        parentBoxObject.orientation = orientation;
-        parentBoxObject.children = children;
-        parentBoxObject.layout = layout;
+        boxObject.orientation = orientation;
+        boxObject.children = children;
+        boxObject.layout = layout;
     }
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-function renderBoxes(flexBox, root)
+function renderBoxes(flexBox)
 {
-    var parentBoxObject;
+    var boxObject;
     var childBoxObject;
     var childElement;
     
@@ -548,29 +592,29 @@ function renderBoxes(flexBox, root)
 
     var _isIE6 = isIE6;
     var measure = flexBox.measure;
-    var parentBoxObjects = flexBox.parentBoxObjects;
+    var boxObjects = flexBox.boxObjects;
 
     // render each box, followed by its children
-    for (var index = 0; parentBoxObject = parentBoxObjects[index]; index++)
+    for (var index = 0; boxObject = boxObjects[index]; index++)
     {
         var computedSpace = 0;
         var remainingPixels = 0;
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // restore data from the parentBoxObjects cache
+        // restore data from the boxObjects cache
 
-        var parentElement = parentBoxObject.element;
-        var children = parentBoxObject.children;
-        var orientation = getBoxOrientation(parentElement);
+        var parentElement = boxObject.element;
+        var children = boxObject.children;
+        var orientation = flexBox.getBoxOrientation(parentElement);
         
-        var flexSum = parentBoxObject.layout.flexSum;
-        var fixedSpace = parentBoxObject.layout.fixedSpace;
-        var minimumSpace = parentBoxObject.layout.minimumSpace;
+        var flexSum = boxObject.layout.flexSum;
+        var fixedSpace = boxObject.layout.fixedSpace;
+        var minimumSpace = boxObject.layout.minimumSpace;
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // calculating the total space
 
-        extraSpace = parentBoxObject.extra[orientation.dimension];
+        extraSpace = boxObject.extra[orientation.dimension];
         if (!extraSpace)
         {
             padding = measure.getMeasureBox(parentElement, "padding");
@@ -626,8 +670,7 @@ function renderBoxes(flexBox, root)
                 // distribute remaining pixels
                 if (remainingPixels > 0 && computedSpace + space + remainingPixels <= totalSpace)
                 {
-                    // distribute a proportion of the remaining pixels, 
-                    // with a minimum value of 1 pixel
+                    // distribute a proportion of the remaining pixels, or a minimum of 1 pixel
                     space += Math.floor(remainingPixels * flex / flexSum) || 1;
                 }
 
@@ -685,11 +728,11 @@ function renderBoxes(flexBox, root)
                     childElement.style.left = computedSpace + "px";
                     childElement.style.width = space + "px";
 
-                    // parentBoxObject.height IE6 only
+                    // boxObject.height IE6 only
                     if (_isIE6)
                     {
                         // TODO: figure out how to solve the problem with minimumSpace
-                        childBoxObject.height = parentBoxObject.height || parentElement.offsetHeight;
+                        childBoxObject.height = boxObject.height || parentElement.offsetHeight;
                         childElement.style.height = childBoxObject.height + "px";
                     }
                 }
@@ -704,14 +747,14 @@ function renderBoxes(flexBox, root)
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Ensuring minimum space
 
-        if (parentElement != root && orientation.isVertical)
+        if (parentElement != flexBox.root && orientation.isVertical)
         {
             // TODO: check for "deeper" parents
             // here we are enforcing that the parent box dimension (height or width) 
             // won't be smaller than the minimum space required, which is the sum 
             // of fixed dimension child boxes
-            parentElement.parentNode.style[orientation.dimension] = Math
-                    .max(parentElement.parentNode[orientation.offset], minimumSpace) + "px";
+            parentElement.parentNode.style[orientation.dimension] = 
+                    Math.max(parentElement.parentNode[orientation.offset], minimumSpace) + "px";
         }
     }
 
@@ -789,4 +832,4 @@ var fixIE6BackgroundImageCache = function(doc)
 window.FlexBox = FlexBox;
 
 // ************************************************************************************************
-//})();
+})();
