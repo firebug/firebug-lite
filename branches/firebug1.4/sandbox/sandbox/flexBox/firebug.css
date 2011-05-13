@@ -75,6 +75,10 @@ html, body {
 #fbPanelBar2-panelTabs {
     white-space: nowrap;
     padding: 3px 2px 2px;
+    /* avoid tabs wrapping to the next line when the space is to small*/
+    clip: rect(0pt, 1024px, 25px, 0pt);
+    /* Firefox needs position:absolute so the clip:rect works as expected */
+    position: absolute;
 }
 
 /* *************************************************************************************************

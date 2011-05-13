@@ -1,23 +1,17 @@
 /* See license.txt for terms of usage */
 
-(function() { 
+define(["BrowserDetection"], function(BrowserDetection) { 
 // ************************************************************************************************
 
 // ************************************************************************************************
 // Globals
 
-// ************************************************************************************************
-var userAgent = navigator.userAgent.toLowerCase();
-var isOpera   = /opera/.test(userAgent);
-var isSafari  = /webkit/.test(userAgent);
-var isIE      = /msie/.test(userAgent) && !/opera/.test(userAgent);
-var browserVersion = (userAgent.match( /.+(?:rv|it|ra|ie)[\/: ]([\d.]+)/ ) || [0,'0'])[1];
-
 // Opera and some versions of webkit returns the wrong value of document.elementFromPoint()
 // function, without taking into account the scroll position. Safari 4 (webkit/531.21.8) 
 // still have this issue. Google Chrome 4 (webkit/532.5) does not. So, we're assuming this 
 // issue was fixed in the 532 version
-var shouldFixElementFromPoint = isOpera || isSafari && browserVersion < "532";
+var shouldFixElementFromPoint = BrowserDetection.Safari || 
+        BrowserDetection.Safari && BrowserDetection.version < "532";
 // ************************************************************************************************
 
 // ************************************************************************************************
@@ -144,7 +138,9 @@ Measure.prototype =
             var rect = el.getBoundingClientRect();
             
             // fix IE problem with offset when not in fullscreen mode
-            var offset = isIE ? this.document.body.clientTop || this.document.documentElement.clientTop: 0;
+            var offset = BrowserDetection.IE ? 
+                    this.document.body.clientTop || 
+                    this.document.documentElement.clientTop: 0;
             
             var scroll = this.getWindowScrollPosition();
             
@@ -215,7 +211,7 @@ Measure.prototype =
                 ["TopWidth", "LeftWidth", "BottomWidth", "RightWidth"] :
                 ["Top", "Left", "Bottom", "Right"];
         
-        if (isIE)
+        if (BrowserDetection.IE)
         {
             var propName, cssValue;
             var autoMargin = null;
@@ -256,15 +252,17 @@ function getCSSAutoMarginBox(el)
 {
     /*
     // the following elements will fail
-    if (isIE && " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
-        return {top:0, left:0, bottom:0, right:0};
-        /**/
+    if (BrowserDetection.IE && 
+            " meta title input script link a ".indexOf(" "+el.nodeName.toLowerCase()+" ") != -1)
+                return {top:0, left:0, bottom:0, right:0};
+    /**/
 
     // the following elements are safe
     // which other elements may have auto margin?
-    if (isIE && " h1 h2 h3 h4 h5 h6 h7 ul p ".indexOf(" "+el.nodeName.toLowerCase()+" ") == -1)
-        return {top:0, left:0, bottom:0, right:0};
-        /**/
+    if (BrowserDetection.IE && 
+            " h1 h2 h3 h4 h5 h6 h7 ul p ".indexOf(" "+el.nodeName.toLowerCase()+" ") == -1)
+                return {top:0, left:0, bottom:0, right:0};
+    /**/
 
     var offsetTop = 0;
     if (false && isIEStantandMode)
@@ -298,7 +296,7 @@ function getCSSAutoMarginBox(el)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-var getStyle = isIE ? function(el, name)
+var getStyle = BrowserDetection.IE ? function(el, name)
 {
     return el.currentStyle[name] || el.style[name] || undefined;
 }
@@ -336,7 +334,7 @@ function getPixelValue(element, value)
 
 // ************************************************************************************************
 
-window.Measure = Measure;
+return Measure;
 
 // ************************************************************************************************
-})();
+});

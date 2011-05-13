@@ -24,12 +24,12 @@ scrolling in-browser iframe Chrome different computation than Splitter
 
 */
 
-(function(){
+define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
 
 // ************************************************************************************************
 // turning debugging on makes CSS3-flexBox-supported browsers to use FlexBox class to resize
 // the elements via JavaScript instead of CSS, allowing the FlexBox functions to be debugabe
-var debug = true;
+var debug = false;
 
 //************************************************************************************************
 
@@ -40,7 +40,7 @@ debug = debug === true ? true : /\bdebug\b/.test(document.location.hash);
 
 // TODO: better browser detection
 var supportsFlexBox = !document.all;
-var isIE6 = navigator.userAgent.indexOf("MSIE 6") != -1;
+var isIE6 = BrowserDetection.IE6;
 
 // ************************************************************************************************
 // FlexBox Class constructor
@@ -270,7 +270,7 @@ FlexBox.prototype.getChildObject = function(element, boxObject)
 //************************************************************************************************
 // Splitter
 
-window.splitters = [];
+var splitters = [];
 
 function initializeSplitters(flexBox)
 {
@@ -294,7 +294,7 @@ function initializeSplitters(flexBox)
     }
 }
 
-window.Splitter = function Splitter(flexBox, splitter, target, spacer)
+function Splitter(flexBox, splitter, target, spacer)
 {
     this.flexBox = flexBox;
 
@@ -375,18 +375,9 @@ Splitter.prototype.onSplitterMouseDown = function(e)
 
         closeSplitterFrame(self);
 
+        self.splitter.focus();
         try
         {
-            self.splitter.focus();
-
-            // IE9 need this hack
-            /*
-            self.splitter.style.cursor = "default";
-            setTimeout(function(){
-            self.splitter.style.cursor = "e-resize";
-            self.splitter.focus();
-            },0);
-            /**/
         }
         catch (E)
         {
@@ -829,7 +820,7 @@ var fixIE6BackgroundImageCache = function(doc)
 
 // ************************************************************************************************
 
-window.FlexBox = FlexBox;
+return FlexBox;
 
 // ************************************************************************************************
-})();
+});

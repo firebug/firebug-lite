@@ -8,10 +8,12 @@
 <link href="firebug.css" rel="stylesheet" type="text/css" />
 
 <script type="text/javascript" src="../../../zcontent/firebug-lite-dev.js"></script>
-<script type="text/javascript" src="include/measure.js"></script>
-<script type="text/javascript" src="include/flexBox.js"></script>
+<script type="text/javascript" src="include/require.js"></script>
 <script>
-window.onload = function()
+
+require({baseUrl: "include"},
+["FlexBox"], 
+function(FlexBox)
 {
     var useIFrame = /\biframe\b/.test(document.location.hash);
 
@@ -44,7 +46,7 @@ window.onload = function()
     // avoid FOUC
     root.style.visibility = "visible";
 
-}
+});
 </script>
 </head>
 <body>
