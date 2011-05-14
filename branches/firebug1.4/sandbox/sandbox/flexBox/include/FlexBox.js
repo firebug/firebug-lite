@@ -27,9 +27,15 @@ scrolling in-browser iframe Chrome different computation than Splitter
 define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
 
 // ************************************************************************************************
+
 // turning debugging on makes CSS3-flexBox-supported browsers to use FlexBox class to resize
 // the elements via JavaScript instead of CSS, allowing the FlexBox functions to be debugabe
 var debug = false;
+
+// setting debugSplitterFrame to true will make the SplitterFrame element to be visible
+// (the invisible element used to cover the whole UI when dragging the splitter in 
+// order to capture mouse events)
+var debugSplitterFrame = false;
 
 //************************************************************************************************
 
@@ -398,7 +404,7 @@ function openSplitterFrame(splitter, orientation)
         splitterFrame.style[prop] = box[prop] + "px";
     }
 
-    if (debug)
+    if (debugSplitterFrame)
     {
         splitterFrame.style.background = "#def";
         splitterFrame.style.opacity = 0.5;
