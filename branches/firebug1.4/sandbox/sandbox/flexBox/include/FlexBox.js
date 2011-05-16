@@ -1,30 +1,31 @@
-/*
+/* See license.txt for terms of usage */
 
-    - really required
+define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
+
+// ************************************************************************************************
+
+/*
+  xxxpedro notes:
+  
+    - flexBox dependencies
         - className
-        - userAgent/browser-detection
-    
-        - measure
-            - userAgent/browser-detection
+        - event (onresize, onunload)
+        - BrowserDetection
+        - lazyExecution
+        - Measure
+            - BrowserDetection
         
-    - move to chrome?
+    - move to chrome/context?
         - lazy
         - event
         - cache?
-
-
-rename parentBox* to containerBox* ?
-     getBoxObject() seems to be confuse
-
-
-getPosition - relative to what?
-
-scrolling in-browser iframe Chrome different computation than Splitter
-
+    
+    
+    - scrolling
+        - getPosition - relative to what?
+        - scrolling in-browser iframe Chrome different computation than Splitter
 
 */
-
-define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
 
 // ************************************************************************************************
 
@@ -44,8 +45,8 @@ debug = debug === true ? true : /\bdebug\b/.test(document.location.hash);
 
 //************************************************************************************************
 
-// TODO: better browser detection
-var supportsFlexBox = !document.all;
+// FIXME: xxxpedro: better browser detection? always use flexBox?
+var supportsFlexBox = !document.all && !window.opera;
 var isIE6 = BrowserDetection.IE6;
 
 // ************************************************************************************************
@@ -379,16 +380,17 @@ Splitter.prototype.onSplitterMouseDown = function(e)
         event = window.event || event;
         cancelEvent(event, true);
 
-        closeSplitterFrame(self);
-
-        self.splitter.focus();
-        try
-        {
-        }
-        catch (E)
-        {
-
-        }
+        // IE9 need this timeout otherwise the mouse cursor image will freeze 
+        // until the document is clicked again
+        setTimeout(function(){
+            try
+            {
+                self.splitter.focus();
+            }
+            catch (E) {}
+            
+            closeSplitterFrame(self);
+        },0);
     };
 };
 

@@ -15,7 +15,7 @@ var versionNumber = parseInt(version);
 
 var BrowserDetection =
 {
-    version   : version,
+    version : version,
     Firefox : /firefox/.test(userAgent) && versionNumber,
     Opera   : /opera/.test(userAgent) && versionNumber,
     Safari  : /webkit/.test(userAgent) && versionNumber,

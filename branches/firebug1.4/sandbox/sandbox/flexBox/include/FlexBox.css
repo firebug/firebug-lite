@@ -1,3 +1,5 @@
+/* See license.txt for terms of usage */
+
 /* *************************************************************************************************
  Flexible Box
 ************************************************************************************************* */
@@ -48,8 +50,9 @@
 
 .boxScroll {
     overflow: auto;
-    min-height: 1px; /* Firefox needs min-height and min-width to show scrollbars */
-    min-width: 1px;
+    display: block;  /* Google Chrome needs this in case of an iframe element. */
+    min-height: 1px; /* Firefox needs min-height and min-width to avoid problems */
+    min-width: 1px;  /* with the minimum dimensions of flexible elements. */
 }
 
 
@@ -89,8 +92,8 @@
 	left: 0;
     z-index: 2147483550;
     
-    /* IE6 needs a transparent background otherwise it won't capture mouse events */
-    _background-image: url(transparentPixel.gif);
+    /* IE needs a transparent background otherwise it won't capture mouse events properly */
+    background-image: url(transparentPixel.gif);
 }
 
 /* *************************************************************************************************
