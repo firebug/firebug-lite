@@ -52,7 +52,8 @@ Firebug.HTML = extend(Firebug.Module,
                 var nodeControl = !hasSingleTextChild && childLength > 0 ? 
                     ('<div class="nodeControl"></div>') : '';
                 
-                var isIE = false;
+                // FIXME xxxpedro remove this
+                //var isIE = false;
 
                 if(isIE && nodeControl)
                     html.push(nodeControl);
@@ -81,8 +82,13 @@ Firebug.HTML = extend(Firebug.Module,
                 for (var i = 0; i < node.attributes.length; ++i)
                 {
                     var attr = node.attributes[i];
-                    if (!attr.specified || Firebug.ignoreFirebugElements && 
-                        ignoreHTMLProps.hasOwnProperty(attr.nodeName))
+                    if (!attr.specified || 
+                        // Issue 4432:  Firebug Lite: HTML is mixed-up with functions
+                        // The problem here is that expando properties added to DOM elements in 
+                        // IE < 9 will behave like DOM attributes and so they'll show up when
+                        // looking at element.attributes list. 
+                        isIE && (browserVersion-0<9) && typeof attr.nodeValue != "string" ||
+                        Firebug.ignoreFirebugElements && ignoreHTMLProps.hasOwnProperty(attr.nodeName))
                             continue;
                     
                     var name = attr.nodeName.toLowerCase();
@@ -90,7 +96,7 @@ Firebug.HTML = extend(Firebug.Module,
                     
                     html.push('&nbsp;<span class="nodeName">', name,
                         '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
-                        '</span>&quot;')
+                        '</span>&quot;');
                 }
                 
                 /*
@@ -204,7 +210,8 @@ Firebug.HTML = extend(Firebug.Module,
         var treeNext = treeNode.nextSibling;
         var treeParent = treeNode.parentNode;
         
-        var isIE = false;
+        // FIXME xxxpedro remove this
+        //var isIE = false;
         var control = isIE ? treeNode.previousSibling : treeNode.firstChild;
         control.className = 'nodeControl nodeMaximized';
         
@@ -219,7 +226,7 @@ Firebug.HTML = extend(Firebug.Module,
         var closeElement = doc.createElement("div");
         closeElement.className = "objectBox-element";
         closeElement.innerHTML = '&lt;/<span class="nodeTag">' + 
-            parentNode.nodeName.toLowerCase() + '&gt;</span>'
+            parentNode.nodeName.toLowerCase() + '&gt;</span>';
         
         treeParent.insertBefore(closeElement, treeNext);
         
@@ -230,7 +237,8 @@ Firebug.HTML = extend(Firebug.Module,
         var children = treeNode.nextSibling;
         var closeTag = children.nextSibling;
         
-        var isIE = false;
+        // FIXME xxxpedro remove this
+        //var isIE = false;
         var control = isIE ? treeNode.previousSibling : treeNode.firstChild;
         control.className = 'nodeControl';
         
@@ -301,7 +309,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     options: {
         hasSidePanel: true,
         //hasToolButtons: true,
-        isPreRendered: true,
+        isPreRendered: !Firebug.flexChromeEnabled /* FIXME xxxpedro chromenew */,
         innerHTMLSync: true
     },
 
@@ -322,7 +330,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     
     destroy: function()
     {
-        selectedElement = null
+        selectedElement = null;
         fbPanel1 = null;
         
         selectedSidePanelTS = null;
@@ -398,14 +406,14 @@ var formatStyles = function(styles)
 {
     return isIE ?
         // IE return CSS property names in upper case, so we need to convert them
-        styles.replace(/([^\s]+)\s*:/g, function(m,g){return g.toLowerCase()+":"}) :
+        styles.replace(/([^\s]+)\s*:/g, function(m,g){return g.toLowerCase()+":";}) :
         // other browsers are just fine
         styles;
 };
 
 // ************************************************************************************************
 
-var selectedElement = null
+var selectedElement = null;
 var fbPanel1 = null;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
@@ -454,11 +462,11 @@ var selectElement= function selectElement(e)
         }
         
         if (new Date().getTime() - selectedSidePanelTS > 100)
-            setTimeout(lazySelect, 0)
+            setTimeout(lazySelect, 0);
         else
             selectedSidePanelTimer = setTimeout(lazySelect, 150);
     }
-}
+};
 
 
 // ************************************************************************************************
@@ -477,7 +485,8 @@ Firebug.HTML.onTreeClick = function (e)
     
     if (targ.className.indexOf('nodeControl') != -1 || targ.className == 'nodeTag')
     {
-        var isIE = false;
+        // FIXME xxxpedro remove this
+        //var isIE = false;
         
         if(targ.className == 'nodeTag')
         {
@@ -517,7 +526,7 @@ Firebug.HTML.onTreeClick = function (e)
         input.focus(); 
         /**/
     }
-}
+};
 
 function onListMouseOut(e)
 {
@@ -601,7 +610,7 @@ Firebug.HTML.onListMouseMove = function onListMouseMove(e)
     catch(E)
     {
     }
-}
+};
 
 
 // ************************************************************************************************
@@ -692,7 +701,7 @@ Firebug.Reps = {
         var reObject = /\[object (.*?)\]/;
     
         var m = reObject.exec(text);
-        html.push('<span class="objectBox-object">', m ? m[1] : text, '</span>')
+        html.push('<span class="objectBox-object">', m ? m[1] : text, '</span>');
     },
     
     appendSelector: function(object, html)
@@ -734,7 +743,7 @@ Firebug.Reps = {
                 
                 html.push('&nbsp;<span class="nodeName">', name,
                     '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
-                    '</span>&quot;')
+                    '</span>&quot;');
             }
     
             if (node.firstChild)
