@@ -159,7 +159,7 @@ var createCache = function()
         }
         
         return id;
-    }
+    };
     
     FBL.append(cacheFunction, cacheAPI);
     
