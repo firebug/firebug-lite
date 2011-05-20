@@ -47,7 +47,7 @@ Firebug.Console.injector =
         {
             var c = consoleHandler;
             var f = consoleHandler[name];
-            return function(){return f.apply(c,arguments)};
+            return function(){return f.apply(c,arguments);};
         };
         
         var installer = function(c)
@@ -60,8 +60,17 @@ Firebug.Console.injector =
             }
         };
         
-        var consoleNS = (!isFirefox || isFirefox && !("console" in win)) ? "console" : "firebug";
-        var sandbox = new win.Function("arguments.callee.install(window." + consoleNS + "={})");
+        var sandbox;
+        try
+        {
+        	// try overriding the console object
+            sandbox = new win.Function("arguments.callee.install(window.console={})");
+        }
+        catch(E)
+        {
+        	// if something goes wrong create the firebug object instead
+        	sandbox = new win.Function("arguments.callee.install(window.firebug={})");
+        }
         sandbox.install = installer;
         sandbox();
     },
@@ -214,7 +223,7 @@ Firebug.Console.injector =
                 element.parentNode.removeChild(element);
         }
     }
-}
+};
 
 var total_handlers = 0;
 var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
@@ -803,7 +812,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         else
             return "Firebug failed to get stack trace with any frames";
     }
-}
+};
 
 // ************************************************************************************************
 // Register console namespace
@@ -811,9 +820,11 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 FBL.registerConsole = function()
 {
     //TODO: xxxpedro console options override
-    //if (Env.Options.overrideConsole)
-    var win = Env.browser.window;
-    Firebug.Console.injector.install(win);
+    if (Env.Options.overrideConsole)
+	{
+        var win = Env.browser.window;
+        Firebug.Console.injector.install(win);
+	}
 };
 
 registerConsole();
