@@ -2150,7 +2150,7 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
     var clientY = event.clientY;
     var win = isIE
         ? event.srcElement.ownerDocument.parentWindow
-        : event.target.ownerDocument && event.target.ownerDocument.defaultView;
+        : event.target.defaultView || event.target.ownerDocument && event.target.ownerDocument.defaultView;
     
     if (!win)
         return;
@@ -2172,6 +2172,7 @@ var onHSplitterMouseMove = function onHSplitterMouseMove(event)
     {
         clientY = Firebug.browser.getWindowSize().height - win.frameElement.offsetHeight + clientY;
     }
+    
     /*
     console.log(
             typeof win.FBL != "undefined" ? "no-Chrome" : "Chrome",
