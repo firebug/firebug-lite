@@ -2084,6 +2084,7 @@ h1.groupHeader {
     display: none;
     position: absolute;
     font-size: 11px;
+    line-height: 13px;
     z-index: 2147483647;
 }
 
@@ -2383,6 +2384,7 @@ h1.groupHeader {
     background: url(sprite.png) #f1f2ee 0 0;
     height: 27px;
     font-size: 11px;
+    line-height: 13px;
 }
 
 #fbPanelBarBox {
@@ -2738,6 +2740,7 @@ div.fbFitHeight {
     cursor: default;
     font-family: Lucida Grande, Tahoma, sans-serif;
     font-size: 11px;
+    line-height: 13px;
     font-weight: bold;
     height: 22px;
     color: #565656;
