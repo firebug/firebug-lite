@@ -33,19 +33,17 @@ window.FBDev =
         // ****************************************************************************************
         // Application Core
         
-        "firebug/lib.js",
+        "lite/lib.js",
+        "lite/i18n.js",
+        "lite/firebug.js",
         
-        "firebug/i18n.js",
+        "lite/gui.js",        
+        "lite/context.js",
+        "lite/chrome.js",
+        "lite/chromeSkin.js",
         
-        "firebug/firebug.js",
-        
-        "firebug/gui.js",        
-        "firebug/context.js",
-        "firebug/chrome.js",
-        "firebug/chromeSkin.js",
-        
-    	// firebug1.4 experimental
-        //"firebug/chrome2.js",
+        // firebug1.4 experimental
+        //"lite/temp/chrome2.js",
         //"firebug/tabContext.js",
         //"firebug/tabWatcher.js",
         
@@ -53,24 +51,22 @@ window.FBDev =
         // ****************************************************************************************
         // Lite
         
-        "firebug/lite.js", // experimental
-        "firebug/lite/browser.js", // experimental
-        "firebug/lite/cache.js", // experimental
-        "firebug/lite/proxy.js", // experimental
-        "firebug/lite/script.js", // experimental
-        "firebug/lite/style.js", // experimental
-        
+        "lite/lite.js",
+        "lite/lite/cache.js",
+        "lite/lite/proxy.js",
+        "lite/lite/style.js",
+        "lite/lite/script.js", // experimental
+        "lite/lite/browser.js", // experimental
         
         // ****************************************************************************************
         // Application Classes
         
-        "firebug/selector.js",
+        "lite/selector.js",
+        "lite/inspector.js",
         
         "firebug/domplate.js",
-        "firebug/reps.js",
-        
+        "firebug/reps.js",        
         "firebug/editor.js",
-        "firebug/inspector.js",
         
         // ****************************************************************************************
         // Console / CommandLine core
@@ -78,12 +74,12 @@ window.FBDev =
         "firebug/console.js",
         "firebug/consoleInjector.js",
         
-        "firebug/commandLine.js",
+        "lite/commandLine.js",
         
         // ****************************************************************************************
         // XHR Watcher
         
-        "firebug/xhr.js",
+        "lite/xhr.js",
         "firebug/net.js",
         "firebug/spy.js",
         
@@ -93,35 +89,35 @@ window.FBDev =
         // ****************************************************************************************
         // Application Modules/Panels
         
-        "firebug/html.js",
+        "lite/html.js",
         
         //"firebug/insideOutBox.js", // HTML experimental        
         //"firebug/lib/htmlLib.js", // HTML experimental
-        //"firebug/html3.js", // HTML experimental
-        //"firebug/html2.js", // HTML experimental
+        //"lite/temp/html3.js", // HTML experimental
+        //"lite/temp/html2.js", // HTML experimental
         
-        "firebug/infotip.js", // experimental
+        "firebug/infotip.js",
         
         "firebug/css.js",
         
-        "firebug/script.js",
+        "lite/script.js",
         
         //"firebug/sourceCache.js", // experimental
         //"firebug/sourceFile.js", // experimental
         //"firebug/sourceBox.js", // experimental
         //"firebug/debugger.js", // experimental
         
-        //"firebug/eventDelegator.js", // experimental
+        //"lite/eventDelegator.js", // experimental
 
         "firebug/dom.js",
         
-        //"firebug/helloWorld.js",
+        //"lite/example/helloWorld.js",
         
         // ****************************************************************************************
         // Trace Module/Panel
         
-        "firebug/trace.js",
-        "firebug/tracePanel.js",
+        "lite/trace.js",
+        "lite/tracePanel.js",
         
         // ****************************************************************************************
         // Firediff
@@ -152,11 +148,11 @@ window.FBDev =
         // ****************************************************************************************
         // Plugin
         
-        "firebug/plugin.js", // must be the last module loaded
+        "lite/plugin.js", // must be the last module loaded
         
         // ****************************************************************************************
         // Bootstrap
-        "firebug/boot.js"
+        "lite/boot.js"
     ],
     // ********************************************************************************************
 
