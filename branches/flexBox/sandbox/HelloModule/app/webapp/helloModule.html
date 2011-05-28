@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Hello Module</title>
+</head>
+<body class="harBody">
+    <div id="content"></div>
+    <link rel="stylesheet" href="../skin/classic/helloModule.css" type="text/css"/>
+    <script src="allplugins-require.js"></script>
+    <script>
+        require(
+            {
+                baseUrl: "../modules",
+                paths:
+                {
+                    "FBL/Plugin/Test": "https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min"
+                }
+            },
+            ["../webapp/helloModule"]
+        );
+    </script>
+</body>
+</html>

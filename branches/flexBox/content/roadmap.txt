@@ -1,0 +1,59 @@
+###################################################################################################
+ 1.3.1
+###################################################################################################
+
+    Better listening for page events
+        - context listener (page, iframe, firebug chrome)
+        - panel listener (global and per panel listeners)
+    
+    Panel remember scroll position
+    
+    Better detach and reattach methods
+    General cache
+    Restore last state of Panels
+    
+    Firebug.Listener
+    Firebug.Module extends Firebug.Listener
+
+
+###################################################################################################
+ 1.4 - December 2010
+###################################################################################################
+
+Panels:
+    New HTML Panel (with editing features)
+    Layout HTML SidePanel (BoxModel and Rulers)
+
+
+User Interface:
+    Panel options menu
+    Context menu
+    Tooltips (CSS color, images)
+    Internationalization
+
+
+Core:
+    Unit tests
+    Search feature
+    Bookmarlet Plugin system
+    Support pages with multiple iframes / frameset
+    TabWatcher port
+    TabContext port
+    New Chrome/Panel architecture (make easier to port Firebug code)
+        - Panels and SidePanels in different "windows"
+        - port of TabContext/TabWatcher
+        - better FirebugChrome module (more close to the Firebug module)  
+    Code Parser (JS and CSS)
+        - proxy/plugin (cross-domain issue)?    
+        - line number
+        - correct CSS rules
+
+
+
+###################################################################################################
+ 1.5 - July 2011
+###################################################################################################
+    Use the code directly from Firebug from the "shared layer" (non XPCOM dependent layer)    
+    live highlight dom changes?
+
+    
