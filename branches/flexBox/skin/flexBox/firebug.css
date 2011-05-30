@@ -38,7 +38,7 @@ html, body {
     height: 100%;
     
     background: #fff; /* avoids glitch in FF */
-    /*visibility: hidden;*/
+    visibility: hidden; /* avoids FOUC */
 }
 
 /* *************************************************************************************************

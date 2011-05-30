@@ -12,14 +12,10 @@
 <script type="text/javascript" src="include/require.js"></script>
 <script>
 
-if (document.all || window.opera)
-    document.documentElement.className = document.documentElement.className + " flexBoxHideBoxes";
-
 require({baseUrl: "include"},
 ["FlexBox"], 
 function(FlexBox)
 {
-    //setTimeout(function(){
     var useIFrame = /\biframe\b/.test(document.location.hash);
     useIFrame = true;
 
@@ -50,9 +46,8 @@ function(FlexBox)
     var flexBox = window.flexBox = new FlexBox(root, true);
     
     // avoid FOUC
-    var className = document.documentElement.className;
-    document.documentElement.className = className.replace(" flexBoxHideBoxes", "");
-    //},500);
+    root.style.visibility = "visible";
+
 });
 </script>
 </head>

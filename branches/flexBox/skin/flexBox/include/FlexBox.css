@@ -48,14 +48,6 @@
  Flexible Helpers
 ************************************************************************************************* */
 
-.flexBoxHideBoxes .vbox, .flexBoxHideBoxes .hbox {
-	visibility: hidden;
-}
-
-/* *************************************************************************************************
- Flexible Helpers
-************************************************************************************************* */
-
 .boxScroll {
     overflow: auto;
     display: block;  /* Google Chrome needs this in case of an iframe element. */

@@ -15,7 +15,6 @@
     line-height: 14px;
 }
 
-.fbButtonHover, /* TODO: xxxpedro remove this. used for test only */
 .fbButton:hover {
     color: #333;
     background: #f5f5ef url(buttonBg.png);
