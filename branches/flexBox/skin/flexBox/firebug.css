@@ -70,11 +70,7 @@ html, body {
     _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg.png');
 }
 
-#fbToolbarContent {
-    white-space: nowrap;
-    padding: 3px 2px 2px;
-}
-
+#fbToolbarContent,
 #fbPanelBar2-panelTabs {
     white-space: nowrap;
     padding: 3px 2px 2px;

@@ -248,7 +248,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     isTreeNodeVisible: function(id)
     {
-        return $(id);
+        return $("fbPanelBar1-content").contentWindow.document.getElementById(id);
     },
     
     select: function(el)
@@ -279,7 +279,7 @@ Firebug.HTML = extend(Firebug.Module,
         while(stack.length > 0)
         {
             id = stack.pop();
-            node = $(id);
+            node = $("fbPanelBar1-content").contentWindow.document.getElementById(id);
             
             if (stack.length > 0 && ElementCache.get(id).childNodes.length > 0)
               this.appendTreeChildren(node);

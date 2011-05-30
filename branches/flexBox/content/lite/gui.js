@@ -594,7 +594,7 @@ FBL.Menu = function(options)
         
         options.element = MenuPlate.tag.append(
                 {object: options},
-                getElementByClass(Firebug.chrome.document, "fbBody"),
+                Firebug.chrome.document.body,
                 MenuPlate
             );
     }

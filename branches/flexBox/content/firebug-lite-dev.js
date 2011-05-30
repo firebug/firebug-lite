@@ -39,7 +39,7 @@ window.FBDev =
         
         "lite/gui.js",        
         "lite/context.js",
-        "lite/chrome.js",
+        "lite/chromeNew.js",
         "lite/chromeSkin.js",
         
         // firebug1.4 experimental

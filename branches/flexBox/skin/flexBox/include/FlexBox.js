@@ -31,7 +31,7 @@ define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
 
 // turning debugging on makes CSS3-flexBox-supported browsers to use FlexBox class to resize
 // the elements via JavaScript instead of CSS, allowing the FlexBox functions to be debugabe
-var debug = false;
+var debug = true;
 
 // setting debugSplitterFrame to true will make the SplitterFrame element to be visible
 // (the invisible element used to cover the whole UI when dragging the splitter in 

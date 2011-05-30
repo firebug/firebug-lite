@@ -281,7 +281,7 @@ this.Env =
         app: null
     },
 
-    skin: "xp",
+    skin: "flexBox",
     useLocalSkin: false,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
