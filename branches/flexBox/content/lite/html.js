@@ -353,7 +353,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
-        fbPanel1 = $("fbPanel1");
+        fbPanel1 = $("fbPanelBar1-content").contentWindow.document.body;
         
         if(!selectedElement)
         {
@@ -362,7 +362,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         // TODO: xxxpedro
         addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        /// FIXME xxxpedro chromenew
+        ///addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
     },
     
