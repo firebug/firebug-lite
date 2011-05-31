@@ -48,6 +48,7 @@ html, body {
 #fbPanelBar1-tabBox {
     height: 28px;
     white-space: nowrap;
+    cursor: default;
     
     background: url("tabBgTop.png") repeat-x scroll 0 0 #ddd;
     _background-image: none !important; 
@@ -62,8 +63,8 @@ html, body {
 #fbToolbar,
 #fbPanelBar2-panelTabsBox {
     height: 28px;
-    
     position: relative;
+    cursor: default;
     
     background: url("tabBg.png") repeat-x scroll 0 3px #FBFDFF;
     _background-image: none !important; 
@@ -299,9 +300,18 @@ html, body {
     -moz-border-radius: 4px 4px 0 0;
     border-radius: 4px 4px 0 0;
 }
+
+.panelTab:hover {
+    padding: 5px 6px 6px;
+    background: #ddd;
+    border: 1px solid #aaa;
+    border-bottom-width: 0;
+}
+
 .fbSelectedTab {
     color: #000;
-    background: #FBFDFF;
+    padding: 5px 7px 6px !important;
+    background: #FBFDFF !important;
     border: 1px solid #aaa;
     border-bottom-width: 0;
 }
@@ -328,13 +338,20 @@ html, body {
 
 #fbPanelBar2-panelTabs .panelTab {
     color: #aaa;
+    padding: 3px 5px 3px;
     border-bottom-width: 1px;
-    padding: 2px 5px 3px;
     -moz-border-radius: 4px;
     border-radius: 4px;
 }
+
+#fbPanelBar2-panelTabs .panelTab:hover {
+    background: #eee;
+    padding: 2px 4px 4px;
+}
+
 #fbPanelBar2-panelTabs .fbSelectedTab {
-    background: #fff;
+    padding: 2px 4px 3px !important;
+    background: #fff !important;
     color: #000;
 }
 
@@ -383,6 +400,33 @@ html, body {
     border: none;
 }
 
+/* *************************************************************************************************
+ TO ORGANIZE - Status Bar
+************************************************************************************************* */
+.fbToolbarButtons,
+.fbStatusBarBox {
+    display: none;
+}
+
+.fbStatusBar {
+    color: #aca899;
+}
+
+.fbStatusBar a {
+    text-decoration: none;
+    color: black;
+}
+
+.fbStatusBar a:hover {
+    color: blue;
+    cursor: pointer;
+}
+
+.fbStatusSeparator{
+    display: block;
+    float: left;
+    padding-top: 3px;
+}
 
 /* *************************************************************************************************
  webkit hack

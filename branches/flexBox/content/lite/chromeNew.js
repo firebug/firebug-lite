@@ -551,7 +551,7 @@ append(ChromeBase,
         PanelBar.create.call(this);
         
         if (Firebug.Inspector)
-            this.inspectButton = new Button({
+            this.inspectButton = new IconButton({
                 type: "toggle",
                 element: $("fbInspectButton"),
                 owner: Firebug.Inspector,
@@ -974,15 +974,13 @@ append(ChromeBase,
         
         // Select the first registered panel
         // TODO: BUG IE7
-        // FIXME xxxpedro chromenew
-        /*
         var self = this;
         setTimeout(function(){
             self.selectPanel(FirebugChrome.selectedPanelName);
             
             if (FirebugChrome.selectedPanelName == "Console" && Firebug.CommandLine)
                 Firebug.chrome.focusCommandLine();
-        },0);*/
+        },0);
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //this.draw();
