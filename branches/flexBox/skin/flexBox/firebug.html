@@ -43,7 +43,7 @@ function(FlexBox)
     }
     
     var root = document.getElementById("fbContentBox");
-    var flexBox = window.flexBox = new FlexBox(root, true);
+    var flexBox = top.Firebug.flexBox = new FlexBox(root, true);
     
     // avoid FOUC
     root.style.visibility = "visible";
@@ -53,7 +53,7 @@ function(FlexBox)
 </head>
 <body>
 
-    <div id="fbContentBox" class="vbox xhideSidePanelBar xhideCommandPopup">
+    <div id="fbContentBox" class="vbox hideCommandLine hideSidePanelBar hideCommandPopup">
 
         <div id="fbPanelBar1-tabBox" class="panelTabBox">
         

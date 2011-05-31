@@ -1925,7 +1925,6 @@ var ChromePopupBase = extend(ChromeBase,
 
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
-    return;
     var last = Firebug.chrome.commandLineVisible;
     var visible = Firebug.chrome.commandLineVisible =  
         typeof visibility == "boolean" ? visibility : !Firebug.chrome.commandLineVisible;
@@ -1934,7 +1933,7 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
     {
         if (visible)
         {
-            fbBottom.className = "";
+            removeClass($("fbContentBox"), "hideCommandLine");
             
             if (Firebug.CommandLine)
                 Firebug.CommandLine.activate();
@@ -1944,22 +1943,27 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
             if (Firebug.CommandLine)
                 Firebug.CommandLine.deactivate();
             
-            fbBottom.className = "hide";
+            setClass($("fbContentBox"), "hideCommandLine");
         }
+        
+        Firebug.flexBox.invalidate();
     }
 };
 
 var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
 {
-    return;
     var last = Firebug.chrome.sidePanelVisible;
     Firebug.chrome.sidePanelVisible =  
         typeof visibility == "boolean" ? visibility : !Firebug.chrome.sidePanelVisible;
     
     if (Firebug.chrome.sidePanelVisible != last)
     {
-        fbPanelBox2.className = Firebug.chrome.sidePanelVisible ? "" : "hide"; 
-        fbPanelBar2Box.className = Firebug.chrome.sidePanelVisible ? "" : "hide";
+        if (Firebug.chrome.sidePanelVisible)
+            removeClass($("fbContentBox"), "hideSidePanelBar");
+        else
+            setClass($("fbContentBox"), "hideSidePanelBar");
+        
+        Firebug.flexBox.invalidate();
     }
 };
 

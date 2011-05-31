@@ -371,15 +371,16 @@ html, body {
 /* *************************************************************************************************
  TO ORGANIZE
 ************************************************************************************************* */
-
+.hideCommandLine #fbCommandBox,
 .hideSidePanelBar #fbPanelSplitter,
-.hideSidePanelBar #fbSidePanelDeck {
-    display: none;
-}
-
+.hideSidePanelBar #fbSidePanelDeck,
 .hideCommandPopup #fbCommandPopupSplitter,
 .hideCommandPopup #fbCommandPopup {
     display: none;
+}
+
+.hideCommandPopup #fbCommandBox {
+    border: none;
 }
 
 
