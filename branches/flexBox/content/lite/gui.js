@@ -826,7 +826,7 @@ Menu.prototype =  extend(Controller,
                 }
                 
                 if (isFunction(this.onCheck))
-                    this.onCheck.call(this, target, value, !wasChecked)
+                    this.onCheck.call(this, target, value, !wasChecked);
             }            
             
             if (type == "radiobutton")

@@ -274,7 +274,7 @@ FBL.Context.prototype =
             msg += result.message || result;
             
             if (errorHandler)
-                result = errorHandler(msg)
+                result = errorHandler(msg);
             else
                 result = msg;
         }
@@ -374,7 +374,7 @@ FBL.Context.prototype =
     
     getElementPosition: function(el)
     {
-        var left = 0
+        var left = 0;
         var top = 0;
         
         do
@@ -577,7 +577,7 @@ FBL.Context.prototype =
             var value = div.offsetHeight;
             el.removeChild(div);
             return value;
-        }
+        };
         
         /*
         var calibrationBase = 200;
