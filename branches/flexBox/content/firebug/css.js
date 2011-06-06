@@ -11,10 +11,19 @@
  */
 this.getElementXPath = function(element)
 {
-    if (element && element.id)
-        return '//*[@id="' + element.id + '"]';
-    else
-        return this.getElementTreeXPath(element);
+	try
+	{
+	    if (element && element.id)
+	        return '//*[@id="' + element.id + '"]';
+	    else
+	        return this.getElementTreeXPath(element);
+	}
+	catch(E)
+	{
+		// xxxpedro: trying to detect the mysterious error:
+		// Security error" code: "1000
+		debugger;
+	}
 };
 
 this.getElementTreeXPath = function(element)

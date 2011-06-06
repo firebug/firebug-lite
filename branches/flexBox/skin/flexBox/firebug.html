@@ -43,7 +43,7 @@ function(FlexBox)
     }
     
     var root = document.getElementById("fbContentBox");
-    var flexBox = top.Firebug.flexBox = new FlexBox(root, true);
+    var flexBox = (window.opener || top).Firebug.flexBox = new FlexBox(root, true);
     
     // avoid FOUC
     root.style.visibility = "visible";
@@ -197,6 +197,12 @@ function(FlexBox)
         </div>
         
     </div>
-    
+	<span id="fbMiniChrome">
+		<span id="fbMiniContent">
+			<span id="fbMiniIcon" title="Open Firebug Lite"></span>
+			<span id="fbMiniErrors" class="fbErrors">2 errors</span>
+		</span>
+	</span>
+
 </body>
 </html>

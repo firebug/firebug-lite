@@ -145,6 +145,9 @@ FBL.FirebugChrome =
 
 var createChromeWindow = function(options)
 {
+    // FIXME xxxpedro chromenew: is this the right place to reset the framesLoaded?
+	Firebug.framesLoaded = 0;
+	
     options = extend(WindowDefaultOptions, options || {});
     
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1609,7 +1612,7 @@ var ChromeFrameBase = extend(ChromeBase,
                 node.style.visibility = "hidden"; // Avoid flickering
                 
                 // TODO: xxxpedro - persist IE fixed? 
-                var main = $("fbChrome", FirebugChrome.chromeMap.frame.document);
+                var main = $("fbContentBox", FirebugChrome.chromeMap.frame.document);
                 main.style.display = "none";
                         
                 ChromeMini.initialize();
@@ -1806,7 +1809,8 @@ var ChromePopupBase = extend(ChromeBase,
                 [Firebug.browser.window, "unload", this.close]
             );
         
-        fbVSplitter.onmousedown = onVSplitterMouseDown;
+        /// xxxpedro chromenew
+        ///fbVSplitter.onmousedown = onVSplitterMouseDown;
     },
     
     destroy: function()
