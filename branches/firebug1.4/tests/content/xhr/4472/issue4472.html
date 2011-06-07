@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <script type="text/javascript" src="../../../../build/firebug-lite-debug.js"></script>
+        <script type="text/javascript" src="../../../fbtest/fbtest.js"></script>
+        <script type="text/javascript">
+        
+            FBTest.runTestOnLoad(function()
+            {
+                FBTest.stop();
+                
+                var headers = "";
+                
+                var xhr = FBL.Ajax.getXHRObject();
+                xhr.open("GET", "issue4472.html", true);
+                
+                xhr.onreadystatechange = function()
+                {
+                    if (xhr.readyState == 4 && xhr.status == 200)
+                    {
+                        headers = xhr.getAllResponseHeaders()
+                    }
+                };
+                
+                xhr.send();
+    
+                setTimeout(function(){
+    
+                    FBTest.ok(headers.length > 0, "getAllResponseHeaders() returns the headers string");
+                    
+                    FBTest.start();
+    
+                }, 50);
+
+            });
+        
+        </script>
+        <link rel="stylesheet" href="../../../fbtest/fbtest.css" type="text/css" media="screen">
+    </head>
+    <body>
+    	<h1 id="qunit-header">Issue 4472: Firebug Lite deletes Ajax headers on IE</h1>
+    	<h2 id="qunit-banner"></h2>
+    	<div id="qunit-testrunner-toolbar"></div>
+    	<h2 id="qunit-userAgent"></h2>
+    	<ol id="qunit-tests"></ol>
+    	<div id="qunit-fixture">test markup</div>
+    </body>
+</html>
