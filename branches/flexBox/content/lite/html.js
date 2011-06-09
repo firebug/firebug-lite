@@ -371,7 +371,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     {
         // TODO: xxxpedro
         removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        // FIXME xxxpedro chromenew
+        ///removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);

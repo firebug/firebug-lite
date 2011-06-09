@@ -1529,6 +1529,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
         var result;
         if (rules.length)
+        	// FIXME xxxpedro chromenew this is making iPad's Safari to crash
             result = this.template.tag.replace({rules: rules}, this.panelNode);
         else
             result = FirebugReps.Warning.tag.replace({object: "EmptyStyleSheet"}, this.panelNode);
