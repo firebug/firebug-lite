@@ -85,3 +85,126 @@
     text-decoration: none;
     cursor: default;
 }
+
+
+/* *************************************************************************************************
+ TO ORGANIZE - Menu
+************************************************************************************************* */
+
+.fbShadow {
+    float: left;
+    background: url(shadow.png) no-repeat bottom right !important;
+    background: url(shadow.gif) no-repeat bottom right;
+    margin: 10px 0 0 10px !important;
+    margin: 10px 0 0 5px;
+}
+
+.fbShadowContent {
+    display: block;
+    position: relative;
+    background-color: #fff;
+    border: 1px solid #a9a9a9;
+    top: -6px;
+    left: -6px;
+    
+    /* TODO: xxxpedro: box-shadow support */
+    /* box-shadow: 4px 4px 2px -2px rgba(0, 0, 0, 0.5); */
+}
+
+.fbMenu {
+    display: none;
+    position: absolute;
+    font-size: 11px;
+    line-height: 13px;
+    z-index: 2147483647;
+}
+
+.fbMenuContent {
+    padding: 2px;
+}
+
+.fbMenuSeparator {
+    display: block;
+    position: relative;
+    padding: 1px 18px 0;
+    text-decoration: none;
+    color: #000;
+    cursor: default;    
+    background: #ACA899;
+    margin: 4px 0;
+}
+
+.fbMenuOption
+{
+    display: block;
+    position: relative;
+    padding: 2px 18px;
+    text-decoration: none;
+    color: #000;
+    cursor: default;
+}
+
+.fbMenuOption:hover
+{
+    color: #fff;
+    background: #316AC5;
+}
+
+.fbMenuGroup {
+    background: transparent url(menuPin.png) no-repeat right 0;
+}
+
+.fbMenuGroup:hover {
+    background: #316AC5 url(menuPin.png) no-repeat right -17px;
+}
+
+.fbMenuGroupSelected {
+    color: #fff;
+    background: #316AC5 url(menuPin.png) no-repeat right -17px;
+}
+
+.fbMenuChecked  {
+    background: transparent url(menuCheckbox.png) no-repeat 4px 0;
+}
+
+.fbMenuChecked:hover {
+    background: #316AC5 url(menuCheckbox.png) no-repeat 4px -17px;
+}
+
+.fbMenuRadioSelected {
+    background: transparent url(menuRadio.png) no-repeat 4px 0;
+}
+
+.fbMenuRadioSelected:hover {
+    background: #316AC5 url(menuRadio.png) no-repeat 4px -17px;
+}
+
+.fbMenuShortcut {
+    padding-right: 85px; 
+}
+
+.fbMenuShortcutKey {
+    position: absolute;
+    right: 0;
+    top: 2px;
+    width: 77px;
+}
+
+#fbFirebugMenu {
+    top: 22px;
+    left: 0;
+}
+
+.fbMenuDisabled {
+    color: #ACA899 !important;
+}
+
+#fbFirebugSettingsMenu {
+    left: 245px;
+    top: 99px;
+}
+
+#fbConsoleMenu {
+    top: 42px;
+    left: 48px;
+}
