@@ -71,7 +71,6 @@ var WindowDefaultOptions =
 // FirebugChrome
 
 // xxxpedro chromenew hack
-Firebug.flexChromeEnabled = true;
 Firebug.framesLoaded = 0;
 
 /**@namespace*/
