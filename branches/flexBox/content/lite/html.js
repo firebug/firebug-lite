@@ -309,7 +309,6 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     options: {
         hasSidePanel: true,
         //hasToolButtons: true,
-        isPreRendered: !Firebug.flexChromeEnabled /* FIXME xxxpedro chromenew */,
         innerHTMLSync: true
     },
 
