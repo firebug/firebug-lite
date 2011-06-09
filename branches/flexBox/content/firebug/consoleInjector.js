@@ -63,13 +63,13 @@ Firebug.Console.injector =
         var sandbox;
         try
         {
-        	// try overriding the console object
+            // try overriding the console object
             sandbox = new win.Function("arguments.callee.install(window.console={})");
         }
         catch(E)
         {
-        	// if something goes wrong create the firebug object instead
-        	sandbox = new win.Function("arguments.callee.install(window.firebug={})");
+            // if something goes wrong create the firebug object instead
+            sandbox = new win.Function("arguments.callee.install(window.firebug={})");
         }
         sandbox.install = installer;
         sandbox();
@@ -821,10 +821,10 @@ FBL.registerConsole = function()
 {
     //TODO: xxxpedro console options override
     if (Env.Options.overrideConsole)
-	{
+    {
         var win = Env.browser.window;
         Firebug.Console.injector.install(win);
-	}
+    }
 };
 
 registerConsole();

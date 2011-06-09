@@ -146,8 +146,8 @@ FBL.FirebugChrome =
 var createChromeWindow = function(options)
 {
     // FIXME xxxpedro chromenew: is this the right place to reset the framesLoaded?
-	Firebug.framesLoaded = 0;
-	
+    Firebug.framesLoaded = 0;
+    
     options = extend(WindowDefaultOptions, options || {});
     
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
