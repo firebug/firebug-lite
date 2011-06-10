@@ -1471,14 +1471,14 @@ QUnit.diff = (function() {
         window.onload = function() {
             that.runPage();
         };
-    }
+    };
 
     runner.prototype.nextPage = function() {
         if (this.currentIndex + 1 < this.tests.length) {
             this.currentIndex++;
             this.runPage();
         }
-    }
+    };
 
     runner.prototype.runPage = function() {
         var doc = document;
@@ -1515,7 +1515,7 @@ QUnit.diff = (function() {
         if (!this.sequential) {
             this.nextPage();
         }
-    }
+    };
 
     runner.prototype.pageProgress = function(frame, failures, total, testName, isDone) {
         var that = this;
@@ -1542,7 +1542,7 @@ QUnit.diff = (function() {
                     // are all pages finished?
                     if (that.testsCompleted == tests.length) {
                         var banner = document.getElementById("qunit-runner-banner");
-                        banner.className = banner.className + (that.failures > 0 ? " qunit-fail" : " qunit-pass")
+                        banner.className = banner.className + (that.failures > 0 ? " qunit-fail" : " qunit-pass");
                         that.done(that.failures, that.total);
                     }
                     else {
@@ -1553,11 +1553,11 @@ QUnit.diff = (function() {
                 }
             }
         }
-    }
+    };
 
     // if you need to be notified the runner is finished..
     runner.prototype.done = function(failures, total) {
-    }
+    };
 
     QUnit.run = function(tests, sequential, done) {
         /// <param name="tests" type="Array"></param>
@@ -1567,7 +1567,7 @@ QUnit.diff = (function() {
             throw new Error("One runner per page please.");
         }
         window.__qunit_runner = new runner(tests, sequential, done);
-    }
+    };
 
 
     // runner test page hooks - if this page has a runner as parent
@@ -1579,10 +1579,10 @@ QUnit.diff = (function() {
         };
         QUnit.testStart = function(test) {
             runner.pageProgress(window.frameElement, 0, 0, test.name + " started");
-        }
+        };
         QUnit.testDone = function(test) {
             runner.pageProgress(window.frameElement, test.failed, test.total, test.name);
-        }
+        };
     }
 })(this);
 
