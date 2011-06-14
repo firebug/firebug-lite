@@ -97,7 +97,7 @@ FBL.PanelBar =
         {
             ownerPanel.sidePanelBarNode = createElement("span");
             ownerPanel.sidePanelBarNode.style.display = "none";
-            ownerPanel.sidePanelBarBoxNode.appendChild(ownerPanel.sidePanelBarNode);
+            ownerPanel.sidePanelBarContainer.appendChild(ownerPanel.sidePanelBarNode);
         }
         
         var panels = Firebug.panelTypes;

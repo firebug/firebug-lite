@@ -248,7 +248,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     isTreeNodeVisible: function(id)
     {
-        return $("fbPanelBar1-content").contentWindow.document.getElementById(id);
+        return $(id, Firebug.chrome.getPanelDocument(HTMLPanel));
     },
     
     select: function(el)
@@ -279,7 +279,7 @@ Firebug.HTML = extend(Firebug.Module,
         while(stack.length > 0)
         {
             id = stack.pop();
-            node = $("fbPanelBar1-content").contentWindow.document.getElementById(id);
+            node = $(id, Firebug.chrome.getPanelDocument(HTMLPanel));
             
             if (stack.length > 0 && ElementCache.get(id).childNodes.length > 0)
               this.appendTreeChildren(node);
@@ -352,7 +352,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
-        fbPanel1 = $("fbPanelBar1-content").contentWindow.document.body;
+        fbPanel1 = Firebug.chrome.getPanelContainer();
         
         if(!selectedElement)
         {

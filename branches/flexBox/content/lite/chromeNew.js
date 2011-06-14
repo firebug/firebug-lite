@@ -64,6 +64,9 @@ var WindowDefaultOptions =
 
     lastVSplitterMouseMove = 0;
 
+
+var panelBar1, panelBar2, panelContainer, sidePanelContainer, panelDocument, sidePanelDocument;
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 
@@ -345,11 +348,11 @@ var createChromeWindow = function(options)
             waitForWindow = function()
             {
                 if ( // Frame loaded... OR
-                     (Firebug.framesLoaded == 3) && isChromeFrame && (win=node.contentWindow) &&
+                     (Firebug.framesLoaded == 0) && isChromeFrame && (win=node.contentWindow) &&
                      node.contentWindow.document.getElementById("fbCommandLine") ||
                      
                      // Popup loaded
-                     (Firebug.framesLoaded == 3) && !isChromeFrame && (win=node.window) && node.document &&
+                     (Firebug.framesLoaded == 0) && !isChromeFrame && (win=node.window) && node.document &&
                      node.document.getElementById("fbCommandLine") )
                 {
                     chrome.window = win.window;
@@ -548,8 +551,47 @@ append(ChromeBase,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    create: function()
+    getPanelContainer: function()
     {
+        return panelContainer;
+    },
+    
+    getSidePanelContainer: function()
+    {
+        return sidePanelContainer;
+    },
+    
+    getPanelDocument: function(panelType)
+    {
+        if (panelType.prototype.parentPanel)
+            return sidePanelDocument;
+        else
+            return panelDocument;
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    create: function()
+    {   
+        panelBar1 = $("fbPanelBar1-content");
+        panelBar2 = $("fbPanelBar2-content");
+        
+        panelContainer = panelBar1.nodeName.toLowerCase() == "iframe" ? 
+                panelBar1.contentWindow.document.body : 
+                panelBar1;
+        
+        sidePanelContainer = panelBar2.nodeName.toLowerCase() == "iframe" ? 
+                panelBar2.contentWindow.document.body : 
+                panelBar2;
+        
+        panelDocument = panelBar1.nodeName.toLowerCase() == "iframe" ? 
+                panelBar1.contentWindow.document : 
+                Firebug.chrome.document;
+        
+        sidePanelDocument = panelBar2.nodeName.toLowerCase() == "iframe" ? 
+                panelBar2.contentWindow.document : 
+                Firebug.chrome.document;
+        
         PanelBar.create.call(this);
         
         if (Firebug.Inspector)
