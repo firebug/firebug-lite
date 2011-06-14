@@ -1571,7 +1571,7 @@ var hasNoElementChildren = function hasNoElementChildren(element)
     if (FBTrace.DBG_HTML)
         FBTrace.sysout("hasNoElementChildren TRUE "+element.tagName, element);
     return true;
-}
+};
 
 // Duplicate of HTMLPanel.prototype isWhitespaceText
 var isWhitespaceText = function isWhitespaceText(node)
@@ -1579,7 +1579,7 @@ var isWhitespaceText = function isWhitespaceText(node)
     if (node instanceof HTMLAppletElement)
         return false;
     return node.nodeType == 3 && isWhitespace(node.nodeValue);
-}
+};
 
 // Duplicate of HTMLPanel.prototype TODO: create a namespace for all of these functions so
 // they can be called outside of this file.

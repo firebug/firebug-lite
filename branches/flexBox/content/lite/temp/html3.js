@@ -1234,7 +1234,7 @@ Firebug.HTMLPanel.prototype = extend(Firebug.Panel,
                 var EditElement = "EditHTMLElement";
 
                 if (isElementMathML(node))
-                    EditElement = "EditMathMLElement"
+                    EditElement = "EditMathMLElement";
                 else if (isElementSVG(node))
                     EditElement = "EditSVGElement";
 
@@ -1793,7 +1793,7 @@ var getEmptyElementTag = function getEmptyElementTag(node)
         return Firebug.HTMLPanel.XEmptyElement.tag;
     else
         return Firebug.HTMLPanel.EmptyElement.tag;
-}
+};
 
 // xxxpedro HTML3
 var getNodeTag = function getNodeTag(node, expandAll)
@@ -1829,7 +1829,7 @@ var getNodeTag = function getNodeTag(node, expandAll)
         return FirebugReps.SourceText.tag;
     else
         return FirebugReps.Nada.tag;
-}
+};
 
 var getNodeBoxTag = function getNodeBoxTag(nodeBox)
 {
@@ -1845,7 +1845,7 @@ var getNodeBoxTag = function getNodeBoxTag(nodeBox)
         return Firebug.HTMLPanel.TextElement.tag;
     else if (nodeBoxType == "empty")
         return Firebug.HTMLPanel.EmptyElement.tag;
-}
+};
 
 // ************************************************************************************************
 // Mutation Breakpoints
@@ -2044,7 +2044,7 @@ Firebug.HTMLModule.Breakpoint = function(node, type)
     this.xpath = getElementXPath(node);
     this.checked = true;
     this.type = type;
-}
+};
 
 Firebug.HTMLModule.BreakpointRep = domplate(Firebug.Rep,
 {

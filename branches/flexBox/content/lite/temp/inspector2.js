@@ -566,8 +566,8 @@ PopupHighlighter.prototype =
 
     unhighlight: function(context)
     {
-    },
-}
+    }
+};
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 function BoxModelHighlighter()
