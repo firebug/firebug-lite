@@ -20,7 +20,6 @@ define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
         - event
         - cache?
     
-    
     - scrolling
         - getPosition - relative to what?
         - scrolling in-browser iframe Chrome different computation than Splitter
@@ -31,7 +30,7 @@ define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
 
 // turning debugging on makes CSS3-flexBox-supported browsers to use FlexBox class to resize
 // the elements via JavaScript instead of CSS, allowing the FlexBox functions to be debugabe
-var debug = false;
+var debug = true;
 
 // setting debugSplitterFrame to true will make the SplitterFrame element to be visible
 // (the invisible element used to cover the whole UI when dragging the splitter in 
@@ -686,7 +685,16 @@ function renderBoxes(flexBox)
             // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             // resizing child if necessary
 
-            if (orientation.isHorizontal || flex)
+            // If space equals to zero, then we must skip resizing the childElement, otherwise the
+            // element will be resized to zero when not visible. This means that if we hide the 
+            // Side Panel, the next time we try to display it, FlexBox won't be able to render it
+            // properly because it will discover the dimension (width or height) of the box using 
+            // its current value, and once the zero was applied to an inline style, that's the 
+            // value it will get. A more cohesive approach would be detecting whether or not the
+            // element has a "display:none" or "visibility:hidden", but we're trying to avoid
+            // an extra computation to make the rendering process faster and we already are
+            // calculating the space value, so we're using it here.
+            if (space && (orientation.isHorizontal || flex))
             {
                 if (orientation.isVertical)
                 {
