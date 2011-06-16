@@ -32,6 +32,11 @@
     border-color: #ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;
 }
 
+/* TODO: Used in the DOM Panel status bar. Maybe rename this to be exclusively 
+   related to the DOM Panel status bar? */
+.fbBtnSelected {
+    font-weight: bold;
+}
 
 /* *************************************************************************************************
  Icon Button
@@ -88,7 +93,7 @@
 
 
 /* *************************************************************************************************
- TO ORGANIZE - Menu
+ TO ORGANIZE - Shadow (used in Menus)
 ************************************************************************************************* */
 
 .fbShadow {
@@ -110,6 +115,10 @@
     /* TODO: xxxpedro: box-shadow support */
     /* box-shadow: 4px 4px 2px -2px rgba(0, 0, 0, 0.5); */
 }
+
+/* *************************************************************************************************
+ TO ORGANIZE - Menu
+************************************************************************************************* */
 
 .fbMenu {
     display: none;
