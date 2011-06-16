@@ -23,7 +23,7 @@ this.getElementXPath = function(element)
         // xxxpedro: trying to detect the mysterious error:
         // Security error" code: "1000
         // This error happens when rendering the StorageList object in the DOM panel
-        debugger;
+        //debugger;
     }
 };
 
