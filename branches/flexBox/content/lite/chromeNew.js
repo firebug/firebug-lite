@@ -348,11 +348,11 @@ var createChromeWindow = function(options)
             waitForWindow = function()
             {
                 if ( // Frame loaded... OR
-                     (Firebug.framesLoaded == 0) && isChromeFrame && (win=node.contentWindow) &&
+                     (Firebug.framesLoaded == 3) && isChromeFrame && (win=node.contentWindow) &&
                      node.contentWindow.document.getElementById("fbCommandLine") ||
                      
                      // Popup loaded
-                     (Firebug.framesLoaded == 0) && !isChromeFrame && (win=node.window) && node.document &&
+                     (Firebug.framesLoaded == 3) && !isChromeFrame && (win=node.window) && node.document &&
                      node.document.getElementById("fbCommandLine") )
                 {
                     chrome.window = win.window;
@@ -1706,10 +1706,11 @@ var ChromeFrameBase = extend(ChromeBase,
             this.node.style.width = size.width + "px";
         }
         
-        if (fbVSplitterStyle)
-            fbVSplitterStyle.right = FirebugChrome.sidePanelWidth + "px";
+        // FIXME xxxpedro chromenew
+        ///if (fbVSplitterStyle)
+        ///    fbVSplitterStyle.right = FirebugChrome.sidePanelWidth + "px";
         
-        this.draw();
+        ///this.draw();
     }
 
 });
