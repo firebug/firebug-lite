@@ -1110,7 +1110,18 @@ this.splitLines = function(text)
 this.safeToString = function(ob)
 {
     if (this.isIE)
-        return ob + "";
+    {
+        try
+        {
+            // FIXME: xxxpedro this is failing in IE for the global "external" object
+            return ob + "";
+        }
+        catch(E)
+        {
+            FBTrace.sysout("Lib.safeToString() failed for ", ob);
+            return "";
+        }
+    }
     
     try
     {
@@ -3405,8 +3416,17 @@ this.isArray = function(object) {
 this.isFunction = function(object) {
     if (!object) return false;
     
-    return toString.call(object) === "[object Function]" || 
-            this.isIE && typeof object != "string" && reFunction.test(""+object);
+    try
+    {
+        // FIXME: xxxpedro this is failing in IE for the global "external" object
+        return toString.call(object) === "[object Function]" || 
+                this.isIE && typeof object != "string" && reFunction.test(""+object);
+    }
+    catch (E)
+    {
+        FBTrace.sysout("Lib.isFunction() failed for ", object);
+        return false;
+    }
 };
     
 
