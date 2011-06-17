@@ -274,6 +274,26 @@ FlexBox.prototype.getChildObject = function(element, boxObject)
 };
 
 //************************************************************************************************
+// IE quirks mode hack
+
+/*
+// TODO: describe HTML panel scrollbar bug (appears only when manual resizing)
+
+// TODO: describe text selection bug
+document.body.onmouseleave = function(event) 
+{
+    event.returnValue = false;
+    event.cancelBubble = true;    
+};
+
+// TODO: describe scroll bug
+document.body.onscroll = function(event) 
+{
+    document.body.scrollLeft = document.body.scrollTop = 0;
+};
+*/
+
+//************************************************************************************************
 // Splitter
 
 var splitters = [];
