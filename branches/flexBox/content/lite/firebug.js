@@ -528,15 +528,16 @@ Firebug.Panel =
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Create Panel
-        var panelNode = this.panelNode = createElement("div", {
-            id: panelId,
-            className: "fbPanel"
-        });
-
         var container = this.parentPanel ? 
                 Firebug.chrome.getSidePanelContainer() :
                 Firebug.chrome.getPanelContainer(); 
         
+        var panelNode = this.panelNode = createElement("div", {
+            id: panelId,
+            className: "fbPanel",
+            document: container.ownerDocument
+        });
+
         container.appendChild(panelNode);            
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

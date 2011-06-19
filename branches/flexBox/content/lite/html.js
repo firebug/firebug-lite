@@ -201,7 +201,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     appendTreeChildren: function(treeNode)
     {
-        var doc = Firebug.chrome.document;
+        var doc = Firebug.chrome.getPanelDocument(HTMLPanel);
         var uid = treeNode.id;
         var parentNode = ElementCache.get(uid);
         
