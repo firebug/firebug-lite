@@ -75,6 +75,7 @@ var panelBar1, panelBar2, panelContainer, sidePanelContainer, panelDocument, sid
 
 // xxxpedro chromenew hack
 Firebug.framesLoaded = 0;
+var numberOfFramesToLoad = 3;
 
 /**@namespace*/
 FBL.FirebugChrome = 
@@ -348,11 +349,13 @@ var createChromeWindow = function(options)
             waitForWindow = function()
             {
                 if ( // Frame loaded... OR
-                     (Firebug.framesLoaded == 3) && isChromeFrame && (win=node.contentWindow) &&
+                     Firebug.framesLoaded == numberOfFramesToLoad && 
+                     isChromeFrame && (win=node.contentWindow) &&
                      node.contentWindow.document.getElementById("fbCommandLine") ||
                      
                      // Popup loaded
-                     (Firebug.framesLoaded == 3) && !isChromeFrame && (win=node.window) && node.document &&
+                     Firebug.framesLoaded == numberOfFramesToLoad && 
+                     !isChromeFrame && (win=node.window) && node.document &&
                      node.document.getElementById("fbCommandLine") )
                 {
                     chrome.window = win.window;

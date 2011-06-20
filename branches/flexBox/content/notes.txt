@@ -18,6 +18,15 @@
 
 
 ###################################################################################################
+TODO's
+###################################################################################################
+  - Add "chrome.google.com/webstore" to the list of problematic URLs in Chrome extension
+  - Adjust the following code 
+    Env.useLocalSkin = path.indexOf(location.protocol + "//" + location.host + "/") == 0;
+    path is set to getfirebug.com when using bookmarklet, live link, or Chrome extension.
+    This will result in Firebug Lite not loading when visiting getfirebug.com
+ 
+###################################################################################################
 sourceFile dependencies
 ###################################################################################################
 
