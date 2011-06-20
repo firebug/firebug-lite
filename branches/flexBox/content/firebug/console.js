@@ -424,7 +424,7 @@ Firebug.ConsoleListener =
 
 // ************************************************************************************************
 
-Firebug.ConsolePanel = function () {} // XXjjb attach Firebug so this panel can be extended.
+Firebug.ConsolePanel = function () {}; // XXjjb attach Firebug so this panel can be extended.
 
 //TODO: xxxpedro
 //Firebug.ConsolePanel.prototype = extend(Firebug.ActivablePanel,
@@ -739,7 +739,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.create.apply(this, arguments);
         
         this.context = Firebug.browser.window;
-        this.document = Firebug.chrome.document;
+        this.document = Firebug.chrome.getPanelDocument(Firebug.ConsolePanel);
         this.onMouseMove = bind(this.onMouseMove, this);
         this.onMouseDown = bind(this.onMouseDown, this);
         
