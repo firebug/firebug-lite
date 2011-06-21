@@ -224,10 +224,12 @@ html, body {
 
 #fbFirebugButton {
     background: url(firebugX.png) no-repeat;
+    _background: url(firebugX.gif) no-repeat;
 }
 
 #fbInspectButton {
     background: url(Templarian_inspector.png) no-repeat 2px 2px;
+    _background: url(Templarian_inspector.gif) no-repeat 2px 2px;
 }
 
 
@@ -260,26 +262,32 @@ html, body {
 
 #fbWindow_btClose {
     background: url(min.png);
+    _background: url(min.gif);
 }
 
 #fbWindow_btClose:hover {
     background: url(minHover.png);
+    _background: url(minHover.gif);
 }
 
 #fbWindow_btDetach {
     background: url(detach.png);
+    _background: url(detach.gif);
 }
 
 #fbWindow_btDetach:hover {
     background: url(detachHover.png);
+    _background: url(detachHover.gif);
 }
 
 #fbWindow_btDeactivate {
     background: url(off.png);
+    _background: url(off.gif);
 }
 
 #fbWindow_btDeactivate:hover {
     background: url(offHover.png);
+    _background: url(offHover.gif);
 }
 
 
