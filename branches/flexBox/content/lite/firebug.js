@@ -697,7 +697,8 @@ Firebug.Panel =
                 Firebug.chrome.selectedPanel;
         
         Firebug.showInfoTips = true;
-        Firebug.InfoTip.initializeBrowser(Firebug.chrome);
+        if (Firebug.InfoTip)
+            Firebug.InfoTip.initializeBrowser(Firebug.chrome);
     },
     
     shutdown: function()
@@ -705,7 +706,8 @@ Firebug.Panel =
         if (FBTrace.DBG_INITIALIZE) FBTrace.sysout("Firebug.Panel.shutdown", this.name);
         
         /// TODO: xxxpedro infoTip Hack
-        Firebug.InfoTip.uninitializeBrowser(Firebug.chrome);
+        if (Firebug.InfoTip)
+            Firebug.InfoTip.uninitializeBrowser(Firebug.chrome);
         
         if (Firebug.chrome.largeCommandLineVisible)
             Firebug.chrome.hideLargeCommandLine();
