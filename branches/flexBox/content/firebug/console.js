@@ -659,6 +659,8 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     // TODO: xxxpedro console2
     onMouseMove: function(event)
     {
+        if (!Firebug.Inspector) return;
+        
         var target = event.srcElement || event.target;
         
         var object = getAncestorByClass(target, "objectLink-element");
