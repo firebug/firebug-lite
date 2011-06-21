@@ -321,7 +321,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         if (Env.Options.enablePersistent || Firebug.chrome.type != "popup")
             this.createUI();
         
-        if(!this.sidePanelBar.selectedPanel)
+        if(this.sidePanelBar && !this.sidePanelBar.selectedPanel)
         {
             this.sidePanelBar.selectPanel("css");
         }
@@ -440,7 +440,8 @@ var selectElement= function selectElement(e)
         FirebugChrome.selectedHTMLElementId = e.id;
         
         var target = ElementCache.get(e.id);
-        var selectedSidePanel = Firebug.chrome.getPanel("HTML").sidePanelBar.selectedPanel;
+        var sidePanelBar = Firebug.chrome.getPanel("HTML").sidePanelBar;
+        var selectedSidePanel = sidePanelBar ? sidePanelBar.selectedPanel : null;
         
         var stack = FirebugChrome.htmlSelectionStack;
         
@@ -453,7 +454,8 @@ var selectElement= function selectElement(e)
         {
             selectedSidePanelTS = new Date().getTime();
             
-            selectedSidePanel.select(target, true);
+            if (selectedSidePanel)
+                selectedSidePanel.select(target, true);
         };
         
         if (selectedSidePanelTimer)
