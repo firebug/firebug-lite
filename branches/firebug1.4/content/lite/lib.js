@@ -1791,7 +1791,7 @@ var getElementType = this.getElementType = function(node)
         return 'xhtml';
     else if (isElementHTML(node))
         return 'html';
-}
+};
 
 var getElementSimpleType = this.getElementSimpleType = function(node)
 {
@@ -1801,32 +1801,32 @@ var getElementSimpleType = this.getElementSimpleType = function(node)
         return 'mathml';
     else
         return 'html';
-}
+};
 
 var isElementHTML = this.isElementHTML = function(node)
 {
     return node.nodeName == node.nodeName.toUpperCase();
-}
+};
 
 var isElementXHTML = this.isElementXHTML = function(node)
 {
     return node.nodeName == node.nodeName.toLowerCase();
-}
+};
 
 var isElementMathML = this.isElementMathML = function(node)
 {
     return node.namespaceURI == 'http://www.w3.org/1998/Math/MathML';
-}
+};
 
 var isElementSVG = this.isElementSVG = function(node)
 {
     return node.namespaceURI == 'http://www.w3.org/2000/svg';
-}
+};
 
 var isElementXUL = this.isElementXUL = function(node)
 {
     return node instanceof XULElement;
-}
+};
 
 this.isSelfClosing = function(element)
 {
