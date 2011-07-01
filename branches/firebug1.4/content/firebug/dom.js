@@ -244,7 +244,7 @@ var DirTablePlate = domplate(Firebug.Rep,
 
 // ************************************************************************************************
 
-Firebug.DOMBasePanel = function() {}
+Firebug.DOMBasePanel = function() {};
 
 Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
 {
@@ -1377,7 +1377,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
         members.push.apply(members, domConstants);
 
     return members;
-}
+};
 
 function expandMembers(members, toggles, offset, level)  // recursion starts with offset=0, level=0
 {
@@ -1441,7 +1441,7 @@ var hasProperties = function hasProperties(ob)
     if (isFunction(ob)) return true;
     
     return false;
-}
+};
 
 FBL.ErrorCopy = function(message)
 {
@@ -1472,7 +1472,7 @@ var addMember = function addMember(type, props, name, value, level, order)
         hasChildren: hasChildren,
         tag: tag
     });
-}
+};
 
 var getWatchRowIndex = function getWatchRowIndex(row)
 {
@@ -1480,25 +1480,25 @@ var getWatchRowIndex = function getWatchRowIndex(row)
     for (; row && hasClass(row, "watchRow"); row = row.previousSibling)
         ++index;
     return index;
-}
+};
 
 var getRowName = function getRowName(row)
 {
     var node = row.firstChild;
     return node.textContent ? node.textContent : node.innerText;
-}
+};
 
 var getRowValue = function getRowValue(row)
 {
     return row.lastChild.firstChild.repObject;
-}
+};
 
 var getRowOwnerObject = function getRowOwnerObject(row)
 {
     var parentRow = getParentRow(row);
     if (parentRow)
         return getRowValue(parentRow);
-}
+};
 
 var getParentRow = function getParentRow(row)
 {
@@ -1508,7 +1508,7 @@ var getParentRow = function getParentRow(row)
         if (parseInt(row.getAttribute("level")) == level)
             return row;
     }
-}
+};
 
 var getPath = function getPath(row)
 {
@@ -1528,7 +1528,7 @@ var getPath = function getPath(row)
     }
 
     return path;
-}
+};
 
 // ************************************************************************************************
 
