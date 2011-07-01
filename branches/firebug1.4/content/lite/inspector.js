@@ -125,7 +125,8 @@ Firebug.Inspector =
                 {
                     inspectorTS = new Date().getTime();
                     
-                    Firebug.HTML.selectTreeNode(""+ElementCache.key(targ));
+                    if (Firebug.HTML)
+                        Firebug.HTML.selectTreeNode(""+ElementCache.key(targ));
                 };
                 
                 if (inspectorTimer)
