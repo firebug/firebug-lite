@@ -22,7 +22,7 @@ this.getElementXPath = function(element)
     {
         // xxxpedro: trying to detect the mysterious error:
         // Security error" code: "1000
-        debugger;
+        //debugger;
     }
 };
 
