@@ -1429,19 +1429,24 @@ function isClassFunction(fn)
     return false;
 }
 
-var hasProperties = function hasProperties(ob)
-{
-    try
-    {
-        for (var name in ob)
-            return true;
-    } catch (exc) {}
-    
-    // IE function prototype is not listed in (for..in)
-    if (isFunction(ob)) return true;
-    
-    return false;
-};
+// FIXME: xxxpedro This function is already defined in Lib. If we keep this definition here, it
+// will crash IE9 when not running the IE Developer Tool with JavaScript Debugging enabled!!!
+// Check if this function is in fact defined in Firebug for Firefox. If so, we should remove
+// this from here. The only difference of this function is the IE hack to show up the prototype
+// of functions, but Firebug no longer shows the prototype for simple functions.
+//var hasProperties = function hasProperties(ob)
+//{
+//    try
+//    {
+//        for (var name in ob)
+//            return true;
+//    } catch (exc) {}
+//    
+//    // IE function prototype is not listed in (for..in)
+//    if (isFunction(ob)) return true;
+//    
+//    return false;
+//};
 
 FBL.ErrorCopy = function(message)
 {
