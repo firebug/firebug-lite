@@ -457,11 +457,17 @@ FBL.Context.prototype =
         else if (unit == "pt")
             return this.pointsToPixels(name, value);
           
-        if (unit == "em")
+        else if (unit == "em")
             return this.emToPixels(el, value);
           
         else if (unit == "%")
             return this.percentToPixels(el, value);
+        
+        else if (unit == "ex")
+            return this.exToPixels(el, value);
+        
+        // TODO: add other units. Maybe create a better general way
+        // to calculate measurements in different units.    
     },
 
     getMeasurementBox1: function(el, name)
