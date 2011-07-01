@@ -11,10 +11,19 @@
  */
 this.getElementXPath = function(element)
 {
-    if (element && element.id)
-        return '//*[@id="' + element.id + '"]';
-    else
-        return this.getElementTreeXPath(element);
+    try
+    {
+        if (element && element.id)
+            return '//*[@id="' + element.id + '"]';
+        else
+            return this.getElementTreeXPath(element);
+    }
+    catch(E)
+    {
+        // xxxpedro: trying to detect the mysterious error:
+        // Security error" code: "1000
+        debugger;
+    }
 };
 
 this.getElementTreeXPath = function(element)
@@ -1520,6 +1529,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
 
         var result;
         if (rules.length)
+            // FIXME xxxpedro chromenew this is making iPad's Safari to crash
             result = this.template.tag.replace({rules: rules}, this.panelNode);
         else
             result = FirebugReps.Warning.tag.replace({object: "EmptyStyleSheet"}, this.panelNode);
@@ -2454,10 +2464,10 @@ CSSEditor.prototype = domplate(Firebug.InlineEditor.prototype,
 
     saveEdit: function(target, value, previousValue)
     {
-    	// We need to check the value first in order to avoid a problem in IE8 
-    	// See Issue 3038: Empty (null) styles when adding CSS styles in Firebug Lite 
-    	if (!value) return;
-    	
+        // We need to check the value first in order to avoid a problem in IE8 
+        // See Issue 3038: Empty (null) styles when adding CSS styles in Firebug Lite 
+        if (!value) return;
+        
         target.innerHTML = escapeForCss(value);
 
         var row = getAncestorByClass(target, "cssProp");
