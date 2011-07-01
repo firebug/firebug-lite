@@ -314,6 +314,8 @@ var destroyEnvironment = function destroyEnvironment()
 var findLocation =  function findLocation() 
 {
     var reFirebugFile = /(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    var reGetFirebugSite = /(?:http|https):\/\/getfirebug.com\//;
+    var isGetFirebugSite;
     
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
@@ -323,6 +325,7 @@ var findLocation =  function findLocation()
     // Firebug Lite 1.3.0 bookmarklet identification
     var script = doc.getElementById("FirebugLite");
     
+    // If the script was loaded via bookmarklet, we already have the script tag
     if (script)
     {
         file = reFirebugFile.exec(script.src);
@@ -335,6 +338,7 @@ var findLocation =  function findLocation()
             FBL.Env.bookmarkletOutdated = true;
         }
     }
+    // otherwise we must search for the correct script tag
     else
     {
         for(var i=0, s=doc.getElementsByTagName("script"), si; si=s[i]; i++)
@@ -348,6 +352,7 @@ var findLocation =  function findLocation()
         }
     }
 
+    // mark the script tag to be ignored by Firebug Lite
     if (script)
         script.firebugIgnore = true;
     
@@ -411,6 +416,17 @@ var findLocation =  function findLocation()
         script = {innerHTML: "{showIconWhenHidden:false}"};
     }
     
+    isGetFirebugSite = reGetFirebugSite.test(path);
+    
+    if (isGetFirebugSite && path.indexOf("/releases/lite/") == -1)
+    {
+        // See Issue 4587 - If we are loading the script from getfirebug.com shortcut, like 
+        // https://getfirebug.com/firebug-lite.js, then we must manually add the full path,
+        // otherwise the Env.Location will hold the wrong path, which will in turn lead to
+        // undesirable effects like the problem in Issue 4587
+        path += "releases/lite/" + (fileName == "firebug-lite-beta.js" ? "beta/" : "latest/");
+    }
+    
     var m = path && path.match(/([^\/]+)\/$/) || null;
     
     if (path && m)
@@ -419,7 +435,10 @@ var findLocation =  function findLocation()
         
         // Always use the local skin when running in the same domain
         // See Issue 3554: Firebug Lite should use local images when loaded locally
-        Env.useLocalSkin = path.indexOf(location.protocol + "//" + location.host + "/") == 0;
+        Env.useLocalSkin = path.indexOf(location.protocol + "//" + location.host + "/") == 0 &&
+                // but we cannot use the locan skin when loaded from getfirebug.com, otherwise
+                // the bookmarklet won't work when visiting getfirebug.com
+                !isGetFirebugSite;
         
         // detecting development and debug modes via file name
         if (fileName == "firebug-lite-dev.js")
