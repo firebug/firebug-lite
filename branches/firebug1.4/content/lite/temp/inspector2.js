@@ -475,8 +475,8 @@ FrameHighlighter.prototype =
 
         move(nodes.left, x-edgeSize, y-edgeSize);
         resize(nodes.left, edgeSize, h+edgeSize*2);
-        if (FBTrace.DBG_INSPECT)																			/*@explore*/
-            FBTrace.sysout("FrameHighlighter ", element.tagName);											/*@explore*/
+        if (FBTrace.DBG_INSPECT)                                                                            /*@explore*/
+            FBTrace.sysout("FrameHighlighter ", element.tagName);                                            /*@explore*/
         var body = getNonFrameBody(element);
         if (!body)
             return this.unhighlight(context);
@@ -484,7 +484,7 @@ FrameHighlighter.prototype =
         var needsAppend = !nodes.top.parentNode || nodes.top.ownerDocument != body.ownerDocument;
         if (needsAppend)
         {
-            if (FBTrace.DBG_INSPECT)																		/*@explore*/
+            if (FBTrace.DBG_INSPECT)                                                                        /*@explore*/
                 FBTrace.sysout("FrameHighlighter needsAppend", nodes.top.ownerDocument.documentURI+" !?= "+body.ownerDocument.documentURI); /*@explore*/
             attachStyles(context, body);
             for (var edge in nodes)
