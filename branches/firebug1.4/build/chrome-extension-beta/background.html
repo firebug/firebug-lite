@@ -12,10 +12,11 @@ var isActive = false;
 
 function handleIconClick(tab)
 {
-    if (tab.url.indexOf("https://chrome.google.com/extensions") == 0 ||
+    if (tab.url.indexOf("https://chrome.google.com/webstore") == 0 ||
+        tab.url.indexOf("https://chrome.google.com/extensions") == 0 ||
         tab.url.indexOf("chrome://") == 0)
     {
-        alert("For security reasons extensions cannot run content scripts at this page, and therefore, Firebug Lite can't work here.");
+        alert("For security reasons extensions cannot run content scripts in this page, and therefore, Firebug Lite can't work here.");
         
         return;
     }
@@ -39,9 +40,14 @@ function handleIconClick(tab)
             }
         }
     );
-    /*
+    
     setTimeout(function(){
     
+        // the problem of this approach is that if the page does not allow content scripts, like
+        // the Chrome Web Store, it will falsely warn users that reloading the page will complete
+        // the activation process when in the reality it will not. But, the most common case is
+        // when the user just installed Firebug Lite and have other tabs already opened, which
+        // completely ruins the very first experience with using the Firebug Lite extension.
         if (!isContentScriptActive)
         {
             //chrome.tabs.update(tab.id, {url: bookmarlet});
@@ -57,7 +63,7 @@ function handleIconClick(tab)
             }
         }
         
-    },500);/**/
+    },500);
 };
 
 chrome.browserAction.onClicked.addListener(handleIconClick);
