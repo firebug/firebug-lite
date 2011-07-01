@@ -125,7 +125,7 @@ Firebug.Inspector =
                 {
                     inspectorTS = new Date().getTime();
                     
-                    Firebug.HTML.selectTreeNode(""+ElementCache.key(targ))
+                    Firebug.HTML.selectTreeNode(""+ElementCache.key(targ));
                 };
                 
                 if (inspectorTimer)
@@ -135,7 +135,7 @@ Firebug.Inspector =
                 }
                 
                 if (new Date().getTime() - inspectorTS > 200)
-                    setTimeout(lazySelect, 0)
+                    setTimeout(lazySelect, 0);
                 else
                     inspectorTimer = setTimeout(lazySelect, 300);
             }
@@ -398,7 +398,7 @@ var inspectContentStyle = inspectStyle + "background: SkyBlue;";
 var outlineStyle = { 
     fbHorizontalLine: "background: #3875D7;height: 2px;",
     fbVerticalLine: "background: #3875D7;width: 2px;"
-}
+};
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 

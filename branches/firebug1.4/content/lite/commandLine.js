@@ -181,7 +181,7 @@ Firebug.CommandLine = extend(Firebug.Module,
             removeEvent(this.element, "keydown", this.onKeyDown);
         }
         
-        this.element = null
+        this.element = null;
         delete this.element;
         
         fbCommandLine = null;
@@ -213,7 +213,7 @@ Firebug.CommandLine = extend(Firebug.Module,
     evaluate: function(expr)
     {
         // TODO: need to register the API in console.firebug.commandLineAPI
-        var api = "Firebug.CommandLine.API"
+        var api = "Firebug.CommandLine.API";
         
         var result = Firebug.context.evaluate(expr, "window", api, Firebug.Console.error);
         
@@ -487,7 +487,7 @@ var CommandLineAPI =
 {
     $: function(id)
     {
-        return Firebug.browser.document.getElementById(id)
+        return Firebug.browser.document.getElementById(id);
     },
 
     $$: function(selector, context)
