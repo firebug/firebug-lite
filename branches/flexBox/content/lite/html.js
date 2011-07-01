@@ -287,9 +287,12 @@ Firebug.HTML = extend(Firebug.Module,
         
         selectElement(node);
         
-        // TODO: xxxpedro
+        // FIXME: xxxpedro chromenew - this isn't working after detaching the UI
         if (fbPanel1)
-            fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+            fbPanel1.parentNode.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+        
+        // FIXME: IE6 - create chrome.getPanelScrollElement()?
+        // fbPanel1.ownerDocument.documentElement.scrollTop = Math.round(node.offsetTop - fbPanel1.ownerDocument.documentElement.clientHeight/2);
     }
     
 });
