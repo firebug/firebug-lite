@@ -2824,7 +2824,7 @@ a.fbTab:hover .fbTabR {
 
 /************************************************************************************************/
 div.lineNo {
-    font: 1em Monaco, monospace;
+    font: 1em/1.4545em Monaco, monospace;
     position: relative;
     float: left;
     top: 0;

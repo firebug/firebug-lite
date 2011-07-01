@@ -1,11 +1,18 @@
 ###################################################################################################
- 1.4.0a1 - 2011-xx-xx - Revision: xxxx
+ 1.4.0b1 - 2011-xx-xx - Revision: xxxx
 ###################################################################################################
+    - Issue 4606: Firebug Lite: Console is not working properly in FF4 and FF5
+    - Issue 4587: Firebug Lite: Opera shows security warning when using the Inspect tool
     - Issue 4432: Firebug Lite: HTML is mixed-up with functions 
 
     - overrideConsole option now works as expected
     - Fixed problem with console injection in FF4
     - Fixed problem with resizing in-page chrome (iframe) in FF4
+    - Fixed visual glitch with Menus in high resolution monitors
+    - Fixed source line number height in high resolution monitors
+    - Fixed mini-chrome (lower-right icon) size glitch when the cache is empty
+    - Bookmarklet now works as expected when visiting getfirebug.com
+    - Improved activation failure messages in Chrome extension
 
 
 ###################################################################################################
