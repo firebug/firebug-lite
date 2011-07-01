@@ -174,12 +174,18 @@ html, body {
     background: url("splitter.gif") no-repeat;
 }
 
+#fbChromeSplitter,
 #fbCommandPopupSplitter,
 #fbCommandPopupSplitterContent {
     background: #E5E7E9;
     cursor: n-resize;
     height: 4px;
     overflow: hidden;
+}
+
+#fbChromeSplitter {
+    border-top: 1px solid #bbb;
+    height: 3px;
 }
 
 
