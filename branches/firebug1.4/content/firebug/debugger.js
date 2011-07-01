@@ -27,13 +27,13 @@ FBL.ns(function() { with (FBL) {
 ///const TYPE_THROW = jsdIExecutionHook.TYPE_THROW;
 ///const TYPE_DEBUGGER_KEYWORD = jsdIExecutionHook.TYPE_DEBUGGER_KEYWORD;
 
-	
+    
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// TODO: xxxpedro debugger hack
 var fbs = {
-	registerClient: function(){},
-	unregisterClient: function(){},
-	unregisterDebugger: function(){}
+    registerClient: function(){},
+    unregisterClient: function(){},
+    unregisterDebugger: function(){}
 };
 
 FBL.getUniqueId = function(){};
@@ -2660,8 +2660,8 @@ Firebug.ScriptPanel.prototype = extend(Firebug.SourceBoxPanel,
         this.context.setInterval = Firebug.browser.setInterval; 
         this.context.clearInterval = Firebug.browser.clearInterval; 
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    	
-    	Firebug.SourceBoxPanel.create.apply(this, arguments);
+        
+        Firebug.SourceBoxPanel.create.apply(this, arguments);
     },
     
     initialize: function(context, doc)
