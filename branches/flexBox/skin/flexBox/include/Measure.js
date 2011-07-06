@@ -241,8 +241,17 @@ Measure.prototype =
         }
         
         return {top:result[0], left:result[1], bottom:result[2], right:result[3]};
-    } 
-
+    },
+     
+    getStyle: BrowserDetection.IE ? function(el, name)
+    {
+        return el.currentStyle[name] || el.style[name] || undefined;
+    }
+    : function(el, name)
+    {
+        return this.document.defaultView.getComputedStyle(el,null)[name] 
+            || el.style[name] || undefined;
+    }
 };
 
 // ************************************************************************************************
