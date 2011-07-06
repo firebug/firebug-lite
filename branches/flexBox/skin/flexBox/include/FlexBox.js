@@ -369,7 +369,7 @@ Splitter.prototype.onSplitterMouseDown = function(e)
         var boxObject = flexBox.getParentBoxObject(target);
         var orientation = boxObject.orientation;
         
-        var fixedSpace = boxObject.layout.fixedSpace;
+        var fixedSpace = boxObject.layout.accumulatedMinimumSpace;
         var targetSize = target[orientation.offset];
         var maxSize = boxObject.element[orientation.offset] + targetSize - fixedSpace;
         
@@ -380,7 +380,7 @@ Splitter.prototype.onSplitterMouseDown = function(e)
         
         var size = targetSize - positionDiff;
         size = Math.min(maxSize, size);
-        size = Math.max(0, size);
+        size = Math.max(flexBox.getBoxObject(target).layout.accumulatedMinimumSpace, size);
         target.style[orientation.dimension] = size + "px";
 
         if (isIE6)
@@ -389,6 +389,13 @@ Splitter.prototype.onSplitterMouseDown = function(e)
             target.className = className + " boxFixIgnoreContents";
             flexBox.invalidate();
             target.className = className;
+            // TODO: investigate the real source of this problem
+            // xxxpedro not sure why but sometimes the UI will be rendered incorrectly here.
+            // To reproduce, comment out the following line, then open the HTML Panel, and
+            // make the Bottom Panel visible with the Command Editor visible too. Then, 
+            // resize the Bottom Panel. You'll see that the whole LargeCommandLinePane will
+            // be positioned in the wrong place.
+            flexBox.invalidate();
         }
         else
             flexBox.invalidate();
@@ -396,20 +403,27 @@ Splitter.prototype.onSplitterMouseDown = function(e)
 
     this.splitterFrame.onmouseup = function(event)
     {
-        event = window.event || event;
-        cancelEvent(event, true);
-
-        // IE9 need this timeout otherwise the mouse cursor image will freeze 
-        // until the document is clicked again
-        setTimeout(function(){
+        function cancelSplitter(){
             try
             {
                 self.splitter.focus();
             }
             catch (E) {}
-            
+
             closeSplitterFrame(self);
-        },0);
+        }
+
+        event = window.event || event;
+        cancelEvent(event, true);
+
+        if (BrowserDetection.IE == 9)
+            // IE9 need this timeout otherwise the mouse cursor image will freeze 
+            // until the document is clicked again
+            setTimeout(cancelSplitter,0);
+        else
+            // For other browsers we are not using setTimeout to avoid the problem when you 
+            // release the mouse button and the target still resize for a small fraction of time
+            cancelSplitter();
     };
 };
 
@@ -533,6 +547,10 @@ function reflowBoxes(flexBox)
             if (childElement.nodeType != 1)
                 continue;
 
+            // ignore non-visible elements too, otherwise we will reserve a space for
+            // an element which will not be displayed
+            if (measure.getStyle(childElement, "display") == "none") continue;
+
             padding = measure.getMeasureBox(childElement, "padding");
             border = measure.getMeasureBox(childElement, "border");
 
@@ -582,11 +600,32 @@ function reflowBoxes(flexBox)
 
         layout.flexSum = flexSum;
         layout.minimumSpace = minimumSpace;
+        layout.accumulatedMinimumSpace = 0;
         layout.fixedSpace = fixedSpace;
 
         boxObject.orientation = orientation;
         boxObject.children = children;
         boxObject.layout = layout;
+
+        // Now we must calculate the accumulated minimum space used for boxes with the same
+        // orientation (horizontal or vertical). For instance, if a vertical box contains 
+        // other vertical elements and the sum of their dimensions (their height in this case)
+        // is greater than the dimension of the box itself, 
+        do
+        {
+            boxObject = flexBox.getParentBoxObject(parentElement);
+            if (boxObject)
+            {
+                if (boxObject.orientation.isVertical == orientation.isVertical)
+                {
+                    boxObject.layout.accumulatedMinimumSpace = Math.max(
+                            boxObject.layout.accumulatedMinimumSpace, 
+                            boxObject.layout.minimumSpace + minimumSpace
+                        );
+                }
+                parentElement = boxObject.element;
+            }
+        } while(boxObject);
     }
 }
 
@@ -726,12 +765,14 @@ function renderBoxes(flexBox)
                     // xxxpedro 100% width of an iframe with border will exceed the width of 
                     // its offsetParent... don't ask me why. not sure though if this 
                     // is the best way to solve it
-                    if (childElement.nodeName.toLowerCase() == "iframe")
+                    if (childElement.nodeName.toLowerCase() == "iframe" || 
+                        // This same problem occurs in IE6 for "textarea" elements
+                        _isIE6 && childElement.nodeName.toLowerCase() == "textarea")
                     {
                         border = measure.getMeasureBox(childElement, "border");
 
-                        // in IE6 we need to hide the iframe in order to get the correct 
-                        // width of its parentNode
+                        // in IE6 we need to hide the problematic element in order to get 
+                        // the correct width of its parentNode
                         if (_isIE6)
                         {
                             childElement.style.display = "none";
@@ -774,7 +815,11 @@ function renderBoxes(flexBox)
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Ensuring minimum space
 
-        if (parentElement != flexBox.root && orientation.isVertical)
+        if (parentElement != flexBox.root && 
+            // we should not resize the root element, otherwise it will loose its flexible ability
+            // (in case it has a relative property like height:100% for instance)
+            parentElement.parentNode != flexBox.root && 
+            orientation.isVertical)
         {
             // TODO: check for "deeper" parents
             // here we are enforcing that the parent box dimension (height or width) 
