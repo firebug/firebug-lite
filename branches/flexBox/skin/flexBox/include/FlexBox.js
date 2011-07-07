@@ -373,6 +373,9 @@ Splitter.prototype.onSplitterMouseDown = function(e)
         var targetSize = target[orientation.offset];
         var maxSize = boxObject.element[orientation.offset] + targetSize - fixedSpace;
         
+        var targetBoxObject = flexBox.getBoxObject(target);
+        var minSize = targetBoxObject ? targetBoxObject.layout.accumulatedMinimumSpace : 0;
+        
         var mousePosition = event[orientation.mousePosition];
 
         var targetPosition = flexBox.measure.getElementPosition(target);
@@ -380,7 +383,7 @@ Splitter.prototype.onSplitterMouseDown = function(e)
         
         var size = targetSize - positionDiff;
         size = Math.min(maxSize, size);
-        size = Math.max(flexBox.getBoxObject(target).layout.accumulatedMinimumSpace, size);
+        size = Math.max(minSize, size);
         target.style[orientation.dimension] = size + "px";
 
         if (isIE6)
