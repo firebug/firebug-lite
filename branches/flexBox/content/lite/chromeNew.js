@@ -26,7 +26,7 @@ var WindowDefaultOptions =
 
     fbBtnInspect,
 
-    fbToolbar,
+    fbMainToolbarBox,
 
     fbHSplitter,
     fbVSplitter,
@@ -952,7 +952,7 @@ append(ChromeBase,
         // FIXME xxxpedro is this being used?
         fbBtnInspect = $("fbBtnInspect");
         
-        fbToolbar = $("fbToolbar");
+        fbMainToolbarBox = $("fbMainToolbarBox");
       
         fbHSplitter = $("fbHSplitter");
         fbVSplitter = $("fbVSplitter");
@@ -964,13 +964,13 @@ append(ChromeBase,
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
         //topHeight = fbTop.offsetHeight;
-        //topPartialHeight = fbToolbar.offsetHeight;
+        //topPartialHeight = fbMainToolbarBox.offsetHeight;
         topHeight = 0;
         topPartialHeight = 0;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
-        //disableTextSelection($("fbToolbar"));
+        //disableTextSelection($("fbMainToolbarBox"));
         //disableTextSelection($("fbPanelBarBox"));
         //disableTextSelection($("fbPanelBar1"));
         //disableTextSelection($("fbPanelBar2"));
@@ -1237,7 +1237,7 @@ append(ChromeBase,
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         // remove disableTextSelection event handlers
-        //restoreTextSelection($("fbToolbar"));
+        //restoreTextSelection($("fbMainToolbarBox"));
         //restoreTextSelection($("fbPanelBarBox"));
         //restoreTextSelection($("fbPanelBar1"));
         //restoreTextSelection($("fbPanelBar2"));
@@ -1253,7 +1253,7 @@ append(ChromeBase,
 
         fbBtnInspect = null;
         
-        fbToolbar = null;
+        fbMainToolbarBox = null;
 
         fbHSplitter = null;
         fbVSplitter = null;
@@ -1972,6 +1972,9 @@ var ChromePopupBase = extend(ChromeBase,
 
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
+    // FIXME: xxxpedro chromenew
+    return;
+    
     var last = Firebug.chrome.commandLineVisible;
     var visible = Firebug.chrome.commandLineVisible =  
         typeof visibility == "boolean" ? visibility : !Firebug.chrome.commandLineVisible;

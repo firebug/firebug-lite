@@ -28,6 +28,7 @@ define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
 
 // ************************************************************************************************
 
+// TODO: is it possible to use native CSS3 flexbox? If it is not, then we should remove this option
 // turning debugging on makes CSS3-flexBox-supported browsers to use FlexBox class to resize
 // the elements via JavaScript instead of CSS, allowing the FlexBox functions to be debugabe
 var debug = true;
@@ -824,7 +825,7 @@ function renderBoxes(flexBox)
             parentElement.parentNode != flexBox.root && 
             orientation.isVertical)
         {
-            // TODO: check for "deeper" parents
+            // TODO: check for "deeper" parents?
             // here we are enforcing that the parent box dimension (height or width) 
             // won't be smaller than the minimum space required, which is the sum 
             // of fixed dimension child boxes

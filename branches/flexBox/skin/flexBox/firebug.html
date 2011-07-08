@@ -57,11 +57,89 @@ function(FlexBox)
     root.style.visibility = "visible";
 
 });
+
+
+function doInvalidate()
+{
+    (top.Firebug||opener.Firebug).flexBox.invalidate();
+}
+
+function doToggleConsolePanel(){
+    if (!window.ToggleConsolePanel)
+        window.ToggleConsolePanel = false;
+    
+    var fbBottomPane = document.getElementById('fbBottomPane');
+    var fbPanelPane = document.getElementById('fbPanelPane');
+    var fbCommandPopupSplitter = document.getElementById('fbCommandPopupSplitter');
+    
+    if (window.ToggleConsolePanel)
+    {
+        fbPanelPane.style.display = '';
+        fbCommandPopupSplitter.style.display = '';
+        fbBottomPane.className = 'vbox';
+        fbBottomPane.style.height = ToggleConsolePanelSize + 'px';
+        doInvalidate();
+    }
+    else
+    {
+        ToggleConsolePanelSize = fbBottomPane.offsetHeight;
+        fbPanelPane.style.display = 'none';
+        fbCommandPopupSplitter.style.display = 'none';
+        fbBottomPane.className = 'vbox  boxFlex';
+        doInvalidate();
+    }
+    
+    window.ToggleConsolePanel = !window.ToggleConsolePanel;
+}
+
+function doToggleLargeCommandLine(){
+    if (!window.ToggleLargeCommandLine)
+        window.ToggleLargeCommandLine = false;
+        
+    var fbContentBox = document.getElementById('fbContentBox');
+    
+    if (window.ToggleLargeCommandLine)
+    {
+        fbContentBox.className = fbContentBox.className.replace(' hideCommandLineHACK', '') + ' hideLargeCommandLineHACK';
+        doInvalidate();
+    }
+    else
+    {
+        fbContentBox.className = fbContentBox.className.replace(' hideLargeCommandLineHACK', '') + ' hideCommandLineHACK';
+        doInvalidate();
+    }
+    
+    window.ToggleLargeCommandLine = !window.ToggleLargeCommandLine;
+}
+
+function doHideBottomPanel(){
+    var fbBottomPane = document.getElementById('fbBottomPane');
+    var fbCommandPopupSplitter = document.getElementById('fbCommandPopupSplitter');
+    fbCommandPopupSplitter.style.display = 'none';
+    fbBottomPane.style.display = 'none';
+    doInvalidate();
+}
+
+function doShowBottomPanel(){
+    var fbBottomPane = document.getElementById('fbBottomPane');
+    var fbCommandPopupSplitter = document.getElementById('fbCommandPopupSplitter');
+    fbCommandPopupSplitter.style.display = '';
+    fbBottomPane.style.display = '';
+    doInvalidate();
+}
+
+function doMoveToolbar(){
+    var fbLargeCommandLineToolbar = document.getElementById('fbLargeCommandLineToolbar');
+    var fbLargeCommandLine = document.getElementById('fbLargeCommandLine');
+    fbLargeCommandLine.parentNode.insertBefore(fbLargeCommandLineToolbar.parentNode, fbLargeCommandLine);
+    doInvalidate();
+}
+
 </script>
 </head>
 <body>
 
-    <div id="fbContentBox" class="vbox hideCommandLine hideSidePanelBar hideCommandPopup">
+    <div id="fbContentBox" class="vbox hideSidePanelBar hideLargeCommandLineHACK">
 
         <div id="fbChromeSplitter" class="fbSplitter" data-target="fbContentBox" data-spacer="fbContentBox"></div>
         
@@ -74,6 +152,10 @@ function(FlexBox)
                     <div id="fbPanelBar1-innerToolbar" class="inlineBlockLeft">
                         <a id="fbFirebugButton" class="fbIconButton inlineBlockLeft fbHover">&nbsp;</a>
                         <a id="fbInspectButton" class="fbIconButton inlineBlockLeft fbHover">&nbsp;</a>
+                        
+                        
+                        <a href="javascript:doShowBottomPanel()">Show Bottom Panel</a>&nbsp;&nbsp;&nbsp;
+                        
                     </div>
                     
                     <div id="fbPanelBar1-panelTabs" class="panelTabs inlineBlockLeft">
@@ -110,8 +192,8 @@ function(FlexBox)
         
             <div id="fbPanelDeck" class="vbox boxFlex">
             
-                <div id="fbToolbar">
-                    <div id="fbToolbarContent" class="boxContent">
+                <div id="fbMainToolbarBox" class="fbToolbarBox">
+                    <div id="fbMainToolbar" class="fbToolbar boxContent">
                         <span id="fbToolbarButtons"></span>
                         <span id="fbStatusBarBox"></span>
                         <!-- 
@@ -151,8 +233,8 @@ function(FlexBox)
             
             <div id="fbSidePanelDeck" class="vbox">
             
-                <div id="fbPanelBar2-panelTabsBox">
-                    <div id="fbPanelBar2-panelTabs" class="boxContent">
+                <div id="fbPanelBar2-panelTabsBox" class="fbToolbarBox">
+                    <div id="fbPanelBar2-panelTabs" class="fbToolbar boxContent">
                         <!--
                         <span class="panelTab sel">Style<span class="panelOptions">▼</span></span>
                         <span class="panelTab">Layout<span class="panelOptions">▼</span></span>
@@ -185,25 +267,89 @@ function(FlexBox)
             
         </div>
         
-        <div id="fbCommandPopupSplitter" class="fbSplitter" data-target="fbCommandPopup" data-spacer="fbPanelPane">
+        <div id="fbCommandPopupSplitter" class="fbSplitter" data-target="fbBottomPane" data-spacer="fbPanelPane">
             <div id="fbCommandPopupSplitterContent" class="boxContent"></div>
         </div>
         
-        <div id="fbCommandPopup" class="boxScroll">
-        <!-- 
-            <div>
-                <p>command popup</p>
-                <p>command popup</p>
-                <p>command popup</p>
-                <p>command popup</p>
-                <p>command popup</p>
-            </div>
-        -->
-        </div>
+        <div id="fbBottomPane" class="vbox">
         
-        <div id="fbCommandBox">
-            <span id="fbCommandArrow">&gt;&gt;&gt;</span>
-            <input id="fbCommandLine" />
+            <div id="xxxfbPanelDeck" class="hbox boxFlex">
+        
+                <div id="fbCommandPopupPane" class="vbox boxFlex">
+                    <div class="fbToolbarBox">
+                        <div id="fbBottomToolbar" class="fbToolbar">
+                            bottom toolbar :: 
+                            
+                            <a href="javascript:doToggleConsolePanel()">Toggle Console Panel</a> ::
+                             
+                            <a href="javascript:doToggleLargeCommandLine()">Toggle Large Command Line</a> :: 
+
+                            <a href="javascript:doHideBottomPanel()">Hide Bottom Panel</a> :: 
+                            
+                            <a href="javascript:doMoveToolbar()">Move LargeCmdLine Toolbar</a> 
+                            
+                        </div>
+                    </div>
+                
+                    <div id="fbCommandPopup" class="boxFlex boxScroll">
+                    <!-- 
+                        <div>
+                            <p>command popup</p>
+                            <p>command popup</p>
+                            <p>command popup</p>
+                            <p>command popup</p>
+                            <p>command popup</p>
+                        </div>
+                    -->
+                    </div>
+                </div>
+                
+                <div id="fbBottomPaneSplitter" class="fbSplitter" data-target="fbLargeCommandLinePane" data-spacer="fbCommandPopup"></div>
+                
+                <div id="fbLargeCommandLinePane" class="vbox">
+                
+                    <textarea id="fbLargeCommandLine" class="boxFlex boxScroll">/*large command line content*/
+function openSplitterFrame(splitter, orientation)
+{
+    var flexBox = splitter.flexBox;
+    var root = flexBox.root;
+    var splitterFrame = splitter.splitterFrame;
+    
+    var box = flexBox.measure.getElementBox(root);
+    for (var prop in box)
+    {
+        splitterFrame.style[prop] = box[prop] + "px";
+    }
+
+    if (debugSplitterFrame)
+    {
+        splitterFrame.style.background = "#def";
+        splitterFrame.style.opacity = 0.5;
+        
+        if (isIE6)
+            splitterFrame.style.filter = "alpha(opacity=50)";
+    }
+
+    splitterFrame.style.cursor = orientation.isVertical ? "n-resize" : "e-resize";
+
+    root.parentNode.insertBefore(splitterFrame, root);
+}
+                    </textarea>
+                    
+                    <div class="fbToolbarBox">
+                        <div id="fbLargeCommandLineToolbar" class="fbToolbar">
+                            large command line toolbar
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div id="fbCommandBox">
+                <span id="fbCommandArrow">&gt;&gt;&gt;</span>
+                <input id="fbCommandLine" />
+            </div>
+            
         </div>
         
     </div>

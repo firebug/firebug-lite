@@ -60,8 +60,7 @@ html, body {
  Toolbar and SidePanel Tabs Boxes
 ************************************************************************************************* */
 
-#fbToolbar,
-#fbPanelBar2-panelTabsBox {
+.fbToolbarBox {
     height: 28px;
     position: relative;
     cursor: default;
@@ -71,8 +70,7 @@ html, body {
     _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg.png');
 }
 
-#fbToolbarContent,
-#fbPanelBar2-panelTabs {
+.fbToolbar {
     white-space: nowrap;
     padding: 3px 2px 2px;
     /* avoid tabs wrapping to the next line when the space is too small */
@@ -122,9 +120,9 @@ html, body {
 ************************************************************************************************* */
 
 #fbCommandPopup {
-    height: 50px;
     background: #fff;
     border-top: 1px solid #999;
+    border-right: 1px solid #ccc;
 }
 
 
@@ -146,8 +144,9 @@ html, body {
 
 #fbPanelSplitter {
     background: #E5E7E9;
-    cursor: e-resize;
     width: 4px;
+    cursor: ew-resize;
+    _cursor: e-resize;
 }
 
 #fbPanelSplitterContent {
@@ -178,9 +177,10 @@ html, body {
 #fbCommandPopupSplitter,
 #fbCommandPopupSplitterContent {
     background: #E5E7E9;
-    cursor: n-resize;
     height: 4px;
     overflow: hidden;
+    cursor: ns-resize;
+    _cursor: n-resize;
 }
 
 #fbChromeSplitter {
@@ -402,11 +402,21 @@ html, body {
 /* *************************************************************************************************
  TO ORGANIZE
 ************************************************************************************************* */
-.hideCommandLine #fbCommandBox,
+
+/* FIXME remove this? */
+.hideCommandLineREMOVETHIS #fbCommandBox,
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+.hideCommandLineHACK #fbCommandBox,
+.hideLargeCommandLineHACK #fbBottomPaneSplitter,
+.hideLargeCommandLineHACK #fbLargeCommandLinePane,
+.FirebugPopup #fbChromeSplitter,  /* FIXME */ 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 .hideSidePanelBar #fbPanelSplitter,
 .hideSidePanelBar #fbSidePanelDeck,
-.hideCommandPopup #fbCommandPopupSplitter,
-.hideCommandPopup #fbCommandPopup {
+.hideCommandPopup #fbCommandPopupSplitter, /* remove this? */
+.hideCommandPopup #fbCommandPopup /* remove this? */ {
     display: none;
 }
 
@@ -494,10 +504,52 @@ html, body {
 }
 
 
+
+
+
+/* *************************************************************************************************
+ New bottom panel hack
+************************************************************************************************* */
+
+
+#fbBottomPane {
+  height: 100px;
+}
+
+#fbLargeCommandLinePane {
+  background: #fff;
+  border-left: 1px solid #999;
+  width: 200px;
+}
+
+#fbLargeCommandLine {
+  width: 100%;
+  margin: 0;
+  outline: none;
+  border: none;
+  border-top: 1px solid #999;
+  border-bottom: 1px solid #ccc;
+  overflow-x: hidden;
+  resize: none;
+}
+
+#fbBottomPaneSplitter {
+  width: 4px;
+  background: #E5E7E9;
+  cursor: ew-resize;
+  _cursor: e-resize;
+}
+
+#fbCommandPopupSplitter, #fbPanelPane {
+  zzdisplay: none;
+}
+
+
 /* *************************************************************************************************
  webkit hack
 ************************************************************************************************* */
 
+/* remove this? */
 @media screen and (-webkit-min-device-pixel-ratio:0) {
 
     /* The min-height will cause a problem in IE, making the Side Panel PanelTabs 

@@ -580,7 +580,7 @@ Firebug.Panel =
                 className: "fbToolbarButtons"
             });
             
-            $("fbToolbarContent").appendChild(this.toolButtonsNode);
+            $("fbMainToolbar").appendChild(this.toolButtonsNode);
         }
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -589,7 +589,7 @@ Firebug.Panel =
         {
             this.statusBarBox = $("fbStatusBarBox")
                 // FIXME xxxpedro chromenew
-                || $("fbToolbarContent");
+                || $("fbMainToolbar");
             
             this.statusBarNode = createElement("span", {
                 id: panelId + "StatusBar",
