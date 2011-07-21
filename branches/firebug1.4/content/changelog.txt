@@ -1,5 +1,5 @@
 ###################################################################################################
- 1.4.0b1 - 2011-xx-xx - Revision: xxxx
+ 1.4.0b1 - 2011-07-21 - Revision: 11334
 ###################################################################################################
     - Issue 4606: Firebug Lite: Console is not working properly in FF4 and FF5
     - Issue 4587: Firebug Lite: Opera shows security warning when using the Inspect tool
