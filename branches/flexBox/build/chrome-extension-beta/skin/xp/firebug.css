@@ -12,6 +12,10 @@
 }
 /**/
 
+.obscured {
+    left: -999999px !important;
+}
+
 /* IE6 need a separated rule, otherwise it will not recognize it */
 .collapsed {
     display: none;
@@ -67,12 +71,14 @@
 }
 
 .infoTipImageBox {
+	font-size: 11px;
     min-width: 100px;
     text-align: center;
 }
 
 .infoTipCaption {
-    font: message-box;
+	font-size: 11px;
+    font: Monaco, monospace;
 }
 
 .infoTipLoading > .infoTipImage,
@@ -902,6 +908,8 @@ h1.groupHeader {
     border: 1px solid #D7D7D7 !important;
     border-bottom: none !important;
     -moz-border-radius: 4px 4px 0 0;
+    -webkit-border-radius: 4px 4px 0 0;
+    border-radius: 4px 4px 0 0;
     background-color: #FFFFFF;
 }
 
@@ -932,7 +940,7 @@ h1.groupHeader {
     padding: 8px;
     background-color: #FFFFFF;
     font-family: Monaco, monospace;
-    /* white-space: pre; */
+    white-space: pre-wrap;
     /*overflow-x: auto; HTML is damaged in case of big (2-3MB) responses */
 }
 
@@ -946,12 +954,17 @@ h1.groupHeader {
 }
 
 .netInfoParamName {
-    padding: 0 10px 0 0;
+    padding-right: 10px;
     font-family: Lucida Grande, Tahoma, sans-serif;
     font-weight: bold;
     vertical-align: top;
     text-align: right;
     white-space: nowrap;
+}
+
+.netInfoPostText .netInfoParamName {
+    width: 1px; /* Google Chrome need this otherwise the first column of 
+                   the post variables table will be larger than expected */
 }
 
 .netInfoParamValue {
@@ -1088,35 +1101,59 @@ h1.groupHeader {
 /************************************************************************************************/
 /* Twisties */
 
-/* IE6 has problems with > operator, and multiple classes */
-/*.twisty,
+.twisty,
 .logRow-errorMessage > .hasTwisty > .errorTitle,
- /* avoid rule not being parsed IE6 */
+.logRow-log > .objectBox-array.hasTwisty,
 .logRow-spy .spyHead .spyTitle,
-.logGroup .logGroupLabel,
-.hasChildren .memberLabelCell .memberLabel,
-.hasHeaders .netHrefLabel {
+.logGroup > .logRow,
+.memberRow.hasChildren > .memberLabelCell > .memberLabel,
+.hasHeaders .netHrefLabel,
+.netPageRow > .netCol > .netPageTitle {
     background-image: url(tree_open.gif);
     background-repeat: no-repeat;
     background-position: 2px 2px;
+    min-height: 12px;
 }
-/*
+
 .logRow-errorMessage > .hasTwisty.opened > .errorTitle,
-/* avoid rule not being parsed IE6 */
-.opened .spyHead .spyTitle,
-.opened .logGroupLabel, 
-.opened .memberLabelCell .memberLabel/*,
+.logRow-log > .objectBox-array.hasTwisty.opened,
+.logRow-spy.opened .spyHead .spyTitle,
+.logGroup.opened > .logRow,
+.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,
 .nodeBox.highlightOpen > .nodeLabel > .twisty,
 .nodeBox.open > .nodeLabel > .twisty,
-.netRow.opened > .netCol > .netHrefLabel /* avoid rule not being parsed IE6 */ {
+.netRow.opened > .netCol > .netHrefLabel,
+.netPageRow.opened > .netCol > .netPageTitle {
     background-image: url(tree_close.gif);
 }
 
 .twisty {
-    background-position: 2px 0;
+    background-position: 4px 4px;
 }
 
 
+
+/************************************************************************************************/
+/* Twisties IE6 */
+
+/* IE6 has problems with > operator, and multiple classes */
+
+* html .logRow-spy .spyHead .spyTitle,
+* html .logGroup .logGroupLabel,
+* html .hasChildren .memberLabelCell .memberLabel,
+* html .hasHeaders .netHrefLabel {
+    background-image: url(tree_open.gif);
+    background-repeat: no-repeat;
+    background-position: 2px 2px;
+}
+
+* html .opened .spyHead .spyTitle,
+* html .opened .logGroupLabel, 
+* html .opened .memberLabelCell .memberLabel {
+    background-image: url(tree_close.gif);
+    background-repeat: no-repeat;
+    background-position: 2px 2px;
+}
 
 
 
@@ -1484,6 +1521,7 @@ h1.groupHeader {
 
 .logRow-stackTrace {
     padding-top: 0;
+    background: #f8f8f8;
 }
 
 .logRow-stackTrace > .objectBox-stackFrame {
@@ -1500,11 +1538,46 @@ h1.groupHeader {
     white-space: pre-wrap;
 }
 
-.objectPropValue {
-    font-weight: normal;
-    font-style: italic;
-    color: #555555;
+/* xxxpedro reps object representation .................................... */
+.objectProp-object {
+    color: DarkGreen;
 }
+
+.objectProps {
+    color: #000;
+    font-weight: normal;
+}
+
+.objectPropName {
+    /*font-style: italic;*/
+    color: #777;
+}
+
+/*
+.objectProps .objectProp-string,
+.objectProps .objectProp-number,
+.objectProps .objectProp-object
+{
+    font-style: italic;
+}
+/**/
+
+.objectProps .objectProp-string
+{
+    /*font-family: Monaco, monospace;*/
+    color: #f55;
+}
+.objectProps .objectProp-number
+{
+    /*font-family: Monaco, monospace;*/
+    color: #55a;
+}
+.objectProps .objectProp-object
+{
+    /*font-family: Lucida Grande,sans-serif;*/
+    color: #585;
+}
+/* xxxpedro reps object representation .................................... */
 
 /************************************************************************************************/
 
@@ -1566,21 +1639,29 @@ h1.groupHeader {
 
 /*****************************************************************************************/
 
+.objectLeftBrace,
+.objectRightBrace,
+.objectEqual,
+.objectComma,
 .arrayLeftBracket,
 .arrayRightBracket,
 .arrayComma {
     font-family: Monaco, monospace;
 }
 
+.objectLeftBrace,
+.objectRightBrace,
 .arrayLeftBracket,
 .arrayRightBracket {
     font-weight: bold;
 }
 
+.objectLeftBrace,
 .arrayLeftBracket {
     margin-right: 4px;
 }
 
+.objectRightBrace,
 .arrayRightBracket {
     margin-left: 4px;
 }
@@ -2003,6 +2084,7 @@ h1.groupHeader {
     display: none;
     position: absolute;
     font-size: 11px;
+    line-height: 13px;
     z-index: 2147483647;
 }
 
@@ -2285,8 +2367,13 @@ h1.groupHeader {
     height: 100%;
     width: 100%;
     border-collapse: collapse;
+    border-spacing: 0;
     background: #fff;
     overflow: hidden;
+}
+
+#fbChrome > tbody > tr > td {
+    padding: 0;
 }
 
 #fbTop {
@@ -2297,6 +2384,7 @@ h1.groupHeader {
     background: url(sprite.png) #f1f2ee 0 0;
     height: 27px;
     font-size: 11px;
+    line-height: 13px;
 }
 
 #fbPanelBarBox {
@@ -2652,6 +2740,7 @@ div.fbFitHeight {
     cursor: default;
     font-family: Lucida Grande, Tahoma, sans-serif;
     font-size: 11px;
+    line-height: 13px;
     font-weight: bold;
     height: 22px;
     color: #565656;
@@ -2735,12 +2824,13 @@ a.fbTab:hover .fbTabR {
 
 /************************************************************************************************/
 div.lineNo {
-    font: 1em Monaco, monospace;
-    position: absolute;
+    font: 1em/1.4545em Monaco, monospace;
+    position: relative;
+    float: left;
     top: 0;
     left: 0;
-    margin: 0;
-    padding: 0 5px 0 20px;
+    margin: 0 5px 0 0;
+    padding: 0 5px 0 10px;
     background: #eee;
     color: #888;
     border-right: 1px solid #ccc;
@@ -2873,7 +2963,7 @@ position. if so, override it at chrome.js initialization when creating the div *
 }
 
 /************************************************************************************************/
-.logRow-info,.logRow-error,.logRow-warning {
+.logRow-info,.logRow-error,.logRow-warn {
     background: #fff no-repeat 2px 2px;
     padding-left: 20px;
     padding-bottom: 3px;
@@ -2884,7 +2974,7 @@ position. if so, override it at chrome.js initialization when creating the div *
     background-image: url(infoIcon.gif);
 }
 
-.logRow-warning {
+.logRow-warn {
     background-color: cyan;
     background-image: url(warningIcon.png) !important;
     background-image: url(warningIcon.gif);
@@ -2916,6 +3006,7 @@ position. if so, override it at chrome.js initialization when creating the div *
 /*
 //TODO: remove this when console2 is finished
 */
+/*
 .logRow-group {
     background: #EEEEEE;
     border-bottom: none;
