@@ -17,8 +17,9 @@ var ignoreHTMLProps =
     sizset: 1
 };
 
-// ignores also the cache property injected by firebug
-ignoreHTMLProps[cacheID] = 1;
+if (Firebug.ignoreFirebugElements)
+    // ignores also the cache property injected by firebug
+    ignoreHTMLProps[cacheID] = 1;
 
 
 // ************************************************************************************************
