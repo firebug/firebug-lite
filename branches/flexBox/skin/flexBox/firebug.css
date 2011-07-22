@@ -274,7 +274,10 @@ html, body {
 ************************************************************************************************* */
 
 #fbPanelBar1-innerToolbar {
-    padding: 2px 0 0 2px;
+    padding: 0 0 0 2px;
+    /* TODO: xxxpedro remove padding from toolbar container instead? */
+    position: relative;
+    top: -1px;
 }
 
 #fbFirebugButton {
@@ -600,6 +603,11 @@ html, body {
   zzdisplay: none;
 }
 */
+
+/* TODO: xxxpedro organize the input styling */
+.fbToolbarBox select {
+    margin: 3px 0;
+}
 
 /* *************************************************************************************************
  webkit hack
