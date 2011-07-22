@@ -7,6 +7,28 @@ define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
 /*
   xxxpedro notes:
   
+    - position:absolute/fixed support?
+        - what happens if we have a element with fixed position inside the flexBox?
+        - what happens if a fixed position element is a flexBox, like a scrollable file selector?
+  
+    - Organize CSS in UI components
+        - toolbar
+        - splitter
+        - overlay
+        - scrollable
+            - stopPropagation of mouse scroll events if reached top/bottom
+            - auto css clip:rect() when there's no native scrollbar (custom scrollable components)
+            - custom buttons
+            - touch devices support
+    
+    - tweak UI
+        - toolbar 26px
+        - remove all borders from iframes/textarea
+        - borders in splitters
+        - bottom side panel toolbar at the top
+  
+// ************************************************************************************************
+  
     - flexBox dependencies
         - className
         - event (onresize, onunload)
@@ -31,7 +53,7 @@ define(["BrowserDetection", "Measure"], function(BrowserDetection, Measure){
 // TODO: is it possible to use native CSS3 flexbox? If it is not, then we should remove this option
 // turning debugging on makes CSS3-flexBox-supported browsers to use FlexBox class to resize
 // the elements via JavaScript instead of CSS, allowing the FlexBox functions to be debugabe
-var debug = true;
+var debug = false;
 
 // setting debugSplitterFrame to true will make the SplitterFrame element to be visible
 // (the invisible element used to cover the whole UI when dragging the splitter in 
@@ -629,7 +651,8 @@ function reflowBoxes(flexBox)
                 }
                 parentElement = boxObject.element;
             }
-        } while(boxObject);
+        }
+        while(boxObject);
     }
 }
 
@@ -771,7 +794,16 @@ function renderBoxes(flexBox)
                     // is the best way to solve it
                     if (childElement.nodeName.toLowerCase() == "iframe" || 
                         // This same problem occurs in IE6 for "textarea" elements
-                        _isIE6 && childElement.nodeName.toLowerCase() == "textarea")
+                        //
+                        // TODO: xxxpedro investigate of the overall problem with borders.
+                        // It seems that this problem happens also in Firefox on any boxes.
+                        // If this is true, we must rethink our strategy for borders, and
+                        // users should avoid setting borders on boxes, using a wrapper
+                        // to do that.
+                        //
+                        // Need to test if the problem with iframes and textareas persists
+                        // when using a wrapper
+                        /* _isIE6 && */ childElement.nodeName.toLowerCase() == "textarea")
                     {
                         border = measure.getMeasureBox(childElement, "border");
 
