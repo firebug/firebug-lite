@@ -13,7 +13,7 @@ var WindowDefaultOptions =
     {
         type: "frame",
         id: "FirebugUI",
-        height: 250
+        height: 350
     },
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -572,6 +572,12 @@ append(ChromeBase,
             return panelDocument;
     },
     
+    // xxxpedro
+    getSidePanelDocument: function()
+    {
+        return sidePanelDocument;
+    },
+    
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     create: function()
@@ -924,6 +930,9 @@ append(ChromeBase,
     
     initialize: function()
     {
+        // FIXME xxxpedro chromenew  
+        if (Firebug.CommandLine) Firebug.CommandLine.activate();
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (Env.bookmarkletOutdated)
             Firebug.Console.logFormatted([
@@ -1160,7 +1169,7 @@ append(ChromeBase,
         //removeEvent(Firebug.chrome.document, "keydown", listener[0]);
 
 
-        /*
+        
         Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
         {
             if (!filter)
@@ -1176,24 +1185,24 @@ append(ChromeBase,
                     FBL.cancelEvent(event, true);
                     return false;
                 }
-            }
+            };
     
-            addEvent(Firebug.chrome.document, "keydown", fn);
+            addEvent(this.getSidePanelDocument(), "keydown", fn);
             
             return [fn, capture];
         };
         
         Firebug.chrome.keyIgnore = function(listener)
         {
-            removeEvent(Firebug.chrome.document, "keydown", listener[0]);
+            removeEvent(this.getSidePanelDocument(), "keydown", listener[0]);
         };
         /**/
         
-        
-//        this.addController(
-//                [fbPanel1, "mousedown", onPanelMouseDown],
-//                [fbPanel2, "mousedown", onPanelMouseDown]
-//             );
+
+        this.addController(
+                [this.getPanelContainer(), "mousedown", onPanelMouseDown],
+                [this.getSidePanelContainer(), "mousedown", onPanelMouseDown]
+             );
 /**/
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1996,7 +2005,7 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
             setClass($("fbContentBox"), "hideCommandLine");
         }
         
-        Firebug.flexBox.invalidate();
+        Firebug.chrome.window.flexBox.invalidate();
     }
 };
 
@@ -2013,7 +2022,7 @@ var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
         else
             setClass($("fbContentBox"), "hideSidePanelBar");
         
-        Firebug.flexBox.invalidate();
+        Firebug.chrome.window.flexBox.invalidate();
     }
 };
 
