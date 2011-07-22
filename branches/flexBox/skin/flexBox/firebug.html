@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <!-- See license.txt for terms of usage -->
 <html>
 <head>
@@ -51,7 +51,10 @@ function(FlexBox)
     }
     
     var root = document.getElementById("fbContentBox");
-    var flexBox = (window.opener || top).Firebug.flexBox = new FlexBox(root, true);
+    
+    // loading flexBox in a global variable because the Firebug variable is
+    // not already created here when running in persistent mode.
+    window.flexBox = new FlexBox(root, true);
     
     // avoid FOUC
     root.style.visibility = "visible";
@@ -61,7 +64,7 @@ function(FlexBox)
 
 function doInvalidate()
 {
-    (top.Firebug||opener.Firebug).flexBox.invalidate();
+    flexBox.invalidate();
 }
 
 function doToggleConsolePanel(){
@@ -141,20 +144,19 @@ function doMoveToolbar(){
 
     <div id="fbContentBox" class="vbox hideSidePanelBar hideLargeCommandLineHACK">
 
-        <div id="fbChromeSplitter" class="fbSplitter" data-target="fbContentBox" data-spacer="fbContentBox"></div>
+        <div id="fbChromeSplitter" class="fbSplitter fbVerticalSplitter" data-target="fbContentBox" data-spacer="fbContentBox"></div>
         
-        <div id="fbPanelBar1-tabBox" class="panelTabBox">
-        
-            <div class="boxContent">
+                                      <!-- move this to CSS. it fixes glitches in FF when using native flex box -->
+        <div id="fbPanelBar1-tabBox" style="position:relative;" class="panelTabBox">
+
+            <div class="boxContent" >
             
                 <div id="fbWindowLeftControls" class="fbWindowControls">
                 
                     <div id="fbPanelBar1-innerToolbar" class="inlineBlockLeft">
                         <a id="fbFirebugButton" class="fbIconButton inlineBlockLeft fbHover">&nbsp;</a>
                         <a id="fbInspectButton" class="fbIconButton inlineBlockLeft fbHover">&nbsp;</a>
-                        
-                        
-                        <a href="javascript:doShowBottomPanel()">Show Bottom Panel</a>&nbsp;&nbsp;&nbsp;
+
                         
                     </div>
                     
@@ -194,7 +196,12 @@ function doMoveToolbar(){
             
                 <div id="fbMainToolbarBox" class="fbToolbarBox">
                     <div id="fbMainToolbar" class="fbToolbar boxContent">
+
+                        
+                        
                         <span id="fbToolbarButtons"></span>
+                        <a class="fbButton fbHover" href="javascript:doShowBottomPanel()">Show Bottom</a>
+                        
                         <span id="fbStatusBarBox"></span>
                         <!-- 
                         <a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">normal</a>
@@ -224,11 +231,9 @@ function doMoveToolbar(){
                 
             </div>
             
-            <div id="fbPanelSplitter" class="fbSplitter" data-target="fbSidePanelDeck" data-spacer="fbPanelDeck">
-                <div id="fbPanelSplitterContent" class="boxContent">
-                    <div id="fbPanelSplitterHandler">&nbsp;</div>
-                    <div id="fbPanelSplitterTop">&nbsp;</div>
-                </div>
+            <div id="fbPanelSplitter" class="fbSplitter fbHorizontalSplitter" data-target="fbSidePanelDeck" data-spacer="fbPanelDeck">
+                <div class="fbHorizontalSplitterTop">&nbsp;</div>
+                <div class="fbHorizontalSplitterHandler">&nbsp;</div>
             </div>
             
             <div id="fbSidePanelDeck" class="vbox">
@@ -267,8 +272,7 @@ function doMoveToolbar(){
             
         </div>
         
-        <div id="fbCommandPopupSplitter" class="fbSplitter" data-target="fbBottomPane" data-spacer="fbPanelPane">
-            <div id="fbCommandPopupSplitterContent" class="boxContent"></div>
+        <div id="fbCommandPopupSplitter" class="fbSplitter fbVerticalSplitter" data-target="fbBottomPane" data-spacer="fbPanelPane">
         </div>
         
         <div id="fbBottomPane" class="vbox">
@@ -278,15 +282,10 @@ function doMoveToolbar(){
                 <div id="fbCommandPopupPane" class="vbox boxFlex">
                     <div class="fbToolbarBox">
                         <div id="fbBottomToolbar" class="fbToolbar">
-                            bottom toolbar :: 
-                            
-                            <a href="javascript:doToggleConsolePanel()">Toggle Console Panel</a> ::
-                             
-                            <a href="javascript:doToggleLargeCommandLine()">Toggle Large Command Line</a> :: 
-
-                            <a href="javascript:doHideBottomPanel()">Hide Bottom Panel</a> :: 
-                            
-                            <a href="javascript:doMoveToolbar()">Move LargeCmdLine Toolbar</a> 
+                            <a class="fbButton fbHover" href="javascript:doToggleConsolePanel()">Toggle Console</a>
+                            <a class="fbButton fbHover" href="javascript:doToggleLargeCommandLine()">Toggle LargeCmdLine</a> 
+                            <a class="fbButton fbHover" href="javascript:doHideBottomPanel()">Hide Bottom</a>
+                            <a class="fbButton fbHover" href="javascript:doMoveToolbar()">Move Toolbar</a>
                             
                         </div>
                     </div>
@@ -304,10 +303,26 @@ function doMoveToolbar(){
                     </div>
                 </div>
                 
-                <div id="fbBottomPaneSplitter" class="fbSplitter" data-target="fbLargeCommandLinePane" data-spacer="fbCommandPopup"></div>
+                <div id="fbBottomPaneSplitter" class="fbSplitter fbHorizontalSplitter" data-target="fbLargeCommandLinePane" data-spacer="fbCommandPopup">
+                    <div class="fbHorizontalSplitterTop">&nbsp;</div>
+                    <div class="fbHorizontalSplitterHandler">&nbsp;</div>
+                </div>
                 
                 <div id="fbLargeCommandLinePane" class="vbox">
                 
+                    <div class="fbToolbarBox">
+                        <div id="fbLargeCommandLineToolbar" class="fbToolbar">
+                            <a class="fbButton fbHover">Run</a>
+                            <a class="fbButton fbHover">Clear</a>
+                            <a class="fbButton fbHover">Copy</a>
+                            <a class="fbButton fbHover">History</a>
+                        </div>
+                        <div id="fbWindowButtons" class="inlineBlockRight">
+                            <a id="fbWindow_btClose" class="fbSmallButton inlineBlockRight fbHover" href="javascript:doToggleLargeCommandLine()">&nbsp;</a>
+                        </div>
+                    </div>
+                    
+                    
                     <textarea id="fbLargeCommandLine" class="boxFlex boxScroll">/*large command line content*/
 function openSplitterFrame(splitter, orientation)
 {
@@ -336,11 +351,6 @@ function openSplitterFrame(splitter, orientation)
 }
                     </textarea>
                     
-                    <div class="fbToolbarBox">
-                        <div id="fbLargeCommandLineToolbar" class="fbToolbar">
-                            large command line toolbar
-                        </div>
-                    </div>
                 </div>
                 
             </div>

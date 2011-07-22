@@ -61,18 +61,18 @@ html, body {
 ************************************************************************************************* */
 
 .fbToolbarBox {
-    height: 28px;
+    height: 27px;
     position: relative;
     cursor: default;
     
-    background: url("tabBg.png") repeat-x scroll 0 3px #FBFDFF;
+    background: url("tabBg2.png") repeat-x scroll 0 0 #FBFDFF;
     _background-image: none !important; 
-    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg.png');
+    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg2.png');
 }
 
 .fbToolbar {
     white-space: nowrap;
-    padding: 3px 2px 2px;
+    padding: 0 2px;
     /* avoid tabs wrapping to the next line when the space is too small */
     clip: rect(0pt, 1024px, 25px, 0pt);
     /* Firefox needs position:absolute so the clip:rect works as expected */
@@ -102,16 +102,16 @@ html, body {
 #fbPanelBar2-content {
     background: #fff;
     
-    border-top: 1px solid #999;
-    border-bottom: 1px solid #ccc;
+    /*border-top: 1px solid #999;*/
+    /*border-bottom: 1px solid #ccc;*/
 }
 
 #fbPanelBar1-content {
-    border-right: 1px solid #ccc;
+    /*border-right: 1px solid #ccc;*/
 }
 
 #fbPanelBar2-content {
-    border-left: 1px solid #999;
+    /*border-left: 1px solid #999;*/
 }
 
 
@@ -121,8 +121,8 @@ html, body {
 
 #fbCommandPopup {
     background: #fff;
-    border-top: 1px solid #999;
-    border-right: 1px solid #ccc;
+    /*border-top: 1px solid #999;*/
+    /*border-right: 1px solid #ccc;*/
 }
 
 
@@ -142,11 +142,60 @@ html, body {
  Splitters
 ************************************************************************************************* */
 
+.fbSplitter {
+    background: #E5E7E9;
+    position: relative;
+    overflow: hidden;
+}
+
+.fbHorizontalSplitter {
+    width: 5px;
+    background: url("horizontalSplitter.gif") repeat-y scroll 0 0 #E5E7E9;/**/
+    /*border: 1px solid #bbb;
+    border-width: 0 1px;/**/
+    cursor: e-resize;
+}
+
+.fbVerticalSplitter {
+    height: 5px;
+    background: url("verticalSplitter.gif") repeat-x scroll 0 0 #E5E7E9;/**/
+    /*border: 1px solid #bbb;
+    border-width: 1px 0;/**/
+    cursor: n-resize;
+}
+
+
+.fbHorizontalSplitterTop {
+    width: 6px;
+    height: 27px;
+    position: absolute;
+    top: 0;
+    left: -1px;
+    
+    background: url("tabBg2.png") repeat-x scroll 0 0 #FBFDFF;
+    _background-image: none !important; 
+    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg.png');
+}
+
+.fbHorizontalSplitterHandler {
+    width: 4px;
+    height: 24px;
+    top: 4px;
+    left: 2px;
+    position: absolute;
+    
+    background: url("splitter.gif") no-repeat;
+}/**/
+
+
+/* *************************************************************************************************
+ Splitters
+************************************************************************************************* */
+/*
 #fbPanelSplitter {
     background: #E5E7E9;
     width: 4px;
-    cursor: ew-resize;
-    _cursor: e-resize;
+    cursor: e-resize;
 }
 
 #fbPanelSplitterContent {
@@ -179,14 +228,14 @@ html, body {
     background: #E5E7E9;
     height: 4px;
     overflow: hidden;
-    cursor: ns-resize;
-    _cursor: n-resize;
+    cursor: n-resize;
 }
 
 #fbChromeSplitter {
     border-top: 1px solid #bbb;
     height: 3px;
 }
+*/
 
 
 /* *************************************************************************************************
@@ -340,7 +389,7 @@ html, body {
     padding-left: 20px;
     background: url(panelOptions.png) no-repeat 4px 0;
     cursor: default;
-    line-height: 12px;
+    line-height: 11px;
     position: relative;
     top: -1px;
 }
@@ -352,21 +401,23 @@ html, body {
 
 #fbPanelBar2-panelTabs .panelTab {
     color: #aaa;
-    padding: 3px 5px 3px;
-    border-bottom-width: 1px;
+    margin: 2px 0;
+    padding: 4px 5px 4px;
     -moz-border-radius: 4px;
     border-radius: 4px;
 }
 
 #fbPanelBar2-panelTabs .panelTab:hover {
     background: #eee;
-    padding: 2px 4px 4px;
+    padding: 3px 4px 3px;
+    border-width: 1px;
 }
 
 #fbPanelBar2-panelTabs .fbSelectedTab {
-    padding: 2px 4px 3px !important;
+    padding: 3px 4px 3px !important;
     background: #fff !important;
     color: #000;
+    border-width: 1px;
 }
 
 
@@ -518,32 +569,37 @@ html, body {
 
 #fbLargeCommandLinePane {
   background: #fff;
-  border-left: 1px solid #999;
+  /*border-left: 1px solid #999;*/
   width: 200px;
 }
 
 #fbLargeCommandLine {
-  width: 100%;
   margin: 0;
   outline: none;
   border: none;
-  border-top: 1px solid #999;
-  border-bottom: 1px solid #ccc;
+  padding: 0;
   overflow-x: hidden;
   resize: none;
+  
+  /*border-top: 1px solid #999;*/
+  /*border-bottom: 1px solid #ccc;*/
+  
+  /* using border-left instead of padding-left to avoid glitch in Chrome, 
+     with the 100% width of #fbLargeCommandLine  */
+  border-left: 3px solid transparent;
 }
 
+/*
 #fbBottomPaneSplitter {
   width: 4px;
   background: #E5E7E9;
-  cursor: ew-resize;
-  _cursor: e-resize;
+  cursor: e-resize;
 }
 
 #fbCommandPopupSplitter, #fbPanelPane {
   zzdisplay: none;
 }
-
+*/
 
 /* *************************************************************************************************
  webkit hack
