@@ -50,11 +50,19 @@ html, body {
     white-space: nowrap;
     cursor: default;
     
-    background: url("tabBgTop.png") repeat-x scroll 0 0 #ddd;
+    /* TODO: xxxpedro remove border top from image? */
+    background: url("tabBgTop.png") repeat-x scroll 0 -1px #ddd;
     _background-image: none !important; 
     _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBgTop.png');
 }
 
+/* *************************************************************************************************
+ Top PanelTabs
+************************************************************************************************* */
+
+#fbPanelBar1-panelTabs {
+    padding-top: 2px;
+}
 
 /* *************************************************************************************************
  Toolbar and SidePanel Tabs Boxes
@@ -243,14 +251,17 @@ html, body {
 ************************************************************************************************* */
 
 .fbWindowControls {
+    /* TODO: xxxpedro remove this */
     /* height + padding top + padding bottom == 28px (#fbPanelBar1-tabBox's height) */
-    padding: 2px 7px 0 2px;
+    /*padding: 2px 7px 0 2px;*/
+    
     height: 26px;
     position: absolute;
     clear: both;
     white-space: nowrap;
     
-    background: url("tabBgTop.png") repeat-x scroll 0 0 #ddd;
+    /* TODO: xxxpedro remove border top from image? */
+    background: url("tabBgTop.png") repeat-x scroll 0 -1px #ddd;
     _background-image: none !important; 
     _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBgTop.png');
 }
@@ -264,7 +275,7 @@ html, body {
 #fbWindowRightControls {
     right: 0;
     /*width: 190px; /* fixed width to avoid inline elements breaking line when there's no space */
-    width: 50px; /* fixed width to avoid inline elements breaking line when there's no space */
+    width: 55px; /* fixed width to avoid inline elements breaking line when there's no space */
     clear: both;
 }
 
@@ -274,10 +285,7 @@ html, body {
 ************************************************************************************************* */
 
 #fbPanelBar1-innerToolbar {
-    padding: 0 0 0 2px;
-    /* TODO: xxxpedro remove padding from toolbar container instead? */
-    position: relative;
-    top: -1px;
+    padding: 1px 0 0 3px;
 }
 
 #fbFirebugButton {
@@ -314,8 +322,9 @@ html, body {
  Window butons 
 ************************************************************************************************* */
 
+/* TODO xxxpedro change to class used more than once in css */
 #fbWindowButtons {
-    padding: 3px 0 0;
+    padding: 4px 3px 0 0;
 }
 
 #fbWindow_btClose {
