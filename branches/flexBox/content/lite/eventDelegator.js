@@ -1,145 +1,19 @@
 /* See license.txt for terms of usage */
 
-FBL.ns(function() {
-
-/*
-
-  TODO:
-    - API
-            Event.add versus Event.addEvent
-
-    - do not store objects in cache variables, use key instead
-
-    - priority?
-    - sort controller callbacks based on rule specificity?
-    - cancel propagation for controllers? 
-    
-    - use it for internal events?
-        - need to attach "key" attribute to individual objects 
-
-*/
-
-
-/**
-
-Problems
-    - cross-browser compatibily (addEventListener versus attachEvent, event object differences)
-    - performance (we need to reduce the number of events attached to elements --> event delegation)
-    
-Related-problems
-    - memory leak (we need to avoid circular references between DOM and JS worlds --> cache)
-    - remote object identification (we can't use XPATH for JavaScript objects)
-
-Goals
-    - Define an API to handle event-related problems (event handling, event delegation, key listening)
-
-
-Tips for avoiding problem with events
-    - avoid adding events to elements. Use controls/controllers instead.
-
-    - Chrome controller
-        - all mouse events should be delegated
-        - all keyboard events should be delegated
-        - all resize events should be delegated
-        - all scroll events should be delegated
-
-~~~~~~~~~
-
-Questions
-
-Using expando property to cache elements
-  - we need this to optimize cache lookup time and avoid attaching JavaScript objects into DOM Elements (no circular references problem, less prone to memory leaks)
-  - Is this ok in Firebug code? Firebug Lite currently uses this
-
-Controller definition using CSS selectors or classes-only
-  - How to verify if a particular element matches a CSS selector in FF?
-
-
-~~~~~~~~~
-
-Control is an visual component that responds to user actions
-
-Controller is a special kind of Control that operates several sub-components (internal Controls)
-using a single Control component
-
-http://docwiki.embarcadero.com/VCL/en/Controls.TControl
-
-~~~~~~~~~
-
-API - draft
-
-----------------------------------------------------------------------------------------------------
-Lib/Event Module
-----------------------------------------------------------------------------------------------------
-    Lib.addEvent(element, namespace-type, callback, capture)
-    Lib.removeEvent(element, namespace-type, callback, capture)
-    Lib.removeEvents(namespace)
-
-    Lib.cancelEvent(event, preventDefault) ?
-
-    // KeyEvent object for non-FF browsers
-    Lib.KeyEvent = window.KeyEvent ||
-    {
-        DOM_VK_CANCEL: 3,
-        DOM_VK_HELP: 6,
-        DOM_VK_BACK_SPACE: 8,
-        DOM_VK_TAB: 9,
-        DOM_VK_CLEAR: 12,
-        DOM_VK_RETURN: 13,
-        DOM_VK_ENTER: 14,
-        ...
-    }
-
-----------------------------------------------------------------------------------------------------
-Lib/Event Module (currently in Lib)
-----------------------------------------------------------------------------------------------------
-    Lib.noKeyModifiers(event)
-
-    Lib.isControl(event)
-    Lib.isShift(event)
-    Lib.isAlt(event)
-    Lib.isControlShift(event)
-
-    Lib.isLeftClick(event)
-    Lib.isMiddleClick(event)
-    Lib.isRightClick(event)
-    Lib.isControlClick(event)
-    Lib.isShiftClick(event)
-    Lib.isAltClick(event)
-
-----------------------------------------------------------------------------------------------------
-Firebug.Control(context?, element)
-----------------------------------------------------------------------------------------------------
-    addEvent(namespace-type, callback, capture)
-    removeEvent(namespace-type, callback, capture)
-    removeEvents(namespace)
-
-
-----------------------------------------------------------------------------------------------------
-Firebug.Controller(context?, element)
-----------------------------------------------------------------------------------------------------
-    addController(selector, namespace-type, callback, capture)
-    removeController(selector, namespace-type, callback, capture)
-    removeControllers(namespace)
-
-    addKeyController(key, filter, listener, capture, priority?)
-    removeKeyController(key)
-    removeKeyControllers()
-
-    addCharController(character, filter, listener, capture, priority?)
-    removeCharController(character)
-    removeCharControllers()
-
-*/
-
+FBL.ns( /**@scope _eventDelegator_ */ function() {
 
 // ************************************************************************************************
 // Globals
 
 var EventCache = new Cache();
 
+/**
+ * @namespace 
+ * @exports _eventDelegator_-Event as Event
+ */
+var Event = {};
 
-window.addEvent = function(element, type, callback, capture, owner, validator, data, bubble)
+Event.add = function(element, type, callback, capture, owner, validator, data, bubble)
 {
     var id = EventCache.set(element);
     
@@ -183,7 +57,7 @@ window.addEvent = function(element, type, callback, capture, owner, validator, d
     // if there's no handler, create one
     if (!eventHandler)
     {
-        eventHandler = eventData.handler = function(event)
+        eventHandler = /** @ignore */ eventData.handler = function(event)
         {
             //console.time("handling "+type);
 
@@ -230,7 +104,7 @@ window.addEvent = function(element, type, callback, capture, owner, validator, d
     }
 };
 
-window.removeEvent = function(element, type, callback, capture, owner, validator)
+Event.remove = function(element, type, callback, capture, owner, validator)
 {
     var id = EventCache.key(element);
 
@@ -403,6 +277,7 @@ var fixEvent = function(event)
 
     // add preventDefault and stopPropagation since
     // they will not work on the clone
+    /** @ignore */
     event.preventDefault = function() {
         // if preventDefault exists run it on the original event
         if (originalEvent.preventDefault)
@@ -410,6 +285,7 @@ var fixEvent = function(event)
         // otherwise set the returnValue property of the original event to false (IE)
         originalEvent.returnValue = false;
     };
+    /** @ignore */
     event.stopPropagation = function() {
         // if stopPropagation exists run it on the original event
         if (originalEvent.stopPropagation)
@@ -419,6 +295,7 @@ var fixEvent = function(event)
         
         isPropagationStopped = true;
     };
+    /** @ignore */
     event.isPropagationStopped = function()
     {
         return isPropagationStopped;
@@ -466,6 +343,11 @@ var fixEvent = function(event)
 
 // ************************************************************************************************
 
+/** 
+ * @class A "Control" is a visual component that responds to user actions
+ * 
+ * @exports _eventDelegator_-Control as Control
+ */
 function Control(element)
 {
     this._controlElement = element;
@@ -474,13 +356,13 @@ function Control(element)
 Control.prototype =
 {
     addEvent: function(type, callback, capture){
-        addEvent(this._controlElement, getControlType(type), callback, capture, this);
+        Event.add(this._controlElement, getControlType(type), callback, capture, this);
     },
     removeEvent: function(type, callback, capture){
-        removeEvent(this._controlElement, getControlType(type), callback, capture);
+        Event.remove(this._controlElement, getControlType(type), callback, capture);
     },
     removeEvents: function(){
-        removeEvent(this._controlElement, getControlType(""));
+        Event.remove(this._controlElement, getControlType(""));
     }
 };
 
@@ -491,13 +373,40 @@ function getControlType(type)
 
 // ************************************************************************************************
 
+/** 
+ * @class A "Controller" is a special kind of "Control" that can delegate events to its 
+ * descendants.
+ * 
+ * @augments Control
+ * @exports _eventDelegator_-Controller as Controller
+ */
 function Controller(element)
 {
     this._controlElement = element;
 }
 
-Controller.prototype = FBL.extend(Control.prototype,
+Controller.prototype = FBL.extend(Control.prototype, /** @lends Controller.prototype */
 {
+
+    /**
+     * Adds a "Controller" listener.
+     * 
+     * *Example*
+     * ~~
+     * var controller = new Controller(root); // create an instance
+     *      
+     * controller.onclick = function(){}; // define the handler
+     *      
+     * controller.addController("div > .someClass", "click.namespace", controller.onclick);
+     * ~~
+     * 
+     * @param {String} selector   A CSS selector representing the target Elements.
+     * @param {String} type       A string representing the event type/namespace to listen for.
+     * @param {Function} callback The controller handler function.
+     * @param {Boolean} capture   If "true", all events of the specified type/namespace 
+     *                            will be captured. 
+     * @see Event.add()
+     */
     addController: function(selector, type, callback, capture)
     {
         function addControllerValidator(e, listener)
@@ -505,9 +414,42 @@ Controller.prototype = FBL.extend(Control.prototype,
             return Firebug.Selector.matches(listener.data.selector, [e.target]).length > 0;
         }
         
-        addEvent(this._controlElement, getControllerType(selector, type), callback, null, 
+        Event.add(this._controlElement, getControllerType(selector, type), callback, null, 
                 this, addControllerValidator, {selector: selector}, true);
     },
+
+    /**
+     * Removes one or more "Controller" listeners.
+     *      
+     * *Example*
+     * ~~
+     * // removes a particular controller
+     * controller.removeController("div > .someClass", "click.namespace", controller.onclick);
+     * 
+     * // removes all controllers that match the selector, 
+     * // have the "click" type and the "namespace" namespace
+     * controller.removeController("div > .someClass", "click.namespace");
+     *
+     * // removes all controllers that match the selector and have the "click" type
+     * controller.removeController("div > .someClass", "click");
+     *
+     * // removes all controllers that match the selector and have the "namespace" namespace
+     * controller.removeController("div > .someClass", ".namespace");
+     *
+     * // removes all controllers that match the selector
+     * controller.removeController("div > .someClass");
+     *
+     * // removes all controllers that have the same type/namespace, you got the idea...
+     * controller.removeController(null, "click.namespace");
+     * ~~
+     * 
+     * @param {String} selector   A CSS selector representing the target Elements.
+     * @param {String} type       A string representing the event type/namespace to listen for.
+     * @param {Function} callback The controller handler function.
+     * @param {Boolean} capture   If "true", all events of the specified type/namespace 
+     *                            will be captured. 
+     * @see Event.remove()
+     */
     removeController: function(selector, type, callback, capture)
     {
         function removeControllerValidator(listener)
@@ -515,12 +457,16 @@ Controller.prototype = FBL.extend(Control.prototype,
             return listener.data.selector == selector/* && listener.callback == callback*/;
         }
         
-        removeEvent(this._controlElement, getControllerType(selector, type), callback, null,
+        Event.remove(this._controlElement, getControllerType(selector, type), callback, null,
                 this, removeControllerValidator);
     },
+
+    /**
+     * Removes all Controller listeners.
+     */
     removeControllers: function()
     {
-        removeEvent(this._controlElement, getControllerType("", ""));
+        Event.remove(this._controlElement, getControllerType("", ""));
     }
 });
 
@@ -531,12 +477,17 @@ function getControllerType(selector, type)
 
 // ************************************************************************************************
 
+/** 
+ * @class
+ * @augments Controller
+ * @exports _eventDelegator_-WindowController as WindowController
+ */
 function WindowController(win)
 {
     this._controlElement = win;
 }
 
-WindowController.prototype = FBL.extend(Controller.prototype,
+WindowController.prototype = FBL.extend(Controller.prototype, /**@lends WindowController.prototype */
 {
     addKeyController: function(key, filter, listener, capture /*, priority?*/)
     {
@@ -588,3 +539,138 @@ window.c = c;
 // ************************************************************************************************
 
 });
+
+
+
+/*
+
+  TODO:
+    - API
+            Event.add versus Event.addEvent
+
+    - do not store objects in cache variables, use key instead
+
+    - priority?
+    - sort controller callbacks based on rule specificity?
+    - cancel propagation for controllers? 
+    
+    - use it for internal events?
+        - need to attach "key" attribute to individual objects 
+
+*/
+
+
+/*
+
+Problems
+    - cross-browser compatibily (addEventListener versus attachEvent, event object differences)
+    - performance (we need to reduce the number of events attached to elements --> event delegation)
+    
+Related-problems
+    - memory leak (we need to avoid circular references between DOM and JS worlds --> cache)
+    - remote object identification (we can't use XPATH for JavaScript objects)
+
+Goals
+    - Define an API to handle event-related problems (event handling, event delegation, key listening)
+
+
+Tips for avoiding problem with events
+    - avoid adding events to elements. Use controls/controllers instead.
+
+    - Chrome controller
+        - all mouse events should be delegated
+        - all keyboard events should be delegated
+        - all resize events should be delegated
+        - all scroll events should be delegated
+
+~~~~~~~~~
+
+Questions
+
+Using expando property to cache elements
+  - we need this to optimize cache lookup time and avoid attaching JavaScript objects into DOM Elements (no circular references problem, less prone to memory leaks)
+  - Is this ok in Firebug code? Firebug Lite currently uses this
+
+Controller definition using CSS selectors or classes-only
+  - How to verify if a particular element matches a CSS selector in FF?
+
+
+~~~~~~~~~
+
+Control is a visual component that responds to user actions
+
+Controller is a special kind of Control that operates several sub-components (internal Controls)
+using a single Control component
+
+http://docwiki.embarcadero.com/VCL/en/Controls.TControl
+
+~~~~~~~~~
+
+API - draft
+
+----------------------------------------------------------------------------------------------------
+Lib/Event Module
+----------------------------------------------------------------------------------------------------
+    Lib.addEvent(element, namespace-type, callback, capture)
+    Lib.removeEvent(element, namespace-type, callback, capture)
+    Lib.removeEvents(namespace)
+
+    Lib.cancelEvent(event, preventDefault) ?
+
+    // KeyEvent object for non-FF browsers
+    Lib.KeyEvent = window.KeyEvent ||
+    {
+        DOM_VK_CANCEL: 3,
+        DOM_VK_HELP: 6,
+        DOM_VK_BACK_SPACE: 8,
+        DOM_VK_TAB: 9,
+        DOM_VK_CLEAR: 12,
+        DOM_VK_RETURN: 13,
+        DOM_VK_ENTER: 14,
+        ...
+    }
+
+----------------------------------------------------------------------------------------------------
+Lib/Event Module (currently in Lib)
+----------------------------------------------------------------------------------------------------
+    Lib.noKeyModifiers(event)
+
+    Lib.isControl(event)
+    Lib.isShift(event)
+    Lib.isAlt(event)
+    Lib.isControlShift(event)
+
+    Lib.isLeftClick(event)
+    Lib.isMiddleClick(event)
+    Lib.isRightClick(event)
+    Lib.isControlClick(event)
+    Lib.isShiftClick(event)
+    Lib.isAltClick(event)
+
+----------------------------------------------------------------------------------------------------
+Firebug.Control(context?, element)
+----------------------------------------------------------------------------------------------------
+    addEvent(namespace-type, callback, capture)
+    removeEvent(namespace-type, callback, capture)
+    removeEvents(namespace)
+
+
+----------------------------------------------------------------------------------------------------
+Firebug.Controller(context?, element)
+----------------------------------------------------------------------------------------------------
+    addController(selector, namespace-type, callback, capture)
+    removeController(selector, namespace-type, callback, capture)
+    removeControllers(namespace)
+
+    addKeyController(key, filter, listener, capture, priority?)
+    removeKeyController(key)
+    removeKeyControllers()
+
+    addCharController(character, filter, listener, capture, priority?)
+    removeCharController(character)
+    removeCharControllers()
+
+*/
+
+
+
