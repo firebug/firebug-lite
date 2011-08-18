@@ -1,9 +1,21 @@
+/* See license.txt for terms of usage */
+
+FBL.ns(function() { with (FBL) {
+// ************************************************************************************************
+
+var CssParser = null;
+
+// ************************************************************************************************
+
+// Simple CSS stylesheet parser from:
+// https://github.com/sergeche/webkit-css
+
 /**
  * Simple CSS stylesheet parser that remembers rule's lines in file
  * @author Sergey Chikuyonok (serge.che@gmail.com)
  * @link http://chikuyonok.ru
  */
-var SC_CSSParser = (function(){
+CssParser = (function(){
     /**
      * Returns rule object
      * @param {Number} start Character index where CSS rule definition starts
@@ -287,3 +299,11 @@ var SC_CSSParser = (function(){
         }
     };
 })();
+
+
+// ************************************************************************************************
+
+FBL.CssParser = CssParser;
+
+// ************************************************************************************************
+}});
