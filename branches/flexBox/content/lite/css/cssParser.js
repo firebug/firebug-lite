@@ -157,21 +157,23 @@ CssParser = (function(){
      * @param {rule} rule_node Rule node
      * @return {rule[]}
      */
-    function saveLineNumbers(text, rule_node, line_indexes) {
+    function saveLineNumbers(text, rule_node, line_indexes, startLine) {
         preprocessRules(text, rule_node);
+        
+        startLine = startLine || 0;
         
         // remember lines start indexes, preserving line ending characters
         if (!line_indexes)
             var line_indexes = saveLineIndexes(text);
-        
+
         // now find each rule's line
         for (var i = 0, il = rule_node.children.length; i < il; i++) {
             var r = rule_node.children[i];
-            r.line = line_indexes.length;
+            r.line = line_indexes.length + startLine;
             for (var j = 0, jl = line_indexes.length - 1; j < jl; j++) {
                 var line_ix = line_indexes[j];
                 if (r.start >=  line_indexes[j] && r.start <  line_indexes[j + 1]) {
-                    r.line = j + 1;
+                    r.line = j + 1 + startLine;
                     break;
                 }
             }
@@ -188,7 +190,7 @@ CssParser = (function(){
          * text
          * @param {String} text CSS stylesheet to parse
          */
-        read: function(text) {
+        read: function(text, startLine) {
             var rule_start = [],
                 rule_body_start = [],
                 rules = [],
@@ -264,7 +266,7 @@ CssParser = (function(){
                 
             }
             
-            return saveLineNumbers(text, root);
+            return saveLineNumbers(text, root, null, startLine);
         },
         
         normalizeSelector: normalizeSelector,
