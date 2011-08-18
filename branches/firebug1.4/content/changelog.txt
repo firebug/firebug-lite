@@ -1,11 +1,11 @@
 ###################################################################################################
- 1.4.0b1 - 2011-07-21 - Revision: 11337
+ 1.4.0b1 - 2011-08-18 - Revision: 11337
 ###################################################################################################
 
 -------------------------------------------------------------------------------
 Issues
 -------------------------------------------------------------------------------
-    - Issue 4606: Firebug Lite: Console is not working properly in FF4 and FF5
+    - Issue 4606: Firebug Lite: Console is not working properly in recent versions of FF
     - Issue 4587: Firebug Lite: Opera shows security warning when using the Inspect tool
     - Issue 4432: Firebug Lite: HTML is mixed-up with functions 
 
@@ -13,8 +13,8 @@ Issues
 Internal fixes
 -------------------------------------------------------------------------------
     - overrideConsole option now works as expected
-    - Fixed problem with console injection in FF4
-    - Fixed problem with resizing in-page chrome (iframe) in FF4
+    - Fixed problem with console injection in recent versions of FF
+    - Fixed problem with resizing in-page chrome (iframe) in recent versions of FF
     - Fixed visual glitch with Menus in high resolution monitors
     - Fixed source line number height in high resolution monitors
     - Fixed mini-chrome (lower-right icon) size glitch when the cache is empty
