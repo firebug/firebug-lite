@@ -3,8 +3,8 @@
 
 // *************************************************************************************************
 
-//var bookmarlet = "javascript:(typeof Firebug!='undefined')?Firebug.chrome.toggle():(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E=F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLiteBookmarlet','1.3.0.1','firebug.jgz','skin/xp/sprite.png','https://getfirebug.com/releases/lite/beta/','#startOpened,showIconWhenHidden=false');";
-var firebugVersion = "Firebug Lite 1.3.2";
+//var bookmarklet = "javascript:(typeof Firebug!='undefined')?Firebug.chrome.toggle():(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','4','firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');";
+var firebugVersion = "Firebug Lite 1.4.0b1";
 var extensionURL = chrome.extension.getURL("");
 var isActive = false;
 
@@ -16,30 +16,59 @@ function handleIconClick(tab)
         tab.url.indexOf("https://chrome.google.com/extensions") == 0 ||
         tab.url.indexOf("chrome://") == 0)
     {
-        alert("For security reasons extensions cannot run content scripts in this page, and therefore, Firebug Lite can't work here.");
+        alert("Sorry, for security reasons extensions cannot run scripts in this page, "+
+                "which means Firebug Lite can't work here.   :(");
+        
+        return;
+    }
+
+    if (tab.url.indexOf("file:///") == 0)
+    {
+        // TODO: include message here about the problem, and chrome bug
+        //chrome.tabs.update(tab.id, {url: bookmarklet});
+        
+        alert("So, you want to load Firebug Lite in a local file, huh?\n\n" +
+        
+            "Sorry to say but this is a complicated issue... there's a Chrome bug preventing us " +
+            "to load Firebug Lite here, and there's a JavaScript security restriction " +
+            "preventing us to do XHR calls.  :(\n\n" +
+            
+            "You can solve all these problems by using a local web server which is simple to " +
+            "install and is safer for you.   :)\n\n" +
+
+            "If you want to know more about this problem, and how to solve it, please read " +
+            "our FAQ entry for this subject at:\n\n" +
+            "http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ"
+        );
         
         return;
     }
     
     var isContentScriptActive = false;
     
-    chrome.tabs.sendRequest( tab.id, {name: "FB_isActive"}, 
-    
-        function(response)
-        {
-            isContentScriptActive = true;
-            
-            if (response.value == "true")
+    var tryToActivateFirebug = function(){
+        chrome.tabs.sendRequest( tab.id, {name: "FB_isActive"}, 
+        
+            function(response)
             {
-                chrome.tabs.update(tab.id, {url: "javascript:Firebug.chrome.toggle()"});
+                isContentScriptActive = true;
+                
+                if (response.value == "true")
+                {
+                    chrome.tabs.update(tab.id, {url: "javascript:Firebug.chrome.toggle()"});
+                }
+                else
+                {
+                    setActivationStorage(tab);
+                    chrome.tabs.sendRequest(tab.id, {name: "FB_loadFirebug"});
+                }
             }
-            else
-            {
-                setActivationStorage(tab);
-                chrome.tabs.sendRequest(tab.id, {name: "FB_loadFirebug"});
-            }
-        }
-    );
+        );
+    };
+
+    var firebugShouldBeLoaded = tab.url.indexOf("https://") == 0 || tab.url.indexOf("http://") == 0;
+
+    tryToActivateFirebug();
     
     setTimeout(function(){
     
@@ -50,17 +79,38 @@ function handleIconClick(tab)
         // completely ruins the very first experience with using the Firebug Lite extension.
         if (!isContentScriptActive)
         {
-            //chrome.tabs.update(tab.id, {url: bookmarlet});
-            //enableBrowserActionIcon();
-            //setActivationStorage(tab);
-            
-            //alert("Firebug Lite can't open because this page was open before it was installed. Please reload this page.");
-            
-            setActivationStorage(tab);
-            if (confirm("Firebug Lite can't complete its activation because this page was open before the extension itself was enabled. The process will complete when you reload the page.\n\nPress ok to reload the page now, or cancel to reload it later."))
-            {
-                chrome.tabs.update(tab.id, {url: "javascript:window.location.reload()"});
-            }
+        
+            // try again
+            tryToActivateFirebug();
+
+            setTimeout(function(){
+
+                if (!isContentScriptActive)
+                {
+                    //chrome.tabs.update(tab.id, {url: bookmarlet});
+                    //enableBrowserActionIcon();
+                    //setActivationStorage(tab);
+                    
+                    if (firebugShouldBeLoaded)
+                    {
+                        setActivationStorage(tab);
+                        if (confirm("It seems that this page was opened before Firebug Lite was "+
+                              "enabled. It will (hopefully) load after reloading this page.   :)"+
+                              "\n\nPress ok to reload the page now, or cancel to reload it later."))
+                        {
+                            chrome.tabs.update(tab.id, {url: "javascript:window.location.reload()"});
+                        }
+                    }
+                    else
+                    {
+                        // TODO: add FAQ entry with the problem and point it here
+                        alert("Sorry, Firebug Lite cannot be loaded in this page.   :(\n\nFor "+
+                                "support, please visit:\nhttp://groups.google.com/group/firebug");
+                    }
+                }
+
+            },500);
+
         }
         
     },500);
