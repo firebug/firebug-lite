@@ -228,7 +228,8 @@ CssParser = (function(){
                             }
                         }
                     case '/':
-                        if (ch2 == '*') { // comment start
+                        // xxxpedro allowing comment inside comment
+                        if (!in_comment && ch2 == '*') { // comment start
                             in_comment++;
                         }
                         break;
