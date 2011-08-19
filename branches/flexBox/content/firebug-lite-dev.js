@@ -49,7 +49,7 @@ window.FBDev =
         
         
         // ****************************************************************************************
-        // Lite
+        // Lite Core
         
         "lite/lite.js",
         "lite/lite/cache.js",
@@ -59,7 +59,7 @@ window.FBDev =
         "lite/lite/browser.js", // experimental
         
         // ****************************************************************************************
-        // Application Classes
+        // Firebug Classes
         
         "lite/selector.js",
         "lite/inspector.js",
@@ -67,14 +67,6 @@ window.FBDev =
         "firebug/domplate.js",
         "firebug/reps.js",        
         "firebug/editor.js",
-        
-        // ****************************************************************************************
-        // Console / CommandLine core
-        
-        "firebug/console.js",
-        "firebug/consoleInjector.js",
-        
-        "lite/commandLine.js",
         
         // ****************************************************************************************
         // XHR Watcher
@@ -87,9 +79,20 @@ window.FBDev =
         "firebug/xmlViewer.js",
         
         // ****************************************************************************************
-        // Application Modules/Panels
+        // Console / CommandLine core
+        
+        "firebug/console.js",
+        "firebug/consoleInjector.js",
+        
+        "lite/commandLine.js",
+        
+        // ****************************************************************************************
+        // Simple HTML Panel
         
         "lite/html.js",
+        
+        // ****************************************************************************************
+        // Advanced HTML Panel (experimental)
         
         //"firebug/insideOutBox.js", // HTML experimental        
         //"firebug/lib/htmlLib.js", // HTML experimental
@@ -98,9 +101,20 @@ window.FBDev =
         
         "firebug/infotip.js",
         
+        // ****************************************************************************************
+        // CSS Panel
+        
+        "lite/css/cssParser.js",
+        "lite/css/cssAnalyzer.js",
         "firebug/css.js",
         
+        // ****************************************************************************************
+        // Simple Script Panel
+        
         "lite/script.js",
+        
+        // ****************************************************************************************
+        // Script Panel
         
         //"firebug/sourceCache.js", // experimental
         //"firebug/sourceFile.js", // experimental
@@ -110,8 +124,6 @@ window.FBDev =
         //"lite/eventDelegator.js", // experimental
 
         "firebug/dom.js",
-        
-        //"lite/example/helloWorld.js",
         
         // ****************************************************************************************
         // Trace Module/Panel
@@ -144,9 +156,14 @@ window.FBDev =
         "firerainbow/chrome/content/codemirror.js",
         "firerainbow/chrome/content/firerainbow.js",
         */
+
+        // ****************************************************************************************
+        // Example Plugin
+        
+        //"lite/example/helloWorld.js",
         
         // ****************************************************************************************
-        // Plugin
+        // Plugin Interface
         
         "lite/plugin.js", // must be the last module loaded
         
