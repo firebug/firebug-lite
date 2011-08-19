@@ -303,15 +303,12 @@ var processStyleSheet = function(doc, styleSheet)
         // CSS Parser
         if (hasCSSParser)
         {
-            var parsedRule;
-            var parsedSelector;
-            
+            var parsedRule = parsedRules[parsedRulesIndex];
+            var parsedSelector = parsedRule.selector;
+
             // TODO: add reference to issue. create issue report.
-            for (; !parsedSelector || parsedSelector.indexOf("@") == 0; parsedRulesIndex++)
-            {
-                parsedRule = parsedRules[parsedRulesIndex];
-                parsedSelector = parsedRule.selector;
-            }
+            if (parsedSelector && parsedSelector.indexOf("@") == 0)
+                continue;
             
             if (dontSupportGroupedRules && parsedSelector.indexOf(",") != -1 && group.length == 0)
                 group = parsedSelector.split(",");
