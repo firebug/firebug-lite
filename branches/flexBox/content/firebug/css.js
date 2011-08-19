@@ -109,409 +109,10 @@ var toCamelCaseReplaceFn = function toCamelCaseReplaceFn(m,g)
     return g.toUpperCase();
 };
 
-
-
-
-
 // ************************************************************************************************
 
 var ElementCache = Firebug.Lite.Cache.Element;
 var StyleSheetCache = Firebug.Lite.Cache.StyleSheet;
-
-var globalCSSRuleIndex;
-
-var externalStyleSheetURLs = [];
-var externalStyleSheetWarning = domplate(Firebug.Rep,
-{
-    tag:
-        DIV({"class": "warning focusRow", style: "font-weight:normal;", role: 'listitem'},
-            SPAN("$object|STR"),
-            A({"href": "$href", target:"_blank"}, "$link|STR")
-        )
-});
-
-
-var processAllStyleSheetsTimeout = null;
-var loadExternalStylesheet = function(doc, styleSheetIterator, styleSheet)
-{
-    var url = styleSheet.href;
-    styleSheet.firebugIgnore = true;
-    
-    var source = Firebug.Lite.Proxy.load(url);
-    
-    // TODO: check for null and error responses
-    
-    
-    // remove comments
-    //var reMultiComment = /(\/\*([^\*]|\*(?!\/))*\*\/)/g;
-    //source = source.replace(reMultiComment, "");
-    
-    // convert relative addresses to absolute ones  
-    source = source.replace(/url\(([^\)]+)\)/g, function(a,name){
-    
-        var hasDomain = /\w+:\/\/./.test(name);
-        
-        if (!hasDomain)
-        {
-            name = name.replace(/^(["'])(.+)\1$/, "$2");
-            var first = name.charAt(0);
-            
-            // relative path, based on root
-            if (first == "/")
-            {
-                // TODO: xxxpedro move to lib or Firebug.Lite.something
-                // getURLRoot
-                var m = /^([^:]+:\/{1,3}[^\/]+)/.exec(url);
-                
-                return m ? 
-                    "url(" + m[1] + name + ")" :
-                    "url(" + name + ")";
-            }
-            // relative path, based on current location
-            else
-            {
-                // TODO: xxxpedro move to lib or Firebug.Lite.something
-                // getURLPath
-                var path = url.replace(/[^\/]+\.[\w\d]+(\?.+|#.+)?$/g, "");
-                
-                path = path + name;
-                
-                var reBack = /[^\/]+\/\.\.\//;
-                while(reBack.test(path))
-                {
-                    path = path.replace(reBack, "");
-                }
-                
-                //console.log("url(" + path + ")");
-                
-                return "url(" + path + ")";
-            }
-        }
-        
-        // if it is an absolute path, there is nothing to do
-        return a;
-    });
-    
-    var oldStyle = styleSheet.ownerNode;
-    
-    if (!oldStyle) return;
-    
-    if (!oldStyle.parentNode) return;
-    
-    var style = createGlobalElement("style");
-    style.setAttribute("charset","utf-8");
-    style.setAttribute("type", "text/css");
-    style.innerHTML = source;
-
-    //debugger;
-    oldStyle.parentNode.insertBefore(style, oldStyle.nextSibling);
-    oldStyle.parentNode.removeChild(oldStyle);
-    
-    
-    //doc.getElementsByTagName("head")[0].appendChild(style);
-    
-    doc.styleSheets[doc.styleSheets.length-1].externalURL = url;
-    
-    console.log(url, "call " + externalStyleSheetURLs.length, source);
-    
-    externalStyleSheetURLs.pop();
-    
-    if (processAllStyleSheetsTimeout)
-    {
-        clearTimeout(processAllStyleSheetsTimeout);
-    }
-    
-    processAllStyleSheetsTimeout = setTimeout(function(){
-        console.log("processing");
-        FBL.processAllStyleSheets(doc, styleSheetIterator);
-        processAllStyleSheetsTimeout = null;
-    },200);
-    
-};
-
-
-FBL.processAllStyleSheets = function(doc, styleSheetIterator)
-{
-    styleSheetIterator = styleSheetIterator || processStyleSheet;
-    
-    globalCSSRuleIndex = -1;
-    
-    var styleSheets = doc.styleSheets;
-    var importedStyleSheets = [];
-    
-    if (FBTrace.DBG_CSS)
-        var start = new Date().getTime();
-    
-    for(var i=0, length=styleSheets.length; i<length; i++)
-    {
-        try
-        {
-            var styleSheet = styleSheets[i];
-            
-            if ("firebugIgnore" in styleSheet) continue;
-            
-            // we must read the length to make sure we have permission to read 
-            // the stylesheet's content. If an error occurs here, we cannot 
-            // read the stylesheet due to access restriction policy
-            var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
-            rules.length;
-        }
-        catch(e)
-        {
-            externalStyleSheetURLs.push(styleSheet.href);
-            styleSheet.restricted = true;
-            var ssid = StyleSheetCache(styleSheet);
-            
-            /// TODO: xxxpedro external css
-            //loadExternalStylesheet(doc, styleSheetIterator, styleSheet);
-        }
-        
-        // process internal and external styleSheets
-        styleSheetIterator(doc, styleSheet);
-        
-        var importedStyleSheet, importedRules;
-        
-        // process imported styleSheets in IE
-        if (isIE)
-        {
-            var imports = styleSheet.imports;
-            
-            for(var j=0, importsLength=imports.length; j<importsLength; j++)
-            {
-                try
-                {
-                    importedStyleSheet = imports[j];
-                    // we must read the length to make sure we have permission
-                    // to read the imported stylesheet's content. 
-                    importedRules = importedStyleSheet.rules;
-                    importedRules.length;
-                }
-                catch(e)
-                {
-                    externalStyleSheetURLs.push(styleSheet.href);
-                    importedStyleSheet.restricted = true;
-                    var ssid = StyleSheetCache(importedStyleSheet);
-                }
-                
-                styleSheetIterator(doc, importedStyleSheet);
-            }
-        }
-        // process imported styleSheets in other browsers
-        else if (rules)
-        {
-            for(var j=0, rulesLength=rules.length; j<rulesLength; j++)
-            {
-                try
-                {
-                    var rule = rules[j];
-                    
-                    importedStyleSheet = rule.styleSheet;
-                    
-                    if (importedStyleSheet)
-                    {
-                        // we must read the length to make sure we have permission
-                        // to read the imported stylesheet's content. 
-                        importedRules = importedStyleSheet.cssRules;
-                        importedRules.length;
-                    }
-                    else
-                        break;
-                }
-                catch(e)
-                {
-                    externalStyleSheetURLs.push(styleSheet.href);
-                    importedStyleSheet.restricted = true;
-                    var ssid = StyleSheetCache(importedStyleSheet);
-                }
-
-                styleSheetIterator(doc, importedStyleSheet);
-            }
-        }
-    };
-    
-    if (FBTrace.DBG_CSS)
-    {
-        FBTrace.sysout("FBL.processAllStyleSheets", "all stylesheet rules processed in " + (new Date().getTime() - start) + "ms");
-    }
-};
-
-
-var CSSRuleMap = {};
-var ElementCSSRulesMap = {};
-
-var processStyleSheet = function(doc, styleSheet)
-{
-    if (styleSheet.restricted)
-        return;
-    
-    var rules = isIE ? styleSheet.rules : styleSheet.cssRules;
-    
-    var ssid = StyleSheetCache(styleSheet);
-    
-    for (var i=0, length=rules.length; i<length; i++)
-    {
-        var rid = ssid + ":" + i;
-        var rule = rules[i];
-        var selector = rule.selectorText;
-        
-        if (isIE)
-        {
-            selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase();});
-        }
-        
-        // TODO: xxxpedro break grouped rules (,) into individual rules, otherwise
-        // it will result in a overestimated value for getCSSRuleSpecificity
-        CSSRuleMap[rid] =
-        {
-            styleSheetId: ssid,
-            styleSheetIndex: i,
-            order: ++globalCSSRuleIndex,
-            // if it is a grouped selector, do not calculate the specificity
-            // because the correct value will depend of the matched element.
-            // The proper specificity value for grouped selectors are calculated
-            // via getElementCSSRules(element)
-            specificity: selector && selector.indexOf(",") != -1 ? 
-                getCSSRuleSpecificity(selector) : 
-                0,
-            
-            rule: rule,
-            selector: selector,
-            cssText: rule.style ? rule.style.cssText : rule.cssText ? rule.cssText : ""        
-        };
-        
-        var elements = Firebug.Selector(selector, doc);
-        
-        for (var j=0, elementsLength=elements.length; j<elementsLength; j++)
-        {
-            var element = elements[j];
-            var eid = ElementCache(element);
-            
-            if (!ElementCSSRulesMap[eid])
-                ElementCSSRulesMap[eid] = [];
-            
-            ElementCSSRulesMap[eid].push(rid);
-        }
-        
-        //console.log(selector, elements);
-    }
-    
-    // TODO: xxxpedro. remove this, we don't need this anymore with the new getElementCSSRules
-    /*
-    for (var name in ElementCSSRulesMap)
-    {
-        if (ElementCSSRulesMap.hasOwnProperty(name))
-        {
-            var rules = ElementCSSRulesMap[name];
-            
-            rules.sort(sortElementRules);
-            //rules.sort(solveRulesTied);
-        }
-    }
-    /**/
-};
-
-FBL.getElementCSSRules = function(element)
-{
-    var eid = ElementCache(element);
-    var rules = ElementCSSRulesMap[eid];
-    
-    if (!rules) return;
-    
-    var arr = [element];
-    var Selector = Firebug.Selector;
-    var ruleId, rule;
-    
-    // for the case of grouped selectors, we need to calculate the highest
-    // specificity within the selectors of the group that matches the element,
-    // so we can sort the rules properly without over estimating the specificity
-    // of grouped selectors
-    for (var i = 0, length = rules.length; i < length; i++)
-    {
-        ruleId = rules[i];
-        rule = CSSRuleMap[ruleId];
-        
-        // check if it is a grouped selector
-        if (rule.selector.indexOf(",") != -1)
-        {
-            var selectors = rule.selector.split(",");
-            var maxSpecificity = -1;
-            var sel, spec, mostSpecificSelector;
-            
-            // loop over all selectors in the group
-            for (var j, len = selectors.length; j < len; j++)
-            {
-                sel = selectors[j];
-                
-                // find if the selector matches the element
-                if (Selector.matches(sel, arr).length == 1)
-                {
-                    spec = getCSSRuleSpecificity(sel);
-                    
-                    // find the most specific selector that macthes the element
-                    if (spec > maxSpecificity)
-                    {
-                        maxSpecificity = spec;
-                        mostSpecificSelector = sel;
-                    }
-                }
-            }
-            
-            rule.specificity = maxSpecificity;
-        }
-    }
-    
-    rules.sort(sortElementRules);
-    //rules.sort(solveRulesTied);
-    
-    return rules;
-};
-
-var sortElementRules = function(a, b)
-{
-    var ruleA = CSSRuleMap[a];
-    var ruleB = CSSRuleMap[b];
-    
-    var specificityA = ruleA.specificity;
-    var specificityB = ruleB.specificity;
-    
-    if (specificityA > specificityB)
-        return 1;
-    
-    else if (specificityA < specificityB)
-        return -1;
-    
-    else
-        return ruleA.order > ruleB.order ? 1 : -1;
-};
-
-var solveRulesTied = function(a, b)
-{
-    var ruleA = CSSRuleMap[a];
-    var ruleB = CSSRuleMap[b];
-    
-    if (ruleA.specificity == ruleB.specificity)
-        return ruleA.order > ruleB.order ? 1 : -1;
-        
-    return null;
-};
-
-var reSelectorTag = /(^|\s)(?:\w+)/g;
-var reSelectorClass = /\.[\w\d_-]+/g;
-var reSelectorId = /#[\w\d_-]+/g;
-
-var getCSSRuleSpecificity = function(selector)
-{
-    var match = selector.match(reSelectorTag);
-    var tagCount = match ? match.length : 0;
-    
-    match = selector.match(reSelectorClass);
-    var classCount = match ? match.length : 0;
-    
-    match = selector.match(reSelectorId);
-    var idCount = match ? match.length : 0;
-    
-    return tagCount + 10*classCount + 100*idCount;
-};
 
 // ************************************************************************************************
 // ************************************************************************************************
@@ -1363,7 +964,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             var doc = Firebug.browser.document;
             var selectNode = this.selectNode = createElement("select");
             
-            processAllStyleSheets(doc, function(doc, styleSheet)
+            CssAnalyzer.processAllStyleSheets(doc, function(doc, styleSheet)
             {
                 var key = StyleSheetCache.key(styleSheet);
                 var fileName = getFileName(styleSheet.href) || getFileName(doc.location.href);
@@ -1517,7 +1118,7 @@ Firebug.CSSStyleSheetPanel.prototype = extend(Firebug.SourceBoxPanel,
             FirebugReps.Warning.tag.replace({object: "AccessRestricted"}, this.panelNode);
 
             // TODO: xxxpedro remove when there the external resource problem is fixed
-            externalStyleSheetWarning.tag.append({
+            CssAnalyzer.externalStyleSheetWarning.tag.append({
                 object: "The stylesheet could not be loaded due to access restrictions. ",
                 link: "more...",
                 href: "http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22Access_to_restricted_URI_denied.22"
@@ -1963,8 +1564,8 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
         }
 
         // TODO: xxxpedro remove when there the external resource problem is fixed
-        if (externalStyleSheetURLs.length > 0)
-            externalStyleSheetWarning.tag.append({
+        if (CssAnalyzer.hasExternalStyleSheet())
+            CssAnalyzer.externalStyleSheetWarning.tag.append({
                 object: "The results here may be inaccurate because some " +
                         "stylesheets could not be loaded due to access restrictions. ",
                 link: "more...",
@@ -2003,18 +1604,14 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
     {
         var inspectedRules, displayedRules = {};
         
-        // TODO: xxxpedro remove document specificity issue
-        //var eid = ElementCache(element);
-        //inspectedRules = ElementCSSRulesMap[eid];
-        
-        inspectedRules = getElementCSSRules(element);
+        inspectedRules = CssAnalyzer.getElementCSSRules(element);
 
         if (inspectedRules)
         {
             for (var i = 0, length=inspectedRules.length; i < length; ++i)
             {
                 var ruleId = inspectedRules[i];
-                var ruleData = CSSRuleMap[ruleId];
+                var ruleData = CssAnalyzer.getRuleData(ruleId);
                 var rule = ruleData.rule;
                 
                 var ssid = ruleData.styleSheetId;
@@ -2040,7 +1637,8 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
 
                 //
                 //var line = domUtils.getRuleLine(rule);
-                var line;
+                // TODO: xxxpedro CSS line number 
+                var line = ruleData.lineNo;
                 
                 var ruleId = rule.selectorText+"/"+line;
                 var sourceLink = new SourceLink(href, line, "css", rule, instance);
