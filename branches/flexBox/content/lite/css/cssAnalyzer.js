@@ -10,6 +10,7 @@ var CssAnalyzer = {};
 // ************************************************************************************************
 // Locals
 
+
 var CSSRuleMap = {};
 var ElementCSSRulesMap = {};
 
@@ -24,7 +25,14 @@ var globalCSSRuleIndex;
 var processAllStyleSheetsTimeout = null;
 
 var externalStyleSheetURLs = [];
-var externalStyleSheetWarning = domplate(Firebug.Rep,
+
+var ElementCache = Firebug.Lite.Cache.Element;
+var StyleSheetCache = Firebug.Lite.Cache.StyleSheet;
+
+//************************************************************************************************
+// CSS Analyzer templates
+
+CssAnalyzer.externalStyleSheetWarning = domplate(Firebug.Rep,
 {
     tag:
         DIV({"class": "warning focusRow", style: "font-weight:normal;", role: 'listitem'},
@@ -33,28 +41,63 @@ var externalStyleSheetWarning = domplate(Firebug.Rep,
         )
 });
 
-var ElementCache = Firebug.Lite.Cache.Element;
-var StyleSheetCache = Firebug.Lite.Cache.StyleSheet;
-
-
 // ************************************************************************************************
 // CSS Analyzer methods
 
-CssAnalyzer.processAllStyleSheets = function()
+CssAnalyzer.processAllStyleSheets = function(doc, styleSheetIterator)
 {
+    try
+    {
+        processAllStyleSheets(doc, styleSheetIterator);
+    }
+    catch(e)
+    {
+        // TODO: FBTrace condition
+        FBTrace.sysout("CssAnalyzer.processAllStyleSheets fails: ", e);
+    }
 };
 
-CssAnalyzer.getElementCSSRules = function()
+/**
+ * 
+ * @param element
+ * @returns {String[]} Array of IDs of CSS Rules
+ */
+CssAnalyzer.getElementCSSRules = function(element)
 {
+    try
+    {
+        return getElementCSSRules(element);
+    }
+    catch(e)
+    {
+        // TODO: FBTrace condition
+        FBTrace.sysout("CssAnalyzer.getElementCSSRules fails: ", e);
+    }
+};
+
+CssAnalyzer.getRuleData = function(ruleId)
+{
+    return CSSRuleMap[ruleId];
 };
 
 CssAnalyzer.getRuleLine = function()
 {
 };
 
+CssAnalyzer.hasExternalStyleSheet = function()
+{
+    return externalStyleSheetURLs.length > 0;
+};
+
+CssAnalyzer.parseStyleSheet = function(href)
+{
+    var sourceData = extractSourceData(href);
+    return CssParser.read(sourceData.source, sourceData.startLine);
+};
+
 // ************************************************************************************************
 
-FBL.processAllStyleSheets = function(doc, styleSheetIterator)
+var processAllStyleSheets = function(doc, styleSheetIterator)
 {
     styleSheetIterator = styleSheetIterator || processStyleSheet;
     
@@ -159,7 +202,7 @@ FBL.processAllStyleSheets = function(doc, styleSheetIterator)
     }
 };
 
-FBL.getElementCSSRules = function(element)
+var getElementCSSRules = function(element)
 {
     var eid = ElementCache(element);
     var rules = ElementCSSRulesMap[eid];
@@ -229,44 +272,12 @@ var processStyleSheet = function(doc, styleSheet)
     
     var href = styleSheet.href;
     
-    if (!href)
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    // CSS Parser
+    var hasCSSParser = typeof CssParser != "undefined";
+    if (hasCSSParser)
     {
-        // TODO: pre process the position of the inline styles so this will happen only once
-        // in case of having multiple inline styles
-        var index = 0;
-        var ssIndex = ++inlineStyleIndex;
-        var reStyleTag = /\<\s*style.*\>/gi;
-        var reEndStyleTag = /\<\/\s*style.*\>/gi;
-        
-        var source = Firebug.Lite.Proxy.load(Env.browser.location.href);
-        source = source.replace(/\n\r|\r\n/g, "\n"); // normalize line breaks
-        
-        var startLine = 0;
-        
-        do
-        {
-            var matchStyleTag = source.match(reStyleTag); 
-            var i0 = source.indexOf(matchStyleTag[0]) + matchStyleTag[0].length;
-            
-            for (var i=0; i < i0; i++)
-            {
-                if (source.charAt(i) == "\n")
-                    startLine++;
-            }
-            
-            source = source.substr(i0);
-            
-            index++;
-        }
-        while (index <= ssIndex);
-
-        var matchEndStyleTag = source.match(reEndStyleTag);
-        var i1 = source.indexOf(matchEndStyleTag[0]);
-        
-        var extractedSource = source.substr(0, i1);
-        
-        // TODO merge with block below
-        var parsedObj = SC_CSSParser.read(extractedSource, startLine);
+        var parsedObj = CssAnalyzer.parseStyleSheet(href);
         var parsedRules = parsedObj.children; 
         var parsedRulesIndex = 0;
         
@@ -274,20 +285,12 @@ var processStyleSheet = function(doc, styleSheet)
         var group = [];
         var groupItem;
     }
-    else if (href)
-    {
-        var source = Firebug.Lite.Proxy.load(href);
-        var parsedObj = SC_CSSParser.read(source);
-        var parsedRules = parsedObj.children; 
-        var parsedRulesIndex = 0;
-        
-        var dontSupportGroupedRules = isIE && browserVersion < 9;
-        var group = [];
-        var groupItem;
-    }
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     for (var i=0, length=rules.length; i<length; i++)
     {
+        // TODO: xxxpedro is there a better way to cache CSS Rules? The problem is that
+        // we cannot add expando properties in the rule object in IE
         var rid = ssid + ":" + i;
         var rule = rules[i];
         var selector = rule.selectorText;
@@ -296,11 +299,19 @@ var processStyleSheet = function(doc, styleSheet)
         if (isIE)
             selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase();});
         
-        // TODO: remove this if block
-        if (true)
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // CSS Parser
+        if (hasCSSParser)
         {
-            var parsedRule = parsedRules[parsedRulesIndex];
-            var parsedSelector = parsedRule.selector;
+            var parsedRule;
+            var parsedSelector;
+            
+            // TODO: add reference to issue. create issue report.
+            for (; !parsedSelector || parsedSelector.indexOf("@") == 0; parsedRulesIndex++)
+            {
+                parsedRule = parsedRules[parsedRulesIndex];
+                parsedSelector = parsedRule.selector;
+            }
             
             if (dontSupportGroupedRules && parsedSelector.indexOf(",") != -1 && group.length == 0)
                 group = parsedSelector.split(",");
@@ -309,18 +320,19 @@ var processStyleSheet = function(doc, styleSheet)
             {
                 groupItem = group.shift();
                 
-                if (SC_CSSParser.normalizeSelector(selector) == groupItem)
+                if (CssParser.normalizeSelector(selector) == groupItem)
                     lineNo = parsedRule.line;
                 
                 if (group.length == 0)
                     parsedRulesIndex++;
             }
-            else if (SC_CSSParser.normalizeSelector(selector) == parsedRule.selector)
+            else if (CssParser.normalizeSelector(selector) == parsedRule.selector)
             {
                 lineNo = parsedRule.line;
                 parsedRulesIndex++;
             }
         }
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         // TODO: xxxpedro break grouped rules (,) into individual rules, otherwise
         // it will result in a overestimated value for getCSSRuleSpecificity
@@ -507,17 +519,61 @@ var getCSSRuleSpecificity = function(selector)
 };
 
 // ************************************************************************************************
-// StyleSheet Line Number Extractor
+// StyleSheet data
 
-var parseStyleSheet = function parsedStyleSheet()
+var extractSourceData = function(href)
 {
-    var parsedStyleSheet = {};
+    var sourceData = 
+    {
+        source: null,
+        startLine: 0
+    };
     
-    return parsedStyleSheet;
-};
-
-var getRuleLine = function getRuleLine(rule, parsedStyleSheet)
-{
+    if (href)
+    {
+        sourceData.source = Firebug.Lite.Proxy.load(href);
+    }
+    else
+    {
+        // TODO: pre process the position of the inline styles so this will happen only once
+        // in case of having multiple inline styles
+        var index = 0;
+        var ssIndex = ++inlineStyleIndex;
+        var reStyleTag = /\<\s*style.*\>/gi;
+        var reEndStyleTag = /\<\/\s*style.*\>/gi;
+        
+        var source = Firebug.Lite.Proxy.load(Env.browser.location.href);
+        source = source.replace(/\n\r|\r\n/g, "\n"); // normalize line breaks
+        
+        var startLine = 0;
+        
+        do
+        {
+            var matchStyleTag = source.match(reStyleTag); 
+            var i0 = source.indexOf(matchStyleTag[0]) + matchStyleTag[0].length;
+            
+            for (var i=0; i < i0; i++)
+            {
+                if (source.charAt(i) == "\n")
+                    startLine++;
+            }
+            
+            source = source.substr(i0);
+            
+            index++;
+        }
+        while (index <= ssIndex);
+    
+        var matchEndStyleTag = source.match(reEndStyleTag);
+        var i1 = source.indexOf(matchEndStyleTag[0]);
+        
+        var extractedSource = source.substr(0, i1);
+        
+        sourceData.source = extractedSource;
+        sourceData.startLine = startLine;
+    }
+    
+    return sourceData;
 };
 
 // ************************************************************************************************
