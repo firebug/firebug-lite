@@ -52,8 +52,8 @@ FBL.Firebug =
         if (Firebug.Inspector && Firebug.Inspector.create)
             Firebug.Inspector.create();
         
-        if (FBL.processAllStyleSheets)
-            processAllStyleSheets(Firebug.browser.document);
+        if (FBL.CssAnalyzer && FBL.CssAnalyzer.processAllStyleSheets)
+            FBL.CssAnalyzer.processAllStyleSheets(Firebug.browser.document);
         
         FirebugChrome.initialize();
         
