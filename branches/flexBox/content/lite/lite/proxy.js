@@ -3,7 +3,10 @@
 FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 
+// ************************************************************************************************
+var sourceMap = {};
 
+// ************************************************************************************************
 Firebug.Lite.Proxy = 
 {
     // jsonp callbacks
@@ -82,15 +85,22 @@ Firebug.Lite.Proxy =
 
 var fetchResource = function(url)
 {
+    if (sourceMap.hasOwnProperty(url))
+        return sourceMap[url];
+
     var xhr = FBL.Ajax.getXHRObject();
     xhr.open("get", url, false);
     xhr.send();
     
-    return xhr.responseText;
+    var source = sourceMap[url] = xhr.responseText; 
+    return source;
 };
 
 var fetchProxyResource = function(url)
 {
+    if (sourceMap.hasOwnProperty(url))
+        return sourceMap[url];
+
     var proxyURL = Env.Location.baseDir + "plugin/proxy/proxy.php?url=" + encodeURIComponent(url);
     var response = fetchResource(proxyURL);
     
@@ -103,7 +113,8 @@ var fetchProxyResource = function(url)
         return "ERROR: Firebug Lite Proxy plugin returned an invalid response.";
     }
     
-    return data ? data.contents : "";
+    var source = data ? data.contents : ""; 
+    return source;
 };
     
 
