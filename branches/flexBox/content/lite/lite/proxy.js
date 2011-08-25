@@ -88,7 +88,8 @@ var fetchResource = function(url)
     if (sourceMap.hasOwnProperty(url))
         return sourceMap[url];
 
-    var xhr = FBL.Ajax.getXHRObject();
+    // Getting the native XHR object so our calls won't be logged in the Console Panel
+    var xhr = FBL.getNativeXHRObject();
     xhr.open("get", url, false);
     xhr.send();
     
