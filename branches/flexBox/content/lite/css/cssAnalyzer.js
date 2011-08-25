@@ -10,11 +10,10 @@ var CssAnalyzer = {};
 // ************************************************************************************************
 // Locals
 
-
 var CSSRuleMap = {};
 var ElementCSSRulesMap = {};
 
-var inlineStyleIndex = -1;
+var internalStyleSheetIndex = -1;
 
 var reSelectorTag = /(^|\s)(?:\w+)/g;
 var reSelectorClass = /\.[\w\d_-]+/g;
@@ -80,6 +79,7 @@ CssAnalyzer.getRuleData = function(ruleId)
     return CSSRuleMap[ruleId];
 };
 
+// TODO: do we need this?
 CssAnalyzer.getRuleLine = function()
 {
 };
@@ -92,10 +92,31 @@ CssAnalyzer.hasExternalStyleSheet = function()
 CssAnalyzer.parseStyleSheet = function(href)
 {
     var sourceData = extractSourceData(href);
-    return CssParser.read(sourceData.source, sourceData.startLine);
+    var parsedObj = CssParser.read(sourceData.source, sourceData.startLine);
+    var parsedRules = parsedObj.children;
+    
+    // See: Issue 4776: [Firebug lite] CSS Media Types
+    //
+    // Ignore all special selectors like @media and @page
+    for(var i=0; i < parsedRules.length; )
+    {
+        if (parsedRules[i].selector.indexOf("@") != -1)
+        {
+            parsedRules.splice(i, 1);
+        }
+        else
+            i++;
+    }
+    
+    return parsedRules;
 };
 
+//************************************************************************************************
+// Internals
+//************************************************************************************************
+
 // ************************************************************************************************
+// StyleSheet processing
 
 var processAllStyleSheets = function(doc, styleSheetIterator)
 {
@@ -202,64 +223,7 @@ var processAllStyleSheets = function(doc, styleSheetIterator)
     }
 };
 
-var getElementCSSRules = function(element)
-{
-    var eid = ElementCache(element);
-    var rules = ElementCSSRulesMap[eid];
-    
-    if (!rules) return;
-    
-    var arr = [element];
-    var Selector = Firebug.Selector;
-    var ruleId, rule;
-    
-    // for the case of grouped selectors, we need to calculate the highest
-    // specificity within the selectors of the group that matches the element,
-    // so we can sort the rules properly without over estimating the specificity
-    // of grouped selectors
-    for (var i = 0, length = rules.length; i < length; i++)
-    {
-        ruleId = rules[i];
-        rule = CSSRuleMap[ruleId];
-        
-        // check if it is a grouped selector
-        if (rule.selector.indexOf(",") != -1)
-        {
-            var selectors = rule.selector.split(",");
-            var maxSpecificity = -1;
-            var sel, spec, mostSpecificSelector;
-            
-            // loop over all selectors in the group
-            for (var j, len = selectors.length; j < len; j++)
-            {
-                sel = selectors[j];
-                
-                // find if the selector matches the element
-                if (Selector.matches(sel, arr).length == 1)
-                {
-                    spec = getCSSRuleSpecificity(sel);
-                    
-                    // find the most specific selector that macthes the element
-                    if (spec > maxSpecificity)
-                    {
-                        maxSpecificity = spec;
-                        mostSpecificSelector = sel;
-                    }
-                }
-            }
-            
-            rule.specificity = maxSpecificity;
-        }
-    }
-    
-    rules.sort(sortElementRules);
-    //rules.sort(solveRulesTied);
-    
-    return rules;
-};
-
 // ************************************************************************************************
-// StyleSheet processing
 
 var processStyleSheet = function(doc, styleSheet)
 {
@@ -277,8 +241,7 @@ var processStyleSheet = function(doc, styleSheet)
     var hasCSSParser = typeof CssParser != "undefined";
     if (hasCSSParser)
     {
-        var parsedObj = CssAnalyzer.parseStyleSheet(href);
-        var parsedRules = parsedObj.children; 
+        var parsedRules = CssAnalyzer.parseStyleSheet(href); 
         var parsedRulesIndex = 0;
         
         var dontSupportGroupedRules = isIE && browserVersion < 9;
@@ -293,8 +256,14 @@ var processStyleSheet = function(doc, styleSheet)
         // we cannot add expando properties in the rule object in IE
         var rid = ssid + ":" + i;
         var rule = rules[i];
-        var selector = rule.selectorText;
+        var selector = rule.selectorText || "";
         var lineNo = null;
+        
+        // See: Issue 4776: [Firebug lite] CSS Media Types
+        //
+        // Ignore all special selectors like @media and @page
+        if (!selector || selector.indexOf("@") != -1)
+            continue;
         
         if (isIE)
             selector = selector.replace(reSelectorTag, function(s){return s.toLowerCase();});
@@ -306,10 +275,6 @@ var processStyleSheet = function(doc, styleSheet)
             var parsedRule = parsedRules[parsedRulesIndex];
             var parsedSelector = parsedRule.selector;
 
-            // TODO: add reference to issue. create issue report.
-            if (parsedSelector && parsedSelector.indexOf("@") == 0)
-                continue;
-            
             if (dontSupportGroupedRules && parsedSelector.indexOf(",") != -1 && group.length == 0)
                 group = parsedSelector.split(",");
             
@@ -331,19 +296,23 @@ var processStyleSheet = function(doc, styleSheet)
         }
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
-        // TODO: xxxpedro break grouped rules (,) into individual rules, otherwise
-        // it will result in a overestimated value for getCSSRuleSpecificity
         CSSRuleMap[rid] =
         {
             styleSheetId: ssid,
             styleSheetIndex: i,
             order: ++globalCSSRuleIndex,
-            // if it is a grouped selector, do not calculate the specificity
-            // because the correct value will depend of the matched element.
-            // The proper specificity value for grouped selectors are calculated
-            // via getElementCSSRules(element)
-            specificity: selector && selector.indexOf(",") == -1 ? 
+            specificity: 
+                // See: Issue 4777: [Firebug lite] Specificity of CSS Rules
+                //
+                // if it is a normal selector then calculate the specificity
+                selector && selector.indexOf(",") == -1 ? 
                 getCSSRuleSpecificity(selector) : 
+                // See: Issue 3262: [Firebug lite] Specificity of grouped CSS Rules
+                //
+                // if it is a grouped selector, do not calculate the specificity
+                // because the correct value will depend of the matched element.
+                // The proper specificity value for grouped selectors are calculated
+                // via getElementCSSRules(element)
                 0,
             
             rule: rule,
@@ -352,6 +321,11 @@ var processStyleSheet = function(doc, styleSheet)
             cssText: rule.style ? rule.style.cssText : rule.cssText ? rule.cssText : ""        
         };
         
+        // TODO: what happens with elements added after this? Need to create a test case.
+        // Maybe we should place this at getElementCSSRules() but it will make the function
+        // a lot more expensive.
+        // 
+        // Maybe add a "refresh" button?
         var elements = Firebug.Selector(selector, doc);
         
         for (var j=0, elementsLength=elements.length; j<elementsLength; j++)
@@ -380,7 +354,6 @@ var loadExternalStylesheet = function(doc, styleSheetIterator, styleSheet)
     var source = Firebug.Lite.Proxy.load(url);
     
     // TODO: check for null and error responses
-    
     
     // remove comments
     //var reMultiComment = /(\/\*([^\*]|\*(?!\/))*\*\/)/g;
@@ -447,9 +420,6 @@ var loadExternalStylesheet = function(doc, styleSheetIterator, styleSheet)
     oldStyle.parentNode.insertBefore(style, oldStyle.nextSibling);
     oldStyle.parentNode.removeChild(oldStyle);
     
-    
-    //doc.getElementsByTagName("head")[0].appendChild(style);
-    
     doc.styleSheets[doc.styleSheets.length-1].externalURL = url;
     
     console.log(url, "call " + externalStyleSheetURLs.length, source);
@@ -467,6 +437,65 @@ var loadExternalStylesheet = function(doc, styleSheetIterator, styleSheet)
         processAllStyleSheetsTimeout = null;
     },200);
     
+};
+
+//************************************************************************************************
+// getElementCSSRules
+
+var getElementCSSRules = function(element)
+{
+    var eid = ElementCache(element);
+    var rules = ElementCSSRulesMap[eid];
+    
+    if (!rules) return;
+    
+    var arr = [element];
+    var Selector = Firebug.Selector;
+    var ruleId, rule;
+    
+    // for the case of grouped selectors, we need to calculate the highest
+    // specificity within the selectors of the group that matches the element,
+    // so we can sort the rules properly without over estimating the specificity
+    // of grouped selectors
+    for (var i = 0, length = rules.length; i < length; i++)
+    {
+        ruleId = rules[i];
+        rule = CSSRuleMap[ruleId];
+        
+        // check if it is a grouped selector
+        if (rule.selector.indexOf(",") != -1)
+        {
+            var selectors = rule.selector.split(",");
+            var maxSpecificity = -1;
+            var sel, spec, mostSpecificSelector;
+            
+            // loop over all selectors in the group
+            for (var j, len = selectors.length; j < len; j++)
+            {
+                sel = selectors[j];
+                
+                // find if the selector matches the element
+                if (Selector.matches(sel, arr).length == 1)
+                {
+                    spec = getCSSRuleSpecificity(sel);
+                    
+                    // find the most specific selector that macthes the element
+                    if (spec > maxSpecificity)
+                    {
+                        maxSpecificity = spec;
+                        mostSpecificSelector = sel;
+                    }
+                }
+            }
+            
+            rule.specificity = maxSpecificity;
+        }
+    }
+    
+    rules.sort(sortElementRules);
+    //rules.sort(solveRulesTied);
+    
+    return rules;
 };
 
 // ************************************************************************************************
@@ -532,10 +561,11 @@ var extractSourceData = function(href)
     }
     else
     {
+        // TODO: create extractInternalSourceData(index)
         // TODO: pre process the position of the inline styles so this will happen only once
         // in case of having multiple inline styles
         var index = 0;
-        var ssIndex = ++inlineStyleIndex;
+        var ssIndex = ++internalStyleSheetIndex;
         var reStyleTag = /\<\s*style.*\>/gi;
         var reEndStyleTag = /\<\/\s*style.*\>/gi;
         
