@@ -7,7 +7,8 @@ FBL.ns(function() { with (FBL) {
 // List of JSON content types.
 var contentTypes =
 {
-    "text/plain": 1,
+    // TODO: create issue
+    //"text/plain": 1,
     "text/javascript": 1,
     "text/x-javascript": 1,
     "text/json": 1,
