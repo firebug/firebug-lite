@@ -12,8 +12,8 @@ FBL.ns( /**@scope ns-chrome*/ function() { with (FBL) {
 var WindowDefaultOptions = 
     {
         type: "frame",
-        id: "FirebugUI",
-        height: 350
+        id: "FirebugUI"
+        //height: 350 // obsolete
     },
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -77,22 +77,35 @@ var panelBar1, panelBar2, panelContainer, sidePanelContainer, panelDocument, sid
 Firebug.framesLoaded = 0;
 var numberOfFramesToLoad = 3;
 
-/**@namespace*/
-FBL.FirebugChrome = 
+FBL.defaultPersistedState = 
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    
     isOpen: false,
-    height: 250,
+    height: 300,
     sidePanelWidth: 350,
     
     selectedPanelName: "Console",
     selectedHTMLElementId: null,
     
+    htmlSelectionStack: []
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+};
+
+/**@namespace*/
+FBL.FirebugChrome = 
+{
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    //isOpen: false,
+    //height: 300,
+    //sidePanelWidth: 350,
+    
+    //selectedPanelName: "Console",
+    //selectedHTMLElementId: null,
+    
     chromeMap: {},
     
     htmlSelectionStack: [],
-    consoleMessageQueue: [],
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
@@ -155,6 +168,9 @@ var createChromeWindow = function(options)
     
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Locals
+
+    var prefs = Store.get("FirebugLite");
+    var persistedState = prefs && prefs.persistedState || defaultPersistedState;
     
     var chrome = {},
         
@@ -182,14 +198,22 @@ var createChromeWindow = function(options)
                 node.firebugIgnore = true;
             }
             
+            var browserWin = Env.browser.window;
+            var browserContext = new Context(browserWin);
+            var browserWinSize = browserContext.getWindowSize();
+            var height = persistedState.height || 300;
+            
+            height = Math.min(browserWinSize.height, height);
+            height = Math.max(200, height);
+            
             node.style.border = "0";
-            //node.style.visibility = "hidden";
+            node.style.visibility = "hidden";
             node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
             node.style.position = noFixedPosition ? "absolute" : "fixed";
             node.style.width = "100%"; // "102%"; IE auto margin bug
             node.style.left = "0";
             node.style.bottom = noFixedPosition ? "-1px" : "0";
-            node.style.height = options.height + "px";
+            node.style.height = height + "px";
             
             // avoid flickering during chrome rendering
             //if (isFirefox)
@@ -290,15 +314,49 @@ var createChromeWindow = function(options)
         // create the Chrome as a "popup"
         else
         {
-            var height = FirebugChrome.height || options.height,
+            var height = persistedState.popupHeight || 300;
+            var browserWin = Firebug.context.window;
+            var browserWinSize = Firebug.context.getWindowSize();
             
-                options = [
-                    "true,top=",
-                    Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
-                    ",left=0,height=",
-                    height,
-                    ",width=",
-                    screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
+            var browserWinLeft = typeof browserWin.screenX == "number" ? 
+                    browserWin.screenX : browserWin.screenLeft;
+            
+            var popupLeft = typeof persistedState.popupLeft == "number" ?
+                    persistedState.popupLeft : browserWinLeft;
+            
+            var browserWinTop = typeof browserWin.screenY == "number" ? 
+                    browserWin.screenY : browserWin.screenTop;
+
+            var popupTop = typeof persistedState.popupTop == "number" ?
+                    persistedState.popupTop :
+                    Math.max(
+                            0,
+                            Math.min(
+                                    browserWinTop + browserWinSize.height - height,
+                                    // Google Chrome bug
+                                    screen.availHeight - height - 61
+                                ) 
+                            );
+            
+            var popupWidth = typeof persistedState.popupWidth == "number" ? 
+                    persistedState.popupWidth :
+                    Math.max(
+                            0,
+                            Math.min(
+                                    browserWinSize.width,
+                                    // Opera opens popup in a new tab if it's too big!
+                                    screen.availWidth-10 
+                                ) 
+                            );
+
+            var popupHeight = typeof persistedState.popupHeight == "number" ?
+                    persistedState.popupHeight : 300;
+            
+            var options = [
+                    "true,top=", popupTop,
+                    ",left=", popupLeft, 
+                    ",height=", popupHeight,
+                    ",width=", popupWidth, 
                     ",resizable"          
                 ].join(""),
             
@@ -443,9 +501,6 @@ var onChromeLoad = function onChromeLoad(chrome)
             // TODO: xxxpedro sync detach reattach attach
             dispatch(newChrome.panelMap, "detach", [oldChrome, newChrome]);
         
-            if (oldChrome)
-                oldChrome.close();
-            
             newChrome.reattach(oldChrome, newChrome);
         }
     }
@@ -736,11 +791,12 @@ append(ChromeBase,
                 
                 return [
                     {
-                        label: "Save Options in Cookies",
+                        label: "Remember Options",
                         type: "checkbox",
                         value: "saveCookies",
                         checked: Firebug.saveCookies,
-                        command: "saveOptions"
+                        command: "saveOptions",
+                        disabled: true
                     },
                     "-",
                     {
@@ -822,28 +878,23 @@ append(ChromeBase,
             
             saveOptions: function(target)
             {
-                var saveEnabled = target.getAttribute("checked");
-                
-                if (!saveEnabled) this.restorePrefs();
+                var saveEnabled = !!target.getAttribute("checked");
+                if (saveEnabled)
+                    Firebug.setPref("saveCookies", saveEnabled);
+                else
+                    Firebug.erasePrefs();
                 
                 this.updateMenu(target);
-                
                 return false;
             },
             
             restorePrefs: function(target)
             {
-                Firebug.restorePrefs();
-                
-                if(Firebug.saveCookies)
-                    Firebug.savePrefs();
-                else
-                    Firebug.erasePrefs();
+                Firebug.setPref("saveCookies", false);
+                Firebug.erasePrefs();
                 
                 if (target)
                     this.updateMenu(target);
-                
-                return false;
             },
             
             updateMenu: function(target)
@@ -1032,9 +1083,9 @@ append(ChromeBase,
         // TODO: BUG IE7
         var self = this;
         setTimeout(function(){
-            self.selectPanel(FirebugChrome.selectedPanelName);
+            self.selectPanel(Firebug.context.persistedState.selectedPanelName);
             
-            if (FirebugChrome.selectedPanelName == "Console" && Firebug.CommandLine)
+            if (Firebug.context.persistedState.selectedPanelName == "Console" && Firebug.CommandLine)
                 Firebug.chrome.focusCommandLine();
         },0);
         
@@ -1230,6 +1281,8 @@ append(ChromeBase,
     
     shutdown: function()
     {
+        if (Firebug.CommandLine) Firebug.CommandLine.deactivate();
+
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
@@ -1303,7 +1356,7 @@ append(ChromeBase,
             // If the context is a popup, ignores the toggle process
             if (Firebug.chrome.type == "popup") return;
             
-            var shouldOpen = forceOpen || !FirebugChrome.isOpen;
+            var shouldOpen = forceOpen || !Firebug.context.persistedState.isOpen;
             
             if(shouldOpen)
                this.open();
@@ -1317,7 +1370,8 @@ append(ChromeBase,
     detach: function()
     {
         if(!FirebugChrome.chromeMap.popup)
-        {     
+        {
+            this.close();
             createChromeWindow({type: "popup"});
         }
     },
@@ -1354,7 +1408,7 @@ append(ChromeBase,
             // TODO: xxxpedro only needed in persistent
             // should use FirebugChrome.clone, but popup FBChrome
             // isn't acessible 
-            FirebugChrome.selectedPanelName = oldChrome.selectedPanel.name;
+            Firebug.context.persistedState.selectedPanelName = oldChrome.selectedPanel.name;
         }
         
         dispatch(newPanelMap, "reattach", [oldChrome, newChrome]);
@@ -1534,6 +1588,13 @@ var ChromeFrameBase = extend(ChromeBase,
     
     destroy: function()
     {
+        var size = Firebug.chrome.getWindowSize();
+        
+        Firebug.context.persistedState.height = size.height;
+        
+        if (Firebug.saveCookies)
+            Firebug.savePrefs();
+        
         removeGlobalEvent("keydown", onGlobalKeyDown);
         
         ChromeBase.destroy.call(this);
@@ -1597,9 +1658,9 @@ var ChromeFrameBase = extend(ChromeBase,
     
     open: function()
     {
-        if (!FirebugChrome.isOpen)
+        if (!Firebug.context.persistedState.isOpen)
         {
-            FirebugChrome.isOpen = true;
+            Firebug.context.persistedState.isOpen = true;
             
             if (Env.isChromeExtension)
                 localStorage.setItem("Firebug", "1,1");
@@ -1645,7 +1706,7 @@ var ChromeFrameBase = extend(ChromeBase,
     
     close: function()
     {
-        if (FirebugChrome.isOpen || !this.isInitialized)
+        if (Firebug.context.persistedState.isOpen)
         {
             if (this.isInitialized)
             {
@@ -1653,7 +1714,7 @@ var ChromeFrameBase = extend(ChromeBase,
                 this.shutdown();
             }
             
-            FirebugChrome.isOpen = false;
+            Firebug.context.persistedState.isOpen = false;
             
             if (Env.isChromeExtension)
                 localStorage.setItem("Firebug", "1,0");
@@ -1720,7 +1781,7 @@ var ChromeFrameBase = extend(ChromeBase,
         
         // FIXME xxxpedro chromenew
         ///if (fbVSplitterStyle)
-        ///    fbVSplitterStyle.right = FirebugChrome.sidePanelWidth + "px";
+        ///    fbVSplitterStyle.right = Firebug.context.persistedState.sidePanelWidth + "px";
         
         ///this.draw();
     }
@@ -1795,7 +1856,7 @@ var ChromeMini = extend(Controller,
     shutdown: function()
     {
         var node = this.node;
-        node.style.height = FirebugChrome.height + "px";
+        node.style.height = Firebug.context.persistedState.height + "px";
         node.style.width = "100%";
         node.style.left = 0;
         node.style.right = "";
@@ -1851,6 +1912,7 @@ var ChromePopupBase = extend(ChromeBase,
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
             [Firebug.chrome.window, "unload", this.destroy]
+            //[Firebug.chrome.window, "beforeunload", this.destroy]
         );
         
         if (Env.Options.enablePersistent)
@@ -1869,6 +1931,19 @@ var ChromePopupBase = extend(ChromeBase,
     
     destroy: function()
     {
+        var chromeWin = Firebug.chrome.window; 
+        var left = chromeWin.screenX || chromeWin.screenLeft;
+        var top = chromeWin.screenY || chromeWin.screenTop;
+        var size = Firebug.chrome.getWindowSize();
+        
+        Firebug.context.persistedState.popupTop = top;
+        Firebug.context.persistedState.popupLeft = left;
+        Firebug.context.persistedState.popupWidth = size.width;
+        Firebug.context.persistedState.popupHeight = size.height;
+        
+        if (Firebug.saveCookies)
+            Firebug.savePrefs();
+        
         // TODO: xxxpedro sync detach reattach attach
         var frame = FirebugChrome.chromeMap.frame;
         
@@ -1925,6 +2000,7 @@ var ChromePopupBase = extend(ChromeBase,
                 
                         Env.browser = window.opener;
                         Firebug.browser = Firebug.context = new Context(Env.browser);
+                        Firebug.loadPrefs();                        
                 
                         registerConsole();
                 
@@ -1939,15 +2015,18 @@ var ChromePopupBase = extend(ChromeBase,
                         FBL.cacheDocument();
                         Firebug.Inspector.create();
                 
-                        var htmlPanel = chrome.getPanel("HTML");
-                        htmlPanel.createUI();
-                        
                         Firebug.Console.logFormatted(
                             ["Firebug could not capture console calls during " +
                             persistDelay + "ms"],
                             Firebug.context,
                             "info"
                         );
+                        
+                        setTimeout(function(){
+                            var htmlPanel = chrome.getPanel("HTML");
+                            htmlPanel.createUI();
+                        },50);
+                        
                     }
                     catch(pE)
                     {
@@ -2166,7 +2245,7 @@ var handleHSplitterMouseMove = function()
     var chromeHeight = Math.max(height - clientY + 5 - scrollbarSize, fixedHeight);
         chromeHeight = Math.min(chromeHeight, windowSize.height - scrollbarSize);
 
-    FirebugChrome.height = chromeHeight;
+    Firebug.context.persistedState.height = chromeHeight;
     chromeNode.style.height = chromeHeight + "px";
     
     if (noFixedPosition)
@@ -2222,7 +2301,7 @@ var onVSplitterMouseMove = function onVSplitterMouseMove(event)
             var size = Firebug.chrome.getSize();
             var x = Math.max(size.width - clientX + 3, 6);
             
-            FirebugChrome.sidePanelWidth = x;
+            Firebug.context.persistedState.sidePanelWidth = x;
             Firebug.chrome.draw();
         }
         
