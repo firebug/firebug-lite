@@ -143,6 +143,8 @@ var StyleSheetCache = Firebug.Lite.Cache.StyleSheet;
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 Firebug.SourceBoxPanel = Firebug.Panel;
 
+var reSelectorTag = /(^|\s)(?:\w+)/g;
+
 var domUtils = null;
 
 var textContent = isIE ? "innerText" : "textContent";
@@ -1762,7 +1764,7 @@ CSSElementPanel.prototype = extend(Firebug.CSSStyleSheetPanel.prototype,
         Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this, arguments);
         
         // TODO: xxxpedro css2
-        var selection = ElementCache.get(FirebugChrome.selectedHTMLElementId);
+        var selection = ElementCache.get(Firebug.context.persistedState.selectedHTMLElementId);
         if (selection)
             this.select(selection, true);
         
