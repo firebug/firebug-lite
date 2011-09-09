@@ -28,6 +28,32 @@ html, body {
 <link href="../xp/firebug.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
-<script type="text/javascript">(top.opener || top).Firebug.framesLoaded++;</script>
+<script type="text/javascript">
+(function(){
+    function findFirebug(w)
+    {
+        for(var i=0; i<2; i++)
+        {
+            var doc = w.frameElement.parentNode.ownerDocument;
+            w = doc.defaultView || doc.parentWindow;
+        }
+        return w.Firebug;
+    }
+    
+    (
+        // when it's a popup
+        top.opener && top.opener.Firebug ||
+        // in normal scenarios
+        top.Firebug || 
+        // When it's running inside an iframe we need to do a hack.
+        // Need to rethink how each Panel Window is loaded. The problem is that the panel is an 
+        // iframe that could be or not inside another iframe (or a popup, or a div), that in turn
+        // could be inside of another iframe.
+        // FIXME xxxpedro seriously?!?
+        findFirebug(window)
+    ).
+    framesLoaded++;
+})();
+</script>
 </body>
 </html>
