@@ -11,5 +11,5 @@ FBTest.loadTestList([
     { page: "content/css/3262/issue3262.html" },
     { page: "content/css/4776/issue4776.html" },
     { page: "content/css/4777/issue4777.html" },
-    { page: "content/css/ZZZZ/issueZZZZ.html" }
+    { page: "content/css/3326/issue3326.html" }
 ]);
