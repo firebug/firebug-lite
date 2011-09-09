@@ -121,14 +121,10 @@ this.initialize = function()
         findLocation();
         
         // TODO: get preferences here...
-        var prefs = eval("(" + FBL.readCookie("FirebugLite") + ")");
-        if (prefs)
-        {
-            FBL.Env.Options.startOpened = prefs.startOpened;
-            FBL.Env.Options.enableTrace = prefs.enableTrace;
-            FBL.Env.Options.enablePersistent = prefs.enablePersistent;
-            FBL.Env.Options.disableXHRListener = prefs.disableXHRListener;
-        }
+        // The problem is that we don't have the Firebug object yet, so we can't use 
+        // Firebug.loadPrefs. We're using the Store module directly instead.
+        var prefs = FBL.Store.get("FirebugLite") || {};
+        FBL.append(FBL.Env.Options, prefs.options || {});
         
         if (FBL.isFirefox && 
             typeof FBL.Env.browser.console == "object" && 
@@ -174,8 +170,7 @@ this.initialize = function()
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // finish environment initialization
-
-    FBL.Firebug.loadPrefs(prefs);
+    FBL.Firebug.loadPrefs();
     
     if (FBL.Env.Options.enablePersistent)
     {
@@ -252,7 +247,7 @@ this.Env =
     // Env Options (will be transported to Firebug options)
     Options:
     {
-        saveCookies: false,
+        saveCookies: true,
     
         saveWindowPosition: false,
         saveCommandLineHistory: false,
