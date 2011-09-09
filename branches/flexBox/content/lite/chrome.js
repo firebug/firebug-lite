@@ -586,7 +586,7 @@ append(ChromeBase,
         PanelBar.create.call(this);
         
         if (Firebug.Inspector)
-            this.inspectButton = new IconButton({
+            this.inspectButton = new Button({
                 type: "toggle",
                 element: $("fbChrome_btInspect"),
                 owner: Firebug.Inspector,
