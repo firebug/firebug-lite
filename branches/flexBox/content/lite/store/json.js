@@ -1,3 +1,5 @@
+/* See license.txt for terms of usage */
+
 /*
     http://www.JSON.org/json2.js
     2010-03-20
@@ -159,9 +161,11 @@
 // Create a JSON object only if one does not already exist. We create the
 // methods in a closure to avoid creating global variables.
 
-if (!this.JSON) {
-    this.JSON = {};
-}
+// ************************************************************************************************
+
+var JSON = window.JSON || {};
+
+// ************************************************************************************************
 
 (function () {
 
@@ -479,4 +483,11 @@ replace(/(?:^|:|,)(?:\s*\[)+/g, ''))) {
             throw new SyntaxError('JSON.parse');
         };
     }
+
+// ************************************************************************************************
+// registration
+
+FBL.JSON = JSON;
+
+// ************************************************************************************************
 }());
