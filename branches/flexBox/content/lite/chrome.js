@@ -329,16 +329,21 @@ var createChromeWindow = function(options)
             var browserWin = Firebug.context.window;
             var browserWinSize = Firebug.context.getWindowSize();
             
-            var popupLeft = typeof persistedState.popupLeft == "number" ?
-                    persistedState.popupLeft : (browserWin.screenX || browserWin.screenLeft);
+            var browserWinLeft = typeof browserWin.screenX == "number" ? 
+                    browserWin.screenX : browserWin.screenLeft;
             
+            var popupLeft = typeof persistedState.popupLeft == "number" ?
+                    persistedState.popupLeft : browserWinLeft;
+            
+            var browserWinTop = typeof browserWin.screenY == "number" ? 
+                    browserWin.screenY : browserWin.screenTop;
+
             var popupTop = typeof persistedState.popupTop == "number" ?
                     persistedState.popupTop :
                     Math.max(
                             0,
                             Math.min(
-                                    (browserWin.screenY || browserWin.screenTop) + 
-                                            browserWinSize.height - height,
+                                    browserWinTop + browserWinSize.height - height,
                                     // Google Chrome bug
                                     screen.availHeight - height - 61
                                 ) 
