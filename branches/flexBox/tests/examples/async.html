@@ -1,28 +1,32 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">
 <html>
     <head>
-        <script type="text/javascript" src="../../build/firebug-lite-debug.js"></script>
         <script type="text/javascript" src="../fbtest/fbtest.js"></script>
         <script type="text/javascript">
-        
+
         FBTest.runTestOnLoad(function()
         {
-            FBTest.stop();
-            
             var xhr = FBL.Ajax.getXHRObject();
             xhr.open("GET", "test.txt", true);
             xhr.send();
 
-            setTimeout(function(){
+            var consolePanelNode = FBTest.getPanel("Console").panelNode;
 
-                var panel = FBTest.getPanel("Console").panelNode;
-                var elements = FBL.getElementsByClass(panel, "logRow-spy");
-                FBTest.ok(elements.length == 1, "Exists a log entry for the XHR request");
-                
-                FBTest.start();
+            FBTest.wait(
+                function()
+                {
+                    // exists a XHR log entry
+                    return Firebug.Selector(".logRow-spy", consolePanelNode).length > 0;
+                },
+                function()
+                {
+                    var logEntries = Firebug.Selector(".logRow-spy", consolePanelNode);
+                    FBTest.compare(1, logEntries.length, "there is exactly one log entry");
+                }
+            );
 
-            }, 50);
         });
-        
+
         </script>
         <link rel="stylesheet" href="../fbtest/fbtest.css" type="text/css" media="screen">
     </head>
