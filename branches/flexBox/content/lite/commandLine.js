@@ -50,8 +50,9 @@ var _completion =
 
 var _stack = function(command)
 {
-    commandHistory.push(command);
-    commandPointer = commandHistory.length;
+    Firebug.context.persistedState.commandHistory.push(command);
+    Firebug.context.persistedState.commandPointer = 
+        Firebug.context.persistedState.commandHistory.length;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -95,6 +96,12 @@ Firebug.CommandLine = extend(Firebug.Module,
     activate: function(multiLine, hideToggleIcon, onRun)
     {
         defineCommandLineAPI();
+        
+         Firebug.context.persistedState.commandHistory =  
+             Firebug.context.persistedState.commandHistory || [];
+
+         Firebug.context.persistedState.commandPointer =  
+             Firebug.context.persistedState.commandPointer || -1;
         
         if (this.isActive)
         {
@@ -230,7 +237,8 @@ Firebug.CommandLine = extend(Firebug.Module,
         
         _stack(command);
         
-        Firebug.Console.log(commandPrefix + " " + stripNewLines(command), Firebug.browser, "command", FirebugReps.Text);
+        Firebug.Console.log(commandPrefix + " " + stripNewLines(command), 
+                Firebug.browser, "command", FirebugReps.Text);
         
         var result = this.evaluate(command);
         
@@ -241,23 +249,28 @@ Firebug.CommandLine = extend(Firebug.Module,
     
     prevCommand: function()
     {
-        if (commandPointer > 0 && commandHistory.length > 0)
-            this.element.value = commandHistory[--commandPointer];
+        if (Firebug.context.persistedState.commandPointer > 0 && 
+            Firebug.context.persistedState.commandHistory.length > 0)
+        {
+            this.element.value = Firebug.context.persistedState.commandHistory
+                                    [--Firebug.context.persistedState.commandPointer];
+        }
     },
   
     nextCommand: function()
     {
         var element = this.element;
         
-        var limit = commandHistory.length -1;
-        var i = commandPointer;
+        var limit = Firebug.context.persistedState.commandHistory.length -1;
+        var i = Firebug.context.persistedState.commandPointer;
         
         if (i < limit)
-          element.value = commandHistory[++commandPointer];
+          element.value = Firebug.context.persistedState.commandHistory
+                              [++Firebug.context.persistedState.commandPointer];
           
         else if (i == limit)
         {
-            ++commandPointer;
+            ++Firebug.context.persistedState.commandPointer;
             element.value = "";
         }
     },
