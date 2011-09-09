@@ -209,6 +209,14 @@ var createChromeWindow = function(options)
                 node.firebugIgnore = true;
             }
             
+            var browserWin = Env.browser.window;
+            var browserContext = new Context(browserWin);
+            var browserWinSize = browserContext.getWindowSize();
+            var height = persistedState.height || 300;
+            
+            height = Math.min(browserWinSize.height, height);
+            height = Math.max(200, height);
+            
             node.style.border = "0";
             node.style.visibility = "hidden";
             node.style.zIndex = "2147483647"; // MAX z-index = 2147483647
@@ -216,7 +224,7 @@ var createChromeWindow = function(options)
             node.style.width = "100%"; // "102%"; IE auto margin bug
             node.style.left = "0";
             node.style.bottom = noFixedPosition ? "-1px" : "0";
-            node.style.height = persistedState.height + "px";
+            node.style.height = height + "px";
             
             // avoid flickering during chrome rendering
             //if (isFirefox)
@@ -317,17 +325,44 @@ var createChromeWindow = function(options)
         // create the Chrome as a "popup"
         else
         {
-            var height = persistedState.popupHeight || 300,
+            var height = persistedState.popupHeight || 300;
+            var browserWin = Firebug.context.window;
+            var browserWinSize = Firebug.context.getWindowSize();
             
-                options = [
-                    "true,top=",
-                        persistedState.popupTop ||
-                            Math.max(screen.availHeight - height - 61 /* Google Chrome bug */, 0),
-                    ",left=", persistedState.popupLeft || 0, 
-                    ",height=", persistedState.popupHeight || 300,
-                    ",width=", 
-                        persistedState.popupWidth || 
-                            screen.availWidth-10, // Opera opens popup in a new tab if it's too big!
+            var popupLeft = typeof persistedState.popupLeft == "number" ?
+                    persistedState.popupLeft : (browserWin.screenX || browserWin.screenLeft);
+            
+            var popupTop = typeof persistedState.popupTop == "number" ?
+                    persistedState.popupTop :
+                    Math.max(
+                            0,
+                            Math.min(
+                                    (browserWin.screenY || browserWin.screenTop) + 
+                                            browserWinSize.height - height,
+                                    // Google Chrome bug
+                                    screen.availHeight - height - 61
+                                ) 
+                            );
+            
+            var popupWidth = typeof persistedState.popupWidth == "number" ? 
+                    persistedState.popupWidth :
+                    Math.max(
+                            0,
+                            Math.min(
+                                    browserWinSize.width,
+                                    // Opera opens popup in a new tab if it's too big!
+                                    screen.availWidth-10 
+                                ) 
+                            );
+
+            var popupHeight = typeof persistedState.popupHeight == "number" ?
+                    persistedState.popupHeight : 300;
+            
+            var options = [
+                    "true,top=", popupTop,
+                    ",left=", popupLeft, 
+                    ",height=", popupHeight,
+                    ",width=", popupWidth, 
                     ",resizable"          
                 ].join(""),
             
@@ -470,9 +505,6 @@ var onChromeLoad = function onChromeLoad(chrome)
             // TODO: xxxpedro sync detach reattach attach
             dispatch(newChrome.panelMap, "detach", [oldChrome, newChrome]);
         
-            if (oldChrome)
-                oldChrome.close();
-            
             newChrome.reattach(oldChrome, newChrome);
         }
     }
@@ -1738,7 +1770,7 @@ var ChromeFrameBase = extend(ChromeBase,
     
     close: function()
     {
-        if (Firebug.context.persistedState.isOpen || !this.isInitialized)
+        if (Firebug.context.persistedState.isOpen)
         {
             if (this.isInitialized)
             {
@@ -1942,8 +1974,8 @@ var ChromePopupBase = extend(ChromeBase,
         
         this.addController(
             [Firebug.chrome.window, "resize", this.resize],
-            [Firebug.chrome.window, "unload", this.destroy],
-            [Firebug.chrome.window, "beforeunload", this.destroy]
+            [Firebug.chrome.window, "unload", this.destroy]
+            //[Firebug.chrome.window, "beforeunload", this.destroy]
         );
         
         if (Env.Options.enablePersistent)
@@ -1961,8 +1993,9 @@ var ChromePopupBase = extend(ChromeBase,
     
     destroy: function()
     {
-        var left = Firebug.chrome.window.screenX;
-        var top = Firebug.chrome.window.screenY;
+        var chromeWin = Firebug.chrome.window; 
+        var left = chromeWin.screenX || chromeWin.screenLeft;
+        var top = chromeWin.screenY || chromeWin.screenTop;
         var size = Firebug.chrome.getWindowSize();
         
         Firebug.context.persistedState.popupTop = top;
