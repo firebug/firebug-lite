@@ -46,6 +46,9 @@ FBL.Firebug =
         Firebug.browser = new Context(Env.browser);
         Firebug.context = Firebug.browser;
         
+        Firebug.loadPrefs();
+        Firebug.context.persistedState.isOpen = false;
+        
         // Document must be cached before chrome initialization
         cacheDocument();
         
@@ -70,6 +73,9 @@ FBL.Firebug =
   
     shutdown: function()
     {
+        if (Firebug.saveCookies)
+            Firebug.savePrefs();
+        
         if (Firebug.Inspector)
             Firebug.Inspector.destroy();
         
@@ -227,7 +233,7 @@ FBL.Firebug =
     {
         Firebug[name] = value;
         
-        this.savePrefs();
+        Firebug.savePrefs();
     },
     
     setPrefs: function(prefs)
@@ -238,7 +244,7 @@ FBL.Firebug =
                 Firebug[name] = prefs[name];
         }
         
-        this.savePrefs();
+        Firebug.savePrefs();
     },
     
     restorePrefs: function()
@@ -251,58 +257,54 @@ FBL.Firebug =
         }
     },
     
-    loadPrefs: function(prefs)
+    loadPrefs: function()
     {
         this.restorePrefs();
         
-        prefs = prefs || eval("(" + readCookie("FirebugLite") + ")");
+        var prefs = Store.get("FirebugLite") || {};
+        var options = prefs.options;
+        var persistedState = prefs.persistedState || FBL.defaultPersistedState;
         
-        for (var name in prefs)
+        for (var name in options)
         {
-            if (prefs.hasOwnProperty(name))
-                Firebug[name] = prefs[name];
+            if (options.hasOwnProperty(name))
+                Firebug[name] = options[name];
         }
+        
+        if (Firebug.context && persistedState)
+            Firebug.context.persistedState = persistedState;
     },
     
     savePrefs: function()
     {
-        var json = ['{'], jl = 0;
-        var Options = Env.Options;
+        var prefs = {
+            options: {}
+        };
         
-        for (var name in Options)
+        var EnvOptions = Env.Options;
+        var options = prefs.options;
+        for (var name in EnvOptions)
         {
-            if (Options.hasOwnProperty(name))
+            if (EnvOptions.hasOwnProperty(name))
             {
-                var value = Firebug[name];
-                
-                json[++jl] = '"'; 
-                json[++jl] = name;
-                
-                var type = typeof value;
-                if (type == "boolean" || type == "number")
-                {
-                    json[++jl] = '":';
-                    json[++jl] = value;
-                    json[++jl] = ',';
-                }
-                else
-                {
-                    json[++jl] = '":"';
-                    json[++jl] = value;
-                    json[++jl] = '",';
-                }
+                options[name] = Firebug[name];
             }
         }
         
-        json.length = jl--;
-        json[++jl] = '}';
+        var persistedState = Firebug.context.persistedState;
+        if (!persistedState)
+        {
+            persistedState = Firebug.context.persistedState = FBL.defaultPersistedState;
+        }
         
-        createCookie("FirebugLite", json.join(""));
+        prefs.persistedState = persistedState;
+        
+        Store.set("FirebugLite", prefs);
     },
     
     erasePrefs: function()
     {
-        removeCookie("FirebugLite");
+        Store.remove("FirebugLite");
     }
 };
 
@@ -731,7 +733,7 @@ Firebug.Panel =
 
     detach: function(oldChrome, newChrome)
     {
-        if (oldChrome.selectedPanel.name == this.name)
+        if (oldChrome && oldChrome.selectedPanel && oldChrome.selectedPanel.name == this.name)
             this.lastScrollTop = oldChrome.selectedPanel.containerNode.scrollTop;
     },
 
