@@ -1573,7 +1573,7 @@ QUnit.diff = (function() {
         id("qunit-runner-userAgent").innerHTML = window.navigator.userAgent;
 
         var test = this.tests[this.currentIndex];
-        test.title = test.title || test.page;
+        test.title = test.title || /\/content\/(.+)$/.exec(test.page)[1];
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // xxxpedro passing parameters to iframes
@@ -1946,6 +1946,14 @@ QUnit.diff = (function() {
             if (!this.testList)
                 this.testList = [];
             
+            // prefixes all list items with the test base location
+            var prefix = getTestBaseLocation();
+            for (var i=0, l=list.length; i<l; i++)
+            {
+                var item = list[i];
+                item.page = prefix + item.page;
+            }
+            
             this.testList = this.testList.concat(list);
         },
 
@@ -2258,6 +2266,22 @@ QUnit.diff = (function() {
         return result;
     }
     
+    function getFirebugBaseLocation()
+    {
+        var url = location.href;
+        var reFirebugLocation = /(.*\/lite\/branches\/)/;
+        var m = reFirebugLocation.exec(url);
+        return m && m[1];
+    }
+    
+    function getTestBaseLocation()
+    {
+        var url = location.href;
+        var reTestLocation = /(.*\/tests\/)/;
+        var m = reTestLocation.exec(url);
+        return m && m[1];
+    }
+    
     function getFirebugLocation(config)
     {
         config = config || getFirebugConfig();
@@ -2267,11 +2291,10 @@ QUnit.diff = (function() {
         
         var configOptions = FBTest.config;
         
-        var versionBasePath = configOptions.versionBasePath;
         var versionMap = configOptions.versionMap;
         var channelMap = configOptions.channelMap;
         
-        return versionBasePath + versionMap[version] + channelMap[channel];
+        return getFirebugBaseLocation() + versionMap[version] + channelMap[channel];
     }
     
     function getTestListLocation(config)
@@ -2282,10 +2305,9 @@ QUnit.diff = (function() {
         
         var configOptions = FBTest.config;
         
-        var testListBasePath = configOptions.testListBasePath;
         var testListMap = configOptions.testListMap;
         
-        return testListBasePath + testListMap[testList];
+        return getTestBaseLocation() + "testlists/" + testListMap[testList];
     }
     
     function loadFBTest() {
@@ -2361,10 +2383,6 @@ QUnit.diff = (function() {
         delayDuration: 1000,
         waitTimeout: 3000,
         waitInterval: 150,
-        
-        versionBasePath: "/lite/branches/",
-        
-        testListBasePath: "/lite/branches/flexBox/tests/testlists/",
         
         versionMap:
         {
