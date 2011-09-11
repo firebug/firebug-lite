@@ -187,7 +187,11 @@ ScriptPanel.prototype = extend(Firebug.Panel,
             
             try
             {
-                if (isExternal)
+                if (Firebug.disableResourceFetching)
+                {
+                    renderProcess(Firebug.Lite.Proxy.fetchResourceDisabledMessage);
+                }
+                else if (isExternal)
                 {
                     Ajax.request({url: url, onSuccess: renderProcess, onFailure: onFailure});
                 }
