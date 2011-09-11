@@ -91,8 +91,6 @@ this.initialize = function()
     else
         FBTrace = FBL.FBTrace = {};
     
-    FBL.Ajax.initialize();
-    
     // check if the actual window is a persisted chrome context
     var isChromeContext = window.Firebug && typeof window.Firebug.SharedEnv == "object";
     
@@ -124,7 +122,8 @@ this.initialize = function()
         // The problem is that we don't have the Firebug object yet, so we can't use 
         // Firebug.loadPrefs. We're using the Store module directly instead.
         var prefs = FBL.Store.get("FirebugLite") || {};
-        FBL.append(FBL.Env.Options, prefs.options || {});
+        FBL.Env.DefaultOptions = FBL.Env.Options;
+        FBL.Env.Options = FBL.extend(FBL.Env.Options, prefs.options || {});
         
         if (FBL.isFirefox && 
             typeof FBL.Env.browser.console == "object" && 
@@ -167,6 +166,8 @@ this.initialize = function()
         FBTrace.sysout("FBL.initialize", namespaces.length/2+" namespaces END");
         FBTrace.sysout("FBL waitForDocument", "waiting document load");
     }
+    
+    FBL.Ajax.initialize();
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // finish environment initialization
@@ -261,6 +262,7 @@ this.Env =
         disableWhenFirebugActive: true,
         
         disableXHRListener: false,
+        disableResourceFetching: false,
         
         enableTrace: false,
         enablePersistent: false
@@ -5794,7 +5796,7 @@ this.Ajax =
   
     initialize: function()
     {
-        this.transport = this.getXHRObject();
+        this.transport = FBL.getNativeXHRObject();
     },
     
     getXHRObject: function()
