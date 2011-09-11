@@ -791,15 +791,6 @@ append(ChromeBase,
                 
                 return [
                     {
-                        label: "Remember Options",
-                        type: "checkbox",
-                        value: "saveCookies",
-                        checked: Firebug.saveCookies,
-                        command: "saveOptions",
-                        disabled: true
-                    },
-                    "-",
-                    {
                         label: "Start Opened",
                         type: "checkbox",
                         value: "startOpened",
@@ -849,6 +840,12 @@ append(ChromeBase,
                         disabled: cookiesDisabled
                     },
                     {
+                        label: "Disable Resource Fetching",
+                        type: "checkbox",
+                        value: "disableResourceFetching",
+                        checked: Firebug.disableResourceFetching,
+                        disabled: cookiesDisabled
+                    },                    {
                         label: "Enable Trace Mode",
                         type: "checkbox",
                         value: "enableTrace",
@@ -876,21 +873,8 @@ append(ChromeBase,
                 Firebug.setPref(value, checked);
             },           
             
-            saveOptions: function(target)
-            {
-                var saveEnabled = !!target.getAttribute("checked");
-                if (saveEnabled)
-                    Firebug.setPref("saveCookies", saveEnabled);
-                else
-                    Firebug.erasePrefs();
-                
-                this.updateMenu(target);
-                return false;
-            },
-            
             restorePrefs: function(target)
             {
-                Firebug.setPref("saveCookies", false);
                 Firebug.erasePrefs();
                 
                 if (target)
