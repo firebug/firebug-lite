@@ -62,6 +62,13 @@ FBL.Firebug =
         
         dispatch(modules, "initialize", []);
         
+        if (Firebug.disableResourceFetching)
+            Firebug.Console.logFormatted(["Some Firebug Lite features are not working because " +
+            		"resource fetching is disabled. To enabled it set the Firebug Lite option " +
+            		"\"disableResourceFetching\" to \"false\". More info at " +
+            		"http://getfirebug.com/firebuglite#Options"], 
+            		Firebug.context, "warn");
+        
         if (Env.onLoad)
         {
             var onLoad = Env.onLoad;
@@ -249,7 +256,7 @@ FBL.Firebug =
     
     restorePrefs: function()
     {
-        var Options = Env.Options;
+        var Options = Env.DefaultOptions;
         
         for (var name in Options)
         {
@@ -305,6 +312,7 @@ FBL.Firebug =
     erasePrefs: function()
     {
         Store.remove("FirebugLite");
+        this.restorePrefs();
     }
 };
 
