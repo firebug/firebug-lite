@@ -1,6 +1,24 @@
 /* See license.txt for terms of usage */
 
-FBL.ns(function() { with (FBL) {
+FBL.ns(function() {
+
+/*
+
+  TODO:
+    - API
+            Event.add versus Event.addEvent
+
+    - do not store objects in cache variables, use key instead
+
+    - priority?
+    - sort controller callbacks based on rule specificity?
+    - cancel propagation for controllers? 
+    
+    - use it for internal events?
+        - need to attach "key" attribute to individual objects 
+
+*/
+
 
 /**
 
@@ -13,11 +31,21 @@ Related-problems
     - remote object identification (we can't use XPATH for JavaScript objects)
 
 Goals
-  - Define an API to handle event-related problems (event handling, event delegation, key listening)
+    - Define an API to handle event-related problems (event handling, event delegation, key listening)
 
+
+Tips for avoiding problem with events
+    - avoid adding events to elements. Use controls/controllers instead.
+
+    - Chrome controller
+        - all mouse events should be delegated
+        - all keyboard events should be delegated
+        - all resize events should be delegated
+        - all scroll events should be delegated
+
+~~~~~~~~~
 
 Questions
-
 
 Using expando property to cache elements
   - we need this to optimize cache lookup time and avoid attaching JavaScript objects into DOM Elements (no circular references problem, less prone to memory leaks)
@@ -27,38 +55,18 @@ Controller definition using CSS selectors or classes-only
   - How to verify if a particular element matches a CSS selector in FF?
 
 
+~~~~~~~~~
 
-
-Control is an visual component that respond to user actions
+Control is an visual component that responds to user actions
 
 Controller is a special kind of Control that operates several sub-components (internal Controls)
 using a single Control component
 
-
-
-
-Event
-
-Action
-
-Controller
-
-
-
-
-
-
-
-
-
-
-
 http://docwiki.embarcadero.com/VCL/en/Controls.TControl
 
-API
+~~~~~~~~~
 
-Firebug.Inspector::click
-
+API - draft
 
 ----------------------------------------------------------------------------------------------------
 Lib/Event Module
@@ -99,7 +107,6 @@ Lib/Event Module (currently in Lib)
     Lib.isShiftClick(event)
     Lib.isAltClick(event)
 
-
 ----------------------------------------------------------------------------------------------------
 Firebug.Control(context?, element)
 ----------------------------------------------------------------------------------------------------
@@ -123,111 +130,98 @@ Firebug.Controller(context?, element)
     removeCharController(character)
     removeCharControllers()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    ++filters
-    ++keyConstants
-
-
-
-
-    - all mouse events should be delegated
-    - all keyboard events should be delegated
-    - all resize events should be delegated
-    - all scroll events should be delegated
-
-
-    - avoid using addEvent directly. Use it only for specific cases such as:
-        - load
-        - focus
-        - blur
-
-
-
-
 */
-
-
 
 
 // ************************************************************************************************
 // Globals
 
-var EventCache = Firebug.Lite.Cache.Event;
+var EventCache = new Cache();
 
 
-window.addEvent = function(element, type, callback, capture)
+window.addEvent = function(element, type, callback, capture, owner, validator, data, bubble)
 {
-    var id = EventCache(element);
+    var id = EventCache.set(element);
     
     if (!id) return;
     
-    // read namespaces
+    // the "owner" is which object means "this" inside the callback function
+    owner = owner || element;
+    
+    // read type and namespaces
     var info = readEventNamespace(type);
     var namespaces = info.namespaces;
     type = info.type;
 
-    // event data
+    // read eventMap, which will hold data for all types of event
     var eventMap = EventCache.data(element, "eventMap");
-    
+
+    // if there's no eventMap, create one
     if (!eventMap)
     {
         eventMap = EventCache.data(element, "eventMap", {});
     }
-    
+
+    // read eventData
     var eventData = eventMap[type];
 
+    // if there's no eventData, create one
     if (!eventData)
     {
-        eventMap = eventMap[type] = {
-            callbacks: [],
+        eventData = eventMap[type] = {
+            listeners: [],
             handler: null
         };
     }
     
     // callback queue
-    var eventCallbacks = eventData.callbacks;
+    var eventListeners = eventData.listeners;
 
     // event handler
     var eventHandler = eventData.handler;
 
+    // if there's no handler, create one
     if (!eventHandler)
     {
         eventHandler = eventData.handler = function(event)
         {
+            //console.time("handling "+type);
+
             event = fixEvent(event);
 
-            for (var i = 0, length = eventCallbacks.length; i < length; i++)
-            {
-                var item = eventCallbacks[i];
+            var target = event.target;
 
-                item.callback.call(element, event);
+            do
+            {
+                for (var i = 0, length = eventListeners.length; i < length; i++)
+                {
+                    var listener = eventListeners[i];
+                    
+                    if (validator && validator.call(owner, event, listener) || !validator)
+                        listener.callback.call(owner, event);
+                }
+                
+                target = event.target = bubble && // if should bubble up
+                        !event.isPropagationStopped() && // and propagation is not stopped  
+                        target.parentNode; // then we must look for the parent node
+                        // otherwise target variable will be set to null
             }
+            while(target);
+
+            //console.timeEnd("handling "+type);
         };
     }
     
     // add event to the queue
-    eventCallbacks.push({
-        type: type, // redundant.... remove this?
+    eventListeners.push({
+        //type: type, // redundant.... remove this?
         callback: callback,
         capture: capture,
-        namespaces: namespaces
+        namespaces: namespaces,
+        data: data
     });
 
-    if (eventCallbacks.length == 1)
+    if (eventListeners.length == 1)
     {
         if (element.addEventListener)
             element.addEventListener(type, eventHandler, capture);
@@ -236,9 +230,9 @@ window.addEvent = function(element, type, callback, capture)
     }
 };
 
-window.removeEvent = function(element, type, callback, capture)
+window.removeEvent = function(element, type, callback, capture, owner, validator)
 {
-    var id = EventCache(element);
+    var id = EventCache.key(element);
 
     if (!id) return;
 
@@ -251,6 +245,8 @@ window.removeEvent = function(element, type, callback, capture)
     var eventMap = EventCache.data(element, "eventMap");
     if (!eventMap) return;
     
+    var eventData;
+    
     var types = [];
     
     if (type)
@@ -259,7 +255,7 @@ window.removeEvent = function(element, type, callback, capture)
     }
     else
     {
-        for (var name in eventData)
+        for (var name in eventMap)
         {
             types.push(name);
         }
@@ -273,8 +269,8 @@ window.removeEvent = function(element, type, callback, capture)
         var eventData = eventMap[type];
 
         // callback queue
-        var eventCallbacks = eventData.callbacks;
-        if (!eventCallbacks) return;
+        var eventListeners = eventData.listeners;
+        if (!eventListeners) return;
 
         // event handler
         var eventHandler = eventData.handler;
@@ -284,48 +280,44 @@ window.removeEvent = function(element, type, callback, capture)
             // we cannot store the length as a way to improve the performance because
             // we're removing elements from the array, so we need to actually read
             // the length in every loop iteration to make sure we have reached the end
-            i < eventCallbacks.length;
+            i < eventListeners.length;
             )
         {
-            var item = eventCallbacks[i];
+            var listener = eventListeners[i];
 
             /*
-
             cases
                 - click
                 - click.namespace
                 - click.namespace.plus
                 - .namespace
 
-
-
             has type --> look for 1 type
             has no type --> look for all types
 
                 has namespace --> compare
-
                 has callback --> compare
-
                 no namespace, no callback (case removeEvent(el, "click")) --> remove all events with the given type
-
-
             */
 
             if (
-              (callback && item.callback == callback || !callback) &&
-              (namespaces && compareEventNamespace(namespaces, item.namespaces) || !namespaces)
+              (callback && listener.callback == callback || !callback) &&
+              (namespaces && compareEventNamespace(namespaces, listener.namespaces) || !namespaces) &&
+              (validator && validator.call(owner, listener) || !validator)
             )
             {
-                eventCallbacks.splice(i, 1);
+                listener.callback = null;
+                eventListeners.splice(i, 1);
+                EventCache.free(element);
             }
             else
             {
-                // we must advance the cursor only if current item wasn't removed
+                // we must advance the cursor only if current listener wasn't removed
                 i++;
             }
         }
 
-        if (eventCallbacks.length == 0)
+        if (eventListeners.length == 0)
         {
             if (element.removeEventListener)
                 element.removeEventListener(type, eventHandler, capture);
@@ -399,9 +391,12 @@ var fixEvent = function(event)
     // and "clone" to set read-only properties
     var originalEvent = event;
     event = { originalEvent: originalEvent };
+    // TODO: xxxpedro any particular reason to not use "for var name in originalEvent"?
     var props = "altKey attrChange attrName bubbles button cancelable charCode clientX clientY ctrlKey currentTarget data detail eventPhase fromElement handler keyCode metaKey newValue originalTarget pageX pageY prevValue relatedNode relatedTarget screenX screenY shiftKey srcElement target timeStamp toElement type view wheelDelta which".split(" ");
     for ( var i=props.length; i; i-- )
         event[ props[i] ] = originalEvent[ props[i] ];
+
+    var isPropagationStopped = false;
 
     // Mark it as fixed
     event[expando] = true;
@@ -421,10 +416,18 @@ var fixEvent = function(event)
             originalEvent.stopPropagation();
         // otherwise set the cancelBubble property of the original event to true (IE)
         originalEvent.cancelBubble = true;
+        
+        isPropagationStopped = true;
+    };
+    event.isPropagationStopped = function()
+    {
+        return isPropagationStopped;
     };
 
     // Fix timeStamp
-    event.timeStamp = event.timeStamp || this.now();
+    //event.timeStamp = event.timeStamp || this.now();
+    // TODO: xxxpedro what is this now() function? ask honza where this fixEvent function came from
+    event.timeStamp = event.timeStamp || new Date().getTime();
 
     // Fix target property, if necessary
     if ( !event.target )
@@ -461,7 +464,127 @@ var fixEvent = function(event)
     return event;
 };
 
+// ************************************************************************************************
+
+function Control(element)
+{
+    this._controlElement = element;
+}
+
+Control.prototype =
+{
+    addEvent: function(type, callback, capture){
+        addEvent(this._controlElement, getControlType(type), callback, capture, this);
+    },
+    removeEvent: function(type, callback, capture){
+        removeEvent(this._controlElement, getControlType(type), callback, capture);
+    },
+    removeEvents: function(){
+        removeEvent(this._controlElement, getControlType(""));
+    }
+};
+
+function getControlType(type)
+{
+    return type + ".{Control}";
+}
 
 // ************************************************************************************************
 
-}});
+function Controller(element)
+{
+    this._controlElement = element;
+}
+
+Controller.prototype = FBL.extend(Control.prototype,
+{
+    addController: function(selector, type, callback, capture)
+    {
+        function addControllerValidator(e, listener)
+        {
+            return Firebug.Selector.matches(listener.data.selector, [e.target]).length > 0;
+        }
+        
+        addEvent(this._controlElement, getControllerType(selector, type), callback, null, 
+                this, addControllerValidator, {selector: selector}, true);
+    },
+    removeController: function(selector, type, callback, capture)
+    {
+        function removeControllerValidator(listener)
+        {
+            return listener.data.selector == selector/* && listener.callback == callback*/;
+        }
+        
+        removeEvent(this._controlElement, getControllerType(selector, type), callback, null,
+                this, removeControllerValidator);
+    },
+    removeControllers: function()
+    {
+        removeEvent(this._controlElement, getControllerType("", ""));
+    }
+});
+
+function getControllerType(selector, type)
+{
+    return (type||"")+".Controller"+(selector ? ".Selector_"+selector.replace(/\s|\./g, "_") : "");
+}
+
+// ************************************************************************************************
+
+function WindowController(win)
+{
+    this._controlElement = win;
+}
+
+WindowController.prototype = FBL.extend(Controller.prototype,
+{
+    addKeyController: function(key, filter, listener, capture /*, priority?*/)
+    {
+    },
+    
+    removeKeyController: function(key)
+    {
+    },
+    
+    removeKeyControllers: function()
+    {
+    },
+
+    addCharController: function(character, filter, listener, capture /*, priority? */ )
+    {
+    },
+    
+    removeCharController: function(character)
+    {
+    },
+    
+    removeCharControllers: function()
+    {
+    }
+});
+
+// ************************************************************************************************
+
+/*
+// TODO: remove test stuff
+window.Control = Control;
+window.Controller = Controller;
+
+h1 = function(){ console.log("t1"); };
+h2 = function(){ console.log("t2"); };
+
+c = new Controller( document.body );
+
+c.addController("#main", "click", function(){ console.log("main"); });
+c.addController("h1", "click", function(e){ e.stopPropagation();console.log("h1"); });
+
+c.addController("h1", "mouseover", h1);
+c.addController("h1", "mouseover", h2);
+c.addController("h2", "mouseover", h2);
+
+window.c = c;
+*/
+
+// ************************************************************************************************
+
+});

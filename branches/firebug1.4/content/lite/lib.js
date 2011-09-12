@@ -238,7 +238,7 @@ var onDocumentLoad = function onDocumentLoad()
     else
     {
         FBL.FirebugChrome.create();
-    }    
+    }
 };
 
 // ************************************************************************************************

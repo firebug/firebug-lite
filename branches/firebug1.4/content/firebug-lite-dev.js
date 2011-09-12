@@ -158,6 +158,8 @@ window.FBDev =
 
     loadChromeApplication: function(chrome)
     {
+        loadModules(chrome.document); return;
+        
         FBDev.buildSource(function(source){
             var doc = chrome.document;
             var script = doc.createElement("script");
@@ -512,7 +514,7 @@ function findLocation()
 
 // ************************************************************************************************
 
-function loadModules() {
+function loadModules(doc) {
     
     findLocation();
     
@@ -540,23 +542,23 @@ function loadModules() {
             xhr.send();
             html = xhr.responseText;
             
-            script = document.createElement("script");
+            script = doc.createElement("script");
             script.text = html;
-            document.getElementsByTagName("head")[0].appendChild(script);
+            doc.getElementsByTagName("head")[0].appendChild(script);
         }
         return;
     }
     /**/
 
     // new module loader
-    /*
+    
     var length = FBDev.modules.length;
     var loadModule = function(index){
         if (index == length) return;
     
         var module = FBDev.modules[index];
         var moduleURL = sourceURL + module + sufix;
-        var script = document.createElement("script");
+        var script = doc.createElement("script");
         script.src = moduleURL;
         
         script.onload = function() { 
@@ -570,14 +572,14 @@ function loadModules() {
                 script.onloadDone = true; 
                 loadModule(index+1);
             }
-        }
+        };
         
-        document.getElementsByTagName("head")[0].appendChild(script);
+        doc.getElementsByTagName("head")[0].appendChild(script);
     };
     loadModule(0);
     /**/
 
-    
+    /*
     for (var i=0, module; module=FBDev.modules[i]; i++)
     {
         var moduleURL = sourceURL + module + sufix;
@@ -588,17 +590,17 @@ function loadModules() {
         }
         else
         {
-            script = document.createElement("script");
+            script = doc.createElement("script");
             script.src = moduleURL;
             
-            document.getElementsByTagName("head")[0].appendChild(script);
-            //document.getElementsByTagName("body")[0].appendChild(script);
+            doc.getElementsByTagName("head")[0].appendChild(script);
+            //doc.getElementsByTagName("body")[0].appendChild(script);
         }
     }
     
     if(useDocWrite)
     {
-        document.write(scriptTags.join(""));
+        doc.write(scriptTags.join(""));
     }
     /**/
     
@@ -762,7 +764,7 @@ var isIE = navigator.userAgent.indexOf("MSIE") != -1;
 var isOpera = navigator.userAgent.indexOf("Opera") != -1;
 var isSafari = navigator.userAgent.indexOf("AppleWebKit") != -1;
 
-loadModules();
+loadModules(document);
 // ************************************************************************************************
 
 
