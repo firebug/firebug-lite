@@ -1,35 +1,42 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Issue 4472: [Firebug Lite] XHR.getAllResponseHeaders() doesn't work on IE</title>
+        <title>Issue 2846: [Firebug Lite] Offline XHR requests</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
         <script type="text/javascript" src="../../../fbtest/fbtest.js"></script>
         <script type="text/javascript">
         
-            FBTest.runTestOnLoad(function()
-            {
-                var callbackCalled = false;
-                var headers = "";
+            (function(){
                 
-                var console = FBTest.getConsoleObject();
-                console.clear();
+            var callbackCalled = false;
+            var responseText = null;
+                
+            // this test will run before Firebug UI finish to load
+            FBTest.runTest(function()
+            {
+                FBTest.ok(typeof Firebug == "object", "Firebug object exists before page load");
 
-                var consolePanelNode = FBTest.getPanel("Console").panelNode;
-
+                // we are testing here "offline" XHR Info messages, that is,
+                // XHR Info messages logged before Firebug UI finish to load                
                 var xhr = FBL.Ajax.getXHRObject();
-                xhr.open("GET", "issue4472.html", true);
+                xhr.open("GET", "test.txt", true);
                 
                 xhr.onreadystatechange = function()
                 {
                     if (xhr.readyState == 4 && xhr.status == 200)
                     {
-                        headers = xhr.getAllResponseHeaders();
+                        responseText = xhr.responseText;
                         callbackCalled = true;
                     }
                 };
-                
+
                 xhr.send();
-    
+            });
+            
+            FBTest.runTestOnLoad(function()
+            {
+                var consolePanelNode = FBTest.getPanel("Console").panelNode;
+                
                 FBTest.wait(
                     function()
                     {
@@ -40,15 +47,18 @@
                     },
                     function()
                     {
-                        FBTest.ok(headers.length > 0, "getAllResponseHeaders() returns the headers string");
-    
+                        FBTest.ok(callbackCalled, "callback function was properly called");
+                        FBTest.compare("OK", responseText, "responseText returns the proper value");
+                        
                         var logEntries = Firebug.Selector(".logRow-spy", consolePanelNode);
                         FBTest.compare(1, logEntries.length, "there is exactly one log entry");
+                        
                     }
                 );
 
             });
 
+            })();
         
         </script>        
         <link href="../../../fbtest/fbtest.css" type="text/css" rel="stylesheet"/>
@@ -56,7 +66,7 @@
     <body>
         <div id="main">
             <header>
-                <h1 id="qunit-header"><a href="http://code.google.com/p/fbug/issues/detail?id=4472">Issue 4472</a>: [Firebug Lite] XHR.getAllResponseHeaders() doesn't work on IE</h1>
+                <h1 id="qunit-header"><a href="http://code.google.com/p/fbug/issues/detail?id=2846">Issue 2846</a>: [Firebug Lite] Offline XHR requests</h1>
                 <h2 id="qunit-banner"></h2>
                 <div id="qunit-testrunner-toolbar"></div>
                 <h2 id="qunit-userAgent"></h2>
@@ -64,18 +74,15 @@
                 <div id="qunit-fixture">test markup</div>
             </header>
             <section id="description">
-                <!--
-                    The steps to reproduce the test case should be described here in detail.
-                 -->
                 <h3>Steps to reproduce</h3>
                 <ol>
-                    <li>Load Firebug Lite</li>
-                    <li>Execute a XHR request</li>
-                    <li>When the request is completed, call getAllResponseHeaders()</li>
+                    <li>Load Firebug Lite at the &lt;head&gt; of a page</li>
+                    <li>Execute a XHR also at the &lt;head&gt; of a page</li>
                 </ol>
                 <h3>Expected Result</h3>
                 <ul>
-                    <li>The getAllResponseHeaders() should return the proper headers string</li>
+                    <li>The XHR callback should be properly called</li>
+                    <li>The XHR reponseText should be the same as expected</li>
                     <li>There should be one log entry in the Console Panel</li>
                 </ul>
             </section>

@@ -1,6 +1,6 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/DTD/strict.dtd">
 <html>
     <head>
-        <script type="text/javascript" src="../../build/firebug-lite-debug.js"></script>
         <script type="text/javascript" src="../fbtest/fbtest.js"></script>
         <script type="text/javascript">
         
@@ -11,6 +11,8 @@
             // console messages logged before Firebug UI finish to load
             var console = FBTest.getConsoleObject();
             console.log("Test");
+            
+            FBTest.ok(typeof Firebug == "object", "Firebug object exists before page load");
         });
         
         // this test will run after Firebug UI finish to load

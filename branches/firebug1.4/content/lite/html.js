@@ -358,7 +358,13 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         if(!selectedElement)
         {
-            Firebug.HTML.selectTreeNode(ElementCache(Firebug.browser.document.body));
+            Firebug.context.persistedState.selectedHTMLElementId =
+                Firebug.context.persistedState.selectedHTMLElementId &&
+                ElementCache.get(Firebug.context.persistedState.selectedHTMLElementId) ?
+                Firebug.context.persistedState.selectedHTMLElementId :
+                ElementCache(Firebug.browser.document.body);
+            
+            Firebug.HTML.selectTreeNode(Firebug.context.persistedState.selectedHTMLElementId);
         }
         
         // TODO: xxxpedro
@@ -384,8 +390,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     reattach: function()
     {
         // TODO: panel reattach
-        if(FirebugChrome.selectedHTMLElementId)
-            Firebug.HTML.selectTreeNode(FirebugChrome.selectedHTMLElementId);
+        if(Firebug.context.persistedState.selectedHTMLElementId)
+            Firebug.HTML.selectTreeNode(Firebug.context.persistedState.selectedHTMLElementId);
     },
     
     updateSelection: function(object)
@@ -437,7 +443,7 @@ var selectElement= function selectElement(e)
         
         selectedElement = e;
         
-        FirebugChrome.selectedHTMLElementId = e.id;
+        Firebug.context.persistedState.selectedHTMLElementId = e.id;
         
         var target = ElementCache.get(e.id);
         var sidePanelBar = Firebug.chrome.getPanel("HTML").sidePanelBar;

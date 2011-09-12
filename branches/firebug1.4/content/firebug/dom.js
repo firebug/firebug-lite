@@ -1665,7 +1665,7 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         addEvent(this.panelNode, "click", this.onClick);
         
         // TODO: xxxpedro css2
-        var selection = ElementCache.get(FirebugChrome.selectedHTMLElementId);
+        var selection = ElementCache.get(Firebug.context.persistedState.selectedHTMLElementId);
         if (selection)
             this.select(selection, true);
     },

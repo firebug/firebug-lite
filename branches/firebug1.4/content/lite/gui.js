@@ -204,7 +204,7 @@ FBL.PanelBar =
             }
             
             if (!panel.parentPanel)
-                FirebugChrome.selectedPanelName = panelName;
+                Firebug.context.persistedState.selectedPanelName = panelName;
             
             this.selectedPanel = panel;
             

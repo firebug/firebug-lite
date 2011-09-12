@@ -1,35 +1,34 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Issue 4472: [Firebug Lite] XHR.getAllResponseHeaders() doesn't work on IE</title>
+        <title>Issue 3504: [Firebug lite] jQuery.ajax call fails in IE</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
         <script type="text/javascript" src="../../../fbtest/fbtest.js"></script>
         <script type="text/javascript">
         
             FBTest.runTestOnLoad(function()
             {
-                var callbackCalled = false;
-                var headers = "";
+                FBTest.loadScript("../../includes/jquery-1.6.2.min.js", false);
                 
                 var console = FBTest.getConsoleObject();
                 console.clear();
-
-                var consolePanelNode = FBTest.getPanel("Console").panelNode;
-
-                var xhr = FBL.Ajax.getXHRObject();
-                xhr.open("GET", "issue4472.html", true);
                 
-                xhr.onreadystatechange = function()
-                {
-                    if (xhr.readyState == 4 && xhr.status == 200)
-                    {
-                        headers = xhr.getAllResponseHeaders();
+                var consolePanelNode = FBTest.getPanel("Console").panelNode;
+                
+                var callbackCalled = false;
+                
+                var success = false;
+                
+                $.ajax({
+                    url: "test.txt",
+                    success: function() {
+                        success = true;
+                    },
+                    complete: function() {
                         callbackCalled = true;
                     }
-                };
-                
-                xhr.send();
-    
+                });
+        
                 FBTest.wait(
                     function()
                     {
@@ -40,10 +39,12 @@
                     },
                     function()
                     {
-                        FBTest.ok(headers.length > 0, "getAllResponseHeaders() returns the headers string");
-    
+                        FBTest.ok(callbackCalled, "callback function was properly called");
+                        FBTest.compare(true, success, "success variable equals to true");
+                        
                         var logEntries = Firebug.Selector(".logRow-spy", consolePanelNode);
                         FBTest.compare(1, logEntries.length, "there is exactly one log entry");
+                        
                     }
                 );
 
@@ -56,7 +57,7 @@
     <body>
         <div id="main">
             <header>
-                <h1 id="qunit-header"><a href="http://code.google.com/p/fbug/issues/detail?id=4472">Issue 4472</a>: [Firebug Lite] XHR.getAllResponseHeaders() doesn't work on IE</h1>
+                <h1 id="qunit-header"><a href="http://code.google.com/p/fbug/issues/detail?id=3504">Issue 3504</a>: [Firebug lite] jQuery.ajax call fails in IE</h1>
                 <h2 id="qunit-banner"></h2>
                 <div id="qunit-testrunner-toolbar"></div>
                 <h2 id="qunit-userAgent"></h2>
@@ -64,18 +65,28 @@
                 <div id="qunit-fixture">test markup</div>
             </header>
             <section id="description">
-                <!--
-                    The steps to reproduce the test case should be described here in detail.
-                 -->
                 <h3>Steps to reproduce</h3>
                 <ol>
                     <li>Load Firebug Lite</li>
-                    <li>Execute a XHR request</li>
-                    <li>When the request is completed, call getAllResponseHeaders()</li>
+                    <li>Load jQuery</li>
+                    <li>Execute the following code:</li>
                 </ol>
+                <pre>
+        var success = false;
+        
+        $.ajax({
+            url: "test.txt",
+            success: function() {
+                success = true;
+            },
+            complete: function() {
+                // success variable should hold the "true" value here
+            }
+        });
+                </pre>
                 <h3>Expected Result</h3>
                 <ul>
-                    <li>The getAllResponseHeaders() should return the proper headers string</li>
+                    <li>The success variable should hold the "true" value after the XHR completes</li>
                     <li>There should be one log entry in the Console Panel</li>
                 </ul>
             </section>

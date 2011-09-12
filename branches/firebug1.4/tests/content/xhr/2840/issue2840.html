@@ -1,35 +1,33 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Issue 4472: [Firebug Lite] XHR.getAllResponseHeaders() doesn't work on IE</title>
+        <title>Issue 2840: [Firebug Lite] Synchronous XHR requests</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
         <script type="text/javascript" src="../../../fbtest/fbtest.js"></script>
         <script type="text/javascript">
         
             FBTest.runTestOnLoad(function()
             {
+                FBTest.loadScript("../../includes/jquery-1.6.2.min.js", false);
+                
                 var callbackCalled = false;
-                var headers = "";
+                var responseText = null;
                 
                 var console = FBTest.getConsoleObject();
                 console.clear();
-
+                
                 var consolePanelNode = FBTest.getPanel("Console").panelNode;
-
-                var xhr = FBL.Ajax.getXHRObject();
-                xhr.open("GET", "issue4472.html", true);
                 
-                xhr.onreadystatechange = function()
-                {
-                    if (xhr.readyState == 4 && xhr.status == 200)
-                    {
-                        headers = xhr.getAllResponseHeaders();
-                        callbackCalled = true;
+                $.ajax({
+                    url: "test.txt",
+                    complete: function(req, status) {
+                        if (status == "success") {
+                            responseText = req.responseText;
+                            callbackCalled = true;
+                        }
                     }
-                };
-                
-                xhr.send();
-    
+                });
+        
                 FBTest.wait(
                     function()
                     {
@@ -40,10 +38,12 @@
                     },
                     function()
                     {
-                        FBTest.ok(headers.length > 0, "getAllResponseHeaders() returns the headers string");
-    
+                        FBTest.ok(callbackCalled, "callback function was properly called");
+                        FBTest.compare("OK", responseText, "responseText returns the proper value");
+                        
                         var logEntries = Firebug.Selector(".logRow-spy", consolePanelNode);
                         FBTest.compare(1, logEntries.length, "there is exactly one log entry");
+                        
                     }
                 );
 
@@ -56,7 +56,7 @@
     <body>
         <div id="main">
             <header>
-                <h1 id="qunit-header"><a href="http://code.google.com/p/fbug/issues/detail?id=4472">Issue 4472</a>: [Firebug Lite] XHR.getAllResponseHeaders() doesn't work on IE</h1>
+                <h1 id="qunit-header"><a href="http://code.google.com/p/fbug/issues/detail?id=2840">Issue 2840</a>: [Firebug Lite] Synchronous XHR requests</h1>
                 <h2 id="qunit-banner"></h2>
                 <div id="qunit-testrunner-toolbar"></div>
                 <h2 id="qunit-userAgent"></h2>
@@ -64,18 +64,26 @@
                 <div id="qunit-fixture">test markup</div>
             </header>
             <section id="description">
-                <!--
-                    The steps to reproduce the test case should be described here in detail.
-                 -->
                 <h3>Steps to reproduce</h3>
                 <ol>
                     <li>Load Firebug Lite</li>
-                    <li>Execute a XHR request</li>
-                    <li>When the request is completed, call getAllResponseHeaders()</li>
+                    <li>Load jQuery</li>
+                    <li>Execute the following code:</li>
                 </ol>
+                <pre>
+        $.ajax({
+            url: "test.txt",
+            complete: function(req, status) {
+                if (status == "success") {
+                    // this line should be executed
+                }
+            }
+        });
+                </pre>
                 <h3>Expected Result</h3>
                 <ul>
-                    <li>The getAllResponseHeaders() should return the proper headers string</li>
+                    <li>The marked line should be executed, that is, the "complete" callback 
+                    function should be called</li>
                     <li>There should be one log entry in the Console Panel</li>
                 </ul>
             </section>

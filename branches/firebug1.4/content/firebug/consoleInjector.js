@@ -61,16 +61,29 @@ Firebug.Console.injector =
         };
         
         var sandbox;
-        try
+        
+        if (win.console)
         {
-            // try overriding the console object
-            sandbox = new win.Function("arguments.callee.install(window.console={})");
+            if (Env.Options.overrideConsole)
+                sandbox = new win.Function("arguments.callee.install(window.firebug={})");
+            else
+                // if there's a console object and overrideConsole is false we should just quit
+                return;
         }
-        catch(E)
+        else
         {
-            // if something goes wrong create the firebug object instead
-            sandbox = new win.Function("arguments.callee.install(window.firebug={})");
+            try
+            {
+                // try overriding the console object
+                sandbox = new win.Function("arguments.callee.install(window.console={})");
+            }
+            catch(E)
+            {
+                // if something goes wrong create the firebug object instead
+                sandbox = new win.Function("arguments.callee.install(window.firebug={})");
+            }
         }
+        
         sandbox.install = installer;
         sandbox();
     },
@@ -819,12 +832,8 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
 
 FBL.registerConsole = function()
 {
-    //TODO: xxxpedro console options override
-    if (Env.Options.overrideConsole)
-    {
-        var win = Env.browser.window;
-        Firebug.Console.injector.install(win);
-    }
+    var win = Env.browser.window;
+    Firebug.Console.injector.install(win);
 };
 
 registerConsole();

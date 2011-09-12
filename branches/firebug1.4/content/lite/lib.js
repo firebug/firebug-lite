@@ -121,14 +121,10 @@ this.initialize = function()
         findLocation();
         
         // TODO: get preferences here...
-        var prefs = eval("(" + FBL.readCookie("FirebugLite") + ")");
-        if (prefs)
-        {
-            FBL.Env.Options.startOpened = prefs.startOpened;
-            FBL.Env.Options.enableTrace = prefs.enableTrace;
-            FBL.Env.Options.enablePersistent = prefs.enablePersistent;
-            FBL.Env.Options.disableXHRListener = prefs.disableXHRListener;
-        }
+        // The problem is that we don't have the Firebug object yet, so we can't use 
+        // Firebug.loadPrefs. We're using the Store module directly instead.
+        var prefs = FBL.Store.get("FirebugLite") || {};
+        FBL.append(FBL.Env.Options, prefs.options || {});
         
         if (FBL.isFirefox && 
             typeof FBL.Env.browser.console == "object" && 
@@ -174,8 +170,7 @@ this.initialize = function()
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
     // finish environment initialization
-
-    FBL.Firebug.loadPrefs(prefs);
+    FBL.Firebug.loadPrefs();
     
     if (FBL.Env.Options.enablePersistent)
     {
@@ -252,7 +247,7 @@ this.Env =
     // Env Options (will be transported to Firebug options)
     Options:
     {
-        saveCookies: false,
+        saveCookies: true,
     
         saveWindowPosition: false,
         saveCommandLineHistory: false,
@@ -325,10 +320,14 @@ var findLocation =  function findLocation()
     // Firebug Lite 1.3.0 bookmarklet identification
     var script = doc.getElementById("FirebugLite");
     
+    var scriptSrc;
+    var hasSrcAttribute = true;
+    
     // If the script was loaded via bookmarklet, we already have the script tag
     if (script)
     {
-        file = reFirebugFile.exec(script.src);
+        scriptSrc = script.src;
+        file = reFirebugFile.exec(scriptSrc);
         
         var version = script.getAttribute("FirebugLite");
         var number = version ? parseInt(version) : 0; 
@@ -344,8 +343,20 @@ var findLocation =  function findLocation()
         for(var i=0, s=doc.getElementsByTagName("script"), si; si=s[i]; i++)
         {
             var file = null;
-            if ( si.nodeName.toLowerCase() == "script" && (file = reFirebugFile.exec(si.src)) )
+            if ( si.nodeName.toLowerCase() == "script" )
             {
+                if (file = reFirebugFile.exec(si.getAttribute("firebugSrc")))
+                {
+                    scriptSrc = si.getAttribute("firebugSrc");
+                    hasSrcAttribute = false;
+                }
+                else if (file = reFirebugFile.exec(si.src))
+                {
+                    scriptSrc = si.src;
+                }
+                else
+                    continue;
+                
                 script = si;
                 break;
             }
@@ -362,15 +373,15 @@ var findLocation =  function findLocation()
         var fileOptions = file[2];
         
         // absolute path
-        if (reProtocol.test(script.src)) {
-            path = rePath.exec(script.src)[1];
+        if (reProtocol.test(scriptSrc)) {
+            path = rePath.exec(scriptSrc)[1];
           
         }
         // relative path
         else
         {
-            var r = rePath.exec(script.src);
-            var src = r ? r[1] : script.src;
+            var r = rePath.exec(scriptSrc);
+            var src = r ? r[1] : scriptSrc;
             var backDir = /^((?:\.\.\/)+)(.*)/.exec(src);
             var reLastDir = /^(.*\/)[^\/]+\/$/;
             path = rePath.exec(location.href)[1];
@@ -495,29 +506,35 @@ var findLocation =  function findLocation()
         }
         
         // process the Script JSON Options
-        var innerOptions = FBL.trim(script.innerHTML);
-        if (innerOptions)
+        if (hasSrcAttribute)
         {
-            var innerOptionsObject = eval("(" + innerOptions + ")");
-            
-            for (var name in innerOptionsObject)
+            var innerOptions = FBL.trim(script.innerHTML);
+            if (innerOptions)
             {
-                var value = innerOptionsObject[name];
+                var innerOptionsObject = eval("(" + innerOptions + ")");
                 
-                if (name == "debug")
+                for (var name in innerOptionsObject)
                 {
-                    Env.isDebugMode = !!value;
-                }
-                else if (name in Env.Options)
-                {
-                    Env.Options[name] = value;
-                }
-                else
-                {
-                    Env[name] = value;
+                    var value = innerOptionsObject[name];
+                    
+                    if (name == "debug")
+                    {
+                        Env.isDebugMode = !!value;
+                    }
+                    else if (name in Env.Options)
+                    {
+                        Env.Options[name] = value;
+                    }
+                    else
+                    {
+                        Env[name] = value;
+                    }
                 }
             }
         }
+        
+        if (!Env.Options.saveCookies)
+            FBL.Store.remove("FirebugLite");
         
         // process the Debug Mode
         if (Env.isDebugMode)
