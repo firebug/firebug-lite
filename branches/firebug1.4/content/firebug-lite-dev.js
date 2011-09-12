@@ -58,6 +58,9 @@ window.FBDev =
         "lite/lite/script.js", // experimental
         "lite/lite/browser.js", // experimental
         
+        "lite/store/json.js",
+        "lite/store/store.js",
+        
         // ****************************************************************************************
         // Firebug Classes
         
@@ -447,70 +450,110 @@ window.FBDev =
 
 function findLocation() 
 {
-    var reFirebugFile = /(firebug-lite(?:-\w+)?\.js)(#.+)?$/;
+    var reFirebugFile = /(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    var reGetFirebugSite = /(?:http|https):\/\/getfirebug.com\//;
+    var isGetFirebugSite;
+    
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
-    
-    var head = document.getElementsByTagName("head")[0];
-    
     var path = null;
+    var doc = document;
     
-    for(var i=0, c=document.getElementsByTagName("script"), ci; ci=c[i]; i++)
+    // Firebug Lite 1.3.0 bookmarklet identification
+    var script = doc.getElementById("FirebugLite");
+    
+    var scriptSrc;
+    
+    // If the script was loaded via bookmarklet, we already have the script tag
+    if (script)
     {
-        var file = null;
-        if ( ci.nodeName.toLowerCase() == "script" && 
-             (file = reFirebugFile.exec(ci.src)) )
+        scriptSrc = script.src;
+        file = reFirebugFile.exec(scriptSrc);
+        
+        var version = script.getAttribute("FirebugLite");
+        var number = version ? parseInt(version) : 0; 
+        
+        if (!version || !number || number < bookmarkletVersion)
         {
-            
-            var fileName = file[1];
-            var fileOptions = file[2];
-            
-            if (reProtocol.test(ci.src)) {
-                // absolute path
-                path = rePath.exec(ci.src)[1];
-              
-            }
-            else
+            FBL.Env.bookmarkletOutdated = true;
+        }
+    }
+    // otherwise we must search for the correct script tag
+    else
+    {
+        for(var i=0, s=doc.getElementsByTagName("script"), si; si=s[i]; i++)
+        {
+            var file = null;
+            if ( si.nodeName.toLowerCase() == "script" )
             {
-                // relative path
-                var r = rePath.exec(ci.src);
-                var src = r ? r[1] : ci.src;
-                var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
-                path = rePath.exec(location.href)[1];
+                if (file = reFirebugFile.exec(si.getAttribute("firebugSrc")))
+                    scriptSrc = si.getAttribute("firebugSrc");
                 
-                if (rel)
-                {
-                    var lastFolder = /^(.*\/)[^\/]+\/$/;
-                    
-                    var j = rel[1].length/3;
-                    var p;
-                    while (j-- > 0)
-                        path = lastFolder.exec(path)[1];
+                else if (file = reFirebugFile.exec(si.src))
+                    scriptSrc = si.src;
+                
+                else
+                    continue;
+                
+                script = si;
+                break;
+            }
+        }
+    }
 
-                    path += rel[2];
-                }
-                else if(src.indexOf("/") != -1)
-                {
-                    // "./some/path"
-                    if(/^\.\/./.test(src))
-                    {
-                        path += src.substring(2);
-                    }
-                    // "/some/path"
-                    else if(/^\/./.test(src))
-                    {
-                        var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
-                        path = domain[1] + src;
-                    }
-                    // "some/path"
-                    else
-                    {
-                        path += src;
-                    }
-                }
+    // mark the script tag to be ignored by Firebug Lite
+    if (script)
+        script.firebugIgnore = true;
+    
+    if (file)
+    {
+        var fileName = file[1];
+        var fileOptions = file[2];
+        
+        // absolute path
+        if (reProtocol.test(scriptSrc)) {
+            path = rePath.exec(scriptSrc)[1];
+          
+        }
+        // relative path
+        else
+        {
+            var r = rePath.exec(scriptSrc);
+            var src = r ? r[1] : scriptSrc;
+            var backDir = /^((?:\.\.\/)+)(.*)/.exec(src);
+            var reLastDir = /^(.*\/)[^\/]+\/$/;
+            path = rePath.exec(location.href)[1];
+            
+            // "../some/path"
+            if (backDir)
+            {
+                var j = backDir[1].length/3;
+                var p;
+                while (j-- > 0)
+                    path = reLastDir.exec(path)[1];
+
+                path += backDir[2];
             }
             
-            break;
+            else if(src.indexOf("/") != -1)
+            {
+                // "./some/path"
+                if(/^\.\/./.test(src))
+                {
+                    path += src.substring(2);
+                }
+                // "/some/path"
+                else if(/^\/./.test(src))
+                {
+                    var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
+                    path = domain[1] + src;
+                }
+                // "some/path"
+                else
+                {
+                    path += src;
+                }
+            }
         }
     }
 
