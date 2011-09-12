@@ -83,8 +83,19 @@ Firebug.Lite.Proxy =
 
 // ************************************************************************************************
 
+Firebug.Lite.Proxy.fetchResourceDisabledMessage = 
+    "/* Firebug Lite resource fetching is disabled.\n" +
+    "To enabled it set the Firebug Lite option \"disableResourceFetching\" to \"false\".\n" +
+    "More info at http://getfirebug.com/firebuglite#Options */";
+
 var fetchResource = function(url)
 {
+    if (Firebug.disableResourceFetching)
+    {
+        var source = sourceMap[url] = Firebug.Lite.Proxy.fetchResourceDisabledMessage;
+        return source;
+    }
+
     if (sourceMap.hasOwnProperty(url))
         return sourceMap[url];
 

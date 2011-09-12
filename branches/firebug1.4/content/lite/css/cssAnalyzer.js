@@ -238,8 +238,8 @@ var processStyleSheet = function(doc, styleSheet)
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // CSS Parser
-    var hasCSSParser = typeof CssParser != "undefined";
-    if (hasCSSParser)
+    var shouldParseCSS = typeof CssParser != "undefined" && !Firebug.disableResourceFetching;
+    if (shouldParseCSS)
     {
         var parsedRules = CssAnalyzer.parseStyleSheet(href); 
         var parsedRulesIndex = 0;
@@ -270,7 +270,7 @@ var processStyleSheet = function(doc, styleSheet)
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // CSS Parser
-        if (hasCSSParser)
+        if (shouldParseCSS)
         {
             var parsedRule = parsedRules[parsedRulesIndex];
             var parsedSelector = parsedRule.selector;
