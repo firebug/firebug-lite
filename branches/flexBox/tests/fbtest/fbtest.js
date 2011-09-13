@@ -1547,7 +1547,9 @@ QUnit.diff = (function() {
         this.done = done || this.done;
         var that = this;
         window.onload = function() {
-            that.runPage();
+            setTimeout(function(){
+                that.runPage();
+            },0);
         };
     };
 
@@ -2309,7 +2311,15 @@ QUnit.diff = (function() {
         
         return getTestBaseLocation() + "testlists/" + testListMap[testList];
     }
-    
+
+    function toArray(obj) {
+      var array = [];
+      for (var i=0,l=obj.length; i<l; i++)
+        array[i] = obj[i];
+
+      return array;
+    }
+
     function loadFBTest() {
         
         var banner = FBTest.id("qunit-header");
@@ -2355,16 +2365,23 @@ QUnit.diff = (function() {
             
             banner.parentNode.insertBefore(div, banner.nextSibling);
             
-            FBTest.addEvent(div, "change", function( event )
+            var inputs = toArray(document.getElementsByTagName("input")); 
+            inputs = inputs.concat(toArray(document.getElementsByTagName("select")));
+            for (var i=0,l=inputs.length; i<l; i++)
             {
-                event = event || window.event;
-                var target = event.target || event.srcElement;
+                var input = inputs[i];
                 
-                if (target.type == "checkbox")
-                    QUnit.urlParams[ target.name ] = target.checked ? "true" : "false";
-                else
-                    QUnit.urlParams[ target.name ] = target.value;
-            });
+                FBTest.addEvent(input, "change", function( event )
+                {
+                    event = event || window.event;
+                    var target = event.target || event.srcElement;
+                    
+                    if (target.type == "checkbox")
+                        QUnit.urlParams[ target.name ] = target.checked ? "true" : "false";
+                    else
+                        QUnit.urlParams[ target.name ] = target.value;
+                });
+            }
             
             var runButton = FBTest.id("fbtest-run");
             FBTest.addEvent(runButton, "click", function( event ) {
