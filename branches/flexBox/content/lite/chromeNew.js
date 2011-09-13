@@ -169,6 +169,8 @@ var createChromeWindow = function(options)
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Locals
 
+    var browserWin = Env.browser.window;
+    var browserContext = new Context(browserWin);
     var prefs = Store.get("FirebugLite");
     var persistedState = prefs && prefs.persistedState || defaultPersistedState;
     
@@ -198,8 +200,6 @@ var createChromeWindow = function(options)
                 node.firebugIgnore = true;
             }
             
-            var browserWin = Env.browser.window;
-            var browserContext = new Context(browserWin);
             var browserWinSize = browserContext.getWindowSize();
             var height = persistedState.height || 300;
             
@@ -315,8 +315,7 @@ var createChromeWindow = function(options)
         else
         {
             var height = persistedState.popupHeight || 300;
-            var browserWin = Firebug.context.window;
-            var browserWinSize = Firebug.context.getWindowSize();
+            var browserWinSize = browserContext.getWindowSize();
             
             var browserWinLeft = typeof browserWin.screenX == "number" ? 
                     browserWin.screenX : browserWin.screenLeft;
