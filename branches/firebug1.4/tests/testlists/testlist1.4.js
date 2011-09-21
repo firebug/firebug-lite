@@ -1,4 +1,7 @@
 FBTest.loadTestList([
+    /* Firebug */
+    { page: "content/firebug/4239/issue4239.html" },
+    
     /* XHR */
     { page: "content/xhr/2756/issue2756.html" },
     { page: "content/xhr/2840/issue2840.html" },
