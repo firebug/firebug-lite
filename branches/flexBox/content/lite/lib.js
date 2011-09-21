@@ -1,6 +1,6 @@
 /*!*************************************************************
  *
- *    Firebug Lite 1.5.0-flex-a1
+ *    Firebug Lite 1.5.0-flex
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.

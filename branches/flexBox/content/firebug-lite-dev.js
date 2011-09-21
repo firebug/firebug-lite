@@ -17,8 +17,8 @@ if (window.Firebug)
 var bookmarkletMode = true;
 
 //var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // stable
-var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
-//var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
+//var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
+var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/"; // developer
 //var bookmarkletSkinURL = "chrome-extension://bmagokdooijbeehmkpknfglimnifench/skin/xp/"; // chrome extension
 //var bookmarkletSkinURL = "chrome-extension://mdaojmoeahmmokaflgbannaopagamgoj/skin/xp/"; // chrome beta extension
 
