@@ -1,4 +1,86 @@
 ###################################################################################################
+ 1.4.0 - 2011-09-xx - Revision: xxxx
+###################################################################################################
+
+Overview:
+    Issue 4776: [Firebug lite] CSS Media Types
+    Issue 4777: [Firebug lite] Specificity of CSS Rules
+    Issue 3760: [Firebug lite] CommandLine throws syntax error if there's a comment in the expression
+    Issue 3326: [Firebug lite] CSS Rule Line Number
+    Issue 3262: [Firebug Lite] CSS specificity is not being calculated properly
+    Issue 4239: [Firebug Lite] Using ie7-js library crashes IE8
+    
+-------------------------------------------------------------------------------
+CSS
+-------------------------------------------------------------------------------
+
+    - cssAnalyzer code refactored
+    - cssParser (powered by sergeche's Simple CSS Parser https://github.com/sergeche/webkit-css)
+
+-------------------------------------------------------------------------------
+XHR
+-------------------------------------------------------------------------------
+    - XHR calls made by Firebug Lite internally are not visible in the Console log anymore
+    - added FBL.getNativeXHRObject()
+    
+-------------------------------------------------------------------------------
+Other
+-------------------------------------------------------------------------------
+    - Store module (powered by marcuswestin's library https://github.com/marcuswestin/store.js)
+    
+    - console injection fallback now works as expected, creating a "firebug" object when there's 
+      a "console" object already and overrideConsole option is set to false.
+
+    - jsonViewer will not try to evaluate the contents of the requested file if the content-type
+      is set to "text/plain" 
+
+    - new getLocation() function
+    - better expression evaluation
+
+-------------------------------------------------------------------------------
+FBTest
+-------------------------------------------------------------------------------
+    - more robust Unit Test Framework
+    - updated QUnit to the latest version
+    - FBTest.click() now works in IE
+    - FBTest.getPanel() now returns also Side Panels
+    - updated Test Cases to use Sebastian's template
+    - Firebug Lite script is automatically inserted by the Test Runner, allowing you to easily
+      test the same file against different versions
+      
+   - Improvements in the Test Runner
+            - included total number of tests passed and failed, and total execution time
+            - included link to run the test page again
+            - included link to open the test page it in another tab
+            - included link to view the test page in fullscreen mode
+            - improved the progress output of the tests, including the title of that test (if any
+              is found in the document.title)
+
+    - new Test Runner Toolbar:
+            - allows selecting different Test Lists
+            - allows selecting different builds given the Version/Channel/Mode    
+
+    - Properties added to FBTest
+            - config
+            - delayDuration
+            - waitInterval
+            - waitTimeout
+
+    - Methods added to FBTest
+            - FBTest.triggerEvent()
+            - FBTest.getXHRObject()
+            - FBTest.loadScript()
+            - FBTest.installFirebug()
+            - FBTest.getFirebugConfig()
+            - FBTest.getFirebugLocation()
+            - FBTest.getTestListLocation()
+            - FBTest.loadTestList()
+            - FBTest.getURLParamaters()
+            - FBTest.delay()
+            - FBTest.wait()
+
+
+###################################################################################################
  1.4.0b1 - 2011-08-18 - Revision: 11337
 ###################################################################################################
 
