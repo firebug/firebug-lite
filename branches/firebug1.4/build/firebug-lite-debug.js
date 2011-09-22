@@ -22,7 +22,7 @@
 /** @namespace describe lib */
 
 // FIXME: xxxpedro if we use "var FBL = {}" the FBL won't appear in the DOM Panel in IE 
-window.FBL = {};
+var FBL = {};
 
 ( /** @scope s_lib @this FBL */ function() {
 // ************************************************************************************************
@@ -6259,7 +6259,7 @@ FBL.Firebug =
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version:  "Firebug Lite 1.4.0",
     revision: "$Revision$",
-    
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,

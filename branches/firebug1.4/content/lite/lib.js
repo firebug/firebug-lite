@@ -20,7 +20,7 @@
 /** @namespace describe lib */
 
 // FIXME: xxxpedro if we use "var FBL = {}" the FBL won't appear in the DOM Panel in IE 
-window.FBL = {};
+var FBL = {};
 
 ( /** @scope s_lib @this FBL */ function() {
 // ************************************************************************************************

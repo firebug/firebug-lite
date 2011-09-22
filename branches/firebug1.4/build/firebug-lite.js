@@ -16,7 +16,7 @@
  *  Released under the MIT, BSD, and GPL Licenses.
  *  More information: http://sizzlejs.com/
  */
-window.FBL={};
+var FBL={};
 (function(){var productionDir="http://getfirebug.com/releases/lite/";
 var bookmarkletVersion=4;
 var reNotWhitespace=/[^\s]/;
