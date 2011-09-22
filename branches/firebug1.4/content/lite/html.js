@@ -441,6 +441,8 @@ var selectElement= function selectElement(e)
         else if (FBL.isSafari)
             e.style.WebkitBorderRadius = "2px";
         
+        e.style.borderRadius = "2px";
+
         selectedElement = e;
         
         Firebug.context.persistedState.selectedHTMLElementId = e.id;

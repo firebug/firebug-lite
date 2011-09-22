@@ -1,7 +1,7 @@
 (function(){
 /**************************************************************
  *
- *    Firebug Lite 1.4.0b1
+ *    Firebug Lite 1.4.0
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -43,8 +43,7 @@ var FBTrace=null;
 this.initialize=function(){if(window.firebug&&firebug.firebuglite||window.console&&console.firebuglite){return
 }if(FBL.FBTrace){FBTrace=FBL.FBTrace
 }else{FBTrace=FBL.FBTrace={}
-}FBL.Ajax.initialize();
-var isChromeContext=window.Firebug&&typeof window.Firebug.SharedEnv=="object";
+}var isChromeContext=window.Firebug&&typeof window.Firebug.SharedEnv=="object";
 if(isChromeContext){sharedEnv=window.Firebug.SharedEnv;
 delete window.Firebug.SharedEnv;
 FBL.Env=sharedEnv;
@@ -55,12 +54,10 @@ FBL.Env.browser=window;
 FBL.Env.destroy=destroyEnvironment;
 if(document.documentElement.getAttribute("debug")=="true"){FBL.Env.Options.startOpened=true
 }findLocation();
-var prefs=eval("("+FBL.readCookie("FirebugLite")+")");
-if(prefs){FBL.Env.Options.startOpened=prefs.startOpened;
-FBL.Env.Options.enableTrace=prefs.enableTrace;
-FBL.Env.Options.enablePersistent=prefs.enablePersistent;
-FBL.Env.Options.disableXHRListener=prefs.disableXHRListener
-}if(FBL.isFirefox&&typeof FBL.Env.browser.console=="object"&&FBL.Env.browser.console.firebug&&FBL.Env.Options.disableWhenFirebugActive){return
+var prefs=FBL.Store.get("FirebugLite")||{};
+FBL.Env.DefaultOptions=FBL.Env.Options;
+FBL.Env.Options=FBL.extend(FBL.Env.Options,prefs.options||{});
+if(FBL.isFirefox&&typeof FBL.Env.browser.console=="object"&&FBL.Env.browser.console.firebug&&FBL.Env.Options.disableWhenFirebugActive){return
 }}if(FBL.Env.isDebugMode){FBL.Env.browser.FBL=FBL
 }this.isQuiksMode=FBL.Env.browser.document.compatMode=="BackCompat";
 this.isIEQuiksMode=this.isIE&&this.isQuiksMode;
@@ -76,7 +73,8 @@ var ns=namespaces[i+1];
 fn.apply(ns)
 }if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("FBL.initialize",namespaces.length/2+" namespaces END");
 FBTrace.sysout("FBL waitForDocument","waiting document load")
-}FBL.Firebug.loadPrefs(prefs);
+}FBL.Ajax.initialize();
+FBL.Firebug.loadPrefs();
 if(FBL.Env.Options.enablePersistent){if(isChromeContext){FBL.FirebugChrome.clone(FBL.Env.FirebugChrome)
 }else{FBL.Env.FirebugChrome=FBL.FirebugChrome;
 FBL.Env.traceMessageQueue=FBTrace.messageQueue
@@ -96,7 +94,7 @@ sharedEnv=null
 }}else{FBL.FirebugChrome.create()
 }};
 var sharedEnv;
-this.Env={Options:{saveCookies:false,saveWindowPosition:false,saveCommandLineHistory:false,startOpened:false,startInNewWindow:false,showIconWhenHidden:true,overrideConsole:true,ignoreFirebugElements:true,disableWhenFirebugActive:true,disableXHRListener:false,enableTrace:false,enablePersistent:false},Location:{sourceDir:null,baseDir:null,skinDir:null,skin:null,app:null},skin:"xp",useLocalSkin:false,isDevelopmentMode:false,isDebugMode:false,isChromeContext:false,browser:null,chrome:null};
+this.Env={Options:{saveCookies:true,saveWindowPosition:false,saveCommandLineHistory:false,startOpened:false,startInNewWindow:false,showIconWhenHidden:true,overrideConsole:true,ignoreFirebugElements:true,disableWhenFirebugActive:true,disableXHRListener:false,disableResourceFetching:false,enableTrace:false,enablePersistent:false},Location:{sourceDir:null,baseDir:null,skinDir:null,skin:null,app:null},skin:"xp",useLocalSkin:false,isDevelopmentMode:false,isDebugMode:false,isChromeContext:false,browser:null,chrome:null};
 var destroyEnvironment=function destroyEnvironment(){setTimeout(function(){FBL=null
 },100)
 };
@@ -108,21 +106,28 @@ var reProtocol=/^\w+:\/\//;
 var path=null;
 var doc=document;
 var script=doc.getElementById("FirebugLite");
-if(script){file=reFirebugFile.exec(script.src);
+var scriptSrc;
+var hasSrcAttribute=true;
+if(script){scriptSrc=script.src;
+file=reFirebugFile.exec(scriptSrc);
 var version=script.getAttribute("FirebugLite");
 var number=version?parseInt(version):0;
 if(!version||!number||number<bookmarkletVersion){FBL.Env.bookmarkletOutdated=true
 }}else{for(var i=0,s=doc.getElementsByTagName("script"),si;
 si=s[i];
 i++){var file=null;
-if(si.nodeName.toLowerCase()=="script"&&(file=reFirebugFile.exec(si.src))){script=si;
+if(si.nodeName.toLowerCase()=="script"){if(file=reFirebugFile.exec(si.getAttribute("firebugSrc"))){scriptSrc=si.getAttribute("firebugSrc");
+hasSrcAttribute=false
+}else{if(file=reFirebugFile.exec(si.src)){scriptSrc=si.src
+}else{continue
+}}script=si;
 break
 }}}if(script){script.firebugIgnore=true
 }if(file){var fileName=file[1];
 var fileOptions=file[2];
-if(reProtocol.test(script.src)){path=rePath.exec(script.src)[1]
-}else{var r=rePath.exec(script.src);
-var src=r?r[1]:script.src;
+if(reProtocol.test(scriptSrc)){path=rePath.exec(scriptSrc)[1]
+}else{var r=rePath.exec(scriptSrc);
+var src=r?r[1]:scriptSrc;
 var backDir=/^((?:\.\.\/)+)(.*)/.exec(src);
 var reLastDir=/^(.*\/)[^\/]+\/$/;
 path=rePath.exec(location.href)[1];
@@ -160,13 +165,14 @@ value=true
 }if(name=="debug"){Env.isDebugMode=!!value
 }else{if(name in Env.Options){Env.Options[name]=value
 }else{Env[name]=value
-}}}}var innerOptions=FBL.trim(script.innerHTML);
+}}}}if(hasSrcAttribute){var innerOptions=FBL.trim(script.innerHTML);
 if(innerOptions){var innerOptionsObject=eval("("+innerOptions+")");
 for(var name in innerOptionsObject){var value=innerOptionsObject[name];
 if(name=="debug"){Env.isDebugMode=!!value
 }else{if(name in Env.Options){Env.Options[name]=value
 }else{Env[name]=value
-}}}}if(Env.isDebugMode){Env.Options.startOpened=true;
+}}}}}if(!Env.Options.saveCookies){FBL.Store.remove("FirebugLite")
+}if(Env.isDebugMode){Env.Options.startOpened=true;
 Env.Options.enableTrace=true;
 Env.Options.disableWhenFirebugActive=false
 }var loc=Env.Location;
@@ -1345,7 +1351,7 @@ this.innerEditableTags={BODY:1,body:1};
 this.selfClosingTags={meta:1,link:1,area:1,base:1,col:1,input:1,img:1,br:1,hr:1,param:1,embed:1};
 var invisibleTags=this.invisibleTags={HTML:1,HEAD:1,TITLE:1,META:1,LINK:1,STYLE:1,SCRIPT:1,NOSCRIPT:1,BR:1,PARAM:1,COL:1,html:1,head:1,title:1,meta:1,link:1,style:1,script:1,noscript:1,br:1,param:1,col:1};
 if(typeof KeyEvent=="undefined"){this.KeyEvent={DOM_VK_CANCEL:3,DOM_VK_HELP:6,DOM_VK_BACK_SPACE:8,DOM_VK_TAB:9,DOM_VK_CLEAR:12,DOM_VK_RETURN:13,DOM_VK_ENTER:14,DOM_VK_SHIFT:16,DOM_VK_CONTROL:17,DOM_VK_ALT:18,DOM_VK_PAUSE:19,DOM_VK_CAPS_LOCK:20,DOM_VK_ESCAPE:27,DOM_VK_SPACE:32,DOM_VK_PAGE_UP:33,DOM_VK_PAGE_DOWN:34,DOM_VK_END:35,DOM_VK_HOME:36,DOM_VK_LEFT:37,DOM_VK_UP:38,DOM_VK_RIGHT:39,DOM_VK_DOWN:40,DOM_VK_PRINTSCREEN:44,DOM_VK_INSERT:45,DOM_VK_DELETE:46,DOM_VK_0:48,DOM_VK_1:49,DOM_VK_2:50,DOM_VK_3:51,DOM_VK_4:52,DOM_VK_5:53,DOM_VK_6:54,DOM_VK_7:55,DOM_VK_8:56,DOM_VK_9:57,DOM_VK_SEMICOLON:59,DOM_VK_EQUALS:61,DOM_VK_A:65,DOM_VK_B:66,DOM_VK_C:67,DOM_VK_D:68,DOM_VK_E:69,DOM_VK_F:70,DOM_VK_G:71,DOM_VK_H:72,DOM_VK_I:73,DOM_VK_J:74,DOM_VK_K:75,DOM_VK_L:76,DOM_VK_M:77,DOM_VK_N:78,DOM_VK_O:79,DOM_VK_P:80,DOM_VK_Q:81,DOM_VK_R:82,DOM_VK_S:83,DOM_VK_T:84,DOM_VK_U:85,DOM_VK_V:86,DOM_VK_W:87,DOM_VK_X:88,DOM_VK_Y:89,DOM_VK_Z:90,DOM_VK_CONTEXT_MENU:93,DOM_VK_NUMPAD0:96,DOM_VK_NUMPAD1:97,DOM_VK_NUMPAD2:98,DOM_VK_NUMPAD3:99,DOM_VK_NUMPAD4:100,DOM_VK_NUMPAD5:101,DOM_VK_NUMPAD6:102,DOM_VK_NUMPAD7:103,DOM_VK_NUMPAD8:104,DOM_VK_NUMPAD9:105,DOM_VK_MULTIPLY:106,DOM_VK_ADD:107,DOM_VK_SEPARATOR:108,DOM_VK_SUBTRACT:109,DOM_VK_DECIMAL:110,DOM_VK_DIVIDE:111,DOM_VK_F1:112,DOM_VK_F2:113,DOM_VK_F3:114,DOM_VK_F4:115,DOM_VK_F5:116,DOM_VK_F6:117,DOM_VK_F7:118,DOM_VK_F8:119,DOM_VK_F9:120,DOM_VK_F10:121,DOM_VK_F11:122,DOM_VK_F12:123,DOM_VK_F13:124,DOM_VK_F14:125,DOM_VK_F15:126,DOM_VK_F16:127,DOM_VK_F17:128,DOM_VK_F18:129,DOM_VK_F19:130,DOM_VK_F20:131,DOM_VK_F21:132,DOM_VK_F22:133,DOM_VK_F23:134,DOM_VK_F24:135,DOM_VK_NUM_LOCK:144,DOM_VK_SCROLL_LOCK:145,DOM_VK_COMMA:188,DOM_VK_PERIOD:190,DOM_VK_SLASH:191,DOM_VK_BACK_QUOTE:192,DOM_VK_OPEN_BRACKET:219,DOM_VK_BACK_SLASH:220,DOM_VK_CLOSE_BRACKET:221,DOM_VK_QUOTE:222,DOM_VK_META:224}
-}this.Ajax={requests:[],transport:null,states:["Uninitialized","Loading","Loaded","Interactive","Complete"],initialize:function(){this.transport=this.getXHRObject()
+}this.Ajax={requests:[],transport:null,states:["Uninitialized","Loading","Loaded","Interactive","Complete"],initialize:function(){this.transport=FBL.getNativeXHRObject()
 },getXHRObject:function(){var xhrObj=false;
 try{xhrObj=new XMLHttpRequest()
 }catch(e){var progid=["MSXML2.XMLHTTP.5.0","MSXML2.XMLHTTP.4.0","MSXML2.XMLHTTP.3.0","MSXML2.XMLHTTP","Microsoft.XMLHTTP"];
@@ -1489,18 +1495,22 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-FBL.Firebug={version:"Firebug Lite 1.4.0b1",revision:"$Revision$",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+FBL.Firebug={version:"Firebug Lite 1.4.0",revision:"$Revision$",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
+Firebug.loadPrefs();
+Firebug.context.persistedState.isOpen=false;
 cacheDocument();
 if(Firebug.Inspector&&Firebug.Inspector.create){Firebug.Inspector.create()
-}if(FBL.processAllStyleSheets){processAllStyleSheets(Firebug.browser.document)
+}if(FBL.CssAnalyzer&&FBL.CssAnalyzer.processAllStyleSheets){FBL.CssAnalyzer.processAllStyleSheets(Firebug.browser.document)
 }FirebugChrome.initialize();
 dispatch(modules,"initialize",[]);
-if(Env.onLoad){var onLoad=Env.onLoad;
+if(Firebug.disableResourceFetching){Firebug.Console.logFormatted(['Some Firebug Lite features are not working because resource fetching is disabled. To enabled it set the Firebug Lite option "disableResourceFetching" to "false". More info at http://getfirebug.com/firebuglite#Options'],Firebug.context,"warn")
+}if(Env.onLoad){var onLoad=Env.onLoad;
 delete Env.onLoad;
 setTimeout(onLoad,200)
-}},shutdown:function(){if(Firebug.Inspector){Firebug.Inspector.destroy()
+}},shutdown:function(){if(Firebug.saveCookies){Firebug.savePrefs()
+}if(Firebug.Inspector){Firebug.Inspector.destroy()
 }dispatch(modules,"shutdown",[]);
 var chromeMap=FirebugChrome.chromeMap;
 for(var name in chromeMap){if(chromeMap.hasOwnProperty(name)){try{chromeMap[name].destroy()
@@ -1549,30 +1559,27 @@ child;
 child=child.nextSibling){if(child.repObject==object){return child
 }}},getPref:function(name){return Firebug[name]
 },setPref:function(name,value){Firebug[name]=value;
-this.savePrefs()
+Firebug.savePrefs()
 },setPrefs:function(prefs){for(var name in prefs){if(prefs.hasOwnProperty(name)){Firebug[name]=prefs[name]
-}}this.savePrefs()
-},restorePrefs:function(){var Options=Env.Options;
+}}Firebug.savePrefs()
+},restorePrefs:function(){var Options=Env.DefaultOptions;
 for(var name in Options){Firebug[name]=Options[name]
-}},loadPrefs:function(prefs){this.restorePrefs();
-prefs=prefs||eval("("+readCookie("FirebugLite")+")");
-for(var name in prefs){if(prefs.hasOwnProperty(name)){Firebug[name]=prefs[name]
-}}},savePrefs:function(){var json=["{"],jl=0;
-var Options=Env.Options;
-for(var name in Options){if(Options.hasOwnProperty(name)){var value=Firebug[name];
-json[++jl]='"';
-json[++jl]=name;
-var type=typeof value;
-if(type=="boolean"||type=="number"){json[++jl]='":';
-json[++jl]=value;
-json[++jl]=","
-}else{json[++jl]='":"';
-json[++jl]=value;
-json[++jl]='",'
-}}}json.length=jl--;
-json[++jl]="}";
-createCookie("FirebugLite",json.join(""))
-},erasePrefs:function(){removeCookie("FirebugLite")
+}},loadPrefs:function(){this.restorePrefs();
+var prefs=Store.get("FirebugLite")||{};
+var options=prefs.options;
+var persistedState=prefs.persistedState||FBL.defaultPersistedState;
+for(var name in options){if(options.hasOwnProperty(name)){Firebug[name]=options[name]
+}}if(Firebug.context&&persistedState){Firebug.context.persistedState=persistedState
+}},savePrefs:function(){var prefs={options:{}};
+var EnvOptions=Env.Options;
+var options=prefs.options;
+for(var name in EnvOptions){if(EnvOptions.hasOwnProperty(name)){options[name]=Firebug[name]
+}}var persistedState=Firebug.context.persistedState;
+if(!persistedState){persistedState=Firebug.context.persistedState=FBL.defaultPersistedState
+}prefs.persistedState=persistedState;
+Store.set("FirebugLite",prefs)
+},erasePrefs:function(){Store.remove("FirebugLite");
+this.restorePrefs()
 }};
 Firebug.restorePrefs();
 window.Firebug=FBL.Firebug;
@@ -1654,7 +1661,7 @@ if(Firebug.InfoTip){Firebug.InfoTip.initializeBrowser(Firebug.chrome)
 }if(Firebug.chrome.largeCommandLineVisible){Firebug.chrome.hideLargeCommandLine()
 }if(this.hasSidePanel){}this.lastScrollTop=this.containerNode.scrollTop;
 removeEvent(this.containerNode,"contextmenu",this.onContextMenu)
-},detach:function(oldChrome,newChrome){if(oldChrome.selectedPanel.name==this.name){this.lastScrollTop=oldChrome.selectedPanel.containerNode.scrollTop
+},detach:function(oldChrome,newChrome){if(oldChrome&&oldChrome.selectedPanel&&oldChrome.selectedPanel.name==this.name){this.lastScrollTop=oldChrome.selectedPanel.containerNode.scrollTop
 }},reattach:function(doc){if(this.options.innerHTMLSync){this.synchronizeUI()
 }},synchronizeUI:function(){this.containerNode.scrollTop=this.lastScrollTop||0
 },show:function(state){var options=this.options;
@@ -1831,7 +1838,7 @@ var panel=this.panelMap[panelName];
 if(panel&&selectedPanel!=panel){if(selectedPanel){removeClass(selectedPanel.tabNode,"fbSelectedTab");
 selectedPanel.shutdown();
 selectedPanel.hide()
-}if(!panel.parentPanel){FirebugChrome.selectedPanelName=panelName
+}if(!panel.parentPanel){Firebug.context.persistedState.selectedPanelName=panelName
 }this.selectedPanel=panel;
 setClass(panel.tabNode,"fbSelectedTab");
 panel.show();
@@ -2091,18 +2098,13 @@ if(panel){if(panel.visible&&!panel.editing){panel.refresh()
 delete this.refreshTimeout;
 if(invalids.length){this.invalidatePanels.apply(this,invalids)
 }},this),refreshDelay)
-},evaluate:function(expr,context,api,errorHandler){expr=stripNewLines(expr);
-context=context||"window";
-var cmd,result;
-if(context=="window"){cmd=api?"with("+api+"){ ("+expr+") }":"("+expr+")";
-result=this.eval(cmd);
-if(result&&result[evalError]){cmd=api?"with("+api+"){ "+expr+" }":expr;
-result=this.eval(cmd)
-}}else{cmd=api?"(function(arguments){ with("+api+"){ return ("+expr+") } }).call("+context+",undefined)":"(function(arguments){ return ("+expr+") }).call("+context+",undefined)";
-result=this.eval(cmd);
-if(result&&result[evalError]){cmd=api?"(function(arguments){ with("+api+"){ "+expr+" } }).call("+context+",undefined)":"(function(arguments){ "+expr+" }).call("+context+",undefined)";
-result=this.eval(cmd)
-}}if(result&&result[evalError]){var msg=result.name?(result.name+": "):"";
+},evaluate:function(expr,context,api,errorHandler){context=context||"window";
+var isObjectLiteral=trim(expr).indexOf("{")==0,cmd,result;
+if(context=="window"){if(isObjectLiteral){cmd=api?"with("+api+"){ ("+expr+") }":"("+expr+")"
+}else{cmd=api?"with("+api+"){ "+expr+" }":expr
+}}else{cmd=api?"(function(arguments){ with("+api+"){ "+expr+" } }).call("+context+",undefined)":"(function(arguments){ "+expr+" }).call("+context+",undefined)"
+}result=this.eval(cmd);
+if(result&&result[evalError]){var msg=result.name?(result.name+": "):"";
 msg+=result.message||result;
 if(errorHandler){result=errorHandler(msg)
 }else{result=msg
@@ -2248,8 +2250,9 @@ return value
 }:function(el,name){return this.document.defaultView.getComputedStyle(el,null)[name]||el.style[name]||undefined
 }}
 }});
-FBL.ns(function(){with(FBL){var WindowDefaultOptions={type:"frame",id:"FirebugUI",height:250},commandLine,fbTop,fbContent,fbContentStyle,fbBottom,fbBtnInspect,fbToolbar,fbPanelBox1,fbPanelBox1Style,fbPanelBox2,fbPanelBox2Style,fbPanelBar2Box,fbPanelBar2BoxStyle,fbHSplitter,fbVSplitter,fbVSplitterStyle,fbPanel1,fbPanel1Style,fbPanel2,fbPanel2Style,fbConsole,fbConsoleStyle,fbHTML,fbCommandLine,fbLargeCommandLine,fbLargeCommandButtons,topHeight,topPartialHeight,chromeRedrawSkipRate=isIE?75:isOpera?80:75,lastSelectedPanelName,focusCommandLineState=0,lastFocusedPanelName,lastHSplitterMouseMove=0,onHSplitterMouseMoveBuffer=null,onHSplitterMouseMoveTimer=null,lastVSplitterMouseMove=0;
-FBL.FirebugChrome={isOpen:false,height:250,sidePanelWidth:350,selectedPanelName:"Console",selectedHTMLElementId:null,chromeMap:{},htmlSelectionStack:[],consoleMessageQueue:[],create:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("FirebugChrome.create","creating chrome window")
+FBL.ns(function(){with(FBL){var WindowDefaultOptions={type:"frame",id:"FirebugUI"},commandLine,fbTop,fbContent,fbContentStyle,fbBottom,fbBtnInspect,fbToolbar,fbPanelBox1,fbPanelBox1Style,fbPanelBox2,fbPanelBox2Style,fbPanelBar2Box,fbPanelBar2BoxStyle,fbHSplitter,fbVSplitter,fbVSplitterStyle,fbPanel1,fbPanel1Style,fbPanel2,fbPanel2Style,fbConsole,fbConsoleStyle,fbHTML,fbCommandLine,fbLargeCommandLine,fbLargeCommandButtons,topHeight,topPartialHeight,chromeRedrawSkipRate=isIE?75:isOpera?80:75,lastSelectedPanelName,focusCommandLineState=0,lastFocusedPanelName,lastHSplitterMouseMove=0,onHSplitterMouseMoveBuffer=null,onHSplitterMouseMoveTimer=null,lastVSplitterMouseMove=0;
+FBL.defaultPersistedState={isOpen:false,height:300,sidePanelWidth:350,selectedPanelName:"Console",selectedHTMLElementId:null,htmlSelectionStack:[]};
+FBL.FirebugChrome={chromeMap:{},htmlSelectionStack:[],create:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("FirebugChrome.create","creating chrome window")
 }createChromeWindow()
 },initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("FirebugChrome.initialize","initializing chrome window")
 }if(Env.chrome.type=="frame"||Env.chrome.type=="div"){ChromeMini.create(Env.chrome)
@@ -2263,17 +2266,24 @@ if(frame){frame.close()
 if(FBChrome.hasOwnProperty(name)&&!isFunction(prop)){this[name]=prop
 }}}};
 var createChromeWindow=function(options){options=extend(WindowDefaultOptions,options||{});
+var browserWin=Env.browser.window;
+var browserContext=new Context(browserWin);
+var prefs=Store.get("FirebugLite");
+var persistedState=prefs&&prefs.persistedState||defaultPersistedState;
 var chrome={},context=options.context||Env.browser,type=chrome.type=Env.Options.enablePersistent?"popup":options.type,isChromeFrame=type=="frame",useLocalSkin=Env.useLocalSkin,url=useLocalSkin?Env.Location.skin:"about:blank",body=context.document.getElementsByTagName("body")[0],formatNode=function(node){if(!Env.isDebugMode){node.firebugIgnore=true
-}node.style.border="0";
+}var browserWinSize=browserContext.getWindowSize();
+var height=persistedState.height||300;
+height=Math.min(browserWinSize.height,height);
+height=Math.max(200,height);
+node.style.border="0";
 node.style.visibility="hidden";
 node.style.zIndex="2147483647";
 node.style.position=noFixedPosition?"absolute":"fixed";
 node.style.width="100%";
 node.style.left="0";
 node.style.bottom=noFixedPosition?"-1px":"0";
-node.style.height=options.height+"px";
-if(isFirefox){node.style.display="none"
-}},createChromeDiv=function(){var node=chrome.node=createGlobalElement("div"),style=createGlobalElement("style"),css=FirebugChrome.Skin.CSS,rules=".fbBody *{margin:0;padding:0;font-size:11px;line-height:13px;color:inherit;}"+css+".fbBody #fbHSplitter{position:absolute !important;} .fbBody #fbHTML span{line-height:14px;} .fbBody .lineNo div{line-height:inherit !important;}";
+node.style.height=height+"px"
+},createChromeDiv=function(){var node=chrome.node=createGlobalElement("div"),style=createGlobalElement("style"),css=FirebugChrome.Skin.CSS,rules=".fbBody *{margin:0;padding:0;font-size:11px;line-height:13px;color:inherit;}"+css+".fbBody #fbHSplitter{position:absolute !important;} .fbBody #fbHTML span{line-height:14px;} .fbBody .lineNo div{line-height:inherit !important;}";
 style.type="text/css";
 if(style.styleSheet){style.styleSheet.cssText=rules
 }else{style.appendChild(context.document.createTextNode(rules))
@@ -2298,7 +2308,15 @@ node.setAttribute("frameBorder","0");
 formatNode(node);
 body.appendChild(node);
 node.id=options.id
-}else{var height=FirebugChrome.height||options.height,options=["true,top=",Math.max(screen.availHeight-height-61,0),",left=0,height=",height,",width=",screen.availWidth-10,",resizable"].join(""),node=chrome.node=context.window.open(url,"popup",options);
+}else{var height=persistedState.popupHeight||300;
+var browserWinSize=browserContext.getWindowSize();
+var browserWinLeft=typeof browserWin.screenX=="number"?browserWin.screenX:browserWin.screenLeft;
+var popupLeft=typeof persistedState.popupLeft=="number"?persistedState.popupLeft:browserWinLeft;
+var browserWinTop=typeof browserWin.screenY=="number"?browserWin.screenY:browserWin.screenTop;
+var popupTop=typeof persistedState.popupTop=="number"?persistedState.popupTop:Math.max(0,Math.min(browserWinTop+browserWinSize.height-height,screen.availHeight-height-61));
+var popupWidth=typeof persistedState.popupWidth=="number"?persistedState.popupWidth:Math.max(0,Math.min(browserWinSize.width,screen.availWidth-10));
+var popupHeight=typeof persistedState.popupHeight=="number"?persistedState.popupHeight:300;
+var options=["true,top=",popupTop,",left=",popupLeft,",height=",popupHeight,",width=",popupWidth,",resizable"].join(""),node=chrome.node=context.window.open(url,"popup",options);
 if(node){try{node.focus()
 }catch(E){alert("Firebug Error: Firebug popup was blocked.");
 return
@@ -2335,8 +2353,7 @@ doc.getElementsByTagName("head")[0].appendChild(script)
 }else{if(chrome.type=="popup"){var oldChrome=FirebugChrome.chromeMap.frame;
 var newChrome=new Chrome(chrome);
 dispatch(newChrome.panelMap,"detach",[oldChrome,newChrome]);
-if(oldChrome){oldChrome.close()
-}newChrome.reattach(oldChrome,newChrome)
+newChrome.reattach(oldChrome,newChrome)
 }}}};
 var getChromeDivTemplate=function(){return FirebugChrome.Skin.HTML
 };
@@ -2385,18 +2402,11 @@ this.shutdown()
 },visit:function(url){window.open(url)
 }});
 var firebugOptionsMenu={id:"fbFirebugOptionsMenu",getItems:function(){var cookiesDisabled=!Firebug.saveCookies;
-return[{label:"Save Options in Cookies",type:"checkbox",value:"saveCookies",checked:Firebug.saveCookies,command:"saveOptions"},"-",{label:"Start Opened",type:"checkbox",value:"startOpened",checked:Firebug.startOpened,disabled:cookiesDisabled},{label:"Start in New Window",type:"checkbox",value:"startInNewWindow",checked:Firebug.startInNewWindow,disabled:cookiesDisabled},{label:"Show Icon When Hidden",type:"checkbox",value:"showIconWhenHidden",checked:Firebug.showIconWhenHidden,disabled:cookiesDisabled},{label:"Override Console Object",type:"checkbox",value:"overrideConsole",checked:Firebug.overrideConsole,disabled:cookiesDisabled},{label:"Ignore Firebug Elements",type:"checkbox",value:"ignoreFirebugElements",checked:Firebug.ignoreFirebugElements,disabled:cookiesDisabled},{label:"Disable When Firebug Active",type:"checkbox",value:"disableWhenFirebugActive",checked:Firebug.disableWhenFirebugActive,disabled:cookiesDisabled},{label:"Disable XHR Listener",type:"checkbox",value:"disableXHRListener",checked:Firebug.disableXHRListener,disabled:cookiesDisabled},{label:"Enable Trace Mode",type:"checkbox",value:"enableTrace",checked:Firebug.enableTrace,disabled:cookiesDisabled},{label:"Enable Persistent Mode (experimental)",type:"checkbox",value:"enablePersistent",checked:Firebug.enablePersistent,disabled:cookiesDisabled},"-",{label:"Reset All Firebug Options",command:"restorePrefs",disabled:cookiesDisabled}]
+return[{label:"Start Opened",type:"checkbox",value:"startOpened",checked:Firebug.startOpened,disabled:cookiesDisabled},{label:"Start in New Window",type:"checkbox",value:"startInNewWindow",checked:Firebug.startInNewWindow,disabled:cookiesDisabled},{label:"Show Icon When Hidden",type:"checkbox",value:"showIconWhenHidden",checked:Firebug.showIconWhenHidden,disabled:cookiesDisabled},{label:"Override Console Object",type:"checkbox",value:"overrideConsole",checked:Firebug.overrideConsole,disabled:cookiesDisabled},{label:"Ignore Firebug Elements",type:"checkbox",value:"ignoreFirebugElements",checked:Firebug.ignoreFirebugElements,disabled:cookiesDisabled},{label:"Disable When Firebug Active",type:"checkbox",value:"disableWhenFirebugActive",checked:Firebug.disableWhenFirebugActive,disabled:cookiesDisabled},{label:"Disable XHR Listener",type:"checkbox",value:"disableXHRListener",checked:Firebug.disableXHRListener,disabled:cookiesDisabled},{label:"Disable Resource Fetching",type:"checkbox",value:"disableResourceFetching",checked:Firebug.disableResourceFetching,disabled:cookiesDisabled},{label:"Enable Trace Mode",type:"checkbox",value:"enableTrace",checked:Firebug.enableTrace,disabled:cookiesDisabled},{label:"Enable Persistent Mode (experimental)",type:"checkbox",value:"enablePersistent",checked:Firebug.enablePersistent,disabled:cookiesDisabled},"-",{label:"Reset All Firebug Options",command:"restorePrefs",disabled:cookiesDisabled}]
 },onCheck:function(target,value,checked){Firebug.setPref(value,checked)
-},saveOptions:function(target){var saveEnabled=target.getAttribute("checked");
-if(!saveEnabled){this.restorePrefs()
-}this.updateMenu(target);
-return false
-},restorePrefs:function(target){Firebug.restorePrefs();
-if(Firebug.saveCookies){Firebug.savePrefs()
-}else{Firebug.erasePrefs()
-}if(target){this.updateMenu(target)
-}return false
-},updateMenu:function(target){var options=getElementsByClass(target.parentNode,"fbMenuOption");
+},restorePrefs:function(target){Firebug.erasePrefs();
+if(target){this.updateMenu(target)
+}},updateMenu:function(target){var options=getElementsByClass(target.parentNode,"fbMenuOption");
 var firstOption=options[0];
 var enabled=Firebug.saveCookies;
 if(enabled){Menu.check(firstOption)
@@ -2468,8 +2478,8 @@ i++){a.setAttribute("href","javascript:void(0)")
 }}if(Firebug.Inspector){this.inspectButton.initialize()
 }this.addController([$("fbLargeCommandLineIcon"),"click",this.showLargeCommandLine]);
 var self=this;
-setTimeout(function(){self.selectPanel(FirebugChrome.selectedPanelName);
-if(FirebugChrome.selectedPanelName=="Console"&&Firebug.CommandLine){Firebug.chrome.focusCommandLine()
+setTimeout(function(){self.selectPanel(Firebug.context.persistedState.selectedPanelName);
+if(Firebug.context.persistedState.selectedPanelName=="Console"&&Firebug.CommandLine){Firebug.chrome.focusCommandLine()
 }},0);
 var onPanelMouseDown=function onPanelMouseDown(event){var target=event.target||event.srcElement;
 if(FBL.isLeftClick(event)){var editable=FBL.getAncestorByClass(target,"editable");
@@ -2544,10 +2554,11 @@ FirebugChrome.chromeMap.popup=null;
 frame.open();
 return
 }if(Firebug.chrome.type=="popup"){return
-}var shouldOpen=forceOpen||!FirebugChrome.isOpen;
+}var shouldOpen=forceOpen||!Firebug.context.persistedState.isOpen;
 if(shouldOpen){this.open()
 }else{this.close()
-}}},detach:function(){if(!FirebugChrome.chromeMap.popup){createChromeWindow({type:"popup"})
+}}},detach:function(){if(!FirebugChrome.chromeMap.popup){this.close();
+createChromeWindow({type:"popup"})
 }},reattach:function(oldChrome,newChrome){Firebug.browser.window.Firebug=Firebug;
 var newPanelMap=newChrome.panelMap;
 var oldPanelMap=oldChrome.panelMap;
@@ -2556,10 +2567,10 @@ for(var name in newPanelMap){panel=newPanelMap[name];
 if(panel.options.innerHTMLSync){panel.panelNode.innerHTML=oldPanelMap[name].panelNode.innerHTML
 }}Firebug.chrome=newChrome;
 if(newChrome.type=="popup"){newChrome.initialize()
-}else{FirebugChrome.selectedPanelName=oldChrome.selectedPanel.name
+}else{Firebug.context.persistedState.selectedPanelName=oldChrome.selectedPanel.name
 }dispatch(newPanelMap,"reattach",[oldChrome,newChrome])
 },draw:function(){var size=this.getSize();
-var commandLineHeight=Firebug.chrome.commandLineVisible?fbCommandLine.offsetHeight:0,y=Math.max(size.height,topHeight),heightValue=Math.max(y-topHeight-commandLineHeight,0),height=heightValue+"px",sideWidthValue=Firebug.chrome.sidePanelVisible?FirebugChrome.sidePanelWidth:0,width=Math.max(size.width-sideWidthValue,0)+"px";
+var commandLineHeight=Firebug.chrome.commandLineVisible?fbCommandLine.offsetHeight:0,y=Math.max(size.height,topHeight),heightValue=Math.max(y-topHeight-commandLineHeight,0),height=heightValue+"px",sideWidthValue=Firebug.chrome.sidePanelVisible?Firebug.context.persistedState.sidePanelWidth:0,width=Math.max(size.width-sideWidthValue,0)+"px";
 fbPanelBox1Style.height=height;
 fbPanel1Style.height=height;
 if(isIE||isOpera){fbVSplitterStyle.height=Math.max(y-topPartialHeight-commandLineHeight,0)+"px"
@@ -2626,7 +2637,10 @@ this.toggle(true,true);
 return
 }if(Env.Options.startOpened){this.open()
 }else{this.close()
-}},destroy:function(){removeGlobalEvent("keydown",onGlobalKeyDown);
+}},destroy:function(){var size=Firebug.chrome.getWindowSize();
+Firebug.context.persistedState.height=size.height;
+if(Firebug.saveCookies){Firebug.savePrefs()
+}removeGlobalEvent("keydown",onGlobalKeyDown);
 ChromeBase.destroy.call(this);
 this.document=null;
 delete this.document;
@@ -2648,7 +2662,7 @@ ChromeBase.shutdown.apply(this);
 this.isInitialized=false
 },reattach:function(){var frame=FirebugChrome.chromeMap.frame;
 ChromeBase.reattach(FirebugChrome.chromeMap.popup,this)
-},open:function(){if(!FirebugChrome.isOpen){FirebugChrome.isOpen=true;
+},open:function(){if(!Firebug.context.persistedState.isOpen){Firebug.context.persistedState.isOpen=true;
 if(Env.isChromeExtension){localStorage.setItem("Firebug","1,1")
 }var node=this.node;
 node.style.visibility="hidden";
@@ -2662,8 +2676,8 @@ setTimeout(function(){self.initialize();
 if(noFixedPosition){self.fixIEPosition()
 }self.draw()
 },10)
-}},close:function(){if(FirebugChrome.isOpen||!this.isInitialized){if(this.isInitialized){this.shutdown()
-}FirebugChrome.isOpen=false;
+}},close:function(){if(Firebug.context.persistedState.isOpen){if(this.isInitialized){this.shutdown()
+}Firebug.context.persistedState.isOpen=false;
 if(Env.isChromeExtension){localStorage.setItem("Firebug","1,0")
 }var node=this.node;
 if(Firebug.showIconWhenHidden){node.style.visibility="hidden";
@@ -2685,7 +2699,7 @@ var height=this.node.offsetHeight;
 var bodyStyle=doc.body.currentStyle;
 this.node.style.top=maxHeight-height+scroll.top+"px";
 if((this.type=="frame"||this.type=="div")&&(bodyStyle.marginLeft||bodyStyle.marginRight)){this.node.style.width=size.width+"px"
-}if(fbVSplitterStyle){fbVSplitterStyle.right=FirebugChrome.sidePanelWidth+"px"
+}if(fbVSplitterStyle){fbVSplitterStyle.right=Firebug.context.persistedState.sidePanelWidth+"px"
 }this.draw()
 }});
 var ChromeMini=extend(Controller,{create:function(chrome){append(this,chrome);
@@ -2712,7 +2726,7 @@ this.document.body.style.backgroundColor="transparent"
 if(noFixedPosition){this.addController([Firebug.browser.window,"scroll",this.fixIEPosition])
 }this.isInitialized=true
 },shutdown:function(){var node=this.node;
-node.style.height=FirebugChrome.height+"px";
+node.style.height=Firebug.context.persistedState.height+"px";
 node.style.width="100%";
 node.style.left=0;
 node.style.right="";
@@ -2733,7 +2747,16 @@ if(Env.Options.enablePersistent){this.persist=bind(this.persist,this);
 addEvent(Firebug.browser.window,"unload",this.persist)
 }else{this.addController([Firebug.browser.window,"unload",this.close])
 }fbVSplitter.onmousedown=onVSplitterMouseDown
-},destroy:function(){var frame=FirebugChrome.chromeMap.frame;
+},destroy:function(){var chromeWin=Firebug.chrome.window;
+var left=chromeWin.screenX||chromeWin.screenLeft;
+var top=chromeWin.screenY||chromeWin.screenTop;
+var size=Firebug.chrome.getWindowSize();
+Firebug.context.persistedState.popupTop=top;
+Firebug.context.persistedState.popupLeft=left;
+Firebug.context.persistedState.popupWidth=size.width;
+Firebug.context.persistedState.popupHeight=size.height;
+if(Firebug.saveCookies){Firebug.savePrefs()
+}var frame=FirebugChrome.chromeMap.frame;
 if(frame){dispatch(frame.panelMap,"detach",[this,frame]);
 frame.reattach(this,frame)
 }if(Env.Options.enablePersistent){removeEvent(Firebug.browser.window,"unload",this.persist)
@@ -2751,15 +2774,17 @@ try{if(window.opener&&!window.opener.FirebugOldBrowser&&(doc=window.opener.docum
 window.opener.Firebug=Firebug;
 Env.browser=window.opener;
 Firebug.browser=Firebug.context=new Context(Env.browser);
+Firebug.loadPrefs();
 registerConsole();
 var persistDelay=new Date().getTime()-persistTimeStart;
 var chrome=Firebug.chrome;
 addEvent(Firebug.browser.window,"unload",chrome.persist);
 FBL.cacheDocument();
 Firebug.Inspector.create();
-var htmlPanel=chrome.getPanel("HTML");
-htmlPanel.createUI();
-Firebug.Console.logFormatted(["Firebug could not capture console calls during "+persistDelay+"ms"],Firebug.context,"info")
+Firebug.Console.logFormatted(["Firebug could not capture console calls during "+persistDelay+"ms"],Firebug.context,"info");
+setTimeout(function(){var htmlPanel=chrome.getPanel("HTML");
+htmlPanel.createUI()
+},50)
 }catch(pE){alert("persist error: "+(pE.message||pE))
 }}else{window.setTimeout(waitMainWindow,0)
 }}catch(E){window.close()
@@ -2827,7 +2852,7 @@ var scrollbarSize=!isIE&&(scrollSize.width>windowSize.width)?17:0;
 var height=windowSize.height;
 var chromeHeight=Math.max(height-clientY+5-scrollbarSize,fixedHeight);
 chromeHeight=Math.min(chromeHeight,windowSize.height-scrollbarSize);
-FirebugChrome.height=chromeHeight;
+Firebug.context.persistedState.height=chromeHeight;
 chromeNode.style.height=chromeHeight+"px";
 if(noFixedPosition){Firebug.chrome.fixIEPosition()
 }Firebug.chrome.draw()
@@ -2849,7 +2874,7 @@ var win=document.all?event.srcElement.ownerDocument.parentWindow:event.target.ow
 if(win!=win.parent){clientX+=win.frameElement?win.frameElement.offsetLeft:0
 }var size=Firebug.chrome.getSize();
 var x=Math.max(size.width-clientX+3,6);
-FirebugChrome.sidePanelWidth=x;
+Firebug.context.persistedState.sidePanelWidth=x;
 Firebug.chrome.draw()
 }lastVSplitterMouseMove=new Date().getTime()
 }cancelEvent(event,true);
@@ -2907,7 +2932,8 @@ Firebug.Lite.Cache.StyleSheet=createCache();
 Firebug.Lite.Cache.Element=createCache();
 Firebug.Lite.Cache.Event=createCache()
 }});
-FBL.ns(function(){with(FBL){Firebug.Lite.Proxy={_callbacks:{},load:function(url){var resourceDomain=getDomain(url);
+FBL.ns(function(){with(FBL){var sourceMap={};
+Firebug.Lite.Proxy={_callbacks:{},load:function(url){var resourceDomain=getDomain(url);
 var isLocalResource=!resourceDomain||resourceDomain==Firebug.context.window.location.host;
 return isLocalResource?fetchResource(url):fetchProxyResource(url)
 },loadJSONP:function(url,callback){var script=createGlobalElement("script"),doc=Firebug.context.document,uid=""+new Date().getTime(),callbackName="callback=Firebug.Lite.Proxy._callbacks."+uid,jsonpURL=url.indexOf("?")!=-1?url+"&"+callbackName:url+"?"+callbackName;
@@ -2924,16 +2950,23 @@ if(match){source=match[1]
 }console.log(source)
 })
 }};
-var fetchResource=function(url){var xhr=FBL.Ajax.getXHRObject();
+Firebug.Lite.Proxy.fetchResourceDisabledMessage='/* Firebug Lite resource fetching is disabled.\nTo enabled it set the Firebug Lite option "disableResourceFetching" to "false".\nMore info at http://getfirebug.com/firebuglite#Options */';
+var fetchResource=function(url){if(Firebug.disableResourceFetching){var source=sourceMap[url]=Firebug.Lite.Proxy.fetchResourceDisabledMessage;
+return source
+}if(sourceMap.hasOwnProperty(url)){return sourceMap[url]
+}var xhr=FBL.getNativeXHRObject();
 xhr.open("get",url,false);
 xhr.send();
-return xhr.responseText
+var source=sourceMap[url]=xhr.responseText;
+return source
 };
-var fetchProxyResource=function(url){var proxyURL=Env.Location.baseDir+"plugin/proxy/proxy.php?url="+encodeURIComponent(url);
+var fetchProxyResource=function(url){if(sourceMap.hasOwnProperty(url)){return sourceMap[url]
+}var proxyURL=Env.Location.baseDir+"plugin/proxy/proxy.php?url="+encodeURIComponent(url);
 var response=fetchResource(proxyURL);
 try{var data=eval("("+response+")")
 }catch(E){return"ERROR: Firebug Lite Proxy plugin returned an invalid response."
-}return data?data.contents:""
+}var source=data?data.contents:"";
+return source
 }
 }});
 FBL.ns(function(){with(FBL){Firebug.Lite.Style={}
@@ -2956,6 +2989,143 @@ this.currentURI={spec:window.location.href}
 Firebug.Lite.Browser.prototype={toString:function(){return"Firebug.Lite.Browser"
 }}
 }});
+var JSON=window.JSON||{};
+(function(){function f(n){return n<10?"0"+n:n
+}if(typeof Date.prototype.toJSON!=="function"){Date.prototype.toJSON=function(key){return isFinite(this.valueOf())?this.getUTCFullYear()+"-"+f(this.getUTCMonth()+1)+"-"+f(this.getUTCDate())+"T"+f(this.getUTCHours())+":"+f(this.getUTCMinutes())+":"+f(this.getUTCSeconds())+"Z":null
+};
+String.prototype.toJSON=Number.prototype.toJSON=Boolean.prototype.toJSON=function(key){return this.valueOf()
+}
+}var cx=/[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,escapable=/[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,gap,indent,meta={"\b":"\\b","\t":"\\t","\n":"\\n","\f":"\\f","\r":"\\r",'"':'\\"',"\\":"\\\\"},rep;
+function quote(string){escapable.lastIndex=0;
+return escapable.test(string)?'"'+string.replace(escapable,function(a){var c=meta[a];
+return typeof c==="string"?c:"\\u"+("0000"+a.charCodeAt(0).toString(16)).slice(-4)
+})+'"':'"'+string+'"'
+}function str(key,holder){var i,k,v,length,mind=gap,partial,value=holder[key];
+if(value&&typeof value==="object"&&typeof value.toJSON==="function"){value=value.toJSON(key)
+}if(typeof rep==="function"){value=rep.call(holder,key,value)
+}switch(typeof value){case"string":return quote(value);
+case"number":return isFinite(value)?String(value):"null";
+case"boolean":case"null":return String(value);
+case"object":if(!value){return"null"
+}gap+=indent;
+partial=[];
+if(Object.prototype.toString.apply(value)==="[object Array]"){length=value.length;
+for(i=0;
+i<length;
+i+=1){partial[i]=str(i,value)||"null"
+}v=partial.length===0?"[]":gap?"[\n"+gap+partial.join(",\n"+gap)+"\n"+mind+"]":"["+partial.join(",")+"]";
+gap=mind;
+return v
+}if(rep&&typeof rep==="object"){length=rep.length;
+for(i=0;
+i<length;
+i+=1){k=rep[i];
+if(typeof k==="string"){v=str(k,value);
+if(v){partial.push(quote(k)+(gap?": ":":")+v)
+}}}}else{for(k in value){if(Object.hasOwnProperty.call(value,k)){v=str(k,value);
+if(v){partial.push(quote(k)+(gap?": ":":")+v)
+}}}}v=partial.length===0?"{}":gap?"{\n"+gap+partial.join(",\n"+gap)+"\n"+mind+"}":"{"+partial.join(",")+"}";
+gap=mind;
+return v
+}}if(typeof JSON.stringify!=="function"){JSON.stringify=function(value,replacer,space){var i;
+gap="";
+indent="";
+if(typeof space==="number"){for(i=0;
+i<space;
+i+=1){indent+=" "
+}}else{if(typeof space==="string"){indent=space
+}}rep=replacer;
+if(replacer&&typeof replacer!=="function"&&(typeof replacer!=="object"||typeof replacer.length!=="number")){throw new Error("JSON.stringify")
+}return str("",{"":value})
+}
+}if(typeof JSON.parse!=="function"){JSON.parse=function(text,reviver){var j;
+function walk(holder,key){var k,v,value=holder[key];
+if(value&&typeof value==="object"){for(k in value){if(Object.hasOwnProperty.call(value,k)){v=walk(value,k);
+if(v!==undefined){value[k]=v
+}else{delete value[k]
+}}}}return reviver.call(holder,key,value)
+}text=String(text);
+cx.lastIndex=0;
+if(cx.test(text)){text=text.replace(cx,function(a){return"\\u"+("0000"+a.charCodeAt(0).toString(16)).slice(-4)
+})
+}if(/^[\],:{}\s]*$/.test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g,"@").replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,"]").replace(/(?:^|:|,)(?:\s*\[)+/g,""))){j=eval("("+text+")");
+return typeof reviver==="function"?walk({"":j},""):j
+}throw new SyntaxError("JSON.parse")
+}
+}FBL.JSON=JSON
+}());
+(function(){var store=(function(){var api={},win=window,doc=win.document,localStorageName="localStorage",globalStorageName="globalStorage",namespace="__firebug__storejs__",storage;
+api.disabled=false;
+api.set=function(key,value){};
+api.get=function(key){};
+api.remove=function(key){};
+api.clear=function(){};
+api.transact=function(key,transactionFn){var val=api.get(key);
+if(typeof val=="undefined"){val={}
+}transactionFn(val);
+api.set(key,val)
+};
+api.serialize=function(value){return JSON.stringify(value)
+};
+api.deserialize=function(value){if(typeof value!="string"){return undefined
+}return JSON.parse(value)
+};
+function isLocalStorageNameSupported(){try{return(localStorageName in win&&win[localStorageName])
+}catch(err){return false
+}}function isGlobalStorageNameSupported(){try{return(globalStorageName in win&&win[globalStorageName]&&win[globalStorageName][win.location.hostname])
+}catch(err){return false
+}}if(isLocalStorageNameSupported()){storage=win[localStorageName];
+api.set=function(key,val){storage.setItem(key,api.serialize(val))
+};
+api.get=function(key){return api.deserialize(storage.getItem(key))
+};
+api.remove=function(key){storage.removeItem(key)
+};
+api.clear=function(){storage.clear()
+}
+}else{if(isGlobalStorageNameSupported()){storage=win[globalStorageName][win.location.hostname];
+api.set=function(key,val){storage[key]=api.serialize(val)
+};
+api.get=function(key){return api.deserialize(storage[key]&&storage[key].value)
+};
+api.remove=function(key){delete storage[key]
+};
+api.clear=function(){for(var key in storage){delete storage[key]
+}}
+}else{if(doc.documentElement.addBehavior){var storage=doc.createElement("div");
+function withIEStorage(storeFunction){return function(){var args=Array.prototype.slice.call(arguments,0);
+args.unshift(storage);
+doc.body.appendChild(storage);
+storage.addBehavior("#default#userData");
+storage.load(localStorageName);
+var result=storeFunction.apply(api,args);
+doc.body.removeChild(storage);
+return result
+}
+}api.set=withIEStorage(function(storage,key,val){storage.setAttribute(key,api.serialize(val));
+storage.save(localStorageName)
+});
+api.get=withIEStorage(function(storage,key){return api.deserialize(storage.getAttribute(key))
+});
+api.remove=withIEStorage(function(storage,key){storage.removeAttribute(key);
+storage.save(localStorageName)
+});
+api.clear=withIEStorage(function(storage){var attributes=storage.XMLDocument.documentElement.attributes;
+storage.load(localStorageName);
+for(var i=0,attr;
+attr=attributes[i];
+i++){storage.removeAttribute(attr.name)
+}storage.save(localStorageName)
+})
+}}}try{api.set(namespace,namespace);
+if(api.get(namespace)!=namespace){api.disabled=true
+}api.remove(namespace)
+}catch(e){api.disabled=true
+}return api
+})();
+if(typeof module!="undefined"){module.exports=store
+}FBL.Store=store
+})();
 FBL.ns(function(){with(FBL){var chunker=/((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?((?:.|\r|\n)*)/g,done=0,toString=Object.prototype.toString,hasDuplicate=false,baseHasDuplicate=true;
 [0,0].sort(function(){baseHasDuplicate=false;
 return 0
@@ -3425,7 +3595,7 @@ style.width=border+"px"
 }var box=Firebug.browser.getElementBox(el);
 var windowSize=Firebug.browser.getWindowSize();
 var scrollPosition=Firebug.browser.getWindowScrollPosition();
-var offsetHeight=Firebug.chrome.type=="frame"?FirebugChrome.height:0;
+var offsetHeight=Firebug.chrome.type=="frame"?Firebug.context.persistedState.height:0;
 if(box.top>scrollPosition.top+windowSize.height-offsetHeight||box.left>scrollPosition.left+windowSize.width||scrollPosition.top>box.top+box.height||scrollPosition.left>box.left+box.width){return
 }var top=box.top;
 var left=box.left;
@@ -4801,796 +4971,6 @@ var insertTab=function insertTab(){insertTextIntoElement(currentEditor.input,Fir
 };
 Firebug.registerModule(Firebug.Editor)
 }});
-FBL.ns(function(){with(FBL){var consoleQueue=[];
-var lastHighlightedObject;
-var FirebugContext=Env.browser;
-var maxQueueRequests=500;
-Firebug.ConsoleBase={log:function(object,context,className,rep,noThrottle,sourceLink){return this.logRow(appendObject,object,context,className,rep,sourceLink,noThrottle)
-},logFormatted:function(objects,context,className,noThrottle,sourceLink){return this.logRow(appendFormatted,objects,context,className,null,sourceLink,noThrottle)
-},openGroup:function(objects,context,className,rep,noThrottle,sourceLink,noPush){return this.logRow(appendOpenGroup,objects,context,className,rep,sourceLink,noThrottle)
-},closeGroup:function(context,noThrottle){return this.logRow(appendCloseGroup,null,context,null,null,null,noThrottle,true)
-},logRow:function(appender,objects,context,className,rep,sourceLink,noThrottle,noRow){noThrottle=true;
-if(!context){context=FirebugContext
-}if(FBTrace.DBG_ERRORS&&!context){FBTrace.sysout("Console.logRow has no context, skipping objects",objects)
-}if(!context){return
-}if(noThrottle||!context){var panel=this.getPanel(context);
-if(panel){var row=panel.append(appender,objects,className,rep,sourceLink,noRow);
-var container=panel.panelNode;
-return row
-}else{consoleQueue.push([appender,objects,context,className,rep,sourceLink,noThrottle,noRow])
-}}else{if(!context.throttle){return
-}var args=[appender,objects,context,className,rep,sourceLink,true,noRow];
-context.throttle(this.logRow,this,args)
-}},appendFormatted:function(args,row,context){if(!context){context=FirebugContext
-}var panel=this.getPanel(context);
-panel.appendFormatted(args,row)
-},clear:function(context){if(!context){context=Firebug.context
-}var panel=this.getPanel(context,true);
-if(panel){panel.clear()
-}},getPanel:function(context,noCreate){return Firebug.chrome?Firebug.chrome.getPanel("Console"):null
-}};
-var ActivableConsole=extend(Firebug.ConsoleBase,{isAlwaysEnabled:function(){return true
-}});
-Firebug.Console=Firebug.Console=extend(ActivableConsole,{dispatchName:"console",error:function(){Firebug.Console.logFormatted(arguments,Firebug.browser,"error")
-},flush:function(){dispatch(this.fbListeners,"flush",[]);
-for(var i=0,length=consoleQueue.length;
-i<length;
-i++){var args=consoleQueue[i];
-this.logRow.apply(this,args)
-}},showPanel:function(browser,panel){},getFirebugConsoleElement:function(context,win){var element=win.document.getElementById("_firebugConsole");
-if(!element){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("getFirebugConsoleElement forcing element")
-}var elementForcer="(function(){var r=null; try { r = window._getFirebugConsoleElement();}catch(exc){r=exc;} return r;})();";
-if(context.stopped){Firebug.Console.injector.evaluateConsoleScript(context)
-}else{var r=Firebug.CommandLine.evaluateInWebPage(elementForcer,context,win)
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("getFirebugConsoleElement forcing element result "+r,r)
-}var element=win.document.getElementById("_firebugConsole");
-if(!element){if(FBTrace.DBG_ERRORS){FBTrace.sysout("console.getFirebugConsoleElement: no _firebugConsole in win:",win)
-}Firebug.Console.logFormatted(["Firebug cannot find _firebugConsole element",r,win],context,"error",true)
-}}return element
-},isReadyElsePreparing:function(context,win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.isReadyElsePreparing, win is "+(win?"an argument: ":"null, context.window: ")+(win?win.location:context.window.location),(win?win:context.window))
-}if(win){return this.injector.attachIfNeeded(context,win)
-}else{var attached=true;
-for(var i=0;
-i<context.windows.length;
-i++){attached=attached&&this.injector.attachIfNeeded(context,context.windows[i])
-}if(context.windows.indexOf(context.window)==-1){FBTrace.sysout("isReadyElsePreparing ***************** context.window not in context.windows")
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.isReadyElsePreparing attached to "+context.windows.length+" and returns "+attached)
-}return attached
-}},initialize:function(){this.panelName="console"
-},enable:function(){if(Firebug.Console.isAlwaysEnabled()){this.watchForErrors()
-}},disable:function(){if(Firebug.Console.isAlwaysEnabled()){this.unwatchForErrors()
-}},initContext:function(context,persistedState){Firebug.ActivableModule.initContext.apply(this,arguments);
-context.consoleReloadWarning=true
-},loadedContext:function(context){for(var url in context.sourceFileMap){return
-}this.clearReloadWarning(context)
-},clearReloadWarning:function(context){if(context.consoleReloadWarning){var panel=context.getPanel(this.panelName);
-panel.clearReloadWarning();
-delete context.consoleReloadWarning
-}},togglePersist:function(context){var panel=context.getPanel(this.panelName);
-panel.persistContent=panel.persistContent?false:true;
-Firebug.chrome.setGlobalAttribute("cmd_togglePersistConsole","checked",panel.persistContent)
-},showContext:function(browser,context){Firebug.chrome.setGlobalAttribute("cmd_clearConsole","disabled",!context);
-Firebug.ActivableModule.showContext.apply(this,arguments)
-},destroyContext:function(context,persistedState){Firebug.Console.injector.detachConsole(context,context.window)
-},onPanelEnable:function(panelName){if(panelName!=this.panelName){return
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onPanelEnable**************")
-}this.watchForErrors();
-Firebug.Debugger.addDependentModule(this)
-},onPanelDisable:function(panelName){if(panelName!=this.panelName){return
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onPanelDisable**************")
-}Firebug.Debugger.removeDependentModule(this);
-this.unwatchForErrors();
-this.clear()
-},onSuspendFirebug:function(){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onSuspendFirebug\n")
-}if(Firebug.Console.isAlwaysEnabled()){this.unwatchForErrors()
-}},onResumeFirebug:function(){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onResumeFirebug\n")
-}if(Firebug.Console.isAlwaysEnabled()){this.watchForErrors()
-}},watchForErrors:function(){Firebug.Errors.checkEnabled();
-$("fbStatusIcon").setAttribute("console","on")
-},unwatchForErrors:function(){Firebug.Errors.checkEnabled();
-$("fbStatusIcon").removeAttribute("console")
-},onMonitorScript:function(context,frame){Firebug.Console.log(frame,context)
-},onFunctionCall:function(context,frame,depth,calling){if(calling){Firebug.Console.openGroup([frame,"depth:"+depth],context)
-}else{Firebug.Console.closeGroup(context)
-}},logRow:function(appender,objects,context,className,rep,sourceLink,noThrottle,noRow){if(!context){context=FirebugContext
-}if(FBTrace.DBG_WINDOWS&&!context){FBTrace.sysout("Console.logRow: no context \n")
-}if(this.isAlwaysEnabled()){return Firebug.ConsoleBase.logRow.apply(this,arguments)
-}}});
-Firebug.ConsoleListener={log:function(context,object,className,sourceLink){},logFormatted:function(context,objects,className,sourceLink){}};
-Firebug.ConsolePanel=function(){};
-Firebug.ConsolePanel.prototype=extend(Firebug.Panel,{wasScrolledToBottom:false,messageCount:0,lastLogTime:0,groups:null,limit:null,append:function(appender,objects,className,rep,sourceLink,noRow){var container=this.getTopContainer();
-if(noRow){appender.apply(this,[objects])
-}else{var row=this.createRow("logRow",className);
-appender.apply(this,[objects,row,rep]);
-if(sourceLink){FirebugReps.SourceLink.tag.append({object:sourceLink},row)
-}container.appendChild(row);
-this.filterLogRow(row,this.wasScrolledToBottom);
-if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
-}return row
-}},clear:function(){if(this.panelNode){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("ConsolePanel.clear")
-}clearNode(this.panelNode);
-this.insertLogLimit(this.context)
-}},insertLogLimit:function(){var row=this.createRow("limitRow");
-var limitInfo={totalCount:0,limitPrefsTitle:$STRF("LimitPrefsTitle",[Firebug.prefDomain+".console.logLimit"])};
-return;
-var netLimitRep=Firebug.NetMonitor.NetLimit;
-var nodes=netLimitRep.createTable(row,limitInfo);
-this.limit=nodes[1];
-var container=this.panelNode;
-container.insertBefore(nodes[0],container.firstChild)
-},insertReloadWarning:function(){this.warningRow=this.append(appendObject,$STR("message.Reload to activate window console"),"info")
-},clearReloadWarning:function(){if(this.warningRow){this.warningRow.parentNode.removeChild(this.warningRow);
-delete this.warningRow
-}},appendObject:function(object,row,rep){if(!rep){rep=Firebug.getRep(object)
-}return rep.tag.append({object:object},row)
-},appendFormatted:function(objects,row,rep){if(!objects||!objects.length){return
-}function logText(text,row){var node=row.ownerDocument.createTextNode(text);
-row.appendChild(node)
-}var format=objects[0];
-var objIndex=0;
-if(typeof(format)!="string"){format="";
-objIndex=-1
-}else{if(objects.length===1){if(format.length<1){logText("(an empty string)",row);
-return
-}}}var parts=parseFormat(format);
-var trialIndex=objIndex;
-for(var i=0;
-i<parts.length;
-i++){var part=parts[i];
-if(part&&typeof(part)=="object"){if(++trialIndex>objects.length){format="";
-objIndex=-1;
-parts.length=0;
-break
-}}}for(var i=0;
-i<parts.length;
-++i){var part=parts[i];
-if(part&&typeof(part)=="object"){var object=objects[++objIndex];
-if(typeof(object)!="undefined"){this.appendObject(object,row,part.rep)
-}else{this.appendObject(part.type,row,FirebugReps.Text)
-}}else{FirebugReps.Text.tag.append({object:part},row)
-}}for(var i=objIndex+1;
-i<objects.length;
-++i){logText(" ",row);
-var object=objects[i];
-if(typeof(object)=="string"){FirebugReps.Text.tag.append({object:object},row)
-}else{this.appendObject(object,row)
-}}},appendOpenGroup:function(objects,row,rep){if(!this.groups){this.groups=[]
-}setClass(row,"logGroup");
-setClass(row,"opened");
-var innerRow=this.createRow("logRow");
-setClass(innerRow,"logGroupLabel");
-if(rep){rep.tag.replace({objects:objects},innerRow)
-}else{this.appendFormatted(objects,innerRow,rep)
-}row.appendChild(innerRow);
-var groupBody=this.createRow("logGroupBody");
-row.appendChild(groupBody);
-groupBody.setAttribute("role","group");
-this.groups.push(groupBody);
-addEvent(innerRow,"mousedown",function(event){if(isLeftClick(event)){var target=event.target||event.srcElement;
-target=getAncestorByClass(target,"logGroupLabel");
-var groupRow=target.parentNode;
-if(hasClass(groupRow,"opened")){removeClass(groupRow,"opened");
-target.setAttribute("aria-expanded","false")
-}else{setClass(groupRow,"opened");
-target.setAttribute("aria-expanded","true")
-}}})
-},appendCloseGroup:function(object,row,rep){if(this.groups){this.groups.pop()
-}},onMouseMove:function(event){if(!Firebug.Inspector){return
-}var target=event.srcElement||event.target;
-var object=getAncestorByClass(target,"objectLink-element");
-object=object?object.repObject:null;
-if(object&&instanceOf(object,"Element")&&object.nodeType==1){if(object!=lastHighlightedObject){Firebug.Inspector.drawBoxModel(object);
-object=lastHighlightedObject
-}}else{Firebug.Inspector.hideBoxModel()
-}},onMouseDown:function(event){var target=event.srcElement||event.target;
-var object=getAncestorByClass(target,"objectLink");
-var repObject=object?object.repObject:null;
-if(!repObject){return
-}if(hasClass(object,"objectLink-object")){Firebug.chrome.selectPanel("DOM");
-Firebug.chrome.getPanel("DOM").select(repObject,true)
-}else{if(hasClass(object,"objectLink-element")){Firebug.chrome.selectPanel("HTML");
-Firebug.chrome.getPanel("HTML").select(repObject,true)
-}}},name:"Console",title:"Console",options:{hasCommandLine:true,hasToolButtons:true,isPreRendered:true},create:function(){Firebug.Panel.create.apply(this,arguments);
-this.context=Firebug.browser.window;
-this.document=Firebug.chrome.document;
-this.onMouseMove=bind(this.onMouseMove,this);
-this.onMouseDown=bind(this.onMouseDown,this);
-this.clearButton=new Button({element:$("fbConsole_btClear"),owner:Firebug.Console,onClick:Firebug.Console.clear})
-},initialize:function(){Firebug.Panel.initialize.apply(this,arguments);
-if(!this.persistedContent&&Firebug.Console.isAlwaysEnabled()){this.insertLogLimit(this.context);
-this.updateMaxLimit();
-if(this.context.consoleReloadWarning){this.insertReloadWarning()
-}}addEvent(this.panelNode,"mouseover",this.onMouseMove);
-addEvent(this.panelNode,"mousedown",this.onMouseDown);
-this.clearButton.initialize()
-},initializeNode:function(){if(FBTrace.DBG_CONSOLE){this.onScroller=bind(this.onScroll,this);
-addEvent(this.panelNode,"scroll",this.onScroller)
-}this.onResizer=bind(this.onResize,this);
-this.resizeEventTarget=Firebug.chrome.$("fbContentBox");
-addEvent(this.resizeEventTarget,"resize",this.onResizer)
-},destroyNode:function(){if(this.onScroller){removeEvent(this.panelNode,"scroll",this.onScroller)
-}},shutdown:function(){this.clearButton.shutdown();
-removeEvent(this.panelNode,"mousemove",this.onMouseMove);
-removeEvent(this.panelNode,"mousedown",this.onMouseDown);
-this.destroyNode();
-Firebug.Panel.shutdown.apply(this,arguments)
-},ishow:function(state){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.panel show; "+this.context.getName(),state)
-}var enabled=Firebug.Console.isAlwaysEnabled();
-if(enabled){Firebug.Console.disabledPanelPage.hide(this);
-this.showCommandLine(true);
-this.showToolbarButtons("fbConsoleButtons",true);
-Firebug.chrome.setGlobalAttribute("cmd_togglePersistConsole","checked",this.persistContent);
-if(state&&state.wasScrolledToBottom){this.wasScrolledToBottom=state.wasScrolledToBottom;
-delete state.wasScrolledToBottom
-}if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.show ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
-}}else{this.hide(state);
-Firebug.Console.disabledPanelPage.show(this)
-}},ihide:function(state){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.panel hide; "+this.context.getName(),state)
-}this.showToolbarButtons("fbConsoleButtons",false);
-this.showCommandLine(false);
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.hide ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
-}},destroy:function(state){if(this.panelNode.offsetHeight){this.wasScrolledToBottom=isScrolledToBottom(this.panelNode)
-}if(state){state.wasScrolledToBottom=this.wasScrolledToBottom
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.destroy ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
-}},shouldBreakOnNext:function(){return Firebug.getPref(Firebug.servicePrefDomain,"breakOnErrors")
-},getBreakOnNextTooltip:function(enabled){return(enabled?$STR("console.Disable Break On All Errors"):$STR("console.Break On All Errors"))
-},enablePanel:function(module){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.ConsolePanel.enablePanel; "+this.context.getName())
-}Firebug.ActivablePanel.enablePanel.apply(this,arguments);
-this.showCommandLine(true);
-if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
-}},disablePanel:function(module){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.ConsolePanel.disablePanel; "+this.context.getName())
-}Firebug.ActivablePanel.disablePanel.apply(this,arguments);
-this.showCommandLine(false)
-},getOptionsMenuItems:function(){return[optionMenu("ShowJavaScriptErrors","showJSErrors"),optionMenu("ShowJavaScriptWarnings","showJSWarnings"),optionMenu("ShowCSSErrors","showCSSErrors"),optionMenu("ShowXMLErrors","showXMLErrors"),optionMenu("ShowXMLHttpRequests","showXMLHttpRequests"),optionMenu("ShowChromeErrors","showChromeErrors"),optionMenu("ShowChromeMessages","showChromeMessages"),optionMenu("ShowExternalErrors","showExternalErrors"),optionMenu("ShowNetworkErrors","showNetworkErrors"),this.getShowStackTraceMenuItem(),this.getStrictOptionMenuItem(),"-",optionMenu("LargeCommandLine","largeCommandLine")]
-},getShowStackTraceMenuItem:function(){var menuItem=serviceOptionMenu("ShowStackTrace","showStackTrace");
-if(FirebugContext&&!Firebug.Debugger.isAlwaysEnabled()){menuItem.disabled=true
-}return menuItem
-},getStrictOptionMenuItem:function(){var strictDomain="javascript.options";
-var strictName="strict";
-var strictValue=prefs.getBoolPref(strictDomain+"."+strictName);
-return{label:"JavascriptOptionsStrict",type:"checkbox",checked:strictValue,command:bindFixed(Firebug.setPref,Firebug,strictDomain,strictName,!strictValue)}
-},getBreakOnMenuItems:function(){return[]
-},search:function(text){if(!text){return
-}if(this.matchSet){for(var i in this.matchSet){removeClass(this.matchSet[i],"matched")
-}}this.matchSet=[];
-function findRow(node){return getAncestorByClass(node,"logRow")
-}var search=new TextSearch(this.panelNode,findRow);
-var logRow=search.find(text);
-if(!logRow){dispatch([Firebug.A11yModel],"onConsoleSearchMatchFound",[this,text,[]]);
-return false
-}for(;
-logRow;
-logRow=search.findNext()){setClass(logRow,"matched");
-this.matchSet.push(logRow)
-}dispatch([Firebug.A11yModel],"onConsoleSearchMatchFound",[this,text,this.matchSet]);
-return true
-},breakOnNext:function(breaking){Firebug.setPref(Firebug.servicePrefDomain,"breakOnErrors",breaking)
-},createRow:function(rowName,className){var elt=this.document.createElement("div");
-elt.className=rowName+(className?" "+rowName+"-"+className:"");
-return elt
-},getTopContainer:function(){if(this.groups&&this.groups.length){return this.groups[this.groups.length-1]
-}else{return this.panelNode
-}},filterLogRow:function(logRow,scrolledToBottom){if(this.searchText){setClass(logRow,"matching");
-setClass(logRow,"matched");
-setTimeout(bindFixed(function(){if(this.searchFilter(this.searchText,logRow)){this.matchSet.push(logRow)
-}else{removeClass(logRow,"matched")
-}removeClass(logRow,"matching");
-if(scrolledToBottom){scrollToBottom(this.panelNode)
-}},this),100)
-}},searchFilter:function(text,logRow){var count=this.panelNode.childNodes.length;
-var searchRange=this.document.createRange();
-searchRange.setStart(this.panelNode,0);
-searchRange.setEnd(this.panelNode,count);
-var startPt=this.document.createRange();
-startPt.setStartBefore(logRow);
-var endPt=this.document.createRange();
-endPt.setStartAfter(logRow);
-return finder.Find(text,searchRange,startPt,endPt)!=null
-},observe:function(subject,topic,data){if(topic!="nsPref:changed"){return
-}var prefDomain="Firebug.extension.";
-var prefName=data.substr(prefDomain.length);
-if(prefName=="console.logLimit"){this.updateMaxLimit()
-}},updateMaxLimit:function(){var value=1000;
-maxQueueRequests=value?value:maxQueueRequests
-},showCommandLine:function(shouldShow){return;
-if(shouldShow){collapse(Firebug.chrome.$("fbCommandBox"),false);
-Firebug.CommandLine.setMultiLine(Firebug.largeCommandLine,Firebug.chrome)
-}else{Firebug.CommandLine.setMultiLine(false,Firebug.chrome,Firebug.largeCommandLine);
-collapse(Firebug.chrome.$("fbCommandBox"),true)
-}},onScroll:function(event){this.wasScrolledToBottom=FBL.isScrolledToBottom(this.panelNode);
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onScroll ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", wasScrolledToBottom: "+this.context.getName(),event)
-}},onResize:function(event){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onResize ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", offsetHeight: "+this.panelNode.offsetHeight+", scrollTop: "+this.panelNode.scrollTop+", scrollHeight: "+this.panelNode.scrollHeight+", "+this.context.getName(),event)
-}if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
-}}});
-function parseFormat(format){var parts=[];
-if(format.length<=0){return parts
-}var reg=/((^%|.%)(\d+)?(\.)([a-zA-Z]))|((^%|.%)([a-zA-Z]))/;
-for(var m=reg.exec(format);
-m;
-m=reg.exec(format)){if(m[0].substr(0,2)=="%%"){parts.push(format.substr(0,m.index));
-parts.push(m[0].substr(1))
-}else{var type=m[8]?m[8]:m[5];
-var precision=m[3]?parseInt(m[3]):(m[4]=="."?-1:0);
-var rep=null;
-switch(type){case"s":rep=FirebugReps.Text;
-break;
-case"f":case"i":case"d":rep=FirebugReps.Number;
-break;
-case"o":rep=null;
-break
-}parts.push(format.substr(0,m[0][0]=="%"?m.index:m.index+1));
-parts.push({rep:rep,precision:precision,type:("%"+type)})
-}format=format.substr(m.index+m[0].length)
-}parts.push(format);
-return parts
-}var appendObject=Firebug.ConsolePanel.prototype.appendObject;
-var appendFormatted=Firebug.ConsolePanel.prototype.appendFormatted;
-var appendOpenGroup=Firebug.ConsolePanel.prototype.appendOpenGroup;
-var appendCloseGroup=Firebug.ConsolePanel.prototype.appendCloseGroup;
-Firebug.registerModule(Firebug.Console);
-Firebug.registerPanel(Firebug.ConsolePanel)
-}});
-FBL.ns(function(){with(FBL){var frameCounters={};
-var traceRecursion=0;
-Firebug.Console.injector={install:function(context){var win=context.window;
-var consoleHandler=new FirebugConsoleHandler(context,win);
-var properties=["log","debug","info","warn","error","assert","dir","dirxml","group","groupCollapsed","groupEnd","time","timeEnd","count","trace","profile","profileEnd","clear","open","close"];
-var Handler=function(name){var c=consoleHandler;
-var f=consoleHandler[name];
-return function(){return f.apply(c,arguments)
-}
-};
-var installer=function(c){for(var i=0,l=properties.length;
-i<l;
-i++){var name=properties[i];
-c[name]=new Handler(name);
-c.firebuglite=Firebug.version
-}};
-var sandbox;
-try{sandbox=new win.Function("arguments.callee.install(window.console={})")
-}catch(E){sandbox=new win.Function("arguments.callee.install(window.firebug={})")
-}sandbox.install=installer;
-sandbox()
-},isAttached:function(context,win){if(win.wrappedJSObject){var attached=(win.wrappedJSObject._getFirebugConsoleElement?true:false);
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.isAttached:"+attached+" to win.wrappedJSObject "+safeGetWindowLocation(win.wrappedJSObject))
-}return attached
-}else{if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.isAttached? to win "+win.location+" fnc:"+win._getFirebugConsoleElement)
-}return(win._getFirebugConsoleElement?true:false)
-}},attachIfNeeded:function(context,win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.attachIfNeeded has win "+(win?((win.wrappedJSObject?"YES":"NO")+" wrappedJSObject"):"null"))
-}if(this.isAttached(context,win)){return true
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.attachIfNeeded found isAttached false ")
-}this.attachConsoleInjector(context,win);
-this.addConsoleListener(context,win);
-Firebug.Console.clearReloadWarning(context);
-var attached=this.isAttached(context,win);
-if(attached){dispatch(Firebug.Console.fbListeners,"onConsoleInjected",[context,win])
-}return attached
-},attachConsoleInjector:function(context,win){var consoleInjection=this.getConsoleInjectionScript();
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("attachConsoleInjector evaluating in "+win.location,consoleInjection)
-}Firebug.CommandLine.evaluateInWebPage(consoleInjection,context,win);
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("attachConsoleInjector evaluation completed for "+win.location)
-}},getConsoleInjectionScript:function(){if(!this.consoleInjectionScript){var script="";
-script+="window.__defineGetter__('console', function() {\n";
-script+=" return (window._firebug ? window._firebug : window.loadFirebugConsole()); })\n\n";
-script+="window.loadFirebugConsole = function() {\n";
-script+="window._firebug =  new _FirebugConsole();";
-if(FBTrace.DBG_CONSOLE){script+=" window.dump('loadFirebugConsole '+window.location+'\\n');\n"
-}script+=" return window._firebug };\n";
-var theFirebugConsoleScript=getResource("chrome://firebug/content/consoleInjected.js");
-script+=theFirebugConsoleScript;
-this.consoleInjectionScript=script
-}return this.consoleInjectionScript
-},forceConsoleCompilationInPage:function(context,win){if(!win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("no win in forceConsoleCompilationInPage!")
-}return
-}var consoleForcer="window.loadFirebugConsole();";
-if(context.stopped){Firebug.Console.injector.evaluateConsoleScript(context)
-}else{Firebug.CommandLine.evaluateInWebPage(consoleForcer,context,win)
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("forceConsoleCompilationInPage "+win.location,consoleForcer)
-}},evaluateConsoleScript:function(context){var scriptSource=this.getConsoleInjectionScript();
-Firebug.Debugger.evaluate(scriptSource,context)
-},addConsoleListener:function(context,win){if(!context.activeConsoleHandlers){context.activeConsoleHandlers=[]
-}else{for(var i=0;
-i<context.activeConsoleHandlers.length;
-i++){if(context.activeConsoleHandlers[i].window==win){context.activeConsoleHandlers[i].detach();
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector addConsoleListener removed handler("+context.activeConsoleHandlers[i].handler_name+") from _firebugConsole in : "+win.location+"\n")
-}context.activeConsoleHandlers.splice(i,1)
-}}}var element=Firebug.Console.getFirebugConsoleElement(context,win);
-if(element){element.setAttribute("FirebugVersion",Firebug.version)
-}else{return false
-}var handler=new FirebugConsoleHandler(context,win);
-handler.attachTo(element);
-context.activeConsoleHandlers.push(handler);
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector addConsoleListener attached handler("+handler.handler_name+") to _firebugConsole in : "+win.location+"\n")
-}return true
-},detachConsole:function(context,win){if(win&&win.document){var element=win.document.getElementById("_firebugConsole");
-if(element){element.parentNode.removeChild(element)
-}}}};
-var total_handlers=0;
-var FirebugConsoleHandler=function FirebugConsoleHandler(context,win){this.window=win;
-this.attachTo=function(element){this.element=element;
-this.boundHandler=bind(this.handleEvent,this);
-this.element.addEventListener("firebugAppendConsole",this.boundHandler,true)
-};
-this.detach=function(){this.element.removeEventListener("firebugAppendConsole",this.boundHandler,true)
-};
-this.handler_name=++total_handlers;
-this.handleEvent=function(event){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("FirebugConsoleHandler("+this.handler_name+") "+event.target.getAttribute("methodName")+", event",event)
-}if(!Firebug.CommandLine.CommandHandler.handle(event,this,win)){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("FirebugConsoleHandler",this)
-}var methodName=event.target.getAttribute("methodName");
-Firebug.Console.log($STRF("console.MethodNotSupported",[methodName]))
-}};
-this.firebuglite=Firebug.version;
-this.init=function(){var consoleElement=win.document.getElementById("_firebugConsole");
-consoleElement.setAttribute("FirebugVersion",Firebug.version)
-};
-this.log=function(){logFormatted(arguments,"log")
-};
-this.debug=function(){logFormatted(arguments,"debug",true)
-};
-this.info=function(){logFormatted(arguments,"info",true)
-};
-this.warn=function(){logFormatted(arguments,"warn",true)
-};
-this.error=function(){logFormatted(arguments,"error",true)
-};
-this.exception=function(){logAssert("error",arguments)
-};
-this.assert=function(x){if(!x){var rest=[];
-for(var i=1;
-i<arguments.length;
-i++){rest.push(arguments[i])
-}logAssert("assert",rest)
-}};
-this.dir=function(o){Firebug.Console.log(o,context,"dir",Firebug.DOMPanel.DirTable)
-};
-this.dirxml=function(o){if(instanceOf(o,"Window")){o=o.document.documentElement
-}else{if(instanceOf(o,"Document")){o=o.documentElement
-}}Firebug.Console.log(o,context,"dirxml",Firebug.HTMLPanel.SoloElement)
-};
-this.group=function(){var sourceLink=null;
-Firebug.Console.openGroup(arguments,null,"group",null,false,sourceLink)
-};
-this.groupEnd=function(){Firebug.Console.closeGroup(context)
-};
-this.groupCollapsed=function(){var sourceLink=getStackLink();
-var row=Firebug.Console.openGroup(arguments,null,"group",null,true,sourceLink);
-removeClass(row,"opened")
-};
-this.profile=function(title){logFormatted(["console.profile() not supported."],"warn",true)
-};
-this.profileEnd=function(){logFormatted(["console.profile() not supported."],"warn",true)
-};
-this.count=function(key){var frameId="0";
-if(frameId){if(!frameCounters){frameCounters={}
-}if(key!=undefined){frameId+=key
-}var frameCounter=frameCounters[frameId];
-if(!frameCounter){var logRow=logFormatted(["0"],null,true,true);
-frameCounter={logRow:logRow,count:1};
-frameCounters[frameId]=frameCounter
-}else{++frameCounter.count
-}var label=key==undefined?frameCounter.count:key+" "+frameCounter.count;
-frameCounter.logRow.firstChild.firstChild.nodeValue=label
-}};
-this.trace=function(){var getFuncName=function getFuncName(f){if(f.getName instanceof Function){return f.getName()
-}if(f.name){return f.name
-}var name=f.toString().match(/function\s*([_$\w\d]*)/)[1];
-return name||"anonymous"
-};
-var wasVisited=function(fn){for(var i=0,l=frames.length;
-i<l;
-i++){if(frames[i].fn==fn){return true
-}}return false
-};
-traceRecursion++;
-if(traceRecursion>1){traceRecursion--;
-return
-}var frames=[];
-for(var fn=arguments.callee.caller.caller;
-fn;
-fn=fn.caller){if(wasVisited(fn)){break
-}var args=[];
-for(var i=0,l=fn.arguments.length;
-i<l;
-++i){args.push({value:fn.arguments[i]})
-}frames.push({fn:fn,name:getFuncName(fn),args:args})
-}try{(0)()
-}catch(e){var result=e;
-var stack=result.stack||result.stacktrace||"";
-stack=stack.replace(/\n\r|\r\n/g,"\n");
-var items=stack.split(/[\n\r]/);
-if(FBL.isSafari){var reChromeStackItem=/^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
-var reChromeStackItemName=/\s*\($/;
-var reChromeStackItemValue=/^(.+)\:(\d+\:\d+)\)?$/;
-var framePos=0;
-for(var i=4,length=items.length;
-i<length;
-i++,framePos++){var frame=frames[framePos];
-var item=items[i];
-var match=item.match(reChromeStackItem);
-if(match){var name=match[1];
-if(name){name=name.replace(reChromeStackItemName,"");
-frame.name=name
-}var value=match[2].match(reChromeStackItemValue);
-if(value){frame.href=value[1];
-frame.lineNo=value[2]
-}}}}else{if(FBL.isFirefox){var reFirefoxStackItem=/^(.*)@(.*)$/;
-var reFirefoxStackItemValue=/^(.+)\:(\d+)$/;
-var framePos=0;
-for(var i=2,length=items.length;
-i<length;
-i++,framePos++){var frame=frames[framePos]||{};
-var item=items[i];
-var match=item.match(reFirefoxStackItem);
-if(match){var name=match[1];
-var value=match[2].match(reFirefoxStackItemValue);
-if(value){frame.href=value[1];
-frame.lineNo=value[2]
-}}}}}}Firebug.Console.log({frames:frames},context,"stackTrace",FirebugReps.StackTrace);
-traceRecursion--
-};
-this.trace_ok=function(){var getFuncName=function getFuncName(f){if(f.getName instanceof Function){return f.getName()
-}if(f.name){return f.name
-}var name=f.toString().match(/function\s*([_$\w\d]*)/)[1];
-return name||"anonymous"
-};
-var wasVisited=function(fn){for(var i=0,l=frames.length;
-i<l;
-i++){if(frames[i].fn==fn){return true
-}}return false
-};
-var frames=[];
-for(var fn=arguments.callee.caller;
-fn;
-fn=fn.caller){if(wasVisited(fn)){break
-}var args=[];
-for(var i=0,l=fn.arguments.length;
-i<l;
-++i){args.push({value:fn.arguments[i]})
-}frames.push({fn:fn,name:getFuncName(fn),args:args})
-}Firebug.Console.log({frames:frames},context,"stackTrace",FirebugReps.StackTrace)
-};
-this.clear=function(){Firebug.Console.clear(context)
-};
-this.time=function(name,reset){if(!name){return
-}var time=new Date().getTime();
-if(!this.timeCounters){this.timeCounters={}
-}var key="KEY"+name.toString();
-if(!reset&&this.timeCounters[key]){return
-}this.timeCounters[key]=time
-};
-this.timeEnd=function(name){var time=new Date().getTime();
-if(!this.timeCounters){return
-}var key="KEY"+name.toString();
-var timeCounter=this.timeCounters[key];
-if(timeCounter){var diff=time-timeCounter;
-var label=name+": "+diff+"ms";
-this.info(label);
-delete this.timeCounters[key]
-}return diff
-};
-this.evaluated=function(result,context){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.FirebugConsoleHandler evalutated default called",result)
-}Firebug.Console.log(result,context)
-};
-this.evaluateError=function(result,context){Firebug.Console.log(result,context,"errorMessage")
-};
-function logFormatted(args,className,linkToSource,noThrottle){var sourceLink=linkToSource?getStackLink():null;
-return Firebug.Console.logFormatted(args,context,className,noThrottle,sourceLink)
-}function logAssert(category,args){Firebug.Errors.increaseCount(context);
-if(!args||!args.length||args.length==0){var msg=[FBL.$STR("Assertion")]
-}else{var msg=args[0]
-}if(Firebug.errorStackTrace){var trace=Firebug.errorStackTrace;
-delete Firebug.errorStackTrace;
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from errorStackTrace",trace)
-}}else{if(msg.stack){var trace=parseToStackTrace(msg.stack);
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from msg.stack",trace)
-}}else{var trace=getJSDUserStack();
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from getJSDUserStack",trace)
-}}}var errorObject=new FBL.ErrorMessage(msg,(msg.fileName?msg.fileName:win.location),(msg.lineNumber?msg.lineNumber:0),"",category,context,trace);
-if(trace&&trace.frames&&trace.frames[0]){errorObject.correctWithStackTrace(trace)
-}errorObject.resetSource();
-var objects=errorObject;
-if(args.length>1){objects=[errorObject];
-for(var i=1;
-i<args.length;
-i++){objects.push(args[i])
-}}var row=Firebug.Console.log(objects,context,"errorMessage",null,true);
-row.scrollIntoView()
-}function getComponentsStackDump(){var frame=Components.stack;
-var userURL=win.location.href.toString();
-if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.getComponentsStackDump initial stack for userURL "+userURL,frame)
-}while(frame&&FBL.isSystemURL(frame.filename)){frame=frame.caller
-}if(frame){frame=frame.caller
-}if(frame){frame=frame.caller
-}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.getComponentsStackDump final stack for userURL "+userURL,frame)
-}return frame
-}function getStackLink(){return
-}function getJSDUserStack(){var trace=FBL.getCurrentStackTrace(context);
-var frames=trace?trace.frames:null;
-if(frames&&(frames.length>0)){var oldest=frames.length-1;
-for(var i=0;
-i<frames.length;
-i++){if(frames[oldest-i].href.indexOf("chrome:")==0){break
-}var fn=frames[oldest-i].fn+"";
-if(fn&&(fn.indexOf("_firebugEvalEvent")!=-1)){break
-}}FBTrace.sysout("consoleInjector getJSDUserStack: "+frames.length+" oldest: "+oldest+" i: "+i+" i - oldest + 2: "+(i-oldest+2),trace);
-trace.frames=trace.frames.slice(2-i);
-return trace
-}else{return"Firebug failed to get stack trace with any frames"
-}}};
-FBL.registerConsole=function(){if(Env.Options.overrideConsole){var win=Env.browser.window;
-Firebug.Console.injector.install(win)
-}};
-registerConsole()
-}});
-FBL.ns(function(){with(FBL){var commandPrefix=">>>";
-var reOpenBracket=/[\[\(\{]/;
-var reCloseBracket=/[\]\)\}]/;
-var commandHistory=[];
-var commandPointer=-1;
-var isAutoCompleting=null;
-var autoCompletePrefix=null;
-var autoCompleteExpr=null;
-var autoCompleteBuffer=null;
-var autoCompletePosition=null;
-var fbCommandLine=null;
-var fbLargeCommandLine=null;
-var fbLargeCommandButtons=null;
-var _completion={window:["console"],document:["getElementById","getElementsByTagName"]};
-var _stack=function(command){commandHistory.push(command);
-commandPointer=commandHistory.length
-};
-Firebug.CommandLine=extend(Firebug.Module,{element:null,isMultiLine:false,isActive:false,initialize:function(doc){this.clear=bind(this.clear,this);
-this.enter=bind(this.enter,this);
-this.onError=bind(this.onError,this);
-this.onKeyDown=bind(this.onKeyDown,this);
-this.onMultiLineKeyDown=bind(this.onMultiLineKeyDown,this);
-addEvent(Firebug.browser.window,"error",this.onError);
-addEvent(Firebug.chrome.window,"error",this.onError)
-},shutdown:function(doc){this.deactivate();
-removeEvent(Firebug.browser.window,"error",this.onError);
-removeEvent(Firebug.chrome.window,"error",this.onError)
-},activate:function(multiLine,hideToggleIcon,onRun){defineCommandLineAPI();
-if(this.isActive){if(this.isMultiLine==multiLine){return
-}this.deactivate()
-}fbCommandLine=$("fbCommandLine");
-fbLargeCommandLine=$("fbLargeCommandLine");
-fbLargeCommandButtons=$("fbLargeCommandButtons");
-if(multiLine){onRun=onRun||this.enter;
-this.isMultiLine=true;
-this.element=fbLargeCommandLine;
-addEvent(this.element,"keydown",this.onMultiLineKeyDown);
-addEvent($("fbSmallCommandLineIcon"),"click",Firebug.chrome.hideLargeCommandLine);
-this.runButton=new Button({element:$("fbCommand_btRun"),owner:Firebug.CommandLine,onClick:onRun});
-this.runButton.initialize();
-this.clearButton=new Button({element:$("fbCommand_btClear"),owner:Firebug.CommandLine,onClick:this.clear});
-this.clearButton.initialize()
-}else{this.isMultiLine=false;
-this.element=fbCommandLine;
-if(!fbCommandLine){return
-}addEvent(this.element,"keydown",this.onKeyDown)
-}if(isOpera){fixOperaTabKey(this.element)
-}if(this.lastValue){this.element.value=this.lastValue
-}this.isActive=true
-},deactivate:function(){if(!this.isActive){return
-}this.isActive=false;
-this.lastValue=this.element.value;
-if(this.isMultiLine){removeEvent(this.element,"keydown",this.onMultiLineKeyDown);
-removeEvent($("fbSmallCommandLineIcon"),"click",Firebug.chrome.hideLargeCommandLine);
-this.runButton.destroy();
-this.clearButton.destroy()
-}else{removeEvent(this.element,"keydown",this.onKeyDown)
-}this.element=null;
-delete this.element;
-fbCommandLine=null;
-fbLargeCommandLine=null;
-fbLargeCommandButtons=null
-},focus:function(){this.element.focus()
-},blur:function(){this.element.blur()
-},clear:function(){this.element.value=""
-},evaluate:function(expr){var api="Firebug.CommandLine.API";
-var result=Firebug.context.evaluate(expr,"window",api,Firebug.Console.error);
-return result
-},enter:function(){var command=this.element.value;
-if(!command){return
-}_stack(command);
-Firebug.Console.log(commandPrefix+" "+stripNewLines(command),Firebug.browser,"command",FirebugReps.Text);
-var result=this.evaluate(command);
-Firebug.Console.log(result)
-},prevCommand:function(){if(commandPointer>0&&commandHistory.length>0){this.element.value=commandHistory[--commandPointer]
-}},nextCommand:function(){var element=this.element;
-var limit=commandHistory.length-1;
-var i=commandPointer;
-if(i<limit){element.value=commandHistory[++commandPointer]
-}else{if(i==limit){++commandPointer;
-element.value=""
-}}},autocomplete:function(reverse){var element=this.element;
-var command=element.value;
-var offset=getExpressionOffset(command);
-var valBegin=offset?command.substr(0,offset):"";
-var val=command.substr(offset);
-var buffer,obj,objName,commandBegin,result,prefix;
-if(!isAutoCompleting){var reObj=/(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
-var r=reObj.exec(val);
-if(r[1]||r[2]||r[3]){commandBegin=r[1]||"";
-objName=r[2]||"";
-prefix=r[3]||""
-}else{if(val==""){commandBegin=objName=prefix=""
-}else{return
-}}isAutoCompleting=true;
-if(objName==""){obj=window
-}else{objName=objName.replace(/\.$/,"");
-var n=objName.split(".");
-var target=window,o;
-for(var i=0,ni;
-ni=n[i];
-i++){if(o=target[ni]){target=o
-}else{target=null;
-break
-}}obj=target
-}if(obj){autoCompletePrefix=prefix;
-autoCompleteExpr=valBegin+commandBegin+(objName?objName+".":"");
-autoCompletePosition=-1;
-buffer=autoCompleteBuffer=isIE?_completion[objName||"window"]||[]:[];
-for(var p in obj){buffer.push(p)
-}}}else{buffer=autoCompleteBuffer
-}if(buffer){prefix=autoCompletePrefix;
-var diff=reverse?-1:1;
-for(var i=autoCompletePosition+diff,l=buffer.length,bi;
-i>=0&&i<l;
-i+=diff){bi=buffer[i];
-if(bi.indexOf(prefix)==0){autoCompletePosition=i;
-result=bi;
-break
-}}}if(result){element.value=autoCompleteExpr+result
-}},setMultiLine:function(multiLine){if(multiLine==this.isMultiLine){return
-}this.activate(multiLine)
-},onError:function(msg,href,lineNo){href=href||"";
-var lastSlash=href.lastIndexOf("/");
-var fileName=lastSlash==-1?href:href.substr(lastSlash+1);
-var html=['<span class="errorMessage">',msg,"</span>",'<div class="objectBox-sourceLink">',fileName," (line ",lineNo,")</div>"]
-},onKeyDown:function(e){e=e||event;
-var code=e.keyCode;
-if(code!=9&&code!=16&&code!=17&&code!=18){isAutoCompleting=false
-}if(code==13){this.enter();
-this.clear()
-}else{if(code==27){setTimeout(this.clear,0)
-}else{if(code==38){this.prevCommand()
-}else{if(code==40){this.nextCommand()
-}else{if(code==9){this.autocomplete(e.shiftKey)
-}else{return
-}}}}}cancelEvent(e,true);
-return false
-},onMultiLineKeyDown:function(e){e=e||event;
-var code=e.keyCode;
-if(code==13&&e.ctrlKey){this.enter()
-}}});
-Firebug.registerModule(Firebug.CommandLine);
-function getExpressionOffset(command){var bracketCount=0;
-var start=command.length-1;
-for(;
-start>=0;
---start){var c=command[start];
-if((c==","||c==";"||c==" ")&&!bracketCount){break
-}if(reOpenBracket.test(c)){if(bracketCount){--bracketCount
-}else{break
-}}else{if(reCloseBracket.test(c)){++bracketCount
-}}}return start+1
-}var CommandLineAPI={$:function(id){return Firebug.browser.document.getElementById(id)
-},$$:function(selector,context){context=context||Firebug.browser.document;
-return Firebug.Selector?Firebug.Selector(selector,context):Firebug.Console.error("Firebug.Selector module not loaded.")
-},$0:null,$1:null,dir:function(o){Firebug.Console.log(o,Firebug.context,"dir",Firebug.DOMPanel.DirTable)
-},dirxml:function(o){if(instanceOf(o,"Window")){o=o.document.documentElement
-}else{if(instanceOf(o,"Document")){o=o.documentElement
-}}Firebug.Console.log(o,Firebug.context,"dirxml",Firebug.HTMLPanel.SoloElement)
-}};
-var defineCommandLineAPI=function defineCommandLineAPI(){Firebug.CommandLine.API={};
-for(var m in CommandLineAPI){if(!Env.browser.window[m]){Firebug.CommandLine.API[m]=CommandLineAPI[m]
-}}var stack=FirebugChrome.htmlSelectionStack;
-if(stack){Firebug.CommandLine.API.$0=stack[0];
-Firebug.CommandLine.API.$1=stack[1]
-}}
-}});
 FBL.ns(function(){with(FBL){if(Env.Options.disableXHRListener){return
 }var XHRSpy=function(){this.requestHeaders=[];
 this.responseHeaders=[]
@@ -5710,7 +5090,17 @@ try{var activeXObject=new _ActiveXObject(name)
 }if(!isIE6){var _XMLHttpRequest=XMLHttpRequest;
 window.XMLHttpRequest=function(){return new XMLHttpRequestWrapper()
 }
-}}});
+}FBL.getNativeXHRObject=function(){var xhrObj=false;
+try{xhrObj=new _XMLHttpRequest()
+}catch(e){var progid=["MSXML2.XMLHTTP.5.0","MSXML2.XMLHTTP.4.0","MSXML2.XMLHTTP.3.0","MSXML2.XMLHTTP","Microsoft.XMLHTTP"];
+for(var i=0;
+i<progid.length;
+++i){try{xhrObj=new _ActiveXObject(progid[i])
+}catch(e){continue
+}break
+}}finally{return xhrObj
+}}
+}});
 FBL.ns(function(){with(FBL){var reIgnore=/about:|javascript:|resource:|chrome:|jar:/;
 var layoutInterval=300;
 var indentWidth=18;
@@ -6128,7 +5518,7 @@ if(channel instanceof Ci.nsIHttpChannel){channel.visitResponseHeaders({visitHead
 }}return headers
 }Firebug.registerModule(Firebug.Spy)
 }});
-FBL.ns(function(){with(FBL){var contentTypes={"text/plain":1,"text/javascript":1,"text/x-javascript":1,"text/json":1,"text/x-json":1,"application/json":1,"application/x-json":1,"application/javascript":1,"application/x-javascript":1,"application/json-rpc":1};
+FBL.ns(function(){with(FBL){var contentTypes={"text/javascript":1,"text/x-javascript":1,"text/json":1,"text/x-json":1,"application/json":1,"application/x-json":1,"application/javascript":1,"application/x-javascript":1,"application/json-rpc":1};
 Firebug.JSONViewerModel=extend(Firebug.Module,{dispatchName:"jsonViewer",initialize:function(){Firebug.NetMonitor.NetInfoBody.addListener(this);
 this.toggles={}
 },shutdown:function(){Firebug.NetMonitor.NetInfoBody.removeListener(this)
@@ -6191,11 +5581,805 @@ parts[1]="..."+parts[1].substr(column-limit)
 }});
 Firebug.registerModule(Firebug.XMLViewerModel)
 }});
+FBL.ns(function(){with(FBL){var consoleQueue=[];
+var lastHighlightedObject;
+var FirebugContext=Env.browser;
+var maxQueueRequests=500;
+Firebug.ConsoleBase={log:function(object,context,className,rep,noThrottle,sourceLink){return this.logRow(appendObject,object,context,className,rep,sourceLink,noThrottle)
+},logFormatted:function(objects,context,className,noThrottle,sourceLink){return this.logRow(appendFormatted,objects,context,className,null,sourceLink,noThrottle)
+},openGroup:function(objects,context,className,rep,noThrottle,sourceLink,noPush){return this.logRow(appendOpenGroup,objects,context,className,rep,sourceLink,noThrottle)
+},closeGroup:function(context,noThrottle){return this.logRow(appendCloseGroup,null,context,null,null,null,noThrottle,true)
+},logRow:function(appender,objects,context,className,rep,sourceLink,noThrottle,noRow){noThrottle=true;
+if(!context){context=FirebugContext
+}if(FBTrace.DBG_ERRORS&&!context){FBTrace.sysout("Console.logRow has no context, skipping objects",objects)
+}if(!context){return
+}if(noThrottle||!context){var panel=this.getPanel(context);
+if(panel){var row=panel.append(appender,objects,className,rep,sourceLink,noRow);
+var container=panel.panelNode;
+return row
+}else{consoleQueue.push([appender,objects,context,className,rep,sourceLink,noThrottle,noRow])
+}}else{if(!context.throttle){return
+}var args=[appender,objects,context,className,rep,sourceLink,true,noRow];
+context.throttle(this.logRow,this,args)
+}},appendFormatted:function(args,row,context){if(!context){context=FirebugContext
+}var panel=this.getPanel(context);
+panel.appendFormatted(args,row)
+},clear:function(context){if(!context){context=Firebug.context
+}var panel=this.getPanel(context,true);
+if(panel){panel.clear()
+}},getPanel:function(context,noCreate){return Firebug.chrome?Firebug.chrome.getPanel("Console"):null
+}};
+var ActivableConsole=extend(Firebug.ConsoleBase,{isAlwaysEnabled:function(){return true
+}});
+Firebug.Console=Firebug.Console=extend(ActivableConsole,{dispatchName:"console",error:function(){Firebug.Console.logFormatted(arguments,Firebug.browser,"error")
+},flush:function(){dispatch(this.fbListeners,"flush",[]);
+for(var i=0,length=consoleQueue.length;
+i<length;
+i++){var args=consoleQueue[i];
+this.logRow.apply(this,args)
+}},showPanel:function(browser,panel){},getFirebugConsoleElement:function(context,win){var element=win.document.getElementById("_firebugConsole");
+if(!element){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("getFirebugConsoleElement forcing element")
+}var elementForcer="(function(){var r=null; try { r = window._getFirebugConsoleElement();}catch(exc){r=exc;} return r;})();";
+if(context.stopped){Firebug.Console.injector.evaluateConsoleScript(context)
+}else{var r=Firebug.CommandLine.evaluateInWebPage(elementForcer,context,win)
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("getFirebugConsoleElement forcing element result "+r,r)
+}var element=win.document.getElementById("_firebugConsole");
+if(!element){if(FBTrace.DBG_ERRORS){FBTrace.sysout("console.getFirebugConsoleElement: no _firebugConsole in win:",win)
+}Firebug.Console.logFormatted(["Firebug cannot find _firebugConsole element",r,win],context,"error",true)
+}}return element
+},isReadyElsePreparing:function(context,win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.isReadyElsePreparing, win is "+(win?"an argument: ":"null, context.window: ")+(win?win.location:context.window.location),(win?win:context.window))
+}if(win){return this.injector.attachIfNeeded(context,win)
+}else{var attached=true;
+for(var i=0;
+i<context.windows.length;
+i++){attached=attached&&this.injector.attachIfNeeded(context,context.windows[i])
+}if(context.windows.indexOf(context.window)==-1){FBTrace.sysout("isReadyElsePreparing ***************** context.window not in context.windows")
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.isReadyElsePreparing attached to "+context.windows.length+" and returns "+attached)
+}return attached
+}},initialize:function(){this.panelName="console"
+},enable:function(){if(Firebug.Console.isAlwaysEnabled()){this.watchForErrors()
+}},disable:function(){if(Firebug.Console.isAlwaysEnabled()){this.unwatchForErrors()
+}},initContext:function(context,persistedState){Firebug.ActivableModule.initContext.apply(this,arguments);
+context.consoleReloadWarning=true
+},loadedContext:function(context){for(var url in context.sourceFileMap){return
+}this.clearReloadWarning(context)
+},clearReloadWarning:function(context){if(context.consoleReloadWarning){var panel=context.getPanel(this.panelName);
+panel.clearReloadWarning();
+delete context.consoleReloadWarning
+}},togglePersist:function(context){var panel=context.getPanel(this.panelName);
+panel.persistContent=panel.persistContent?false:true;
+Firebug.chrome.setGlobalAttribute("cmd_togglePersistConsole","checked",panel.persistContent)
+},showContext:function(browser,context){Firebug.chrome.setGlobalAttribute("cmd_clearConsole","disabled",!context);
+Firebug.ActivableModule.showContext.apply(this,arguments)
+},destroyContext:function(context,persistedState){Firebug.Console.injector.detachConsole(context,context.window)
+},onPanelEnable:function(panelName){if(panelName!=this.panelName){return
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onPanelEnable**************")
+}this.watchForErrors();
+Firebug.Debugger.addDependentModule(this)
+},onPanelDisable:function(panelName){if(panelName!=this.panelName){return
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onPanelDisable**************")
+}Firebug.Debugger.removeDependentModule(this);
+this.unwatchForErrors();
+this.clear()
+},onSuspendFirebug:function(){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onSuspendFirebug\n")
+}if(Firebug.Console.isAlwaysEnabled()){this.unwatchForErrors()
+}},onResumeFirebug:function(){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onResumeFirebug\n")
+}if(Firebug.Console.isAlwaysEnabled()){this.watchForErrors()
+}},watchForErrors:function(){Firebug.Errors.checkEnabled();
+$("fbStatusIcon").setAttribute("console","on")
+},unwatchForErrors:function(){Firebug.Errors.checkEnabled();
+$("fbStatusIcon").removeAttribute("console")
+},onMonitorScript:function(context,frame){Firebug.Console.log(frame,context)
+},onFunctionCall:function(context,frame,depth,calling){if(calling){Firebug.Console.openGroup([frame,"depth:"+depth],context)
+}else{Firebug.Console.closeGroup(context)
+}},logRow:function(appender,objects,context,className,rep,sourceLink,noThrottle,noRow){if(!context){context=FirebugContext
+}if(FBTrace.DBG_WINDOWS&&!context){FBTrace.sysout("Console.logRow: no context \n")
+}if(this.isAlwaysEnabled()){return Firebug.ConsoleBase.logRow.apply(this,arguments)
+}}});
+Firebug.ConsoleListener={log:function(context,object,className,sourceLink){},logFormatted:function(context,objects,className,sourceLink){}};
+Firebug.ConsolePanel=function(){};
+Firebug.ConsolePanel.prototype=extend(Firebug.Panel,{wasScrolledToBottom:false,messageCount:0,lastLogTime:0,groups:null,limit:null,append:function(appender,objects,className,rep,sourceLink,noRow){var container=this.getTopContainer();
+if(noRow){appender.apply(this,[objects])
+}else{var row=this.createRow("logRow",className);
+appender.apply(this,[objects,row,rep]);
+if(sourceLink){FirebugReps.SourceLink.tag.append({object:sourceLink},row)
+}container.appendChild(row);
+this.filterLogRow(row,this.wasScrolledToBottom);
+if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
+}return row
+}},clear:function(){if(this.panelNode){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("ConsolePanel.clear")
+}clearNode(this.panelNode);
+this.insertLogLimit(this.context)
+}},insertLogLimit:function(){var row=this.createRow("limitRow");
+var limitInfo={totalCount:0,limitPrefsTitle:$STRF("LimitPrefsTitle",[Firebug.prefDomain+".console.logLimit"])};
+return;
+var netLimitRep=Firebug.NetMonitor.NetLimit;
+var nodes=netLimitRep.createTable(row,limitInfo);
+this.limit=nodes[1];
+var container=this.panelNode;
+container.insertBefore(nodes[0],container.firstChild)
+},insertReloadWarning:function(){this.warningRow=this.append(appendObject,$STR("message.Reload to activate window console"),"info")
+},clearReloadWarning:function(){if(this.warningRow){this.warningRow.parentNode.removeChild(this.warningRow);
+delete this.warningRow
+}},appendObject:function(object,row,rep){if(!rep){rep=Firebug.getRep(object)
+}return rep.tag.append({object:object},row)
+},appendFormatted:function(objects,row,rep){if(!objects||!objects.length){return
+}function logText(text,row){var node=row.ownerDocument.createTextNode(text);
+row.appendChild(node)
+}var format=objects[0];
+var objIndex=0;
+if(typeof(format)!="string"){format="";
+objIndex=-1
+}else{if(objects.length===1){if(format.length<1){logText("(an empty string)",row);
+return
+}}}var parts=parseFormat(format);
+var trialIndex=objIndex;
+for(var i=0;
+i<parts.length;
+i++){var part=parts[i];
+if(part&&typeof(part)=="object"){if(++trialIndex>objects.length){format="";
+objIndex=-1;
+parts.length=0;
+break
+}}}for(var i=0;
+i<parts.length;
+++i){var part=parts[i];
+if(part&&typeof(part)=="object"){var object=objects[++objIndex];
+if(typeof(object)!="undefined"){this.appendObject(object,row,part.rep)
+}else{this.appendObject(part.type,row,FirebugReps.Text)
+}}else{FirebugReps.Text.tag.append({object:part},row)
+}}for(var i=objIndex+1;
+i<objects.length;
+++i){logText(" ",row);
+var object=objects[i];
+if(typeof(object)=="string"){FirebugReps.Text.tag.append({object:object},row)
+}else{this.appendObject(object,row)
+}}},appendOpenGroup:function(objects,row,rep){if(!this.groups){this.groups=[]
+}setClass(row,"logGroup");
+setClass(row,"opened");
+var innerRow=this.createRow("logRow");
+setClass(innerRow,"logGroupLabel");
+if(rep){rep.tag.replace({objects:objects},innerRow)
+}else{this.appendFormatted(objects,innerRow,rep)
+}row.appendChild(innerRow);
+var groupBody=this.createRow("logGroupBody");
+row.appendChild(groupBody);
+groupBody.setAttribute("role","group");
+this.groups.push(groupBody);
+addEvent(innerRow,"mousedown",function(event){if(isLeftClick(event)){var target=event.target||event.srcElement;
+target=getAncestorByClass(target,"logGroupLabel");
+var groupRow=target.parentNode;
+if(hasClass(groupRow,"opened")){removeClass(groupRow,"opened");
+target.setAttribute("aria-expanded","false")
+}else{setClass(groupRow,"opened");
+target.setAttribute("aria-expanded","true")
+}}})
+},appendCloseGroup:function(object,row,rep){if(this.groups){this.groups.pop()
+}},onMouseMove:function(event){if(!Firebug.Inspector){return
+}var target=event.srcElement||event.target;
+var object=getAncestorByClass(target,"objectLink-element");
+object=object?object.repObject:null;
+if(object&&instanceOf(object,"Element")&&object.nodeType==1){if(object!=lastHighlightedObject){Firebug.Inspector.drawBoxModel(object);
+object=lastHighlightedObject
+}}else{Firebug.Inspector.hideBoxModel()
+}},onMouseDown:function(event){var target=event.srcElement||event.target;
+var object=getAncestorByClass(target,"objectLink");
+var repObject=object?object.repObject:null;
+if(!repObject){return
+}if(hasClass(object,"objectLink-object")){Firebug.chrome.selectPanel("DOM");
+Firebug.chrome.getPanel("DOM").select(repObject,true)
+}else{if(hasClass(object,"objectLink-element")){Firebug.chrome.selectPanel("HTML");
+Firebug.chrome.getPanel("HTML").select(repObject,true)
+}}},name:"Console",title:"Console",options:{hasCommandLine:true,hasToolButtons:true,isPreRendered:true},create:function(){Firebug.Panel.create.apply(this,arguments);
+this.context=Firebug.browser.window;
+this.document=Firebug.chrome.document;
+this.onMouseMove=bind(this.onMouseMove,this);
+this.onMouseDown=bind(this.onMouseDown,this);
+this.clearButton=new Button({element:$("fbConsole_btClear"),owner:Firebug.Console,onClick:Firebug.Console.clear})
+},initialize:function(){Firebug.Panel.initialize.apply(this,arguments);
+if(!this.persistedContent&&Firebug.Console.isAlwaysEnabled()){this.insertLogLimit(this.context);
+this.updateMaxLimit();
+if(this.context.consoleReloadWarning){this.insertReloadWarning()
+}}addEvent(this.panelNode,"mouseover",this.onMouseMove);
+addEvent(this.panelNode,"mousedown",this.onMouseDown);
+this.clearButton.initialize()
+},initializeNode:function(){if(FBTrace.DBG_CONSOLE){this.onScroller=bind(this.onScroll,this);
+addEvent(this.panelNode,"scroll",this.onScroller)
+}this.onResizer=bind(this.onResize,this);
+this.resizeEventTarget=Firebug.chrome.$("fbContentBox");
+addEvent(this.resizeEventTarget,"resize",this.onResizer)
+},destroyNode:function(){if(this.onScroller){removeEvent(this.panelNode,"scroll",this.onScroller)
+}},shutdown:function(){this.clearButton.shutdown();
+removeEvent(this.panelNode,"mousemove",this.onMouseMove);
+removeEvent(this.panelNode,"mousedown",this.onMouseDown);
+this.destroyNode();
+Firebug.Panel.shutdown.apply(this,arguments)
+},ishow:function(state){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.panel show; "+this.context.getName(),state)
+}var enabled=Firebug.Console.isAlwaysEnabled();
+if(enabled){Firebug.Console.disabledPanelPage.hide(this);
+this.showCommandLine(true);
+this.showToolbarButtons("fbConsoleButtons",true);
+Firebug.chrome.setGlobalAttribute("cmd_togglePersistConsole","checked",this.persistContent);
+if(state&&state.wasScrolledToBottom){this.wasScrolledToBottom=state.wasScrolledToBottom;
+delete state.wasScrolledToBottom
+}if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.show ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
+}}else{this.hide(state);
+Firebug.Console.disabledPanelPage.show(this)
+}},ihide:function(state){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.panel hide; "+this.context.getName(),state)
+}this.showToolbarButtons("fbConsoleButtons",false);
+this.showCommandLine(false);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.hide ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
+}},destroy:function(state){if(this.panelNode.offsetHeight){this.wasScrolledToBottom=isScrolledToBottom(this.panelNode)
+}if(state){state.wasScrolledToBottom=this.wasScrolledToBottom
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.destroy ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", "+this.context.getName())
+}},shouldBreakOnNext:function(){return Firebug.getPref(Firebug.servicePrefDomain,"breakOnErrors")
+},getBreakOnNextTooltip:function(enabled){return(enabled?$STR("console.Disable Break On All Errors"):$STR("console.Break On All Errors"))
+},enablePanel:function(module){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.ConsolePanel.enablePanel; "+this.context.getName())
+}Firebug.ActivablePanel.enablePanel.apply(this,arguments);
+this.showCommandLine(true);
+if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
+}},disablePanel:function(module){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.ConsolePanel.disablePanel; "+this.context.getName())
+}Firebug.ActivablePanel.disablePanel.apply(this,arguments);
+this.showCommandLine(false)
+},getOptionsMenuItems:function(){return[optionMenu("ShowJavaScriptErrors","showJSErrors"),optionMenu("ShowJavaScriptWarnings","showJSWarnings"),optionMenu("ShowCSSErrors","showCSSErrors"),optionMenu("ShowXMLErrors","showXMLErrors"),optionMenu("ShowXMLHttpRequests","showXMLHttpRequests"),optionMenu("ShowChromeErrors","showChromeErrors"),optionMenu("ShowChromeMessages","showChromeMessages"),optionMenu("ShowExternalErrors","showExternalErrors"),optionMenu("ShowNetworkErrors","showNetworkErrors"),this.getShowStackTraceMenuItem(),this.getStrictOptionMenuItem(),"-",optionMenu("LargeCommandLine","largeCommandLine")]
+},getShowStackTraceMenuItem:function(){var menuItem=serviceOptionMenu("ShowStackTrace","showStackTrace");
+if(FirebugContext&&!Firebug.Debugger.isAlwaysEnabled()){menuItem.disabled=true
+}return menuItem
+},getStrictOptionMenuItem:function(){var strictDomain="javascript.options";
+var strictName="strict";
+var strictValue=prefs.getBoolPref(strictDomain+"."+strictName);
+return{label:"JavascriptOptionsStrict",type:"checkbox",checked:strictValue,command:bindFixed(Firebug.setPref,Firebug,strictDomain,strictName,!strictValue)}
+},getBreakOnMenuItems:function(){return[]
+},search:function(text){if(!text){return
+}if(this.matchSet){for(var i in this.matchSet){removeClass(this.matchSet[i],"matched")
+}}this.matchSet=[];
+function findRow(node){return getAncestorByClass(node,"logRow")
+}var search=new TextSearch(this.panelNode,findRow);
+var logRow=search.find(text);
+if(!logRow){dispatch([Firebug.A11yModel],"onConsoleSearchMatchFound",[this,text,[]]);
+return false
+}for(;
+logRow;
+logRow=search.findNext()){setClass(logRow,"matched");
+this.matchSet.push(logRow)
+}dispatch([Firebug.A11yModel],"onConsoleSearchMatchFound",[this,text,this.matchSet]);
+return true
+},breakOnNext:function(breaking){Firebug.setPref(Firebug.servicePrefDomain,"breakOnErrors",breaking)
+},createRow:function(rowName,className){var elt=this.document.createElement("div");
+elt.className=rowName+(className?" "+rowName+"-"+className:"");
+return elt
+},getTopContainer:function(){if(this.groups&&this.groups.length){return this.groups[this.groups.length-1]
+}else{return this.panelNode
+}},filterLogRow:function(logRow,scrolledToBottom){if(this.searchText){setClass(logRow,"matching");
+setClass(logRow,"matched");
+setTimeout(bindFixed(function(){if(this.searchFilter(this.searchText,logRow)){this.matchSet.push(logRow)
+}else{removeClass(logRow,"matched")
+}removeClass(logRow,"matching");
+if(scrolledToBottom){scrollToBottom(this.panelNode)
+}},this),100)
+}},searchFilter:function(text,logRow){var count=this.panelNode.childNodes.length;
+var searchRange=this.document.createRange();
+searchRange.setStart(this.panelNode,0);
+searchRange.setEnd(this.panelNode,count);
+var startPt=this.document.createRange();
+startPt.setStartBefore(logRow);
+var endPt=this.document.createRange();
+endPt.setStartAfter(logRow);
+return finder.Find(text,searchRange,startPt,endPt)!=null
+},observe:function(subject,topic,data){if(topic!="nsPref:changed"){return
+}var prefDomain="Firebug.extension.";
+var prefName=data.substr(prefDomain.length);
+if(prefName=="console.logLimit"){this.updateMaxLimit()
+}},updateMaxLimit:function(){var value=1000;
+maxQueueRequests=value?value:maxQueueRequests
+},showCommandLine:function(shouldShow){return;
+if(shouldShow){collapse(Firebug.chrome.$("fbCommandBox"),false);
+Firebug.CommandLine.setMultiLine(Firebug.largeCommandLine,Firebug.chrome)
+}else{Firebug.CommandLine.setMultiLine(false,Firebug.chrome,Firebug.largeCommandLine);
+collapse(Firebug.chrome.$("fbCommandBox"),true)
+}},onScroll:function(event){this.wasScrolledToBottom=FBL.isScrolledToBottom(this.panelNode);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onScroll ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", wasScrolledToBottom: "+this.context.getName(),event)
+}},onResize:function(event){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("console.onResize ------------------ wasScrolledToBottom: "+this.wasScrolledToBottom+", offsetHeight: "+this.panelNode.offsetHeight+", scrollTop: "+this.panelNode.scrollTop+", scrollHeight: "+this.panelNode.scrollHeight+", "+this.context.getName(),event)
+}if(this.wasScrolledToBottom){scrollToBottom(this.panelNode)
+}}});
+function parseFormat(format){var parts=[];
+if(format.length<=0){return parts
+}var reg=/((^%|.%)(\d+)?(\.)([a-zA-Z]))|((^%|.%)([a-zA-Z]))/;
+for(var m=reg.exec(format);
+m;
+m=reg.exec(format)){if(m[0].substr(0,2)=="%%"){parts.push(format.substr(0,m.index));
+parts.push(m[0].substr(1))
+}else{var type=m[8]?m[8]:m[5];
+var precision=m[3]?parseInt(m[3]):(m[4]=="."?-1:0);
+var rep=null;
+switch(type){case"s":rep=FirebugReps.Text;
+break;
+case"f":case"i":case"d":rep=FirebugReps.Number;
+break;
+case"o":rep=null;
+break
+}parts.push(format.substr(0,m[0][0]=="%"?m.index:m.index+1));
+parts.push({rep:rep,precision:precision,type:("%"+type)})
+}format=format.substr(m.index+m[0].length)
+}parts.push(format);
+return parts
+}var appendObject=Firebug.ConsolePanel.prototype.appendObject;
+var appendFormatted=Firebug.ConsolePanel.prototype.appendFormatted;
+var appendOpenGroup=Firebug.ConsolePanel.prototype.appendOpenGroup;
+var appendCloseGroup=Firebug.ConsolePanel.prototype.appendCloseGroup;
+Firebug.registerModule(Firebug.Console);
+Firebug.registerPanel(Firebug.ConsolePanel)
+}});
+FBL.ns(function(){with(FBL){var frameCounters={};
+var traceRecursion=0;
+Firebug.Console.injector={install:function(context){var win=context.window;
+var consoleHandler=new FirebugConsoleHandler(context,win);
+var properties=["log","debug","info","warn","error","assert","dir","dirxml","group","groupCollapsed","groupEnd","time","timeEnd","count","trace","profile","profileEnd","clear","open","close"];
+var Handler=function(name){var c=consoleHandler;
+var f=consoleHandler[name];
+return function(){return f.apply(c,arguments)
+}
+};
+var installer=function(c){for(var i=0,l=properties.length;
+i<l;
+i++){var name=properties[i];
+c[name]=new Handler(name);
+c.firebuglite=Firebug.version
+}};
+var sandbox;
+if(win.console){if(Env.Options.overrideConsole){sandbox=new win.Function("arguments.callee.install(window.firebug={})")
+}else{return
+}}else{try{sandbox=new win.Function("arguments.callee.install(window.console={})")
+}catch(E){sandbox=new win.Function("arguments.callee.install(window.firebug={})")
+}}sandbox.install=installer;
+sandbox()
+},isAttached:function(context,win){if(win.wrappedJSObject){var attached=(win.wrappedJSObject._getFirebugConsoleElement?true:false);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.isAttached:"+attached+" to win.wrappedJSObject "+safeGetWindowLocation(win.wrappedJSObject))
+}return attached
+}else{if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.isAttached? to win "+win.location+" fnc:"+win._getFirebugConsoleElement)
+}return(win._getFirebugConsoleElement?true:false)
+}},attachIfNeeded:function(context,win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.attachIfNeeded has win "+(win?((win.wrappedJSObject?"YES":"NO")+" wrappedJSObject"):"null"))
+}if(this.isAttached(context,win)){return true
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("Console.attachIfNeeded found isAttached false ")
+}this.attachConsoleInjector(context,win);
+this.addConsoleListener(context,win);
+Firebug.Console.clearReloadWarning(context);
+var attached=this.isAttached(context,win);
+if(attached){dispatch(Firebug.Console.fbListeners,"onConsoleInjected",[context,win])
+}return attached
+},attachConsoleInjector:function(context,win){var consoleInjection=this.getConsoleInjectionScript();
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("attachConsoleInjector evaluating in "+win.location,consoleInjection)
+}Firebug.CommandLine.evaluateInWebPage(consoleInjection,context,win);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("attachConsoleInjector evaluation completed for "+win.location)
+}},getConsoleInjectionScript:function(){if(!this.consoleInjectionScript){var script="";
+script+="window.__defineGetter__('console', function() {\n";
+script+=" return (window._firebug ? window._firebug : window.loadFirebugConsole()); })\n\n";
+script+="window.loadFirebugConsole = function() {\n";
+script+="window._firebug =  new _FirebugConsole();";
+if(FBTrace.DBG_CONSOLE){script+=" window.dump('loadFirebugConsole '+window.location+'\\n');\n"
+}script+=" return window._firebug };\n";
+var theFirebugConsoleScript=getResource("chrome://firebug/content/consoleInjected.js");
+script+=theFirebugConsoleScript;
+this.consoleInjectionScript=script
+}return this.consoleInjectionScript
+},forceConsoleCompilationInPage:function(context,win){if(!win){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("no win in forceConsoleCompilationInPage!")
+}return
+}var consoleForcer="window.loadFirebugConsole();";
+if(context.stopped){Firebug.Console.injector.evaluateConsoleScript(context)
+}else{Firebug.CommandLine.evaluateInWebPage(consoleForcer,context,win)
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("forceConsoleCompilationInPage "+win.location,consoleForcer)
+}},evaluateConsoleScript:function(context){var scriptSource=this.getConsoleInjectionScript();
+Firebug.Debugger.evaluate(scriptSource,context)
+},addConsoleListener:function(context,win){if(!context.activeConsoleHandlers){context.activeConsoleHandlers=[]
+}else{for(var i=0;
+i<context.activeConsoleHandlers.length;
+i++){if(context.activeConsoleHandlers[i].window==win){context.activeConsoleHandlers[i].detach();
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector addConsoleListener removed handler("+context.activeConsoleHandlers[i].handler_name+") from _firebugConsole in : "+win.location+"\n")
+}context.activeConsoleHandlers.splice(i,1)
+}}}var element=Firebug.Console.getFirebugConsoleElement(context,win);
+if(element){element.setAttribute("FirebugVersion",Firebug.version)
+}else{return false
+}var handler=new FirebugConsoleHandler(context,win);
+handler.attachTo(element);
+context.activeConsoleHandlers.push(handler);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector addConsoleListener attached handler("+handler.handler_name+") to _firebugConsole in : "+win.location+"\n")
+}return true
+},detachConsole:function(context,win){if(win&&win.document){var element=win.document.getElementById("_firebugConsole");
+if(element){element.parentNode.removeChild(element)
+}}}};
+var total_handlers=0;
+var FirebugConsoleHandler=function FirebugConsoleHandler(context,win){this.window=win;
+this.attachTo=function(element){this.element=element;
+this.boundHandler=bind(this.handleEvent,this);
+this.element.addEventListener("firebugAppendConsole",this.boundHandler,true)
+};
+this.detach=function(){this.element.removeEventListener("firebugAppendConsole",this.boundHandler,true)
+};
+this.handler_name=++total_handlers;
+this.handleEvent=function(event){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("FirebugConsoleHandler("+this.handler_name+") "+event.target.getAttribute("methodName")+", event",event)
+}if(!Firebug.CommandLine.CommandHandler.handle(event,this,win)){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("FirebugConsoleHandler",this)
+}var methodName=event.target.getAttribute("methodName");
+Firebug.Console.log($STRF("console.MethodNotSupported",[methodName]))
+}};
+this.firebuglite=Firebug.version;
+this.init=function(){var consoleElement=win.document.getElementById("_firebugConsole");
+consoleElement.setAttribute("FirebugVersion",Firebug.version)
+};
+this.log=function(){logFormatted(arguments,"log")
+};
+this.debug=function(){logFormatted(arguments,"debug",true)
+};
+this.info=function(){logFormatted(arguments,"info",true)
+};
+this.warn=function(){logFormatted(arguments,"warn",true)
+};
+this.error=function(){logFormatted(arguments,"error",true)
+};
+this.exception=function(){logAssert("error",arguments)
+};
+this.assert=function(x){if(!x){var rest=[];
+for(var i=1;
+i<arguments.length;
+i++){rest.push(arguments[i])
+}logAssert("assert",rest)
+}};
+this.dir=function(o){Firebug.Console.log(o,context,"dir",Firebug.DOMPanel.DirTable)
+};
+this.dirxml=function(o){if(instanceOf(o,"Window")){o=o.document.documentElement
+}else{if(instanceOf(o,"Document")){o=o.documentElement
+}}Firebug.Console.log(o,context,"dirxml",Firebug.HTMLPanel.SoloElement)
+};
+this.group=function(){var sourceLink=null;
+Firebug.Console.openGroup(arguments,null,"group",null,false,sourceLink)
+};
+this.groupEnd=function(){Firebug.Console.closeGroup(context)
+};
+this.groupCollapsed=function(){var sourceLink=getStackLink();
+var row=Firebug.Console.openGroup(arguments,null,"group",null,true,sourceLink);
+removeClass(row,"opened")
+};
+this.profile=function(title){logFormatted(["console.profile() not supported."],"warn",true)
+};
+this.profileEnd=function(){logFormatted(["console.profile() not supported."],"warn",true)
+};
+this.count=function(key){var frameId="0";
+if(frameId){if(!frameCounters){frameCounters={}
+}if(key!=undefined){frameId+=key
+}var frameCounter=frameCounters[frameId];
+if(!frameCounter){var logRow=logFormatted(["0"],null,true,true);
+frameCounter={logRow:logRow,count:1};
+frameCounters[frameId]=frameCounter
+}else{++frameCounter.count
+}var label=key==undefined?frameCounter.count:key+" "+frameCounter.count;
+frameCounter.logRow.firstChild.firstChild.nodeValue=label
+}};
+this.trace=function(){var getFuncName=function getFuncName(f){if(f.getName instanceof Function){return f.getName()
+}if(f.name){return f.name
+}var name=f.toString().match(/function\s*([_$\w\d]*)/)[1];
+return name||"anonymous"
+};
+var wasVisited=function(fn){for(var i=0,l=frames.length;
+i<l;
+i++){if(frames[i].fn==fn){return true
+}}return false
+};
+traceRecursion++;
+if(traceRecursion>1){traceRecursion--;
+return
+}var frames=[];
+for(var fn=arguments.callee.caller.caller;
+fn;
+fn=fn.caller){if(wasVisited(fn)){break
+}var args=[];
+for(var i=0,l=fn.arguments.length;
+i<l;
+++i){args.push({value:fn.arguments[i]})
+}frames.push({fn:fn,name:getFuncName(fn),args:args})
+}try{(0)()
+}catch(e){var result=e;
+var stack=result.stack||result.stacktrace||"";
+stack=stack.replace(/\n\r|\r\n/g,"\n");
+var items=stack.split(/[\n\r]/);
+if(FBL.isSafari){var reChromeStackItem=/^\s+at\s+(.*)((?:http|https|ftp|file):\/\/.*)$/;
+var reChromeStackItemName=/\s*\($/;
+var reChromeStackItemValue=/^(.+)\:(\d+\:\d+)\)?$/;
+var framePos=0;
+for(var i=4,length=items.length;
+i<length;
+i++,framePos++){var frame=frames[framePos];
+var item=items[i];
+var match=item.match(reChromeStackItem);
+if(match){var name=match[1];
+if(name){name=name.replace(reChromeStackItemName,"");
+frame.name=name
+}var value=match[2].match(reChromeStackItemValue);
+if(value){frame.href=value[1];
+frame.lineNo=value[2]
+}}}}else{if(FBL.isFirefox){var reFirefoxStackItem=/^(.*)@(.*)$/;
+var reFirefoxStackItemValue=/^(.+)\:(\d+)$/;
+var framePos=0;
+for(var i=2,length=items.length;
+i<length;
+i++,framePos++){var frame=frames[framePos]||{};
+var item=items[i];
+var match=item.match(reFirefoxStackItem);
+if(match){var name=match[1];
+var value=match[2].match(reFirefoxStackItemValue);
+if(value){frame.href=value[1];
+frame.lineNo=value[2]
+}}}}}}Firebug.Console.log({frames:frames},context,"stackTrace",FirebugReps.StackTrace);
+traceRecursion--
+};
+this.trace_ok=function(){var getFuncName=function getFuncName(f){if(f.getName instanceof Function){return f.getName()
+}if(f.name){return f.name
+}var name=f.toString().match(/function\s*([_$\w\d]*)/)[1];
+return name||"anonymous"
+};
+var wasVisited=function(fn){for(var i=0,l=frames.length;
+i<l;
+i++){if(frames[i].fn==fn){return true
+}}return false
+};
+var frames=[];
+for(var fn=arguments.callee.caller;
+fn;
+fn=fn.caller){if(wasVisited(fn)){break
+}var args=[];
+for(var i=0,l=fn.arguments.length;
+i<l;
+++i){args.push({value:fn.arguments[i]})
+}frames.push({fn:fn,name:getFuncName(fn),args:args})
+}Firebug.Console.log({frames:frames},context,"stackTrace",FirebugReps.StackTrace)
+};
+this.clear=function(){Firebug.Console.clear(context)
+};
+this.time=function(name,reset){if(!name){return
+}var time=new Date().getTime();
+if(!this.timeCounters){this.timeCounters={}
+}var key="KEY"+name.toString();
+if(!reset&&this.timeCounters[key]){return
+}this.timeCounters[key]=time
+};
+this.timeEnd=function(name){var time=new Date().getTime();
+if(!this.timeCounters){return
+}var key="KEY"+name.toString();
+var timeCounter=this.timeCounters[key];
+if(timeCounter){var diff=time-timeCounter;
+var label=name+": "+diff+"ms";
+this.info(label);
+delete this.timeCounters[key]
+}return diff
+};
+this.evaluated=function(result,context){if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.FirebugConsoleHandler evalutated default called",result)
+}Firebug.Console.log(result,context)
+};
+this.evaluateError=function(result,context){Firebug.Console.log(result,context,"errorMessage")
+};
+function logFormatted(args,className,linkToSource,noThrottle){var sourceLink=linkToSource?getStackLink():null;
+return Firebug.Console.logFormatted(args,context,className,noThrottle,sourceLink)
+}function logAssert(category,args){Firebug.Errors.increaseCount(context);
+if(!args||!args.length||args.length==0){var msg=[FBL.$STR("Assertion")]
+}else{var msg=args[0]
+}if(Firebug.errorStackTrace){var trace=Firebug.errorStackTrace;
+delete Firebug.errorStackTrace;
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from errorStackTrace",trace)
+}}else{if(msg.stack){var trace=parseToStackTrace(msg.stack);
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from msg.stack",trace)
+}}else{var trace=getJSDUserStack();
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("logAssert trace from getJSDUserStack",trace)
+}}}var errorObject=new FBL.ErrorMessage(msg,(msg.fileName?msg.fileName:win.location),(msg.lineNumber?msg.lineNumber:0),"",category,context,trace);
+if(trace&&trace.frames&&trace.frames[0]){errorObject.correctWithStackTrace(trace)
+}errorObject.resetSource();
+var objects=errorObject;
+if(args.length>1){objects=[errorObject];
+for(var i=1;
+i<args.length;
+i++){objects.push(args[i])
+}}var row=Firebug.Console.log(objects,context,"errorMessage",null,true);
+row.scrollIntoView()
+}function getComponentsStackDump(){var frame=Components.stack;
+var userURL=win.location.href.toString();
+if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.getComponentsStackDump initial stack for userURL "+userURL,frame)
+}while(frame&&FBL.isSystemURL(frame.filename)){frame=frame.caller
+}if(frame){frame=frame.caller
+}if(frame){frame=frame.caller
+}if(FBTrace.DBG_CONSOLE){FBTrace.sysout("consoleInjector.getComponentsStackDump final stack for userURL "+userURL,frame)
+}return frame
+}function getStackLink(){return
+}function getJSDUserStack(){var trace=FBL.getCurrentStackTrace(context);
+var frames=trace?trace.frames:null;
+if(frames&&(frames.length>0)){var oldest=frames.length-1;
+for(var i=0;
+i<frames.length;
+i++){if(frames[oldest-i].href.indexOf("chrome:")==0){break
+}var fn=frames[oldest-i].fn+"";
+if(fn&&(fn.indexOf("_firebugEvalEvent")!=-1)){break
+}}FBTrace.sysout("consoleInjector getJSDUserStack: "+frames.length+" oldest: "+oldest+" i: "+i+" i - oldest + 2: "+(i-oldest+2),trace);
+trace.frames=trace.frames.slice(2-i);
+return trace
+}else{return"Firebug failed to get stack trace with any frames"
+}}};
+FBL.registerConsole=function(){var win=Env.browser.window;
+Firebug.Console.injector.install(win)
+};
+registerConsole()
+}});
+FBL.ns(function(){with(FBL){var commandPrefix=">>>";
+var reOpenBracket=/[\[\(\{]/;
+var reCloseBracket=/[\]\)\}]/;
+var commandHistory=[];
+var commandPointer=-1;
+var isAutoCompleting=null;
+var autoCompletePrefix=null;
+var autoCompleteExpr=null;
+var autoCompleteBuffer=null;
+var autoCompletePosition=null;
+var fbCommandLine=null;
+var fbLargeCommandLine=null;
+var fbLargeCommandButtons=null;
+var _completion={window:["console"],document:["getElementById","getElementsByTagName"]};
+var _stack=function(command){Firebug.context.persistedState.commandHistory.push(command);
+Firebug.context.persistedState.commandPointer=Firebug.context.persistedState.commandHistory.length
+};
+Firebug.CommandLine=extend(Firebug.Module,{element:null,isMultiLine:false,isActive:false,initialize:function(doc){this.clear=bind(this.clear,this);
+this.enter=bind(this.enter,this);
+this.onError=bind(this.onError,this);
+this.onKeyDown=bind(this.onKeyDown,this);
+this.onMultiLineKeyDown=bind(this.onMultiLineKeyDown,this);
+addEvent(Firebug.browser.window,"error",this.onError);
+addEvent(Firebug.chrome.window,"error",this.onError)
+},shutdown:function(doc){this.deactivate();
+removeEvent(Firebug.browser.window,"error",this.onError);
+removeEvent(Firebug.chrome.window,"error",this.onError)
+},activate:function(multiLine,hideToggleIcon,onRun){defineCommandLineAPI();
+Firebug.context.persistedState.commandHistory=Firebug.context.persistedState.commandHistory||[];
+Firebug.context.persistedState.commandPointer=Firebug.context.persistedState.commandPointer||-1;
+if(this.isActive){if(this.isMultiLine==multiLine){return
+}this.deactivate()
+}fbCommandLine=$("fbCommandLine");
+fbLargeCommandLine=$("fbLargeCommandLine");
+fbLargeCommandButtons=$("fbLargeCommandButtons");
+if(multiLine){onRun=onRun||this.enter;
+this.isMultiLine=true;
+this.element=fbLargeCommandLine;
+addEvent(this.element,"keydown",this.onMultiLineKeyDown);
+addEvent($("fbSmallCommandLineIcon"),"click",Firebug.chrome.hideLargeCommandLine);
+this.runButton=new Button({element:$("fbCommand_btRun"),owner:Firebug.CommandLine,onClick:onRun});
+this.runButton.initialize();
+this.clearButton=new Button({element:$("fbCommand_btClear"),owner:Firebug.CommandLine,onClick:this.clear});
+this.clearButton.initialize()
+}else{this.isMultiLine=false;
+this.element=fbCommandLine;
+if(!fbCommandLine){return
+}addEvent(this.element,"keydown",this.onKeyDown)
+}if(isOpera){fixOperaTabKey(this.element)
+}if(this.lastValue){this.element.value=this.lastValue
+}this.isActive=true
+},deactivate:function(){if(!this.isActive){return
+}this.isActive=false;
+this.lastValue=this.element.value;
+if(this.isMultiLine){removeEvent(this.element,"keydown",this.onMultiLineKeyDown);
+removeEvent($("fbSmallCommandLineIcon"),"click",Firebug.chrome.hideLargeCommandLine);
+this.runButton.destroy();
+this.clearButton.destroy()
+}else{removeEvent(this.element,"keydown",this.onKeyDown)
+}this.element=null;
+delete this.element;
+fbCommandLine=null;
+fbLargeCommandLine=null;
+fbLargeCommandButtons=null
+},focus:function(){this.element.focus()
+},blur:function(){this.element.blur()
+},clear:function(){this.element.value=""
+},evaluate:function(expr){var api="Firebug.CommandLine.API";
+var result=Firebug.context.evaluate(expr,"window",api,Firebug.Console.error);
+return result
+},enter:function(){var command=this.element.value;
+if(!command){return
+}_stack(command);
+Firebug.Console.log(commandPrefix+" "+stripNewLines(command),Firebug.browser,"command",FirebugReps.Text);
+var result=this.evaluate(command);
+Firebug.Console.log(result)
+},prevCommand:function(){if(Firebug.context.persistedState.commandPointer>0&&Firebug.context.persistedState.commandHistory.length>0){this.element.value=Firebug.context.persistedState.commandHistory[--Firebug.context.persistedState.commandPointer]
+}},nextCommand:function(){var element=this.element;
+var limit=Firebug.context.persistedState.commandHistory.length-1;
+var i=Firebug.context.persistedState.commandPointer;
+if(i<limit){element.value=Firebug.context.persistedState.commandHistory[++Firebug.context.persistedState.commandPointer]
+}else{if(i==limit){++Firebug.context.persistedState.commandPointer;
+element.value=""
+}}},autocomplete:function(reverse){var element=this.element;
+var command=element.value;
+var offset=getExpressionOffset(command);
+var valBegin=offset?command.substr(0,offset):"";
+var val=command.substr(offset);
+var buffer,obj,objName,commandBegin,result,prefix;
+if(!isAutoCompleting){var reObj=/(.*[^_$\w\d\.])?((?:[_$\w][_$\w\d]*\.)*)([_$\w][_$\w\d]*)?$/;
+var r=reObj.exec(val);
+if(r[1]||r[2]||r[3]){commandBegin=r[1]||"";
+objName=r[2]||"";
+prefix=r[3]||""
+}else{if(val==""){commandBegin=objName=prefix=""
+}else{return
+}}isAutoCompleting=true;
+if(objName==""){obj=window
+}else{objName=objName.replace(/\.$/,"");
+var n=objName.split(".");
+var target=window,o;
+for(var i=0,ni;
+ni=n[i];
+i++){if(o=target[ni]){target=o
+}else{target=null;
+break
+}}obj=target
+}if(obj){autoCompletePrefix=prefix;
+autoCompleteExpr=valBegin+commandBegin+(objName?objName+".":"");
+autoCompletePosition=-1;
+buffer=autoCompleteBuffer=isIE?_completion[objName||"window"]||[]:[];
+for(var p in obj){buffer.push(p)
+}}}else{buffer=autoCompleteBuffer
+}if(buffer){prefix=autoCompletePrefix;
+var diff=reverse?-1:1;
+for(var i=autoCompletePosition+diff,l=buffer.length,bi;
+i>=0&&i<l;
+i+=diff){bi=buffer[i];
+if(bi.indexOf(prefix)==0){autoCompletePosition=i;
+result=bi;
+break
+}}}if(result){element.value=autoCompleteExpr+result
+}},setMultiLine:function(multiLine){if(multiLine==this.isMultiLine){return
+}this.activate(multiLine)
+},onError:function(msg,href,lineNo){href=href||"";
+var lastSlash=href.lastIndexOf("/");
+var fileName=lastSlash==-1?href:href.substr(lastSlash+1);
+var html=['<span class="errorMessage">',msg,"</span>",'<div class="objectBox-sourceLink">',fileName," (line ",lineNo,")</div>"]
+},onKeyDown:function(e){e=e||event;
+var code=e.keyCode;
+if(code!=9&&code!=16&&code!=17&&code!=18){isAutoCompleting=false
+}if(code==13){this.enter();
+this.clear()
+}else{if(code==27){setTimeout(this.clear,0)
+}else{if(code==38){this.prevCommand()
+}else{if(code==40){this.nextCommand()
+}else{if(code==9){this.autocomplete(e.shiftKey)
+}else{return
+}}}}}cancelEvent(e,true);
+return false
+},onMultiLineKeyDown:function(e){e=e||event;
+var code=e.keyCode;
+if(code==13&&e.ctrlKey){this.enter()
+}}});
+Firebug.registerModule(Firebug.CommandLine);
+function getExpressionOffset(command){var bracketCount=0;
+var start=command.length-1;
+for(;
+start>=0;
+--start){var c=command[start];
+if((c==","||c==";"||c==" ")&&!bracketCount){break
+}if(reOpenBracket.test(c)){if(bracketCount){--bracketCount
+}else{break
+}}else{if(reCloseBracket.test(c)){++bracketCount
+}}}return start+1
+}var CommandLineAPI={$:function(id){return Firebug.browser.document.getElementById(id)
+},$$:function(selector,context){context=context||Firebug.browser.document;
+return Firebug.Selector?Firebug.Selector(selector,context):Firebug.Console.error("Firebug.Selector module not loaded.")
+},$0:null,$1:null,dir:function(o){Firebug.Console.log(o,Firebug.context,"dir",Firebug.DOMPanel.DirTable)
+},dirxml:function(o){if(instanceOf(o,"Window")){o=o.document.documentElement
+}else{if(instanceOf(o,"Document")){o=o.documentElement
+}}Firebug.Console.log(o,Firebug.context,"dirxml",Firebug.HTMLPanel.SoloElement)
+}};
+var defineCommandLineAPI=function defineCommandLineAPI(){Firebug.CommandLine.API={};
+for(var m in CommandLineAPI){if(!Env.browser.window[m]){Firebug.CommandLine.API[m]=CommandLineAPI[m]
+}}var stack=FirebugChrome.htmlSelectionStack;
+if(stack){Firebug.CommandLine.API.$0=stack[0];
+Firebug.CommandLine.API.$1=stack[1]
+}}
+}});
 FBL.ns(function(){with(FBL){var ElementCache=Firebug.Lite.Cache.Element;
 var cacheID=Firebug.Lite.Cache.ID;
 var ignoreHTMLProps={sizcache:1,sizset:1};
-ignoreHTMLProps[cacheID]=1;
-Firebug.HTML=extend(Firebug.Module,{appendTreeNode:function(nodeArray,html){var reTrim=/^\s+|\s+$/g;
+if(Firebug.ignoreFirebugElements){ignoreHTMLProps[cacheID]=1
+}Firebug.HTML=extend(Firebug.Module,{appendTreeNode:function(nodeArray,html){var reTrim=/^\s+|\s+$/g;
 if(!nodeArray.length){nodeArray=[nodeArray]
 }for(var n=0,node;
 node=nodeArray[n];
@@ -6292,7 +6476,8 @@ this.panelNode.innerHTML=html.join("")
 },initialize:function(){Firebug.Panel.initialize.apply(this,arguments);
 addEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
 fbPanel1=$("fbPanel1");
-if(!selectedElement){Firebug.HTML.selectTreeNode(ElementCache(Firebug.browser.document.body))
+if(!selectedElement){Firebug.context.persistedState.selectedHTMLElementId=Firebug.context.persistedState.selectedHTMLElementId&&ElementCache.get(Firebug.context.persistedState.selectedHTMLElementId)?Firebug.context.persistedState.selectedHTMLElementId:ElementCache(Firebug.browser.document.body);
+Firebug.HTML.selectTreeNode(Firebug.context.persistedState.selectedHTMLElementId)
 }addEvent(fbPanel1,"mousemove",Firebug.HTML.onListMouseMove);
 addEvent($("fbContent"),"mouseout",Firebug.HTML.onListMouseMove);
 addEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove)
@@ -6302,7 +6487,7 @@ removeEvent(Firebug.chrome.node,"mouseout",Firebug.HTML.onListMouseMove);
 removeEvent(this.panelNode,"click",Firebug.HTML.onTreeClick);
 fbPanel1=null;
 Firebug.Panel.shutdown.apply(this,arguments)
-},reattach:function(){if(FirebugChrome.selectedHTMLElementId){Firebug.HTML.selectTreeNode(FirebugChrome.selectedHTMLElementId)
+},reattach:function(){if(Firebug.context.persistedState.selectedHTMLElementId){Firebug.HTML.selectTreeNode(Firebug.context.persistedState.selectedHTMLElementId)
 }},updateSelection:function(object){var id=ElementCache(object);
 if(id){Firebug.HTML.selectTreeNode(id)
 }}});
@@ -6317,8 +6502,9 @@ var selectElement=function selectElement(e){if(e!=selectedElement){if(selectedEl
 }e.className=e.className+" selectedElement";
 if(FBL.isFirefox){e.style.MozBorderRadius="2px"
 }else{if(FBL.isSafari){e.style.WebkitBorderRadius="2px"
-}}selectedElement=e;
-FirebugChrome.selectedHTMLElementId=e.id;
+}}e.style.borderRadius="2px";
+selectedElement=e;
+Firebug.context.persistedState.selectedHTMLElementId=e.id;
 var target=ElementCache.get(e.id);
 var sidePanelBar=Firebug.chrome.getPanel("HTML").sidePanelBar;
 var selectedSidePanel=sidePanelBar?sidePanelBar.selectedPanel:null;
@@ -6524,6 +6710,301 @@ if(!infoTip){infoTip=this.initializeBrowser(panel.panelBrowser)
 }});
 Firebug.registerModule(Firebug.InfoTip)
 }});
+FBL.ns(function(){with(FBL){var CssParser=null;
+CssParser=(function(){function rule(start,body_start,end){return{start:start||0,body_start:body_start||0,end:end||0,line:-1,selector:null,parent:null,children:[],addChild:function(start,body_start,end){var r=rule(start,body_start,end);
+r.parent=this;
+this.children.push(r);
+return r
+},lastChild:function(){return this.children[this.children.length-1]
+}}
+}function removeAll(str,re){var m;
+while(m=str.match(re)){str=str.substring(m[0].length)
+}return str
+}function trim(str){return str.replace(/^\s+|\s+$/g,"")
+}function normalizeSelector(selector){selector=selector.replace(/[\n\r]/g," ");
+selector=trim(selector);
+selector=selector.replace(/\s*,\s*/g,",");
+return selector
+}function preprocessRules(text,rule_node){for(var i=0,il=rule_node.children.length;
+i<il;
+i++){var r=rule_node.children[i],rule_start=text.substring(r.start,r.body_start),cur_len=rule_start.length;
+rule_start=rule_start.replace(/[\n\r]/g," ");
+rule_start=removeAll(rule_start,/^\s*\/\*.*?\*\/[\s\t]*/);
+rule_start=rule_start.replace(/^[\s\t]+/,"");
+r.start+=(cur_len-rule_start.length);
+r.selector=normalizeSelector(rule_start)
+}return rule_node
+}function saveLineIndexes(text){var result=[0],i=0,il=text.length,ch,ch2;
+while(i<il){ch=text.charAt(i);
+if(ch=="\n"||ch=="\r"){if(ch=="\r"&&i<il-1&&text.charAt(i+1)=="\n"){i++
+}result.push(i+1)
+}i++
+}return result
+}function saveLineNumbers(text,rule_node,line_indexes,startLine){preprocessRules(text,rule_node);
+startLine=startLine||0;
+if(!line_indexes){var line_indexes=saveLineIndexes(text)
+}for(var i=0,il=rule_node.children.length;
+i<il;
+i++){var r=rule_node.children[i];
+r.line=line_indexes.length+startLine;
+for(var j=0,jl=line_indexes.length-1;
+j<jl;
+j++){var line_ix=line_indexes[j];
+if(r.start>=line_indexes[j]&&r.start<line_indexes[j+1]){r.line=j+1+startLine;
+break
+}}saveLineNumbers(text,r,line_indexes)
+}return rule_node
+}return{read:function(text,startLine){var rule_start=[],rule_body_start=[],rules=[],in_comment=0,root=rule(),cur_parent=root,last_rule=null,stack=[],ch,ch2;
+stack.last=function(){return this[this.length-1]
+};
+function hasStr(pos,substr){return text.substr(pos,substr.length)==substr
+}for(var i=0,il=text.length;
+i<il;
+i++){ch=text.charAt(i);
+ch2=i<il-1?text.charAt(i+1):"";
+if(!rule_start.length){rule_start.push(i)
+}switch(ch){case"@":if(!in_comment){if(hasStr(i,"@import")){var m=text.substr(i).match(/^@import\s*url\((['"])?.+?\1?\)\;?/);
+if(m){cur_parent.addChild(i,i+7,i+m[0].length);
+i+=m[0].length;
+rule_start.pop()
+}break
+}}case"/":if(!in_comment&&ch2=="*"){in_comment++
+}break;
+case"*":if(ch2=="/"){in_comment--
+}break;
+case"{":if(!in_comment){rule_body_start.push(i);
+cur_parent=cur_parent.addChild(rule_start.pop());
+stack.push(cur_parent)
+}break;
+case"}":if(!in_comment){var last_rule=stack.pop();
+rule_start.pop();
+last_rule.body_start=rule_body_start.pop();
+last_rule.end=i;
+cur_parent=last_rule.parent||root
+}break
+}}return saveLineNumbers(text,root,null,startLine)
+},normalizeSelector:normalizeSelector,findBySelector:function(rule_node,selector,source){var selector=normalizeSelector(selector),result=[];
+if(rule_node){for(var i=0,il=rule_node.children.length;
+i<il;
+i++){var r=rule_node.children[i];
+if(r.selector==selector){result.push(r)
+}}}if(result.length){return result
+}else{return null
+}}}
+})();
+FBL.CssParser=CssParser
+}});
+FBL.ns(function(){with(FBL){var CssAnalyzer={};
+var CSSRuleMap={};
+var ElementCSSRulesMap={};
+var internalStyleSheetIndex=-1;
+var reSelectorTag=/(^|\s)(?:\w+)/g;
+var reSelectorClass=/\.[\w\d_-]+/g;
+var reSelectorId=/#[\w\d_-]+/g;
+var globalCSSRuleIndex;
+var processAllStyleSheetsTimeout=null;
+var externalStyleSheetURLs=[];
+var ElementCache=Firebug.Lite.Cache.Element;
+var StyleSheetCache=Firebug.Lite.Cache.StyleSheet;
+CssAnalyzer.externalStyleSheetWarning=domplate(Firebug.Rep,{tag:DIV({"class":"warning focusRow",style:"font-weight:normal;",role:"listitem"},SPAN("$object|STR"),A({href:"$href",target:"_blank"},"$link|STR"))});
+CssAnalyzer.processAllStyleSheets=function(doc,styleSheetIterator){try{processAllStyleSheets(doc,styleSheetIterator)
+}catch(e){FBTrace.sysout("CssAnalyzer.processAllStyleSheets fails: ",e)
+}};
+CssAnalyzer.getElementCSSRules=function(element){try{return getElementCSSRules(element)
+}catch(e){FBTrace.sysout("CssAnalyzer.getElementCSSRules fails: ",e)
+}};
+CssAnalyzer.getRuleData=function(ruleId){return CSSRuleMap[ruleId]
+};
+CssAnalyzer.getRuleLine=function(){};
+CssAnalyzer.hasExternalStyleSheet=function(){return externalStyleSheetURLs.length>0
+};
+CssAnalyzer.parseStyleSheet=function(href){var sourceData=extractSourceData(href);
+var parsedObj=CssParser.read(sourceData.source,sourceData.startLine);
+var parsedRules=parsedObj.children;
+for(var i=0;
+i<parsedRules.length;
+){if(parsedRules[i].selector.indexOf("@")!=-1){parsedRules.splice(i,1)
+}else{i++
+}}return parsedRules
+};
+var processAllStyleSheets=function(doc,styleSheetIterator){styleSheetIterator=styleSheetIterator||processStyleSheet;
+globalCSSRuleIndex=-1;
+var styleSheets=doc.styleSheets;
+var importedStyleSheets=[];
+if(FBTrace.DBG_CSS){var start=new Date().getTime()
+}for(var i=0,length=styleSheets.length;
+i<length;
+i++){try{var styleSheet=styleSheets[i];
+if("firebugIgnore" in styleSheet){continue
+}var rules=isIE?styleSheet.rules:styleSheet.cssRules;
+rules.length
+}catch(e){externalStyleSheetURLs.push(styleSheet.href);
+styleSheet.restricted=true;
+var ssid=StyleSheetCache(styleSheet)
+}styleSheetIterator(doc,styleSheet);
+var importedStyleSheet,importedRules;
+if(isIE){var imports=styleSheet.imports;
+for(var j=0,importsLength=imports.length;
+j<importsLength;
+j++){try{importedStyleSheet=imports[j];
+importedRules=importedStyleSheet.rules;
+importedRules.length
+}catch(e){externalStyleSheetURLs.push(styleSheet.href);
+importedStyleSheet.restricted=true;
+var ssid=StyleSheetCache(importedStyleSheet)
+}styleSheetIterator(doc,importedStyleSheet)
+}}else{if(rules){for(var j=0,rulesLength=rules.length;
+j<rulesLength;
+j++){try{var rule=rules[j];
+importedStyleSheet=rule.styleSheet;
+if(importedStyleSheet){importedRules=importedStyleSheet.cssRules;
+importedRules.length
+}else{break
+}}catch(e){externalStyleSheetURLs.push(styleSheet.href);
+importedStyleSheet.restricted=true;
+var ssid=StyleSheetCache(importedStyleSheet)
+}styleSheetIterator(doc,importedStyleSheet)
+}}}}if(FBTrace.DBG_CSS){FBTrace.sysout("FBL.processAllStyleSheets","all stylesheet rules processed in "+(new Date().getTime()-start)+"ms")
+}};
+var processStyleSheet=function(doc,styleSheet){if(styleSheet.restricted){return
+}var rules=isIE?styleSheet.rules:styleSheet.cssRules;
+var ssid=StyleSheetCache(styleSheet);
+var href=styleSheet.href;
+var shouldParseCSS=typeof CssParser!="undefined"&&!Firebug.disableResourceFetching;
+if(shouldParseCSS){var parsedRules=CssAnalyzer.parseStyleSheet(href);
+var parsedRulesIndex=0;
+var dontSupportGroupedRules=isIE&&browserVersion<9;
+var group=[];
+var groupItem
+}for(var i=0,length=rules.length;
+i<length;
+i++){var rid=ssid+":"+i;
+var rule=rules[i];
+var selector=rule.selectorText||"";
+var lineNo=null;
+if(!selector||selector.indexOf("@")!=-1){continue
+}if(isIE){selector=selector.replace(reSelectorTag,function(s){return s.toLowerCase()
+})
+}if(shouldParseCSS){var parsedRule=parsedRules[parsedRulesIndex];
+var parsedSelector=parsedRule.selector;
+if(dontSupportGroupedRules&&parsedSelector.indexOf(",")!=-1&&group.length==0){group=parsedSelector.split(",")
+}if(dontSupportGroupedRules&&group.length>0){groupItem=group.shift();
+if(CssParser.normalizeSelector(selector)==groupItem){lineNo=parsedRule.line
+}if(group.length==0){parsedRulesIndex++
+}}else{if(CssParser.normalizeSelector(selector)==parsedRule.selector){lineNo=parsedRule.line;
+parsedRulesIndex++
+}}}CSSRuleMap[rid]={styleSheetId:ssid,styleSheetIndex:i,order:++globalCSSRuleIndex,specificity:selector&&selector.indexOf(",")==-1?getCSSRuleSpecificity(selector):0,rule:rule,lineNo:lineNo,selector:selector,cssText:rule.style?rule.style.cssText:rule.cssText?rule.cssText:""};
+var elements=Firebug.Selector(selector,doc);
+for(var j=0,elementsLength=elements.length;
+j<elementsLength;
+j++){var element=elements[j];
+var eid=ElementCache(element);
+if(!ElementCSSRulesMap[eid]){ElementCSSRulesMap[eid]=[]
+}ElementCSSRulesMap[eid].push(rid)
+}}};
+var loadExternalStylesheet=function(doc,styleSheetIterator,styleSheet){var url=styleSheet.href;
+styleSheet.firebugIgnore=true;
+var source=Firebug.Lite.Proxy.load(url);
+source=source.replace(/url\(([^\)]+)\)/g,function(a,name){var hasDomain=/\w+:\/\/./.test(name);
+if(!hasDomain){name=name.replace(/^(["'])(.+)\1$/,"$2");
+var first=name.charAt(0);
+if(first=="/"){var m=/^([^:]+:\/{1,3}[^\/]+)/.exec(url);
+return m?"url("+m[1]+name+")":"url("+name+")"
+}else{var path=url.replace(/[^\/]+\.[\w\d]+(\?.+|#.+)?$/g,"");
+path=path+name;
+var reBack=/[^\/]+\/\.\.\//;
+while(reBack.test(path)){path=path.replace(reBack,"")
+}return"url("+path+")"
+}}return a
+});
+var oldStyle=styleSheet.ownerNode;
+if(!oldStyle){return
+}if(!oldStyle.parentNode){return
+}var style=createGlobalElement("style");
+style.setAttribute("charset","utf-8");
+style.setAttribute("type","text/css");
+style.innerHTML=source;
+oldStyle.parentNode.insertBefore(style,oldStyle.nextSibling);
+oldStyle.parentNode.removeChild(oldStyle);
+doc.styleSheets[doc.styleSheets.length-1].externalURL=url;
+console.log(url,"call "+externalStyleSheetURLs.length,source);
+externalStyleSheetURLs.pop();
+if(processAllStyleSheetsTimeout){clearTimeout(processAllStyleSheetsTimeout)
+}processAllStyleSheetsTimeout=setTimeout(function(){console.log("processing");
+FBL.processAllStyleSheets(doc,styleSheetIterator);
+processAllStyleSheetsTimeout=null
+},200)
+};
+var getElementCSSRules=function(element){var eid=ElementCache(element);
+var rules=ElementCSSRulesMap[eid];
+if(!rules){return
+}var arr=[element];
+var Selector=Firebug.Selector;
+var ruleId,rule;
+for(var i=0,length=rules.length;
+i<length;
+i++){ruleId=rules[i];
+rule=CSSRuleMap[ruleId];
+if(rule.selector.indexOf(",")!=-1){var selectors=rule.selector.split(",");
+var maxSpecificity=-1;
+var sel,spec,mostSpecificSelector;
+for(var j,len=selectors.length;
+j<len;
+j++){sel=selectors[j];
+if(Selector.matches(sel,arr).length==1){spec=getCSSRuleSpecificity(sel);
+if(spec>maxSpecificity){maxSpecificity=spec;
+mostSpecificSelector=sel
+}}}rule.specificity=maxSpecificity
+}}rules.sort(sortElementRules);
+return rules
+};
+var sortElementRules=function(a,b){var ruleA=CSSRuleMap[a];
+var ruleB=CSSRuleMap[b];
+var specificityA=ruleA.specificity;
+var specificityB=ruleB.specificity;
+if(specificityA>specificityB){return 1
+}else{if(specificityA<specificityB){return -1
+}else{return ruleA.order>ruleB.order?1:-1
+}}};
+var solveRulesTied=function(a,b){var ruleA=CSSRuleMap[a];
+var ruleB=CSSRuleMap[b];
+if(ruleA.specificity==ruleB.specificity){return ruleA.order>ruleB.order?1:-1
+}return null
+};
+var getCSSRuleSpecificity=function(selector){var match=selector.match(reSelectorTag);
+var tagCount=match?match.length:0;
+match=selector.match(reSelectorClass);
+var classCount=match?match.length:0;
+match=selector.match(reSelectorId);
+var idCount=match?match.length:0;
+return tagCount+10*classCount+100*idCount
+};
+var extractSourceData=function(href){var sourceData={source:null,startLine:0};
+if(href){sourceData.source=Firebug.Lite.Proxy.load(href)
+}else{var index=0;
+var ssIndex=++internalStyleSheetIndex;
+var reStyleTag=/\<\s*style.*\>/gi;
+var reEndStyleTag=/\<\/\s*style.*\>/gi;
+var source=Firebug.Lite.Proxy.load(Env.browser.location.href);
+source=source.replace(/\n\r|\r\n/g,"\n");
+var startLine=0;
+do{var matchStyleTag=source.match(reStyleTag);
+var i0=source.indexOf(matchStyleTag[0])+matchStyleTag[0].length;
+for(var i=0;
+i<i0;
+i++){if(source.charAt(i)=="\n"){startLine++
+}}source=source.substr(i0);
+index++
+}while(index<=ssIndex);
+var matchEndStyleTag=source.match(reEndStyleTag);
+var i1=source.indexOf(matchEndStyleTag[0]);
+var extractedSource=source.substr(0,i1);
+sourceData.source=extractedSource;
+sourceData.startLine=startLine
+}return sourceData
+};
+FBL.CssAnalyzer=CssAnalyzer
+}});
 (function(){this.getElementXPath=function(element){try{if(element&&element.id){return'//*[@id="'+element.id+'"]'
 }else{return this.getElementTreeXPath(element)
 }}catch(E){}};
@@ -6563,151 +7044,8 @@ var toCamelCaseReplaceFn=function toCamelCaseReplaceFn(m,g){return g.toUpperCase
 };
 var ElementCache=Firebug.Lite.Cache.Element;
 var StyleSheetCache=Firebug.Lite.Cache.StyleSheet;
-var globalCSSRuleIndex;
-var externalStyleSheetURLs=[];
-var externalStyleSheetWarning=domplate(Firebug.Rep,{tag:DIV({"class":"warning focusRow",style:"font-weight:normal;",role:"listitem"},SPAN("$object|STR"),A({href:"$href",target:"_blank"},"$link|STR"))});
-var processAllStyleSheetsTimeout=null;
-var loadExternalStylesheet=function(doc,styleSheetIterator,styleSheet){var url=styleSheet.href;
-styleSheet.firebugIgnore=true;
-var source=Firebug.Lite.Proxy.load(url);
-source=source.replace(/url\(([^\)]+)\)/g,function(a,name){var hasDomain=/\w+:\/\/./.test(name);
-if(!hasDomain){name=name.replace(/^(["'])(.+)\1$/,"$2");
-var first=name.charAt(0);
-if(first=="/"){var m=/^([^:]+:\/{1,3}[^\/]+)/.exec(url);
-return m?"url("+m[1]+name+")":"url("+name+")"
-}else{var path=url.replace(/[^\/]+\.[\w\d]+(\?.+|#.+)?$/g,"");
-path=path+name;
-var reBack=/[^\/]+\/\.\.\//;
-while(reBack.test(path)){path=path.replace(reBack,"")
-}return"url("+path+")"
-}}return a
-});
-var oldStyle=styleSheet.ownerNode;
-if(!oldStyle){return
-}if(!oldStyle.parentNode){return
-}var style=createGlobalElement("style");
-style.setAttribute("charset","utf-8");
-style.setAttribute("type","text/css");
-style.innerHTML=source;
-oldStyle.parentNode.insertBefore(style,oldStyle.nextSibling);
-oldStyle.parentNode.removeChild(oldStyle);
-doc.styleSheets[doc.styleSheets.length-1].externalURL=url;
-console.log(url,"call "+externalStyleSheetURLs.length,source);
-externalStyleSheetURLs.pop();
-if(processAllStyleSheetsTimeout){clearTimeout(processAllStyleSheetsTimeout)
-}processAllStyleSheetsTimeout=setTimeout(function(){console.log("processing");
-FBL.processAllStyleSheets(doc,styleSheetIterator);
-processAllStyleSheetsTimeout=null
-},200)
-};
-FBL.processAllStyleSheets=function(doc,styleSheetIterator){styleSheetIterator=styleSheetIterator||processStyleSheet;
-globalCSSRuleIndex=-1;
-var styleSheets=doc.styleSheets;
-var importedStyleSheets=[];
-if(FBTrace.DBG_CSS){var start=new Date().getTime()
-}for(var i=0,length=styleSheets.length;
-i<length;
-i++){try{var styleSheet=styleSheets[i];
-if("firebugIgnore" in styleSheet){continue
-}var rules=isIE?styleSheet.rules:styleSheet.cssRules;
-rules.length
-}catch(e){externalStyleSheetURLs.push(styleSheet.href);
-styleSheet.restricted=true;
-var ssid=StyleSheetCache(styleSheet)
-}styleSheetIterator(doc,styleSheet);
-var importedStyleSheet,importedRules;
-if(isIE){var imports=styleSheet.imports;
-for(var j=0,importsLength=imports.length;
-j<importsLength;
-j++){try{importedStyleSheet=imports[j];
-importedRules=importedStyleSheet.rules;
-importedRules.length
-}catch(e){externalStyleSheetURLs.push(styleSheet.href);
-importedStyleSheet.restricted=true;
-var ssid=StyleSheetCache(importedStyleSheet)
-}styleSheetIterator(doc,importedStyleSheet)
-}}else{if(rules){for(var j=0,rulesLength=rules.length;
-j<rulesLength;
-j++){try{var rule=rules[j];
-importedStyleSheet=rule.styleSheet;
-if(importedStyleSheet){importedRules=importedStyleSheet.cssRules;
-importedRules.length
-}else{break
-}}catch(e){externalStyleSheetURLs.push(styleSheet.href);
-importedStyleSheet.restricted=true;
-var ssid=StyleSheetCache(importedStyleSheet)
-}styleSheetIterator(doc,importedStyleSheet)
-}}}}if(FBTrace.DBG_CSS){FBTrace.sysout("FBL.processAllStyleSheets","all stylesheet rules processed in "+(new Date().getTime()-start)+"ms")
-}};
-var CSSRuleMap={};
-var ElementCSSRulesMap={};
-var processStyleSheet=function(doc,styleSheet){if(styleSheet.restricted){return
-}var rules=isIE?styleSheet.rules:styleSheet.cssRules;
-var ssid=StyleSheetCache(styleSheet);
-for(var i=0,length=rules.length;
-i<length;
-i++){var rid=ssid+":"+i;
-var rule=rules[i];
-var selector=rule.selectorText;
-if(isIE){selector=selector.replace(reSelectorTag,function(s){return s.toLowerCase()
-})
-}CSSRuleMap[rid]={styleSheetId:ssid,styleSheetIndex:i,order:++globalCSSRuleIndex,specificity:selector&&selector.indexOf(",")!=-1?getCSSRuleSpecificity(selector):0,rule:rule,selector:selector,cssText:rule.style?rule.style.cssText:rule.cssText?rule.cssText:""};
-var elements=Firebug.Selector(selector,doc);
-for(var j=0,elementsLength=elements.length;
-j<elementsLength;
-j++){var element=elements[j];
-var eid=ElementCache(element);
-if(!ElementCSSRulesMap[eid]){ElementCSSRulesMap[eid]=[]
-}ElementCSSRulesMap[eid].push(rid)
-}}};
-FBL.getElementCSSRules=function(element){var eid=ElementCache(element);
-var rules=ElementCSSRulesMap[eid];
-if(!rules){return
-}var arr=[element];
-var Selector=Firebug.Selector;
-var ruleId,rule;
-for(var i=0,length=rules.length;
-i<length;
-i++){ruleId=rules[i];
-rule=CSSRuleMap[ruleId];
-if(rule.selector.indexOf(",")!=-1){var selectors=rule.selector.split(",");
-var maxSpecificity=-1;
-var sel,spec,mostSpecificSelector;
-for(var j,len=selectors.length;
-j<len;
-j++){sel=selectors[j];
-if(Selector.matches(sel,arr).length==1){spec=getCSSRuleSpecificity(sel);
-if(spec>maxSpecificity){maxSpecificity=spec;
-mostSpecificSelector=sel
-}}}rule.specificity=maxSpecificity
-}}rules.sort(sortElementRules);
-return rules
-};
-var sortElementRules=function(a,b){var ruleA=CSSRuleMap[a];
-var ruleB=CSSRuleMap[b];
-var specificityA=ruleA.specificity;
-var specificityB=ruleB.specificity;
-if(specificityA>specificityB){return 1
-}else{if(specificityA<specificityB){return -1
-}else{return ruleA.order>ruleB.order?1:-1
-}}};
-var solveRulesTied=function(a,b){var ruleA=CSSRuleMap[a];
-var ruleB=CSSRuleMap[b];
-if(ruleA.specificity==ruleB.specificity){return ruleA.order>ruleB.order?1:-1
-}return null
-};
-var reSelectorTag=/(^|\s)(?:\w+)/g;
-var reSelectorClass=/\.[\w\d_-]+/g;
-var reSelectorId=/#[\w\d_-]+/g;
-var getCSSRuleSpecificity=function(selector){var match=selector.match(reSelectorTag);
-var tagCount=match?match.length:0;
-match=selector.match(reSelectorClass);
-var classCount=match?match.length:0;
-match=selector.match(reSelectorId);
-var idCount=match?match.length:0;
-return tagCount+10*classCount+100*idCount
-};
 Firebug.SourceBoxPanel=Firebug.Panel;
+var reSelectorTag=/(^|\s)(?:\w+)/g;
 var domUtils=null;
 var textContent=isIE?"innerText":"textContent";
 var CSSDomplateBase={isEditable:function(rule){return !rule.isSystemSheet
@@ -6901,7 +7239,7 @@ this.onDoubleClick=bind(this.onDoubleClick,this);
 if(this.name=="stylesheet"){this.onChangeSelect=bind(this.onChangeSelect,this);
 var doc=Firebug.browser.document;
 var selectNode=this.selectNode=createElement("select");
-processAllStyleSheets(doc,function(doc,styleSheet){var key=StyleSheetCache.key(styleSheet);
+CssAnalyzer.processAllStyleSheets(doc,function(doc,styleSheet){var key=StyleSheetCache.key(styleSheet);
 var fileName=getFileName(styleSheet.href)||getFileName(doc.location.href);
 var option=createElement("option",{value:key});
 option.appendChild(Firebug.chrome.document.createTextNode(fileName));
@@ -6944,7 +7282,7 @@ this.lastScrollTop=this.panelNode.scrollTop
 }}}}},updateLocation:function(styleSheet){if(!styleSheet){return
 }if(styleSheet.editStyleSheet){styleSheet=styleSheet.editStyleSheet.sheet
 }if(styleSheet.restricted){FirebugReps.Warning.tag.replace({object:"AccessRestricted"},this.panelNode);
-externalStyleSheetWarning.tag.append({object:"The stylesheet could not be loaded due to access restrictions. ",link:"more...",href:"http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22Access_to_restricted_URI_denied.22"},this.panelNode);
+CssAnalyzer.externalStyleSheetWarning.tag.append({object:"The stylesheet could not be loaded due to access restrictions. ",link:"more...",href:"http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22Access_to_restricted_URI_denied.22"},this.panelNode);
 return
 }var rules=this.getStyleSheetRules(this.context,styleSheet);
 var result;
@@ -7058,7 +7396,7 @@ this.getElementRules(element,rules,usedProps);
 if(rules.length||sections.length){var inheritLabel="Inherited from";
 var result=this.template.cascadedTag.replace({rules:rules,inherited:sections,inheritLabel:inheritLabel},this.panelNode)
 }else{var result=FirebugReps.Warning.tag.replace({object:"EmptyElementCSS"},this.panelNode)
-}if(externalStyleSheetURLs.length>0){externalStyleSheetWarning.tag.append({object:"The results here may be inaccurate because some stylesheets could not be loaded due to access restrictions. ",link:"more...",href:"http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22This_element_has_no_style_rules.22"},this.panelNode)
+}if(CssAnalyzer.hasExternalStyleSheet()){CssAnalyzer.externalStyleSheetWarning.tag.append({object:"The results here may be inaccurate because some stylesheets could not be loaded due to access restrictions. ",link:"more...",href:"http://getfirebug.com/wiki/index.php/Firebug_Lite_FAQ#I_keep_seeing_.22This_element_has_no_style_rules.22"},this.panelNode)
 }},getStylesheetURL:function(rule){if(rule&&rule.parentStyleSheet&&rule.parentStyleSheet.href){return rule.parentStyleSheet.href
 }else{return this.selection.ownerDocument.location.href
 }},getInheritedRules:function(element,sections,usedProps){var parent=element.parentNode;
@@ -7067,11 +7405,11 @@ var rules=[];
 this.getElementRules(parent,rules,usedProps,true);
 if(rules.length){sections.splice(0,0,{element:parent,rules:rules})
 }}},getElementRules:function(element,rules,usedProps,inheritMode){var inspectedRules,displayedRules={};
-inspectedRules=getElementCSSRules(element);
+inspectedRules=CssAnalyzer.getElementCSSRules(element);
 if(inspectedRules){for(var i=0,length=inspectedRules.length;
 i<length;
 ++i){var ruleId=inspectedRules[i];
-var ruleData=CSSRuleMap[ruleId];
+var ruleData=CssAnalyzer.getRuleData(ruleId);
 var rule=ruleData.rule;
 var ssid=ruleData.styleSheetId;
 var parentStyleSheet=StyleSheetCache.get(ssid);
@@ -7082,7 +7420,7 @@ if(!Firebug.showUserAgentCSS&&isSystemSheet){continue
 }if(!href){href=element.ownerDocument.location.href
 }var props=this.getRuleProperties(this.context,rule,inheritMode);
 if(inheritMode&&!props.length){continue
-}var line;
+}var line=ruleData.lineNo;
 var ruleId=rule.selectorText+"/"+line;
 var sourceLink=new SourceLink(href,line,"css",rule,instance);
 this.markOverridenProps(props,usedProps,inheritMode);
@@ -7109,7 +7447,7 @@ if(props.length){rules.splice(0,0,{rule:element,id:getElementXPath(element),sele
 }},name:"css",title:"Style",parentPanel:"HTML",order:0,initialize:function(){this.context=Firebug.chrome;
 this.document=Firebug.chrome.document;
 Firebug.CSSStyleSheetPanel.prototype.initialize.apply(this,arguments);
-var selection=ElementCache.get(FirebugChrome.selectedHTMLElementId);
+var selection=ElementCache.get(Firebug.context.persistedState.selectedHTMLElementId);
 if(selection){this.select(selection,true)
 }},ishow:function(state){},watchWindow:function(win){if(domUtils){var doc=win.document
 }},unwatchWindow:function(win){var doc=win.document;
@@ -7384,10 +7722,11 @@ var doc=Firebug.browser.document;
 var script=doc.getElementsByTagName("script")[index];
 var url=getScriptURL(script);
 var isExternal=url&&url!=doc.location.href;
-try{if(isExternal){Ajax.request({url:url,onSuccess:renderProcess,onFailure:onFailure})
+try{if(Firebug.disableResourceFetching){renderProcess(Firebug.Lite.Proxy.fetchResourceDisabledMessage)
+}else{if(isExternal){Ajax.request({url:url,onSuccess:renderProcess,onFailure:onFailure})
 }else{var src=script.innerHTML;
 renderProcess(src)
-}}catch(e){onFailure()
+}}}catch(e){onFailure()
 }this.sourceIndex=index
 }}});
 Firebug.registerPanel(ScriptPanel);
@@ -7792,7 +8131,7 @@ cancelEvent(event)
 this.onClick=bind(this.onClick,this)
 },initialize:function(){Firebug.DOMBasePanel.prototype.initialize.apply(this,arguments);
 addEvent(this.panelNode,"click",this.onClick);
-var selection=ElementCache.get(FirebugChrome.selectedHTMLElementId);
+var selection=ElementCache.get(Firebug.context.persistedState.selectedHTMLElementId);
 if(selection){this.select(selection,true)
 }},shutdown:function(){removeEvent(this.panelNode,"click",this.onClick);
 Firebug.DOMBasePanel.prototype.shutdown.apply(this,arguments)
@@ -7910,7 +8249,7 @@ i<arguments.length;
 ++i){FBTrace.sysout("Firebug.registerPanel",arguments[i].prototype.name)
 }}}})
 }});
-FBL.ns(function(){with(FBL){FirebugChrome.Skin={CSS:'.obscured{left:-999999px !important;}.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{font-size:11px;min-width:100px;text-align:center;}.infoTipCaption{font-size:11px;font:Monaco,monospace;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/beta/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;line-height:13px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/beta/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/beta/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/beta/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;line-height:13px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/beta/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/beta/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;line-height:13px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em/1.4545em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/beta/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/beta/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',HTML:'<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbWindowButtons"><a id="fbWindow_btDeactivate" class="fbSmallButton fbHover" title="Deactivate Firebug for this web page">&nbsp;</a><a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a><a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div><textarea id="fbLargeCommandLine" class="fbFitHeight"></textarea><div id="fbLargeCommandButtons"><a id="fbCommand_btRun" class="fbButton fbHover">Run</a><a id="fbCommand_btClear" class="fbButton fbHover">Clear</a><a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/><a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors"></span></span></span>'}
+FBL.ns(function(){with(FBL){FirebugChrome.Skin={CSS:'.obscured{left:-999999px !important;}.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{font-size:11px;min-width:100px;text-align:center;}.infoTipCaption{font-size:11px;font:Monaco,monospace;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;line-height:13px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;line-height:13px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;line-height:13px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em/1.4545em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',HTML:'<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbWindowButtons"><a id="fbWindow_btDeactivate" class="fbSmallButton fbHover" title="Deactivate Firebug for this web page">&nbsp;</a><a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a><a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div><textarea id="fbLargeCommandLine" class="fbFitHeight"></textarea><div id="fbLargeCommandButtons"><a id="fbCommand_btRun" class="fbButton fbHover">Run</a><a id="fbCommand_btClear" class="fbButton fbHover">Clear</a><a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/><a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors"></span></span></span>'}
 }});
 FBL.initialize()
 })();
