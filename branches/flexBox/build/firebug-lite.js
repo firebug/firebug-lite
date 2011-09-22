@@ -1,7 +1,7 @@
 (function(){
 /**************************************************************
  *
- *    Firebug Lite 1.5.0-flex
+ *    Firebug Lite 1.5.0-flex-a2
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -1495,7 +1495,7 @@ var panelTypes=[];
 var panelTypeMap={};
 var reps=[];
 var parentPanelMap={};
-FBL.Firebug={version:"Firebug Lite 1.5.0-flex",revision:"$Revision$",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
+FBL.Firebug={version:"Firebug Lite 1.5.0-flex-a2",revision:"$Revision$",modules:modules,panelTypes:panelTypes,panelTypeMap:panelTypeMap,reps:reps,initialize:function(){if(FBTrace.DBG_INITIALIZE){FBTrace.sysout("Firebug.initialize","initializing application")
 }Firebug.browser=new Context(Env.browser);
 Firebug.context=Firebug.browser;
 Firebug.loadPrefs();
