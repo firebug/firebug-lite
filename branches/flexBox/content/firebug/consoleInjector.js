@@ -65,7 +65,7 @@ Firebug.Console.injector =
         if (win.console)
         {
             if (Env.Options.overrideConsole)
-                sandbox = new win.Function("arguments.callee.install(window.firebug={})");
+                sandbox = new win.Function("arguments.callee.install(window.console={})");
             else
                 // if there's a console object and overrideConsole is false we should just quit
                 return;
