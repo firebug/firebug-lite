@@ -5928,7 +5928,7 @@ c[name]=new Handler(name);
 c.firebuglite=Firebug.version
 }};
 var sandbox;
-if(win.console){if(Env.Options.overrideConsole){sandbox=new win.Function("arguments.callee.install(window.firebug={})")
+if(win.console){if(Env.Options.overrideConsole){sandbox=new win.Function("arguments.callee.install(window.console={})")
 }else{return
 }}else{try{sandbox=new win.Function("arguments.callee.install(window.console={})")
 }catch(E){sandbox=new win.Function("arguments.callee.install(window.firebug={})")
