@@ -3044,11 +3044,11 @@ api.clear=function(){for(var key in storage){delete storage[key]
 }else{if(doc.documentElement.addBehavior){var storage=doc.createElement("div");
 function withIEStorage(storeFunction){return function(){var args=Array.prototype.slice.call(arguments,0);
 args.unshift(storage);
-doc.body.appendChild(storage);
+doc.documentElement.appendChild(storage);
 storage.addBehavior("#default#userData");
 storage.load(localStorageName);
 var result=storeFunction.apply(api,args);
-doc.body.removeChild(storage);
+doc.documentElement.removeChild(storage);
 return result
 }
 }api.set=withIEStorage(function(storage,key,val){storage.setAttribute(key,api.serialize(val));
@@ -6817,12 +6817,14 @@ var processStyleSheet=function(doc,styleSheet){if(styleSheet.restricted){return
 var ssid=StyleSheetCache(styleSheet);
 var href=styleSheet.href;
 var shouldParseCSS=typeof CssParser!="undefined"&&!Firebug.disableResourceFetching;
-if(shouldParseCSS){var parsedRules=CssAnalyzer.parseStyleSheet(href);
-var parsedRulesIndex=0;
+if(shouldParseCSS){try{var parsedRules=CssAnalyzer.parseStyleSheet(href)
+}catch(e){if(FBTrace.DBG_ERRORS){FBTrace.sysout("processStyleSheet FAILS",e.message||e)
+}shouldParseCSS=false
+}finally{var parsedRulesIndex=0;
 var dontSupportGroupedRules=isIE&&browserVersion<9;
 var group=[];
 var groupItem
-}for(var i=0,length=rules.length;
+}}for(var i=0,length=rules.length;
 i<length;
 i++){var rid=ssid+":"+i;
 var rule=rules[i];

@@ -12500,11 +12500,13 @@ var store = (function(){
 				args.unshift(storage)
 				// See http://msdn.microsoft.com/en-us/library/ms531081(v=VS.85).aspx
 				// and http://msdn.microsoft.com/en-us/library/ms531424(v=VS.85).aspx
-				doc.body.appendChild(storage)
+				// TODO: xxxpedro doc.body is not always available so we must use doc.documentElement.
+				// We need to make sure this change won't affect the behavior of this library.
+				doc.documentElement.appendChild(storage)
 				storage.addBehavior('#default#userData')
 				storage.load(localStorageName)
 				var result = storeFunction.apply(api, args)
-				doc.body.removeChild(storage)
+				doc.documentElement.removeChild(storage)
 				return result
 			}
 		}
@@ -25866,12 +25868,23 @@ var processStyleSheet = function(doc, styleSheet)
     var shouldParseCSS = typeof CssParser != "undefined" && !Firebug.disableResourceFetching;
     if (shouldParseCSS)
     {
-        var parsedRules = CssAnalyzer.parseStyleSheet(href); 
-        var parsedRulesIndex = 0;
-        
-        var dontSupportGroupedRules = isIE && browserVersion < 9;
-        var group = [];
-        var groupItem;
+        try
+        {
+            var parsedRules = CssAnalyzer.parseStyleSheet(href); 
+        }
+        catch(e)
+        {
+            if (FBTrace.DBG_ERRORS) FBTrace.sysout("processStyleSheet FAILS", e.message || e);
+            shouldParseCSS = false;
+        }
+        finally
+        {
+            var parsedRulesIndex = 0;
+            
+            var dontSupportGroupedRules = isIE && browserVersion < 9;
+            var group = [];
+            var groupItem;
+        }
     }
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
