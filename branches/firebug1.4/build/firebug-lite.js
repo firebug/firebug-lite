@@ -6871,12 +6871,14 @@ var processStyleSheet=function(doc,styleSheet){if(styleSheet.restricted){return
 var ssid=StyleSheetCache(styleSheet);
 var href=styleSheet.href;
 var shouldParseCSS=typeof CssParser!="undefined"&&!Firebug.disableResourceFetching;
-if(shouldParseCSS){var parsedRules=CssAnalyzer.parseStyleSheet(href);
-var parsedRulesIndex=0;
+if(shouldParseCSS){try{var parsedRules=CssAnalyzer.parseStyleSheet(href)
+}catch(e){if(FBTrace.DBG_ERRORS){FBTrace.sysout("processStyleSheet FAILS",e.message||e)
+}shouldParseCSS=false
+}finally{var parsedRulesIndex=0;
 var dontSupportGroupedRules=isIE&&browserVersion<9;
 var group=[];
 var groupItem
-}for(var i=0,length=rules.length;
+}}for(var i=0,length=rules.length;
 i<length;
 i++){var rid=ssid+":"+i;
 var rule=rules[i];
