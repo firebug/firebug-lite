@@ -1,5 +1,5 @@
 ###################################################################################################
- 1.4.0 - 2011-09-22 - Revision: 11943
+ 1.4.0 - 2011-09-23 - Revision: 11943
 ###################################################################################################
 
 Overview:
@@ -9,6 +9,11 @@ Overview:
     Issue 3326: [Firebug lite] CSS Rule Line Number
     Issue 3262: [Firebug Lite] CSS specificity is not being calculated properly
     Issue 4239: [Firebug Lite] Using ie7-js library crashes IE8
+    Issue 4472: [Firebug Lite] Ajax headers deleted on IE
+
+    Issue 4606: [Firebug Lite] Console is not working properly in recent versions of FF
+    Issue 4587: [Firebug Lite] Opera shows security warning when using the Inspect tool
+    Issue 4432: [Firebug Lite] HTML is mixed-up with functions 
     
 -------------------------------------------------------------------------------
 CSS
