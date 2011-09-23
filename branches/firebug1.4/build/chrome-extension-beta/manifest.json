@@ -1,6 +1,6 @@
 {
   "name": "Firebug Lite Beta for Google Chrome™",
-  "version": "1.4.0.11961",
+  "version": "1.4.0.11967",
   "description": "Firebug Lite Beta for Google Chrome, supported by the Firebug Working Group.",
   "update_url": "https://getfirebug.com/releases/lite/chrome/beta/updates.xml",
   "background_page": "background.html",
