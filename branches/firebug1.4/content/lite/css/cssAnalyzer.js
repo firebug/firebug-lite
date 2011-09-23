@@ -241,12 +241,23 @@ var processStyleSheet = function(doc, styleSheet)
     var shouldParseCSS = typeof CssParser != "undefined" && !Firebug.disableResourceFetching;
     if (shouldParseCSS)
     {
-        var parsedRules = CssAnalyzer.parseStyleSheet(href); 
-        var parsedRulesIndex = 0;
-        
-        var dontSupportGroupedRules = isIE && browserVersion < 9;
-        var group = [];
-        var groupItem;
+        try
+        {
+            var parsedRules = CssAnalyzer.parseStyleSheet(href); 
+        }
+        catch(e)
+        {
+            if (FBTrace.DBG_ERRORS) FBTrace.sysout("processStyleSheet FAILS", e.message || e);
+            shouldParseCSS = false;
+        }
+        finally
+        {
+            var parsedRulesIndex = 0;
+            
+            var dontSupportGroupedRules = isIE && browserVersion < 9;
+            var group = [];
+            var groupItem;
+        }
     }
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
