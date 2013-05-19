@@ -20,6 +20,7 @@ var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/";
 //var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
 //var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
 //var bookmarkletSkinURL = "chrome-extension://bmagokdooijbeehmkpknfglimnifench/skin/xp/"; // chrome extension
+//var bookmarkletSkinURL = "chrome-extension://mdaojmoeahmmokaflgbannaopagamgoj/skin/xp/"; // chrome beta extension
 
 // ************************************************************************************************
 
@@ -32,52 +33,48 @@ window.FBDev =
         // ****************************************************************************************
         // Application Core
         
-        "firebug/lib.js",
+        "lite/lib.js",
+        "lite/i18n.js",
+        "lite/firebug.js",
         
-        "firebug/i18n.js",
+        "lite/gui.js",        
+        "lite/context.js",
+        "lite/chrome.js",
+        "lite/chromeSkin.js",
         
-        "firebug/firebug.js",
-        
-        "firebug/gui.js",        
-        "firebug/context.js",
-        "firebug/chrome.js",
-        "firebug/chromeSkin.js",
-        
-        
-        // ****************************************************************************************
-        // Lite
-        
-        "firebug/lite.js", // experimental
-        "firebug/lite/browser.js", // experimental
-        "firebug/lite/cache.js", // experimental
-        "firebug/lite/proxy.js", // experimental
-        "firebug/lite/script.js", // experimental
-        "firebug/lite/style.js", // experimental
+        // firebug1.4 experimental
+        //"lite/temp/chrome2.js",
+        //"firebug/tabContext.js",
+        //"firebug/tabWatcher.js",
         
         
         // ****************************************************************************************
-        // Application Classes
+        // Lite Core
         
-        "firebug/selector.js",
+        "lite/lite.js",
+        "lite/lite/cache.js",
+        "lite/lite/proxy.js",
+        "lite/lite/style.js",
+        "lite/lite/script.js", // experimental
+        "lite/lite/browser.js", // experimental
+        
+        "lite/store/json.js",
+        "lite/store/store.js",
+        
+        // ****************************************************************************************
+        // Firebug Classes
+        
+        "lite/selector.js",
+        "lite/inspector.js",
         
         "firebug/domplate.js",
-        "firebug/reps.js",
-        
+        "firebug/reps.js",        
         "firebug/editor.js",
-        "firebug/inspector.js",
-        
-        // ****************************************************************************************
-        // Console / CommandLine core
-        
-        "firebug/console.js",
-        "firebug/consoleInjector.js",
-        
-        "firebug/commandLine.js",
         
         // ****************************************************************************************
         // XHR Watcher
         
-        "firebug/xhr.js",
+        "lite/xhr.js",
         "firebug/net.js",
         "firebug/spy.js",
         
@@ -85,23 +82,57 @@ window.FBDev =
         "firebug/xmlViewer.js",
         
         // ****************************************************************************************
-        // Application Modules/Panels
+        // Console / CommandLine core
         
-        "firebug/html.js",
+        "firebug/console.js",
+        "firebug/consoleInjector.js",
         
-        "firebug/infotip.js", // experimental
+        "lite/commandLine.js",
         
+        // ****************************************************************************************
+        // Simple HTML Panel
+        
+        "lite/html.js",
+        
+        // ****************************************************************************************
+        // Advanced HTML Panel (experimental)
+        
+        //"firebug/insideOutBox.js", // HTML experimental        
+        //"firebug/lib/htmlLib.js", // HTML experimental
+        //"lite/temp/html3.js", // HTML experimental
+        //"lite/temp/html2.js", // HTML experimental
+        
+        "firebug/infotip.js",
+        
+        // ****************************************************************************************
+        // CSS Panel
+        
+        "lite/css/cssParser.js",
+        "lite/css/cssAnalyzer.js",
         "firebug/css.js",
-        "firebug/script.js",
-        "firebug/dom.js",
         
-        //"firebug/helloWorld.js",
+        // ****************************************************************************************
+        // Simple Script Panel
+        
+        "lite/script.js",
+        
+        // ****************************************************************************************
+        // Script Panel
+        
+        //"firebug/sourceCache.js", // experimental
+        //"firebug/sourceFile.js", // experimental
+        //"firebug/sourceBox.js", // experimental
+        //"firebug/debugger.js", // experimental
+        
+        //"lite/eventDelegator.js", // experimental
+
+        "firebug/dom.js",
         
         // ****************************************************************************************
         // Trace Module/Panel
         
-        "firebug/trace.js",
-        "firebug/tracePanel.js",
+        "lite/trace.js",
+        "lite/tracePanel.js",
         
         // ****************************************************************************************
         // Firediff
@@ -119,21 +150,36 @@ window.FBDev =
         "firediff/content/firediff/pages.js",
         "firediff/content/firediff/diffModule.js",
         "firediff/content/firediff/diffMonitor.js",
-        /**/
+        */
         
         // ****************************************************************************************
-        // Plugin
+        // FireRainbow
         
-        "firebug/plugin.js", // must be the last module loaded
+        /*
+        "firerainbow/chrome/content/codemirror.js",
+        "firerainbow/chrome/content/firerainbow.js",
+        */
+
+        // ****************************************************************************************
+        // Example Plugin
+        
+        //"lite/example/helloWorld.js",
+        
+        // ****************************************************************************************
+        // Plugin Interface
+        
+        "lite/plugin.js", // must be the last module loaded
         
         // ****************************************************************************************
         // Bootstrap
-        "firebug/boot.js"
+        "lite/boot.js"
     ],
     // ********************************************************************************************
 
     loadChromeApplication: function(chrome)
     {
+        loadModules(chrome.document); return;
+        
         FBDev.buildSource(function(source){
             var doc = chrome.document;
             var script = doc.createElement("script");
@@ -220,7 +266,10 @@ window.FBDev =
                     "// ************************************************************************************************\n" +
                     "}});\n\n" +
                     "// ************************************************************************************************\n" +
+                    
+                    // this is the bootstrap.js file
                     "FBL.initialize();\n" +
+                    
                     "// ************************************************************************************************\n";
             }
         });
@@ -401,70 +450,110 @@ window.FBDev =
 
 function findLocation() 
 {
-    var reFirebugFile = /(firebug-lite(?:-\w+)?\.js)(#.+)?$/;
+    var reFirebugFile = /(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+    var reGetFirebugSite = /(?:http|https):\/\/getfirebug.com\//;
+    var isGetFirebugSite;
+    
     var rePath = /^(.*\/)/;
     var reProtocol = /^\w+:\/\//;
-    
-    var head = document.getElementsByTagName("head")[0];
-    
     var path = null;
+    var doc = document;
     
-    for(var i=0, c=document.getElementsByTagName("script"), ci; ci=c[i]; i++)
+    // Firebug Lite 1.3.0 bookmarklet identification
+    var script = doc.getElementById("FirebugLite");
+    
+    var scriptSrc;
+    
+    // If the script was loaded via bookmarklet, we already have the script tag
+    if (script)
     {
-        var file = null;
-        if ( ci.nodeName.toLowerCase() == "script" && 
-             (file = reFirebugFile.exec(ci.src)) )
+        scriptSrc = script.src;
+        file = reFirebugFile.exec(scriptSrc);
+        
+        var version = script.getAttribute("FirebugLite");
+        var number = version ? parseInt(version) : 0; 
+        
+        if (!version || !number || number < bookmarkletVersion)
         {
-            
-            var fileName = file[1];
-            var fileOptions = file[2];
-            
-            if (reProtocol.test(ci.src)) {
-                // absolute path
-                path = rePath.exec(ci.src)[1];
-              
-            }
-            else
+            FBL.Env.bookmarkletOutdated = true;
+        }
+    }
+    // otherwise we must search for the correct script tag
+    else
+    {
+        for(var i=0, s=doc.getElementsByTagName("script"), si; si=s[i]; i++)
+        {
+            var file = null;
+            if ( si.nodeName.toLowerCase() == "script" )
             {
-                // relative path
-                var r = rePath.exec(ci.src);
-                var src = r ? r[1] : ci.src;
-                var rel = /^((?:\.\.\/)+)(.*)/.exec(src);
-                path = rePath.exec(location.href)[1];
+                if (file = reFirebugFile.exec(si.getAttribute("firebugSrc")))
+                    scriptSrc = si.getAttribute("firebugSrc");
                 
-                if (rel)
-                {
-                    var lastFolder = /^(.*\/)[^\/]+\/$/;
-                    
-                    var j = rel[1].length/3;
-                    var p;
-                    while (j-- > 0)
-                        path = lastFolder.exec(path)[1];
+                else if (file = reFirebugFile.exec(si.src))
+                    scriptSrc = si.src;
+                
+                else
+                    continue;
+                
+                script = si;
+                break;
+            }
+        }
+    }
 
-                    path += rel[2];
-                }
-                else if(src.indexOf("/") != -1)
-                {
-                    // "./some/path"
-                    if(/^\.\/./.test(src))
-                    {
-                        path += src.substring(2);
-                    }
-                    // "/some/path"
-                    else if(/^\/./.test(src))
-                    {
-                        var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
-                        path = domain[1] + src;
-                    }
-                    // "some/path"
-                    else
-                    {
-                        path += src;
-                    }
-                }
+    // mark the script tag to be ignored by Firebug Lite
+    if (script)
+        script.firebugIgnore = true;
+    
+    if (file)
+    {
+        var fileName = file[1];
+        var fileOptions = file[2];
+        
+        // absolute path
+        if (reProtocol.test(scriptSrc)) {
+            path = rePath.exec(scriptSrc)[1];
+          
+        }
+        // relative path
+        else
+        {
+            var r = rePath.exec(scriptSrc);
+            var src = r ? r[1] : scriptSrc;
+            var backDir = /^((?:\.\.\/)+)(.*)/.exec(src);
+            var reLastDir = /^(.*\/)[^\/]+\/$/;
+            path = rePath.exec(location.href)[1];
+            
+            // "../some/path"
+            if (backDir)
+            {
+                var j = backDir[1].length/3;
+                var p;
+                while (j-- > 0)
+                    path = reLastDir.exec(path)[1];
+
+                path += backDir[2];
             }
             
-            break;
+            else if(src.indexOf("/") != -1)
+            {
+                // "./some/path"
+                if(/^\.\/./.test(src))
+                {
+                    path += src.substring(2);
+                }
+                // "/some/path"
+                else if(/^\/./.test(src))
+                {
+                    var domain = /^(\w+:\/\/[^\/]+)/.exec(path);
+                    path = domain[1] + src;
+                }
+                // "some/path"
+                else
+                {
+                    path += src;
+                }
+            }
         }
     }
 
@@ -485,7 +574,7 @@ function findLocation()
 
 // ************************************************************************************************
 
-function loadModules() {
+function loadModules(doc) {
     
     findLocation();
     
@@ -493,8 +582,9 @@ function loadModules() {
     
     var sufix = isApplicationContext ? "#app" : "";
     
-    var useDocWrite = isIE || isSafari;
-    //var useDocWrite = isIE;
+    // FF4 will also load it asynchronously
+    var useDocWrite = true;
+    //var useDocWrite = isIE || isSafari;
     
     var moduleURL, script;
     var scriptTags = [];
@@ -512,9 +602,9 @@ function loadModules() {
             xhr.send();
             html = xhr.responseText;
             
-            script = document.createElement("script");
+            script = doc.createElement("script");
             script.text = html;
-            document.getElementsByTagName("head")[0].appendChild(script);
+            doc.getElementsByTagName("head")[0].appendChild(script);
         }
         return;
     }
@@ -528,7 +618,7 @@ function loadModules() {
     
         var module = FBDev.modules[index];
         var moduleURL = sourceURL + module + sufix;
-        var script = document.createElement("script");
+        var script = doc.createElement("script");
         script.src = moduleURL;
         
         script.onload = function() { 
@@ -542,9 +632,9 @@ function loadModules() {
                 script.onloadDone = true; 
                 loadModule(index+1);
             }
-        }
+        };
         
-        document.getElementsByTagName("head")[0].appendChild(script);
+        doc.getElementsByTagName("head")[0].appendChild(script);
     };
     loadModule(0);
     /**/
@@ -560,17 +650,17 @@ function loadModules() {
         }
         else
         {
-            script = document.createElement("script");
+            script = doc.createElement("script");
             script.src = moduleURL;
             
-            document.getElementsByTagName("head")[0].appendChild(script);
-            //document.getElementsByTagName("body")[0].appendChild(script);
+            doc.getElementsByTagName("head")[0].appendChild(script);
+            //doc.getElementsByTagName("body")[0].appendChild(script);
         }
     }
     
     if(useDocWrite)
     {
-        document.write(scriptTags.join(""));
+        doc.write(scriptTags.join(""));
     }
     /**/
     
@@ -645,7 +735,7 @@ var loadDevPanel = function() { with(FBL) {
                 {
                     //Firebug.chrome.window.location = "javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','4','content/firebug-lite-dev.js','skin/xp/sprite.png','" +
                     //    FBL.Env.Location.baseDir + "','#startOpened');";
-                    Firebug.chrome.eval( "(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','4','content/firebug-lite-dev.js','skin/xp/sprite.png','" +
+                    Firebug.chrome.eval( "(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','4','build/firebug-lite-debug.js','skin/xp/sprite.png','" +
                         FBL.Env.Location.baseDir + "','#startOpened,startInNewWindow,showIconWhenHidden=false');" );
                     
                     Firebug.chrome.eval( "setTimeout(function(){console.info('Have fun!')},2000)" );
@@ -734,7 +824,7 @@ var isIE = navigator.userAgent.indexOf("MSIE") != -1;
 var isOpera = navigator.userAgent.indexOf("Opera") != -1;
 var isSafari = navigator.userAgent.indexOf("AppleWebKit") != -1;
 
-loadModules();
+loadModules(document);
 // ************************************************************************************************
 
 

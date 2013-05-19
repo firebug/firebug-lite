@@ -24,7 +24,7 @@ var loadStateData = function()
         isActive = FirebugData[0] == "1";
         isOpen = FirebugData[1] == "1";
     }
-}
+};
 
 // *************************************************************************************************
 
@@ -39,7 +39,7 @@ var loadFirebug = function()
     // Issue 41024: XHR using file: and chrome-extension: protocols not working.
     // http://code.google.com/p/chromium/issues/detail?id=41024
     injectFirebugScript();
-}
+};
 
 // TODO: think a better solution than using the stateData parameter, required
 // by the keyboard activation.
@@ -98,7 +98,7 @@ var injectFirebugScript = function(url)
             document.documentElement.appendChild(script);
         };
     }
-}
+};
 
 // inject a script into the page
 var injectScriptText = function(text)
@@ -112,7 +112,7 @@ var injectScriptText = function(text)
     script.setAttribute("extension", "Chrome");
     parent.appendChild(script);
     parent.removeChild(script);
-}
+};
 
 // *************************************************************************************************
 
@@ -196,7 +196,7 @@ var loadChannel = function()
         channelEvent = document.createEvent("Event");
         channelEvent.initEvent("FirebugChannelEvent", true, true);
     }
-}
+};
 
 var firebugDispatch = function(data)
 {
@@ -251,7 +251,7 @@ var listenConsoleCalls = function()
             listener[fn] = function()
             {
                 queue.push([fn, arguments]);
-            }
+            };
 
         })(fn);
     }
@@ -363,7 +363,7 @@ if (isActive)
 {
     loadFirebugAndWait(function(){
         loadChannel();
-    })
+    });
 }
 else
 {

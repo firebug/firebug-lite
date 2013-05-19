@@ -47,7 +47,7 @@ Firebug.Console.injector =
         {
             var c = consoleHandler;
             var f = consoleHandler[name];
-            return function(){return f.apply(c,arguments)};
+            return function(){return f.apply(c,arguments);};
         };
         
         var installer = function(c)
@@ -60,8 +60,30 @@ Firebug.Console.injector =
             }
         };
         
-        var consoleNS = (!isFirefox || isFirefox && !("console" in win)) ? "console" : "firebug";
-        var sandbox = new win.Function("arguments.callee.install(window." + consoleNS + "={})");
+        var sandbox;
+        
+        if (win.console)
+        {
+            if (Env.Options.overrideConsole)
+                sandbox = new win.Function("arguments.callee.install(window.console={})");
+            else
+                // if there's a console object and overrideConsole is false we should just quit
+                return;
+        }
+        else
+        {
+            try
+            {
+                // try overriding the console object
+                sandbox = new win.Function("arguments.callee.install(window.console={})");
+            }
+            catch(E)
+            {
+                // if something goes wrong create the firebug object instead
+                sandbox = new win.Function("arguments.callee.install(window.firebug={})");
+            }
+        }
+        
         sandbox.install = installer;
         sandbox();
     },
@@ -214,7 +236,7 @@ Firebug.Console.injector =
                 element.parentNode.removeChild(element);
         }
     }
-}
+};
 
 var total_handlers = 0;
 var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
@@ -321,12 +343,7 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         else if (instanceOf(o, "Document"))
             o = o.documentElement;
 
-        // TODO: xxxpedro html3
-        ///Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
-        var div = Firebug.Console.log(o, context, "dirxml");
-        var html = [];
-        Firebug.Reps.appendNode(o, html);
-        div.innerHTML = html.join("");
+        Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
     };
 
     this.group = function()
@@ -808,15 +825,13 @@ var FirebugConsoleHandler = function FirebugConsoleHandler(context, win)
         else
             return "Firebug failed to get stack trace with any frames";
     }
-}
+};
 
 // ************************************************************************************************
 // Register console namespace
 
 FBL.registerConsole = function()
 {
-    //TODO: xxxpedro console options override
-    //if (Env.Options.overrideConsole)
     var win = Env.browser.window;
     Firebug.Console.injector.install(win);
 };

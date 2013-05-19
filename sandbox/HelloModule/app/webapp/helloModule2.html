@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Hello Module</title>
+</head>
+<body class="harBody">
+    <div id="content"></div>
+    <link rel="stylesheet" href="../skin/classic/helloModule.css" type="text/css"/>
+    <script src="allplugins-require.js"></script>
+    <script>
+        require(
+            {
+                baseUrl: "../modules_v2/Common",
+                paths:
+                {
+                    // mapping non-common modules here to platform-specific implementations
+                    "Firebug/CSS": "../Mozilla/Firebug/CSS"
+                }
+            },
+            ["../../webapp/helloModule2"]
+        );
+    </script>
+</body>
+</html>

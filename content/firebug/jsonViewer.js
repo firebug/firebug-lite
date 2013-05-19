@@ -7,7 +7,9 @@ FBL.ns(function() { with (FBL) {
 // List of JSON content types.
 var contentTypes =
 {
-    "text/plain": 1,
+    // TODO: create issue: jsonViewer will not try to evaluate the contents of the requested file 
+    // if the content-type is set to "text/plain"
+    //"text/plain": 1,
     "text/javascript": 1,
     "text/x-javascript": 1,
     "text/json": 1,

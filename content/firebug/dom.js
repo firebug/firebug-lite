@@ -244,7 +244,7 @@ var DirTablePlate = domplate(Firebug.Rep,
 
 // ************************************************************************************************
 
-Firebug.DOMBasePanel = function() {}
+Firebug.DOMBasePanel = function() {};
 
 Firebug.DOMBasePanel.prototype = extend(Firebug.Panel,
 {
@@ -1377,7 +1377,7 @@ var getMembers = function getMembers(object, level)  // we expect object to be u
         members.push.apply(members, domConstants);
 
     return members;
-}
+};
 
 function expandMembers(members, toggles, offset, level)  // recursion starts with offset=0, level=0
 {
@@ -1429,19 +1429,24 @@ function isClassFunction(fn)
     return false;
 }
 
-var hasProperties = function hasProperties(ob)
-{
-    try
-    {
-        for (var name in ob)
-            return true;
-    } catch (exc) {}
-    
-    // IE function prototype is not listed in (for..in)
-    if (isFunction(ob)) return true;
-    
-    return false;
-}
+// FIXME: xxxpedro This function is already defined in Lib. If we keep this definition here, it
+// will crash IE9 when not running the IE Developer Tool with JavaScript Debugging enabled!!!
+// Check if this function is in fact defined in Firebug for Firefox. If so, we should remove
+// this from here. The only difference of this function is the IE hack to show up the prototype
+// of functions, but Firebug no longer shows the prototype for simple functions.
+//var hasProperties = function hasProperties(ob)
+//{
+//    try
+//    {
+//        for (var name in ob)
+//            return true;
+//    } catch (exc) {}
+//    
+//    // IE function prototype is not listed in (for..in)
+//    if (isFunction(ob)) return true;
+//    
+//    return false;
+//};
 
 FBL.ErrorCopy = function(message)
 {
@@ -1472,7 +1477,7 @@ var addMember = function addMember(type, props, name, value, level, order)
         hasChildren: hasChildren,
         tag: tag
     });
-}
+};
 
 var getWatchRowIndex = function getWatchRowIndex(row)
 {
@@ -1480,25 +1485,25 @@ var getWatchRowIndex = function getWatchRowIndex(row)
     for (; row && hasClass(row, "watchRow"); row = row.previousSibling)
         ++index;
     return index;
-}
+};
 
 var getRowName = function getRowName(row)
 {
     var node = row.firstChild;
     return node.textContent ? node.textContent : node.innerText;
-}
+};
 
 var getRowValue = function getRowValue(row)
 {
     return row.lastChild.firstChild.repObject;
-}
+};
 
 var getRowOwnerObject = function getRowOwnerObject(row)
 {
     var parentRow = getParentRow(row);
     if (parentRow)
         return getRowValue(parentRow);
-}
+};
 
 var getParentRow = function getParentRow(row)
 {
@@ -1508,7 +1513,7 @@ var getParentRow = function getParentRow(row)
         if (parseInt(row.getAttribute("level")) == level)
             return row;
     }
-}
+};
 
 var getPath = function getPath(row)
 {
@@ -1528,7 +1533,7 @@ var getPath = function getPath(row)
     }
 
     return path;
-}
+};
 
 // ************************************************************************************************
 
@@ -1660,7 +1665,7 @@ DOMSidePanel.prototype = extend(Firebug.DOMBasePanel.prototype,
         addEvent(this.panelNode, "click", this.onClick);
         
         // TODO: xxxpedro css2
-        var selection = ElementCache.get(FirebugChrome.selectedHTMLElementId);
+        var selection = ElementCache.get(Firebug.context.persistedState.selectedHTMLElementId);
         if (selection)
             this.select(selection, true);
     },

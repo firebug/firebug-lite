@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="copyright" content="Copyright (c) IBM Corporation and others 2010."/>
+<meta http-equiv="PRAGMA" content="NO-CACHE"/>
+<meta http-equiv="Expires" content="-1"/>
+<title>Orion Editor Demo</title>
+<style>
+.button {
+  border: 2px dotted orange;
+  padding: 0 2 0 2
+}
+</style>
+
+<script language="javascript" type="text/javascript" src="console.js"></script>
+<script language="javascript" type="text/javascript" src="styler.js"></script>
+<script language="javascript" type="text/javascript" src="rulers.js"></script>
+<script language="javascript" type="text/javascript" src="undoStack.js"></script>
+<script language="javascript" type="text/javascript" src="../js/editor.js"></script>
+<script language="javascript" type="text/javascript" src="../js/model.js"></script>
+<script language="javascript" type="text/javascript" src="../js-tests/test-performance.js"></script>
+
+<script language="javascript" type="text/javascript">
+var editor = null;
+var styler = null;
+
+var isMac = navigator.platform.indexOf("Mac") !== -1;
+
+function getFile(file) {
+	try {
+		var objXml = new XMLHttpRequest();
+		objXml.open("GET",file,false);
+		objXml.send(null);
+		return objXml.responseText;
+	} catch (e) {
+		return null;
+	}
+}
+
+function checkEditor() {
+	if (editor) return;
+	var options = {
+		parent: "divParent",
+		model: new eclipse.TextModel(),
+		stylesheet: "editor.css",
+		tabSize: 4,
+	};
+	editor = new eclipse.Editor(options);
+	
+	/* Undo stack */
+	var undoStack = new eclipse.UndoStack(editor, 200);
+	editor.setKeyBinding(new eclipse.KeyBinding('z', true), "undo");
+	editor.setAction("undo", function() {
+		undoStack.undo();
+		return true;
+	});
+	editor.setKeyBinding(isMac ? new eclipse.KeyBinding('z', true, true) : new eclipse.KeyBinding('y', true), "redo");
+	editor.setAction("redo", function() {
+		undoStack.redo();
+		return true;
+	});
+	
+	editor.setKeyBinding(new eclipse.KeyBinding('s', true), "save");
+	editor.setAction("save", function() {
+		log("*****************SAVE");
+		return true;
+	});
+	editor.setKeyBinding(new eclipse.KeyBinding('f', true), "find");
+	editor.setAction("find", function() {
+		log("*****************FIND");
+		return true;
+	});
+	
+	var breakpoint = {
+		html: "<img src='brkp_obj.gif'></img>",
+		style: {styleClass: "ruler_annotation_breakpoint"},
+		overviewStyle: {styleClass: "ruler_annotation_breakpoint_overview"}
+	};
+	var todo = {
+		html: "<img src='todo.gif'></img>",
+		style: {styleClass: "ruler_annotation_todo"},
+		overviewStyle: {styleClass: "ruler_annotation_todo_overview"}
+	};
+	var annotation = new eclipse.AnnotationRuler("left", {styleClass: "ruler_annotation"}, breakpoint);
+	annotation.onDblClick =  function(lineIndex, e) {
+		if (lineIndex === undefined) return;
+		annotation.setAnnotation(lineIndex, annotation.getAnnotation(lineIndex) !== undefined ? undefined : e.ctrlKey ? todo : breakpoint);
+	};
+	var lines = new eclipse.LineNumberRuler("left", {styleClass: "ruler_lines"}, {styleClass: "ruler_lines_odd"}, {styleClass: "ruler_lines_even"});
+	lines.onDblClick = annotation.onDblClick;
+	var overview = new eclipse.OverviewRuler("right", {styleClass: "ruler_overview"}, annotation);
+	editor.addRuler(annotation);
+	editor.addRuler(lines);
+	editor.addRuler(overview);
+}
+
+function createJavaSample() {
+	checkEditor();
+	var file =  getFile("text.txt");
+	if (styler) {
+		styler.destroy();
+		styler = null;
+	}
+	styler = new eclipse.TextStyler(editor, "java");
+	editor.setText(file);
+}
+
+function createJavaScriptSample() {
+	checkEditor();
+	var file =  getFile("../js/editor.js");
+	if (styler) {
+		styler.destroy();
+		styler = null;
+	}
+	styler = new eclipse.TextStyler(editor, "js");
+	editor.setText(file);
+}
+
+function createPlainTextSample() {
+	checkEditor();
+	var lineCount = 50000;
+	var lines = [];
+	for(var i = 0; i < lineCount; i++) {
+		lines.push("This is the line of text number "+i);
+	}
+	if (styler) {
+		styler.destroy();
+		styler = null;
+	}
+	editor.setText(lines.join("\r\n"));
+}
+
+function createBidiTextSample() {
+	checkEditor();
+	var lines = [];
+	lines.push("Hello \u0644\u0645\u0646\u0647");
+	if (styler) {
+		styler.destroy();
+		styler = null;
+	}
+	editor.setText(lines.join("\r\n"));
+}
+
+function test() {
+}
+
+function performanceTest() {
+	checkEditor();
+	if (styler) {
+		styler.destroy();
+		styler = null;
+	}
+	var test = new PerformanceTest(editor);
+	var select = document.getElementById("test");
+	test[select.value]();
+}
+
+
+</script>
+</head>
+<body>
+
+<h1>Orion Editor Demo</h1>
+
+<table width="100%">
+<tr>
+<th>Editor</th>
+<th>Console</th>
+</tr>
+<tr>
+<td width="100%">
+<div id='divParent' style='border: 1px solid teal;width:100%;height:650px;'>
+Create the editor by clicking one of the buttons at the bottom.
+</div>
+</td>
+<td>
+<div id='divParent' style='border: 1px solid teal;width:300px;height:650px;'>
+<iframe id='console' frameBorder="0" style="width:100%;height:100%;"></iframe>
+</div>
+</td>
+</tr>
+</table>
+<span onclick='createJavaSample()' class="button">Java file</span>
+<span onclick='createJavaScriptSample()' class="button">JavaScript file</span>
+<span onclick='createPlainTextSample()' class="button">Plain Text</span>
+<span onclick='createBidiTextSample()' class="button">Bidi Text</span>
+<span onclick='clearLog()' class="button">ClearConsole</span>
+<span onclick='test()' class="button">Test</span>
+Performance tests:
+<select id="test">
+  <option value="test_pageDown">Page Down</option>
+  <option value="test_pageUp">Page Up</option>
+  <option value="test_lineDown">Line Down</option>
+  <option value="test_lineUp">Line Up</option>
+  <option value="test_getLocationAtOffset">Location at Offset</option>
+  <option value="test_getOffsetAtLocation">Offset at Location</option>
+  <option value="test_getLocationAtOffsetStyled">Location at Offset[styles]</option>
+  <option value="test_getOffsetAtLocationStyled">Offset at Location[styles]</option>
+<select>
+<span onclick='performanceTest()' class="button">Run</span>
+</body>
+</html>

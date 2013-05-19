@@ -16,11 +16,19 @@ var OBJECTLINK = this.OBJECTLINK = isIE6 ? // IE6 object link representation
     A({
         "class": "objectLink objectLink-$className a11yFocus",
         href: "javascript:void(0)",
+        // workaround to show XPath (a better approach would use the tooltip on mouseover,
+        // so the XPath information would be calculated dynamically, but we need to create
+        // a tooltip class/wrapper around Menu or InfoTip)
+        title: "$object|FBL.getElementXPath",
         _repObject: "$object"
     })
     : // Other browsers
     A({
         "class": "objectLink objectLink-$className a11yFocus",
+        // workaround to show XPath (a better approach would use the tooltip on mouseover,
+        // so the XPath information would be calculated dynamically, but we need to create
+        // a tooltip class/wrapper around Menu or InfoTip)
+        title: "$object|FBL.getElementXPath",
         _repObject: "$object"
     });
 
@@ -799,14 +807,25 @@ this.Element = domplate(Firebug.Rep,
              for (var i = 0; i < elt.attributes.length; ++i)
              {
                  var attr = elt.attributes[i];
-                 if (attr.nodeName && attr.nodeName.indexOf("firebug-") != -1)
+                 
+                 // we must check if the attribute is specified otherwise IE will show them
+                 if (!attr.specified || attr.nodeName && attr.nodeName.indexOf("firebug-") != -1)
                     continue;
                  else if (attr.nodeName == "id")
-                     idAttr = attr;
-                else if (attr.nodeName == "class")
+                    idAttr = attr;
+                 else if (attr.nodeName == "class")
                     classAttr = attr;
+                 else if (attr.nodeName == "style")
+                    attrs.push({
+                        nodeName: attr.nodeName,
+                        nodeValue: attr.nodeValue ||
+                        // IE won't recognize the attr.nodeValue of <style> nodes ...
+                        // and will return CSS property names in upper case, so we need to convert them
+                        elt.style.cssText.replace(/([^\s]+)\s*:/g, 
+                                function(m,g){return g.toLowerCase()+":"})                         
+                    });
                  else
-                     attrs.push(attr);
+                    attrs.push(attr);
              }
          }
          if (classAttr)
