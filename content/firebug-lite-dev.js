@@ -16,9 +16,9 @@ if (window.Firebug)
 
 var bookmarkletMode = true;
 
-var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // stable
+//var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/latest/skin/xp/"; // stable
 //var bookmarkletSkinURL = "https://getfirebug.com/releases/lite/beta/skin/xp/"; // beta
-//var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/firebug1.3/skin/xp/"; // developer
+var bookmarkletSkinURL = "http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/"; // developer
 //var bookmarkletSkinURL = "chrome-extension://bmagokdooijbeehmkpknfglimnifench/skin/xp/"; // chrome extension
 //var bookmarkletSkinURL = "chrome-extension://mdaojmoeahmmokaflgbannaopagamgoj/skin/xp/"; // chrome beta extension
 
@@ -39,7 +39,7 @@ window.FBDev =
         
         "lite/gui.js",        
         "lite/context.js",
-        "lite/chrome.js",
+        "lite/chromeNew.js",
         "lite/chromeSkin.js",
         
         // firebug1.4 experimental
@@ -705,7 +705,7 @@ var loadDevPanel = function() { with(FBL) {
         create: function(){
             Firebug.Panel.create.apply(this, arguments);
             
-            var doc = Firebug.chrome.document;
+            var doc = Firebug.chrome.getPanelDocument(DevPanel);
             var out = doc.createElement("textarea");
             out.id = "fbDevOutput";
             out.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; padding: 0;";

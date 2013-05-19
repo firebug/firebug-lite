@@ -27,7 +27,7 @@ var parentPanelMap = {};
 FBL.Firebug = 
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.4.0",
+    version:  "Firebug Lite 1.5.0-flex-a2",
     revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -484,8 +484,6 @@ Firebug.Panel =
         hasStatusBar: false,
         hasToolButtons: false,
         
-        // Pre-rendered panels are those included in the skin file (firebug.html)
-        isPreRendered: false,
         innerHTMLSync: false
         
         /*
@@ -508,7 +506,7 @@ Firebug.Panel =
 
     panelBarNode: null,
     
-    sidePanelBarBoxNode: null,
+    sidePanelBarContainer: null,
     sidePanelBarNode: null,            
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -526,8 +524,8 @@ Firebug.Panel =
     {
         this.hasSidePanel = parentPanelMap.hasOwnProperty(this.name); 
         
-        this.panelBarNode = $("fbPanelBar1");
-        this.sidePanelBarBoxNode = $("fbPanelBar2");
+        this.panelBarNode = $("fbPanelBar1-panelTabs");
+        this.sidePanelBarContainer = $("fbPanelBar2-panelTabs");
         
         if (this.hasSidePanel)
         {
@@ -538,88 +536,77 @@ Firebug.Panel =
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
         
-        if (options.isPreRendered)
-        {
-            this.panelNode = $(panelId);
-            
-            this.tabNode = $(panelId + "Tab");
-            this.tabNode.style.display = "block";
-            
-            if (options.hasToolButtons)
-            {
-                this.toolButtonsNode = $(panelId + "Buttons");
-            }
-            
-            if (options.hasStatusBar)
-            {
-                this.statusBarBox = $("fbStatusBarBox");
-                this.statusBarNode = $(panelId + "StatusBar");
-            }
-        }
-        else
-        {
-            var containerSufix = this.parentPanel ? "2" : "1";
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // Create Panel
-            var panelNode = this.panelNode = createElement("div", {
-                id: panelId,
-                className: "fbPanel"
-            });
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Create Panel
+        var container = this.parentPanel ? 
+                Firebug.chrome.getSidePanelContainer() :
+                Firebug.chrome.getPanelContainer(); 
+        
+        var panelNode = this.panelNode = createElement("div", {
+            id: panelId,
+            className: "fbPanel",
+            document: container.ownerDocument
+        });
 
-            $("fbPanel" + containerSufix).appendChild(panelNode);
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // Create Panel Tab
-            var tabHTML = '<span class="fbTabL"></span><span class="fbTabText">' +
-                    this.title + '</span><span class="fbTabR"></span>';            
-            
-            var tabNode = this.tabNode = createElement("a", {
-                id: panelId + "Tab",
-                className: "fbTab fbHover",
-                innerHTML: tabHTML
+        container.appendChild(panelNode);            
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Create Panel Tab
+        var tabNode = this.tabNode = createElement("span", {
+            id: panelId + "Tab",
+            className: "panelTab",
+            innerHTML: this.title + '<span class="panelOptions">▼</span>'
+        });
+        
+        /*
+        var tabHTML = '<span class="panelTab">' + this.title + 
+                '<span class="panelOptions">▼</span></span>';            
+        
+        var tabNode = this.tabNode = createElement("a", {
+            id: panelId + "Tab",
+            className: "fbTab fbHover",
+            innerHTML: tabHTML
+        });
+        
+        if (isIE6)
+        {
+            tabNode.href = "javascript:void(0)";
+        }
+        /**/
+        
+        var panelBarNode = this.parentPanel ? 
+                Firebug.chrome.getPanel(this.parentPanel).sidePanelBarNode :
+                this.panelBarNode;
+        
+        panelBarNode.appendChild(tabNode);
+        tabNode.style.display = "block";
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create ToolButtons
+        if (options.hasToolButtons)
+        {
+            this.toolButtonsNode = createElement("span", {
+                id: panelId + "Buttons",
+                className: "fbToolbarButtons"
             });
             
-            if (isIE6)
-            {
-                tabNode.href = "javascript:void(0)";
-            }
+            $("fbMainToolbar").appendChild(this.toolButtonsNode);
+        }
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create StatusBar
+        if (options.hasStatusBar)
+        {
+            this.statusBarBox = $("fbStatusBarBox")
+                // FIXME xxxpedro chromenew
+                || $("fbMainToolbar");
             
-            var panelBarNode = this.parentPanel ? 
-                    Firebug.chrome.getPanel(this.parentPanel).sidePanelBarNode :
-                    this.panelBarNode;
+            this.statusBarNode = createElement("span", {
+                id: panelId + "StatusBar",
+                className: "fbToolbarButtons fbStatusBar"
+            });
             
-            panelBarNode.appendChild(tabNode);
-            tabNode.style.display = "block";
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create ToolButtons
-            if (options.hasToolButtons)
-            {
-                this.toolButtonsNode = createElement("span", {
-                    id: panelId + "Buttons",
-                    className: "fbToolbarButtons"
-                });
-                
-                $("fbToolbarButtons").appendChild(this.toolButtonsNode);
-            }
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create StatusBar
-            if (options.hasStatusBar)
-            {
-                this.statusBarBox = $("fbStatusBarBox");
-                
-                this.statusBarNode = createElement("span", {
-                    id: panelId + "StatusBar",
-                    className: "fbToolbarButtons fbStatusBar"
-                });
-                
-                this.statusBarBox.appendChild(this.statusBarNode);
-            }
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create SidePanel
+            this.statusBarBox.appendChild(this.statusBarNode);
         }
         
         this.containerNode = this.panelNode.parentNode;
@@ -687,7 +674,7 @@ Firebug.Panel =
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
         
-        this.panelNode = $(panelId);
+        ///this.panelNode = $(panelId);
         
         this.tabNode = $(panelId + "Tab");
         this.tabNode.style.display = "block";

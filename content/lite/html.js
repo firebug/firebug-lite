@@ -202,7 +202,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     appendTreeChildren: function(treeNode)
     {
-        var doc = Firebug.chrome.document;
+        var doc = Firebug.chrome.getPanelDocument(HTMLPanel);
         var uid = treeNode.id;
         var parentNode = ElementCache.get(uid);
         
@@ -249,7 +249,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     isTreeNodeVisible: function(id)
     {
-        return $(id);
+        return $(id, Firebug.chrome.getPanelDocument(HTMLPanel));
     },
     
     select: function(el)
@@ -280,7 +280,7 @@ Firebug.HTML = extend(Firebug.Module,
         while(stack.length > 0)
         {
             id = stack.pop();
-            node = $(id);
+            node = $(id, Firebug.chrome.getPanelDocument(HTMLPanel));
             
             if (stack.length > 0 && ElementCache.get(id).childNodes.length > 0)
               this.appendTreeChildren(node);
@@ -288,9 +288,12 @@ Firebug.HTML = extend(Firebug.Module,
         
         selectElement(node);
         
-        // TODO: xxxpedro
+        // FIXME: xxxpedro chromenew - this isn't working after detaching the UI
         if (fbPanel1)
-            fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+            fbPanel1.parentNode.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+        
+        // FIXME: IE6 - create chrome.getPanelScrollElement()?
+        // fbPanel1.ownerDocument.documentElement.scrollTop = Math.round(node.offsetTop - fbPanel1.ownerDocument.documentElement.clientHeight/2);
     }
     
 });
@@ -310,7 +313,6 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     options: {
         hasSidePanel: true,
         //hasToolButtons: true,
-        isPreRendered: !Firebug.flexChromeEnabled /* FIXME xxxpedro chromenew */,
         innerHTMLSync: true
     },
 
@@ -354,7 +356,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
-        fbPanel1 = $("fbPanel1");
+        fbPanel1 = Firebug.chrome.getPanelContainer();
         
         if(!selectedElement)
         {
@@ -369,7 +371,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         // TODO: xxxpedro
         addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        /// FIXME xxxpedro chromenew
+        ///addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
     },
     
@@ -377,7 +380,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     {
         // TODO: xxxpedro
         removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        // FIXME xxxpedro chromenew
+        ///removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
@@ -441,8 +445,6 @@ var selectElement= function selectElement(e)
         else if (FBL.isSafari)
             e.style.WebkitBorderRadius = "2px";
         
-        e.style.borderRadius = "2px";
-
         selectedElement = e;
         
         Firebug.context.persistedState.selectedHTMLElementId = e.id;

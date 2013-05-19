@@ -97,7 +97,7 @@ FBL.PanelBar =
         {
             ownerPanel.sidePanelBarNode = createElement("span");
             ownerPanel.sidePanelBarNode.style.display = "none";
-            ownerPanel.sidePanelBarBoxNode.appendChild(ownerPanel.sidePanelBarNode);
+            ownerPanel.sidePanelBarContainer.appendChild(ownerPanel.sidePanelBarNode);
         }
         
         var panels = Firebug.panelTypes;
@@ -594,7 +594,7 @@ FBL.Menu = function(options)
         
         options.element = MenuPlate.tag.append(
                 {object: options},
-                getElementByClass(Firebug.chrome.document, "fbBody"),
+                Firebug.chrome.document.body,
                 MenuPlate
             );
     }

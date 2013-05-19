@@ -1,6 +1,6 @@
 /*!*************************************************************
  *
- *    Firebug Lite 1.4.0
+ *    Firebug Lite 1.5.0-flex-a2
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -20,7 +20,7 @@
 /** @namespace describe lib */
 
 // FIXME: xxxpedro if we use "var FBL = {}" the FBL won't appear in the DOM Panel in IE 
-var FBL = {};
+window.FBL = {};
 
 ( /** @scope s_lib @this FBL */ function() {
 // ************************************************************************************************
@@ -280,7 +280,7 @@ this.Env =
         app: null
     },
 
-    skin: "xp",
+    skin: "flexBox",
     useLocalSkin: false,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 

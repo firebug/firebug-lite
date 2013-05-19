@@ -6258,8 +6258,8 @@ FBL.Firebug =
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     version:  "Firebug Lite 1.4.0",
-    revision: "$Revision: 11961 $",
-    
+    revision: "$Revision: 11956 $",
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     modules: modules,
     panelTypes: panelTypes,
@@ -22877,7 +22877,7 @@ Firebug.Console.injector =
         if (win.console)
         {
             if (Env.Options.overrideConsole)
-                sandbox = new win.Function("arguments.callee.install(window.console={})");
+                sandbox = new win.Function("arguments.callee.install(window.firebug={})");
             else
                 // if there's a console object and overrideConsole is false we should just quit
                 return;

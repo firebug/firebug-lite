@@ -1,6 +1,6 @@
 {
   "name": "Firebug Lite for Google Chrome™",
-  "version": "1.4.0.11967",
+  "version": "1.4.0.11961",
   "description": "Firebug Lite for Google Chrome, supported by the Firebug Working Group.",
   "background_page": "background.html",
   "browser_action":

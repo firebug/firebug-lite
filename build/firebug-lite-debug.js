@@ -2,7 +2,7 @@
 
 /*!*************************************************************
  *
- *    Firebug Lite 1.4.0
+ *    Firebug Lite 1.5.0-flex-a2
  * 
  *      Copyright (c) 2007, Parakey Inc.
  *      Released under BSD license.
@@ -22,7 +22,7 @@
 /** @namespace describe lib */
 
 // FIXME: xxxpedro if we use "var FBL = {}" the FBL won't appear in the DOM Panel in IE 
-var FBL = {};
+window.FBL = {};
 
 ( /** @scope s_lib @this FBL */ function() {
 // ************************************************************************************************
@@ -282,7 +282,7 @@ this.Env =
         app: null
     },
 
-    skin: "xp",
+    skin: "flexBox",
     useLocalSkin: false,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
@@ -6257,7 +6257,7 @@ var parentPanelMap = {};
 FBL.Firebug = 
 {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    version:  "Firebug Lite 1.4.0",
+    version:  "Firebug Lite 1.5.0-flex-a2",
     revision: "$Revision$",
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -6714,8 +6714,6 @@ Firebug.Panel =
         hasStatusBar: false,
         hasToolButtons: false,
         
-        // Pre-rendered panels are those included in the skin file (firebug.html)
-        isPreRendered: false,
         innerHTMLSync: false
         
         /*
@@ -6738,7 +6736,7 @@ Firebug.Panel =
 
     panelBarNode: null,
     
-    sidePanelBarBoxNode: null,
+    sidePanelBarContainer: null,
     sidePanelBarNode: null,            
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -6756,8 +6754,8 @@ Firebug.Panel =
     {
         this.hasSidePanel = parentPanelMap.hasOwnProperty(this.name); 
         
-        this.panelBarNode = $("fbPanelBar1");
-        this.sidePanelBarBoxNode = $("fbPanelBar2");
+        this.panelBarNode = $("fbPanelBar1-panelTabs");
+        this.sidePanelBarContainer = $("fbPanelBar2-panelTabs");
         
         if (this.hasSidePanel)
         {
@@ -6768,88 +6766,77 @@ Firebug.Panel =
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
         
-        if (options.isPreRendered)
-        {
-            this.panelNode = $(panelId);
-            
-            this.tabNode = $(panelId + "Tab");
-            this.tabNode.style.display = "block";
-            
-            if (options.hasToolButtons)
-            {
-                this.toolButtonsNode = $(panelId + "Buttons");
-            }
-            
-            if (options.hasStatusBar)
-            {
-                this.statusBarBox = $("fbStatusBarBox");
-                this.statusBarNode = $(panelId + "StatusBar");
-            }
-        }
-        else
-        {
-            var containerSufix = this.parentPanel ? "2" : "1";
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // Create Panel
-            var panelNode = this.panelNode = createElement("div", {
-                id: panelId,
-                className: "fbPanel"
-            });
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Create Panel
+        var container = this.parentPanel ? 
+                Firebug.chrome.getSidePanelContainer() :
+                Firebug.chrome.getPanelContainer(); 
+        
+        var panelNode = this.panelNode = createElement("div", {
+            id: panelId,
+            className: "fbPanel",
+            document: container.ownerDocument
+        });
 
-            $("fbPanel" + containerSufix).appendChild(panelNode);
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // Create Panel Tab
-            var tabHTML = '<span class="fbTabL"></span><span class="fbTabText">' +
-                    this.title + '</span><span class="fbTabR"></span>';            
-            
-            var tabNode = this.tabNode = createElement("a", {
-                id: panelId + "Tab",
-                className: "fbTab fbHover",
-                innerHTML: tabHTML
+        container.appendChild(panelNode);            
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // Create Panel Tab
+        var tabNode = this.tabNode = createElement("span", {
+            id: panelId + "Tab",
+            className: "panelTab",
+            innerHTML: this.title + '<span class="panelOptions">▼</span>'
+        });
+        
+        /*
+        var tabHTML = '<span class="panelTab">' + this.title + 
+                '<span class="panelOptions">▼</span></span>';            
+        
+        var tabNode = this.tabNode = createElement("a", {
+            id: panelId + "Tab",
+            className: "fbTab fbHover",
+            innerHTML: tabHTML
+        });
+        
+        if (isIE6)
+        {
+            tabNode.href = "javascript:void(0)";
+        }
+        /**/
+        
+        var panelBarNode = this.parentPanel ? 
+                Firebug.chrome.getPanel(this.parentPanel).sidePanelBarNode :
+                this.panelBarNode;
+        
+        panelBarNode.appendChild(tabNode);
+        tabNode.style.display = "block";
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create ToolButtons
+        if (options.hasToolButtons)
+        {
+            this.toolButtonsNode = createElement("span", {
+                id: panelId + "Buttons",
+                className: "fbToolbarButtons"
             });
             
-            if (isIE6)
-            {
-                tabNode.href = "javascript:void(0)";
-            }
+            $("fbMainToolbar").appendChild(this.toolButtonsNode);
+        }
+        
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        // create StatusBar
+        if (options.hasStatusBar)
+        {
+            this.statusBarBox = $("fbStatusBarBox")
+                // FIXME xxxpedro chromenew
+                || $("fbMainToolbar");
             
-            var panelBarNode = this.parentPanel ? 
-                    Firebug.chrome.getPanel(this.parentPanel).sidePanelBarNode :
-                    this.panelBarNode;
+            this.statusBarNode = createElement("span", {
+                id: panelId + "StatusBar",
+                className: "fbToolbarButtons fbStatusBar"
+            });
             
-            panelBarNode.appendChild(tabNode);
-            tabNode.style.display = "block";
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create ToolButtons
-            if (options.hasToolButtons)
-            {
-                this.toolButtonsNode = createElement("span", {
-                    id: panelId + "Buttons",
-                    className: "fbToolbarButtons"
-                });
-                
-                $("fbToolbarButtons").appendChild(this.toolButtonsNode);
-            }
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create StatusBar
-            if (options.hasStatusBar)
-            {
-                this.statusBarBox = $("fbStatusBarBox");
-                
-                this.statusBarNode = createElement("span", {
-                    id: panelId + "StatusBar",
-                    className: "fbToolbarButtons fbStatusBar"
-                });
-                
-                this.statusBarBox.appendChild(this.statusBarNode);
-            }
-            
-            // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-            // create SidePanel
+            this.statusBarBox.appendChild(this.statusBarNode);
         }
         
         this.containerNode = this.panelNode.parentNode;
@@ -6917,7 +6904,7 @@ Firebug.Panel =
         var options = this.options = extend(Firebug.Panel.options, this.options);
         var panelId = "fb" + this.name;
         
-        this.panelNode = $(panelId);
+        ///this.panelNode = $(panelId);
         
         this.tabNode = $(panelId + "Tab");
         this.tabNode.style.display = "block";
@@ -7688,7 +7675,7 @@ FBL.PanelBar =
         {
             ownerPanel.sidePanelBarNode = createElement("span");
             ownerPanel.sidePanelBarNode.style.display = "none";
-            ownerPanel.sidePanelBarBoxNode.appendChild(ownerPanel.sidePanelBarNode);
+            ownerPanel.sidePanelBarContainer.appendChild(ownerPanel.sidePanelBarNode);
         }
         
         var panels = Firebug.panelTypes;
@@ -8185,7 +8172,7 @@ FBL.Menu = function(options)
         
         options.element = MenuPlate.tag.append(
                 {object: options},
-                getElementByClass(Firebug.chrome.document, "fbBody"),
+                Firebug.chrome.document.body,
                 MenuPlate
             );
     }
@@ -9240,33 +9227,12 @@ var WindowDefaultOptions =
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // Interface Elements Cache
 
-    fbTop,
-    fbContent,
-    fbContentStyle,
-    fbBottom,
     fbBtnInspect,
 
-    fbToolbar,
-
-    fbPanelBox1,
-    fbPanelBox1Style,
-    fbPanelBox2,
-    fbPanelBox2Style,
-    fbPanelBar2Box,
-    fbPanelBar2BoxStyle,
+    fbMainToolbarBox,
 
     fbHSplitter,
     fbVSplitter,
-    fbVSplitterStyle,
-
-    fbPanel1,
-    fbPanel1Style,
-    fbPanel2,
-    fbPanel2Style,
-
-    fbConsole,
-    fbConsoleStyle,
-    fbHTML,
 
     fbCommandLine,
     fbLargeCommandLine, 
@@ -9301,11 +9267,18 @@ var WindowDefaultOptions =
 
     lastVSplitterMouseMove = 0;
 
+
+var panelBar1, panelBar2, panelContainer, sidePanelContainer, panelDocument, sidePanelDocument;
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 
 // ************************************************************************************************
 // FirebugChrome
+
+// xxxpedro chromenew hack
+Firebug.framesLoaded = 0;
+var numberOfFramesToLoad = 3;
 
 FBL.defaultPersistedState = 
 {
@@ -9391,6 +9364,9 @@ FBL.FirebugChrome =
 
 var createChromeWindow = function(options)
 {
+    // FIXME xxxpedro chromenew: is this the right place to reset the framesLoaded?
+    Firebug.framesLoaded = 0;
+    
     options = extend(WindowDefaultOptions, options || {});
     
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -9633,10 +9609,12 @@ var createChromeWindow = function(options)
             waitForWindow = function()
             {
                 if ( // Frame loaded... OR
+                     Firebug.framesLoaded == numberOfFramesToLoad && 
                      isChromeFrame && (win=node.contentWindow) &&
                      node.contentWindow.document.getElementById("fbCommandLine") ||
                      
                      // Popup loaded
+                     Firebug.framesLoaded == numberOfFramesToLoad && 
                      !isChromeFrame && (win=node.window) && node.document &&
                      node.document.getElementById("fbCommandLine") )
                 {
@@ -9833,14 +9811,59 @@ append(ChromeBase,
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
-    create: function()
+    getPanelContainer: function()
     {
+        return panelContainer;
+    },
+    
+    getSidePanelContainer: function()
+    {
+        return sidePanelContainer;
+    },
+    
+    getPanelDocument: function(panelType)
+    {
+        if (panelType.prototype.parentPanel)
+            return sidePanelDocument;
+        else
+            return panelDocument;
+    },
+    
+    // xxxpedro
+    getSidePanelDocument: function()
+    {
+        return sidePanelDocument;
+    },
+    
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    
+    create: function()
+    {   
+        panelBar1 = $("fbPanelBar1-content");
+        panelBar2 = $("fbPanelBar2-content");
+        
+        panelContainer = panelBar1.nodeName.toLowerCase() == "iframe" ? 
+                panelBar1.contentWindow.document.body : 
+                panelBar1;
+        
+        sidePanelContainer = panelBar2.nodeName.toLowerCase() == "iframe" ? 
+                panelBar2.contentWindow.document.body : 
+                panelBar2;
+        
+        panelDocument = panelBar1.nodeName.toLowerCase() == "iframe" ? 
+                panelBar1.contentWindow.document : 
+                Firebug.chrome.document;
+        
+        sidePanelDocument = panelBar2.nodeName.toLowerCase() == "iframe" ? 
+                panelBar2.contentWindow.document : 
+                Firebug.chrome.document;
+        
         PanelBar.create.call(this);
         
         if (Firebug.Inspector)
-            this.inspectButton = new Button({
+            this.inspectButton = new IconButton({
                 type: "toggle",
-                element: $("fbChrome_btInspect"),
+                element: $("fbInspectButton"),
                 owner: Firebug.Inspector,
                 
                 onPress: Firebug.Inspector.startInspecting,
@@ -10024,8 +10047,7 @@ append(ChromeBase,
                         value: "disableResourceFetching",
                         checked: Firebug.disableResourceFetching,
                         disabled: cookiesDisabled
-                    },
-                    {
+                    },                    {
                         label: "Enable Trace Mode",
                         type: "checkbox",
                         value: "enableTrace",
@@ -10145,6 +10167,9 @@ append(ChromeBase,
     
     initialize: function()
     {
+        // FIXME xxxpedro chromenew  
+        if (Firebug.CommandLine) Firebug.CommandLine.activate();
+        
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         if (Env.bookmarkletOutdated)
             Firebug.Console.logFormatted([
@@ -10170,33 +10195,13 @@ append(ChromeBase,
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // create the interface elements cache
         
-        fbTop = $("fbTop");
-        fbContent = $("fbContent");
-        fbContentStyle = fbContent.style;
-        fbBottom = $("fbBottom");
+        // FIXME xxxpedro is this being used?
         fbBtnInspect = $("fbBtnInspect");
         
-        fbToolbar = $("fbToolbar");
-      
-        fbPanelBox1 = $("fbPanelBox1");
-        fbPanelBox1Style = fbPanelBox1.style;
-        fbPanelBox2 = $("fbPanelBox2");
-        fbPanelBox2Style = fbPanelBox2.style;
-        fbPanelBar2Box = $("fbPanelBar2Box");
-        fbPanelBar2BoxStyle = fbPanelBar2Box.style;
+        fbMainToolbarBox = $("fbMainToolbarBox");
       
         fbHSplitter = $("fbHSplitter");
         fbVSplitter = $("fbVSplitter");
-        fbVSplitterStyle = fbVSplitter.style;
-      
-        fbPanel1 = $("fbPanel1");
-        fbPanel1Style = fbPanel1.style;
-        fbPanel2 = $("fbPanel2");
-        fbPanel2Style = fbPanel2.style;
-      
-        fbConsole = $("fbConsole");
-        fbConsoleStyle = fbConsole.style;
-        fbHTML = $("fbHTML");
       
         fbCommandLine = $("fbCommandLine");
         fbLargeCommandLine = $("fbLargeCommandLine");
@@ -10204,15 +10209,17 @@ append(ChromeBase,
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // static values cache
-        topHeight = fbTop.offsetHeight;
-        topPartialHeight = fbToolbar.offsetHeight;
+        //topHeight = fbTop.offsetHeight;
+        //topPartialHeight = fbMainToolbarBox.offsetHeight;
+        topHeight = 0;
+        topPartialHeight = 0;
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
-        disableTextSelection($("fbToolbar"));
-        disableTextSelection($("fbPanelBarBox"));
-        disableTextSelection($("fbPanelBar1"));
-        disableTextSelection($("fbPanelBar2"));
+        //disableTextSelection($("fbMainToolbarBox"));
+        //disableTextSelection($("fbPanelBarBox"));
+        //disableTextSelection($("fbPanelBar1"));
+        //disableTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // Add the "javascript:void(0)" href attributes used to make the hover effect in IE6
@@ -10252,9 +10259,9 @@ append(ChromeBase,
         // ************************************************************************************************
         // ************************************************************************************************
         
-        this.addController(
-            [$("fbLargeCommandLineIcon"), "click", this.showLargeCommandLine]       
-        );
+//        this.addController(
+//            [$("fbLargeCommandLineIcon"), "click", this.showLargeCommandLine]       
+//        );
         
         // ************************************************************************************************
         
@@ -10399,7 +10406,7 @@ append(ChromeBase,
         //removeEvent(Firebug.chrome.document, "keydown", listener[0]);
 
 
-        /*
+        
         Firebug.chrome.keyCodeListen = function(key, filter, listener, capture)
         {
             if (!filter)
@@ -10415,23 +10422,23 @@ append(ChromeBase,
                     FBL.cancelEvent(event, true);
                     return false;
                 }
-            }
+            };
     
-            addEvent(Firebug.chrome.document, "keydown", fn);
+            addEvent(this.getSidePanelDocument(), "keydown", fn);
             
             return [fn, capture];
         };
         
         Firebug.chrome.keyIgnore = function(listener)
         {
-            removeEvent(Firebug.chrome.document, "keydown", listener[0]);
+            removeEvent(this.getSidePanelDocument(), "keydown", listener[0]);
         };
         /**/
         
-        
+
         this.addController(
-                [fbPanel1, "mousedown", onPanelMouseDown],
-                [fbPanel2, "mousedown", onPanelMouseDown]
+                [this.getPanelContainer(), "mousedown", onPanelMouseDown],
+                [this.getSidePanelContainer(), "mousedown", onPanelMouseDown]
              );
 /**/
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -10460,6 +10467,8 @@ append(ChromeBase,
     
     shutdown: function()
     {
+        if (Firebug.CommandLine) Firebug.CommandLine.deactivate();
+
         // ************************************************************************************************
         // ************************************************************************************************
         // ************************************************************************************************
@@ -10476,10 +10485,10 @@ append(ChromeBase,
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         
         // remove disableTextSelection event handlers
-        restoreTextSelection($("fbToolbar"));
-        restoreTextSelection($("fbPanelBarBox"));
-        restoreTextSelection($("fbPanelBar1"));
-        restoreTextSelection($("fbPanelBar2"));
+        //restoreTextSelection($("fbMainToolbarBox"));
+        //restoreTextSelection($("fbPanelBarBox"));
+        //restoreTextSelection($("fbPanelBar1"));
+        //restoreTextSelection($("fbPanelBar2"));
         
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         // shutdown inherited classes
@@ -10490,32 +10499,12 @@ append(ChromeBase,
         // Remove the interface elements cache (this must happen after calling 
         // the shutdown method of all dependent components to avoid errors)
 
-        fbTop = null;
-        fbContent = null;
-        fbContentStyle = null;
-        fbBottom = null;
         fbBtnInspect = null;
         
-        fbToolbar = null;
+        fbMainToolbarBox = null;
 
-        fbPanelBox1 = null;
-        fbPanelBox1Style = null;
-        fbPanelBox2 = null;
-        fbPanelBox2Style = null;
-        fbPanelBar2Box = null;
-        fbPanelBar2BoxStyle = null;
-  
         fbHSplitter = null;
         fbVSplitter = null;
-        fbVSplitterStyle = null;
-  
-        fbPanel1 = null;
-        fbPanel1Style = null;
-        fbPanel2 = null;
-  
-        fbConsole = null;
-        fbConsoleStyle = null;
-        fbHTML = null;
   
         fbCommandLine = null;
         fbLargeCommandLine = null;
@@ -10612,80 +10601,6 @@ append(ChromeBase,
     },
     
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-    draw: function()
-    {
-        var size = this.getSize();
-        
-        // Height related values
-        var commandLineHeight = Firebug.chrome.commandLineVisible ? fbCommandLine.offsetHeight : 0,
-            
-            y = Math.max(size.height /* chrome height */, topHeight),
-            
-            heightValue = Math.max(y - topHeight - commandLineHeight /* fixed height */, 0), 
-            
-            height = heightValue + "px",
-            
-            // Width related values
-            sideWidthValue = Firebug.chrome.sidePanelVisible ? Firebug.context.persistedState.sidePanelWidth : 0,
-            
-            width = Math.max(size.width /* chrome width */ - sideWidthValue, 0) + "px";
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Height related rendering
-        fbPanelBox1Style.height = height;
-        fbPanel1Style.height = height;
-        
-        if (isIE || isOpera)
-        {
-            // Fix IE and Opera problems with auto resizing the verticall splitter
-            fbVSplitterStyle.height = Math.max(y - topPartialHeight - commandLineHeight, 0) + "px";
-        }
-        //xxxpedro FF2 only?
-        /*
-        else if (isFirefox)
-        {
-            // Fix Firefox problem with table rows with 100% height (fit height)
-            fbContentStyle.maxHeight = Math.max(y - fixedHeight, 0)+ "px";
-        }/**/
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-        // Width related rendering
-        fbPanelBox1Style.width = width;
-        fbPanel1Style.width = width;
-        
-        // SidePanel rendering
-        if (Firebug.chrome.sidePanelVisible)
-        {
-            sideWidthValue = Math.max(sideWidthValue - 6, 0);
-            
-            var sideWidth = sideWidthValue + "px";
-            
-            fbPanelBox2Style.width = sideWidth;
-            
-            fbVSplitterStyle.right = sideWidth;
-            
-            if (Firebug.chrome.largeCommandLineVisible)
-            {
-                fbLargeCommandLine = $("fbLargeCommandLine");
-                
-                fbLargeCommandLine.style.height = heightValue - 4 + "px";
-                fbLargeCommandLine.style.width = sideWidthValue - 2 + "px";
-                
-                fbLargeCommandButtons = $("fbLargeCommandButtons");
-                fbLargeCommandButtons.style.width = sideWidth;
-            }
-            else
-            {
-                fbPanel2Style.height = height;
-                fbPanel2Style.width = sideWidth;
-                
-                fbPanelBar2BoxStyle.width = sideWidth;
-            }
-        }
-    },
-    
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     
     getSize: function()
     {
@@ -10704,7 +10619,8 @@ append(ChromeBase,
         
         // avoid partial resize when maximizing window
         setTimeout(function(){
-            self.draw();
+            // FIXME xxxpedro chromenew
+            //self.draw();
             
             if (noFixedPosition && (self.type == "frame" || self.type == "div"))
                 self.fixIEPosition();
@@ -10722,7 +10638,7 @@ append(ChromeBase,
         changeCommandLineVisibility(options.hasCommandLine);
         changeSidePanelVisibility(panel.hasSidePanel);
         
-        Firebug.chrome.draw();
+//        Firebug.chrome.draw();
     },
     
     showLargeCommandLine: function(hideToggleIcon)
@@ -10902,16 +10818,17 @@ var ChromeFrameBase = extend(ChromeBase,
             );
         }
         
-        fbVSplitter.onmousedown = onVSplitterMouseDown;
-        fbHSplitter.onmousedown = onHSplitterMouseDown;
+//        fbVSplitter.onmousedown = onVSplitterMouseDown;
+//        fbHSplitter.onmousedown = onHSplitterMouseDown;
         
         this.isInitialized = true;
     },
     
     shutdown: function()
     {
-        fbVSplitter.onmousedown = null;
-        fbHSplitter.onmousedown = null;
+        // FIXME xxxpedro chromenew
+        ///fbVSplitter.onmousedown = null;
+        ///fbHSplitter.onmousedown = null;
         
         ChromeBase.shutdown.apply(this);
         
@@ -10949,7 +10866,7 @@ var ChromeFrameBase = extend(ChromeBase,
             else
                 node.style.display = "block";
             
-            var main = $("fbChrome");
+            var main = $("fbContentBox");
             
             // IE6 throws an error when setting this property! why?
             //main.style.display = "table";
@@ -10967,7 +10884,7 @@ var ChromeFrameBase = extend(ChromeBase,
                 if (noFixedPosition)
                     self.fixIEPosition();
                 
-                self.draw();
+//                self.draw();
         
             }, 10);
         }
@@ -10995,7 +10912,7 @@ var ChromeFrameBase = extend(ChromeBase,
                 node.style.visibility = "hidden"; // Avoid flickering
                 
                 // TODO: xxxpedro - persist IE fixed? 
-                var main = $("fbChrome", FirebugChrome.chromeMap.frame.document);
+                var main = $("fbContentBox", FirebugChrome.chromeMap.frame.document);
                 main.style.display = "none";
                         
                 ChromeMini.initialize();
@@ -11048,10 +10965,11 @@ var ChromeFrameBase = extend(ChromeBase,
             this.node.style.width = size.width + "px";
         }
         
-        if (fbVSplitterStyle)
-            fbVSplitterStyle.right = Firebug.context.persistedState.sidePanelWidth + "px";
+        // FIXME xxxpedro chromenew
+        ///if (fbVSplitterStyle)
+        ///    fbVSplitterStyle.right = Firebug.context.persistedState.sidePanelWidth + "px";
         
-        this.draw();
+        ///this.draw();
     }
 
 });
@@ -11193,7 +11111,8 @@ var ChromePopupBase = extend(ChromeBase,
                 [Firebug.browser.window, "unload", this.close]
             );
         
-        fbVSplitter.onmousedown = onVSplitterMouseDown;
+        /// xxxpedro chromenew
+        ///fbVSplitter.onmousedown = onVSplitterMouseDown;
     },
     
     destroy: function()
@@ -11327,6 +11246,9 @@ var ChromePopupBase = extend(ChromeBase,
 
 var changeCommandLineVisibility = function changeCommandLineVisibility(visibility)
 {
+    // FIXME: xxxpedro chromenew
+    return;
+    
     var last = Firebug.chrome.commandLineVisible;
     var visible = Firebug.chrome.commandLineVisible =  
         typeof visibility == "boolean" ? visibility : !Firebug.chrome.commandLineVisible;
@@ -11335,7 +11257,7 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
     {
         if (visible)
         {
-            fbBottom.className = "";
+            removeClass($("fbContentBox"), "hideCommandLine");
             
             if (Firebug.CommandLine)
                 Firebug.CommandLine.activate();
@@ -11345,8 +11267,10 @@ var changeCommandLineVisibility = function changeCommandLineVisibility(visibilit
             if (Firebug.CommandLine)
                 Firebug.CommandLine.deactivate();
             
-            fbBottom.className = "hide";
+            setClass($("fbContentBox"), "hideCommandLine");
         }
+        
+        Firebug.chrome.window.flexBox.invalidate();
     }
 };
 
@@ -11358,8 +11282,12 @@ var changeSidePanelVisibility = function changeSidePanelVisibility(visibility)
     
     if (Firebug.chrome.sidePanelVisible != last)
     {
-        fbPanelBox2.className = Firebug.chrome.sidePanelVisible ? "" : "hide"; 
-        fbPanelBar2Box.className = Firebug.chrome.sidePanelVisible ? "" : "hide";
+        if (Firebug.chrome.sidePanelVisible)
+            removeClass($("fbContentBox"), "hideSidePanelBar");
+        else
+            setClass($("fbContentBox"), "hideSidePanelBar");
+        
+        Firebug.chrome.window.flexBox.invalidate();
     }
 };
 
@@ -22041,7 +21969,7 @@ Firebug.ConsoleListener =
 
 // ************************************************************************************************
 
-Firebug.ConsolePanel = function () {} // XXjjb attach Firebug so this panel can be extended.
+Firebug.ConsolePanel = function () {}; // XXjjb attach Firebug so this panel can be extended.
 
 //TODO: xxxpedro
 //Firebug.ConsolePanel.prototype = extend(Firebug.ActivablePanel,
@@ -22350,7 +22278,7 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
     {
         hasCommandLine: true,
         hasToolButtons: true,
-        isPreRendered: true
+        isPreRendered: false
     },
     
     create: function()
@@ -22358,12 +22286,13 @@ Firebug.ConsolePanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.create.apply(this, arguments);
         
         this.context = Firebug.browser.window;
-        this.document = Firebug.chrome.document;
+        this.document = Firebug.chrome.getPanelDocument(Firebug.ConsolePanel);
         this.onMouseMove = bind(this.onMouseMove, this);
         this.onMouseDown = bind(this.onMouseDown, this);
         
         this.clearButton = new Button({
             element: $("fbConsole_btClear"),
+            caption: "Clear",
             owner: Firebug.Console,
             onClick: Firebug.Console.clear
         });
@@ -22877,7 +22806,7 @@ Firebug.Console.injector =
         if (win.console)
         {
             if (Env.Options.overrideConsole)
-                sandbox = new win.Function("arguments.callee.install(window.console={})");
+                sandbox = new win.Function("arguments.callee.install(window.firebug={})");
             else
                 // if there's a console object and overrideConsole is false we should just quit
                 return;
@@ -24412,7 +24341,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     appendTreeChildren: function(treeNode)
     {
-        var doc = Firebug.chrome.document;
+        var doc = Firebug.chrome.getPanelDocument(HTMLPanel);
         var uid = treeNode.id;
         var parentNode = ElementCache.get(uid);
         
@@ -24459,7 +24388,7 @@ Firebug.HTML = extend(Firebug.Module,
     
     isTreeNodeVisible: function(id)
     {
-        return $(id);
+        return $(id, Firebug.chrome.getPanelDocument(HTMLPanel));
     },
     
     select: function(el)
@@ -24490,7 +24419,7 @@ Firebug.HTML = extend(Firebug.Module,
         while(stack.length > 0)
         {
             id = stack.pop();
-            node = $(id);
+            node = $(id, Firebug.chrome.getPanelDocument(HTMLPanel));
             
             if (stack.length > 0 && ElementCache.get(id).childNodes.length > 0)
               this.appendTreeChildren(node);
@@ -24498,9 +24427,12 @@ Firebug.HTML = extend(Firebug.Module,
         
         selectElement(node);
         
-        // TODO: xxxpedro
+        // FIXME: xxxpedro chromenew - this isn't working after detaching the UI
         if (fbPanel1)
-            fbPanel1.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+            fbPanel1.parentNode.scrollTop = Math.round(node.offsetTop - fbPanel1.clientHeight/2);
+        
+        // FIXME: IE6 - create chrome.getPanelScrollElement()?
+        // fbPanel1.ownerDocument.documentElement.scrollTop = Math.round(node.offsetTop - fbPanel1.ownerDocument.documentElement.clientHeight/2);
     }
     
 });
@@ -24520,7 +24452,6 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     options: {
         hasSidePanel: true,
         //hasToolButtons: true,
-        isPreRendered: !Firebug.flexChromeEnabled /* FIXME xxxpedro chromenew */,
         innerHTMLSync: true
     },
 
@@ -24564,7 +24495,7 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         Firebug.Panel.initialize.apply(this, arguments);
         addEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
         
-        fbPanel1 = $("fbPanel1");
+        fbPanel1 = Firebug.chrome.getPanelContainer();
         
         if(!selectedElement)
         {
@@ -24579,7 +24510,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
         
         // TODO: xxxpedro
         addEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        /// FIXME xxxpedro chromenew
+        ///addEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         addEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);        
     },
     
@@ -24587,7 +24519,8 @@ HTMLPanel.prototype = extend(Firebug.Panel,
     {
         // TODO: xxxpedro
         removeEvent(fbPanel1, 'mousemove', Firebug.HTML.onListMouseMove);
-        removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
+        // FIXME xxxpedro chromenew
+        ///removeEvent($("fbContent"), 'mouseout', Firebug.HTML.onListMouseMove);
         removeEvent(Firebug.chrome.node, 'mouseout', Firebug.HTML.onListMouseMove);
         
         removeEvent(this.panelNode, 'click', Firebug.HTML.onTreeClick);
@@ -24651,8 +24584,6 @@ var selectElement= function selectElement(e)
         else if (FBL.isSafari)
             e.style.WebkitBorderRadius = "2px";
         
-        e.style.borderRadius = "2px";
-
         selectedElement = e;
         
         Firebug.context.persistedState.selectedHTMLElementId = e.id;
@@ -26343,6 +26274,7 @@ this.getElementXPath = function(element)
     {
         // xxxpedro: trying to detect the mysterious error:
         // Security error" code: "1000
+        // This error happens when rendering the StorageList object in the DOM panel
         //debugger;
     }
 };
@@ -31162,7 +31094,7 @@ FBL.ns(function() { with (FBL) {
 
 FirebugChrome.Skin = 
 {
-    CSS: '.obscured{left:-999999px !important;}.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{font-size:11px;min-width:100px;text-align:center;}.infoTipCaption{font-size:11px;font:Monaco,monospace;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.png) repeat-y 100% 0;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.png) no-repeat 0 100%;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.png) no-repeat 2px 1px;_background:url(https://getfirebug.com/releases/lite/latest/skin/xp/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadowAlpha.png) no-repeat bottom right !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;line-height:13px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(https://getfirebug.com/releases/lite/latest/skin/xp/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.png) no-repeat 4px 2px !important;background:#fff url(https://getfirebug.com/releases/lite/latest/skin/xp/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) no-repeat !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;line-height:13px;}#fbPanelBarBox{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(https://getfirebug.com/releases/lite/latest/skin/xp/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/min.png);}#fbWindow_btClose:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/minHover.png);}#fbWindow_btDetach{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detach.png);}#fbWindow_btDetach:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/detachHover.png);}#fbWindow_btDeactivate{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/off.png);}#fbWindow_btDeactivate:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;line-height:13px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -24px -96px;}.fbSelectedTab{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em/1.4545em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(https://getfirebug.com/releases/lite/latest/skin/xp/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.png) !important;background-image:url(https://getfirebug.com/releases/lite/latest/skin/xp/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
+    CSS: '.obscured{left:-999999px !important;}.collapsed{display:none;}[collapsed="true"]{display:none;}#fbCSS{padding:0 !important;}.cssPropDisable{float:left;display:block;width:2em;cursor:default;}.infoTip{z-index:2147483647;position:fixed;padding:2px 3px;border:1px solid #CBE087;background:LightYellow;font-family:Monaco,monospace;color:#000000;display:none;white-space:nowrap;pointer-events:none;}.infoTip[active="true"]{display:block;}.infoTipLoading{width:16px;height:16px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/loading_16.gif) no-repeat;}.infoTipImageBox{font-size:11px;min-width:100px;text-align:center;}.infoTipCaption{font-size:11px;font:Monaco,monospace;}.infoTipLoading > .infoTipImage,.infoTipLoading > .infoTipCaption{display:none;}h1.groupHeader{padding:2px 4px;margin:0 0 4px 0;border-top:1px solid #CCCCCC;border-bottom:1px solid #CCCCCC;background:#eee url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/group.gif) repeat-x;font-size:11px;font-weight:bold;_position:relative;}.inlineEditor,.fixedWidthEditor{z-index:2147483647;position:absolute;display:none;}.inlineEditor{margin-left:-6px;margin-top:-3px;}.textEditorInner,.fixedWidthEditor{margin:0 0 0 0 !important;padding:0;border:none !important;font:inherit;text-decoration:inherit;background-color:#FFFFFF;}.fixedWidthEditor{border-top:1px solid #888888 !important;border-bottom:1px solid #888888 !important;}.textEditorInner{position:relative;top:-7px;left:-5px;outline:none;resize:none;}.textEditorInner1{padding-left:11px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorBorders.png) repeat-y;_background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorBorders.gif) repeat-y;_overflow:hidden;}.textEditorInner2{position:relative;padding-right:2px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorBorders.png) repeat-y 100% 0;_background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorBorders.gif) repeat-y 100% 0;_position:fixed;}.textEditorTop1{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorCorners.png) no-repeat 100% 0;margin-left:11px;height:10px;_background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorCorners.gif) no-repeat 100% 0;_overflow:hidden;}.textEditorTop2{position:relative;left:-11px;width:11px;height:10px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorCorners.png) no-repeat;_background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorCorners.gif) no-repeat;}.textEditorBottom1{position:relative;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorCorners.png) no-repeat 100% 100%;margin-left:11px;height:12px;_background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorCorners.gif) no-repeat 100% 100%;}.textEditorBottom2{position:relative;left:-11px;width:11px;height:12px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorCorners.png) no-repeat 0 100%;_background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/textEditorCorners.gif) no-repeat 0 100%;}.panelNode-css{overflow-x:hidden;}.cssSheet > .insertBefore{height:1.5em;}.cssRule{position:relative;margin:0;padding:1em 0 0 6px;font-family:Monaco,monospace;color:#000000;}.cssRule:first-child{padding-top:6px;}.cssElementRuleContainer{position:relative;}.cssHead{padding-right:150px;}.cssProp{}.cssPropName{color:DarkGreen;}.cssPropValue{margin-left:8px;color:DarkBlue;}.cssOverridden span{text-decoration:line-through;}.cssInheritedRule{}.cssInheritLabel{margin-right:0.5em;font-weight:bold;}.cssRule .objectLink-sourceLink{top:0;}.cssProp.editGroup:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/disable.png) no-repeat 2px 1px;_background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/disable.gif) no-repeat 2px 1px;}.cssProp.editGroup.editing{background:none;}.cssProp.disabledStyle{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/disableHover.png) no-repeat 2px 1px;_background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/disableHover.gif) no-repeat 2px 1px;opacity:1;color:#CCCCCC;}.disabledStyle .cssPropName,.disabledStyle .cssPropValue{color:#CCCCCC;}.cssPropValue.editing + .cssSemi,.inlineExpander + .cssSemi{display:none;}.cssPropValue.editing{white-space:nowrap;}.stylePropName{font-weight:bold;padding:0 4px 4px 4px;width:50%;}.stylePropValue{width:50%;}.panelNode-net{overflow-x:hidden;}.netTable{width:100%;}.hideCategory-undefined .category-undefined,.hideCategory-html .category-html,.hideCategory-css .category-css,.hideCategory-js .category-js,.hideCategory-image .category-image,.hideCategory-xhr .category-xhr,.hideCategory-flash .category-flash,.hideCategory-txt .category-txt,.hideCategory-bin .category-bin{display:none;}.netHeadRow{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netHeadCol{border-bottom:1px solid #CCCCCC;padding:2px 4px 2px 18px;font-weight:bold;}.netHeadLabel{white-space:nowrap;overflow:hidden;}.netHeaderRow{height:16px;}.netHeaderCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;background:#BBBBBB url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/tableHeader.gif) repeat-x;white-space:nowrap;}.netHeaderRow > .netHeaderCell:first-child > .netHeaderCellBox{padding:2px 14px 2px 18px;}.netHeaderCellBox{padding:2px 14px 2px 10px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.netHeaderCell:hover:active{background:#959595 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/tableHeaderActive.gif) repeat-x;}.netHeaderSorted{background:#7D93B2 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;}.netHeaderSorted > .netHeaderCellBox{border-right-color:#6B7C93;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/arrowDown.png) no-repeat right;}.netHeaderSorted.sortedAscending > .netHeaderCellBox{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/arrowUp.png);}.netHeaderSorted:hover:active{background:#536B90 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;}.panelNode-net .netRowHeader{display:block;}.netRowHeader{cursor:pointer;display:none;height:15px;margin-right:0 !important;}.netRow .netRowHeader{background-position:5px 1px;}.netRow[breakpoint="true"] .netRowHeader{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/breakpoint.png);}.netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/breakpointDisabled.png);}.netRow.category-xhr:hover .netRowHeader{background-color:#F6F6F6;}#netBreakpointBar{max-width:38px;}#netHrefCol > .netHeaderCellBox{border-left:0px;}.netRow .netRowHeader{width:3px;}.netInfoRow .netRowHeader{display:table-cell;}.netTable[hiddenCols~=netHrefCol] TD[id="netHrefCol"],.netTable[hiddenCols~=netHrefCol] TD.netHrefCol,.netTable[hiddenCols~=netStatusCol] TD[id="netStatusCol"],.netTable[hiddenCols~=netStatusCol] TD.netStatusCol,.netTable[hiddenCols~=netDomainCol] TD[id="netDomainCol"],.netTable[hiddenCols~=netDomainCol] TD.netDomainCol,.netTable[hiddenCols~=netSizeCol] TD[id="netSizeCol"],.netTable[hiddenCols~=netSizeCol] TD.netSizeCol,.netTable[hiddenCols~=netTimeCol] TD[id="netTimeCol"],.netTable[hiddenCols~=netTimeCol] TD.netTimeCol{display:none;}.netRow{background:LightYellow;}.netRow.loaded{background:#FFFFFF;}.netRow.loaded:hover{background:#EFEFEF;}.netCol{padding:0;vertical-align:top;border-bottom:1px solid #EFEFEF;white-space:nowrap;height:17px;}.netLabel{width:100%;}.netStatusCol{padding-left:10px;color:rgb(128,128,128);}.responseError > .netStatusCol{color:red;}.netDomainCol{padding-left:5px;}.netSizeCol{text-align:right;padding-right:10px;}.netHrefLabel{-moz-box-sizing:padding-box;overflow:hidden;z-index:10;position:absolute;padding-left:18px;padding-top:1px;max-width:15%;font-weight:bold;}.netFullHrefLabel{display:none;-moz-user-select:none;padding-right:10px;padding-bottom:3px;max-width:100%;background:#FFFFFF;z-index:200;}.netHrefCol:hover > .netFullHrefLabel{display:block;}.netRow.loaded:hover .netCol > .netFullHrefLabel{background-color:#EFEFEF;}.useA11y .a11yShowFullLabel{display:block;background-image:none !important;border:1px solid #CBE087;background-color:LightYellow;font-family:Monaco,monospace;color:#000000;font-size:10px;z-index:2147483647;}.netSizeLabel{padding-left:6px;}.netStatusLabel,.netDomainLabel,.netSizeLabel,.netBar{padding:1px 0 2px 0 !important;}.responseError{color:red;}.hasHeaders .netHrefLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.netLoadingIcon{position:absolute;border:0;margin-left:14px;width:16px;height:16px;background:transparent no-repeat 0 0;background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/loading_16.gif);display:inline-block;}.loaded .netLoadingIcon{display:none;}.netBar,.netSummaryBar{position:relative;border-right:50px solid transparent;}.netResolvingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/netBarResolving.gif) repeat-x;z-index:60;}.netConnectingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/netBarConnecting.gif) repeat-x;z-index:50;}.netBlockingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/netBarWaiting.gif) repeat-x;z-index:40;}.netSendingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/netBarSending.gif) repeat-x;z-index:30;}.netWaitingBar{position:absolute;left:0;top:0;bottom:0;background:#FFFFFF url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/netBarResponded.gif) repeat-x;z-index:20;min-width:1px;}.netReceivingBar{position:absolute;left:0;top:0;bottom:0;background:#38D63B url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/netBarLoading.gif) repeat-x;z-index:10;}.netWindowLoadBar,.netContentLoadBar{position:absolute;left:0;top:0;bottom:0;width:1px;background-color:red;z-index:70;opacity:0.5;display:none;margin-bottom:-1px;}.netContentLoadBar{background-color:Blue;}.netTimeLabel{-moz-box-sizing:padding-box;position:absolute;top:1px;left:100%;padding-left:6px;color:#444444;min-width:16px;}.loaded .netReceivingBar,.loaded.netReceivingBar{background:#B6B6B6 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/netBarLoaded.gif) repeat-x;border-color:#B6B6B6;}.fromCache .netReceivingBar,.fromCache.netReceivingBar{background:#D6D6D6 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/netBarCached.gif) repeat-x;border-color:#D6D6D6;}.netSummaryRow .netTimeLabel,.loaded .netTimeLabel{background:transparent;}.timeInfoTip{width:150px; height:40px}.timeInfoTipBar,.timeInfoTipEventBar{position:relative;display:block;margin:0;opacity:1;height:15px;width:4px;}.timeInfoTipEventBar{width:1px !important;}.timeInfoTipCell.startTime{padding-right:8px;}.timeInfoTipCell.elapsedTime{text-align:right;padding-right:8px;}.sizeInfoLabelCol{font-weight:bold;padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;}.sizeInfoSizeCol{font-weight:bold;}.sizeInfoDetailCol{color:gray;text-align:right;}.sizeInfoDescCol{font-style:italic;}.netSummaryRow .netReceivingBar{background:#BBBBBB;border:none;}.netSummaryLabel{color:#222222;}.netSummaryRow{background:#BBBBBB !important;font-weight:bold;}.netSummaryRow .netBar{border-right-color:#BBBBBB;}.netSummaryRow > .netCol{border-top:1px solid #999999;border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:1px;padding-bottom:2px;}.netSummaryRow > .netHrefCol:hover{background:transparent !important;}.netCountLabel{padding-left:18px;}.netTotalSizeCol{text-align:right;padding-right:10px;}.netTotalTimeCol{text-align:right;}.netCacheSizeLabel{position:absolute;z-index:1000;left:0;top:0;}.netLimitRow{background:rgb(255,255,225) !important;font-weight:normal;color:black;font-weight:normal;}.netLimitLabel{padding-left:18px;}.netLimitRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;vertical-align:middle !important;padding-top:2px;padding-bottom:2px;}.netLimitButton{font-size:11px;padding-top:1px;padding-bottom:1px;}.netInfoCol{border-top:1px solid #EEEEEE;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/group.gif) repeat-x #FFFFFF;}.netInfoBody{margin:10px 0 4px 10px;}.netInfoTabs{position:relative;padding-left:17px;}.netInfoTab{position:relative;top:-3px;margin-top:10px;padding:4px 6px;border:1px solid transparent;border-bottom:none;_border:none;font-weight:bold;color:#565656;cursor:pointer;}.netInfoTabSelected{cursor:default !important;border:1px solid #D7D7D7 !important;border-bottom:none !important;-moz-border-radius:4px 4px 0 0;-webkit-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;background-color:#FFFFFF;}.logRow-netInfo.error .netInfoTitle{color:red;}.logRow-netInfo.loading .netInfoResponseText{font-style:italic;color:#888888;}.loading .netInfoResponseHeadersTitle{display:none;}.netInfoResponseSizeLimit{font-family:Lucida Grande,Tahoma,sans-serif;padding-top:10px;font-size:11px;}.netInfoText{display:none;margin:0;border:1px solid #D7D7D7;border-right:none;padding:8px;background-color:#FFFFFF;font-family:Monaco,monospace;white-space:pre-wrap;}.netInfoTextSelected{display:block;}.netInfoParamName{padding-right:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;vertical-align:top;text-align:right;white-space:nowrap;}.netInfoPostText .netInfoParamName{width:1px;}.netInfoParamValue{width:100%;}.netInfoHeadersText,.netInfoPostText,.netInfoPutText{padding-top:0;}.netInfoHeadersGroup,.netInfoPostParams,.netInfoPostSource{margin-bottom:4px;border-bottom:1px solid #D7D7D7;padding-top:8px;padding-bottom:2px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#565656;}.netInfoPostParamsTable,.netInfoPostPartsTable,.netInfoPostJSONTable,.netInfoPostXMLTable,.netInfoPostSourceTable{margin-bottom:10px;width:100%;}.netInfoPostContentType{color:#bdbdbd;padding-left:50px;font-weight:normal;}.netInfoHtmlPreview{border:0;width:100%;height:100%;}.netHeadersViewSource{color:#bdbdbd;margin-left:200px;font-weight:normal;}.netHeadersViewSource:hover{color:blue;cursor:pointer;}.netActivationRow,.netPageSeparatorRow{background:rgb(229,229,229) !important;font-weight:normal;color:black;}.netActivationLabel{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;padding-left:22px;}.netPageSeparatorRow{height:5px !important;}.netPageSeparatorLabel{padding-left:22px;height:5px !important;}.netPageRow{background-color:rgb(255,255,255);}.netPageRow:hover{background:#EFEFEF;}.netPageLabel{padding:1px 0 2px 18px !important;font-weight:bold;}.netActivationRow > .netCol{border-bottom:2px solid;-moz-border-bottom-colors:#EFEFEF #999999;padding-top:2px;padding-bottom:3px;}.twisty,.logRow-errorMessage > .hasTwisty > .errorTitle,.logRow-log > .objectBox-array.hasTwisty,.logRow-spy .spyHead .spyTitle,.logGroup > .logRow,.memberRow.hasChildren > .memberLabelCell > .memberLabel,.hasHeaders .netHrefLabel,.netPageRow > .netCol > .netPageTitle{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;min-height:12px;}.logRow-errorMessage > .hasTwisty.opened > .errorTitle,.logRow-log > .objectBox-array.hasTwisty.opened,.logRow-spy.opened .spyHead .spyTitle,.logGroup.opened > .logRow,.memberRow.hasChildren.opened > .memberLabelCell > .memberLabel,.nodeBox.highlightOpen > .nodeLabel > .twisty,.nodeBox.open > .nodeLabel > .twisty,.netRow.opened > .netCol > .netHrefLabel,.netPageRow.opened > .netCol > .netPageTitle{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tree_close.gif);}.twisty{background-position:4px 4px;}* html .logRow-spy .spyHead .spyTitle,* html .logGroup .logGroupLabel,* html .hasChildren .memberLabelCell .memberLabel,* html .hasHeaders .netHrefLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tree_open.gif);background-repeat:no-repeat;background-position:2px 2px;}* html .opened .spyHead .spyTitle,* html .opened .logGroupLabel,* html .opened .memberLabelCell .memberLabel{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tree_close.gif);background-repeat:no-repeat;background-position:2px 2px;}.panelNode-console{overflow-x:hidden;}.objectLink{text-decoration:none;}.objectLink:hover{cursor:pointer;text-decoration:underline;}.logRow{position:relative;margin:0;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;background-color:#FFFFFF;overflow:hidden !important;}.useA11y .logRow:focus{border-bottom:1px solid #000000 !important;outline:none !important;background-color:#FFFFAD !important;}.useA11y .logRow:focus a.objectLink-sourceLink{background-color:#FFFFAD;}.useA11y .a11yFocus:focus,.useA11y .objectBox:focus{outline:2px solid #FF9933;background-color:#FFFFAD;}.useA11y .objectBox-null:focus,.useA11y .objectBox-undefined:focus{background-color:#888888 !important;}.useA11y .logGroup.opened > .logRow{border-bottom:1px solid #ffffff;}.logGroup{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/group.gif) repeat-x #FFFFFF;padding:0 !important;border:none !important;}.logGroupBody{display:none;margin-left:16px;border-left:1px solid #D7D7D7;border-top:1px solid #D7D7D7;background:#FFFFFF;}.logGroup > .logRow{background-color:transparent !important;font-weight:bold;}.logGroup.opened > .logRow{border-bottom:none;}.logGroup.opened > .logGroupBody{display:block;}.logRow-command > .objectBox-text{font-family:Monaco,monospace;color:#0000FF;white-space:pre-wrap;}.logRow-info,.logRow-warn,.logRow-error,.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-left:22px;background-repeat:no-repeat;background-position:4px 2px;}.logRow-assert,.logRow-warningMessage,.logRow-errorMessage{padding-top:0;padding-bottom:0;}.logRow-info,.logRow-info .objectLink-sourceLink{background-color:#FFFFFF;}.logRow-warn,.logRow-warningMessage,.logRow-warn .objectLink-sourceLink,.logRow-warningMessage .objectLink-sourceLink{background-color:cyan;}.logRow-error,.logRow-assert,.logRow-errorMessage,.logRow-error .objectLink-sourceLink,.logRow-errorMessage .objectLink-sourceLink{background-color:LightYellow;}.logRow-error,.logRow-assert,.logRow-errorMessage{color:#FF0000;}.logRow-info{}.logRow-warn,.logRow-warningMessage{}.logRow-error,.logRow-assert,.logRow-errorMessage{}.objectBox-string,.objectBox-text,.objectBox-number,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-string,.objectBox-text,.objectLink-textNode{white-space:pre-wrap;}.objectBox-number,.objectLink-styleRule,.objectLink-element,.objectLink-textNode{color:#000088;}.objectBox-string{color:#FF0000;}.objectLink-function,.objectBox-stackTrace,.objectLink-profile{color:DarkGreen;}.objectBox-null,.objectBox-undefined{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-exception{padding:0 2px 0 18px;color:red;}.objectLink-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.errorTitle{margin-top:0px;margin-bottom:1px;padding-top:2px;padding-bottom:2px;}.errorTrace{margin-left:17px;}.errorSourceBox{margin:2px 0;}.errorSource-none{display:none;}.errorSource-syntax > .errorBreak{visibility:hidden;}.errorSource{cursor:pointer;font-family:Monaco,monospace;color:DarkGreen;}.errorSource:hover{text-decoration:underline;}.errorBreak{cursor:pointer;display:none;margin:0 6px 0 0;width:13px;height:14px;vertical-align:bottom;opacity:0.1;}.hasBreakSwitch .errorBreak{display:inline;}.breakForError .errorBreak{opacity:1;}.assertDescription{margin:0;}.logRow-profile > .logRow > .objectBox-text{font-family:Lucida Grande,Tahoma,sans-serif;color:#000000;}.logRow-profile > .logRow > .objectBox-text:last-child{color:#555555;font-style:italic;}.logRow-profile.opened > .logRow{padding-bottom:4px;}.profilerRunning > .logRow{padding-left:22px !important;}.profileSizer{width:100%;overflow-x:auto;overflow-y:scroll;}.profileTable{border-bottom:1px solid #D7D7D7;padding:0 0 4px 0;}.profileTable tr[odd="1"]{background-color:#F5F5F5;vertical-align:middle;}.profileTable a{vertical-align:middle;}.profileTable td{padding:1px 4px 0 4px;}.headerCell{cursor:pointer;-moz-user-select:none;border-bottom:1px solid #9C9C9C;padding:0 !important;font-weight:bold;}.headerCellBox{padding:2px 4px;border-left:1px solid #D9D9D9;border-right:1px solid #9C9C9C;}.headerCell:hover:active{}.headerSorted{}.headerSorted > .headerCellBox{border-right-color:#6B7C93;}.headerSorted.sortedAscending > .headerCellBox{}.headerSorted:hover:active{}.linkCell{text-align:right;}.linkCell > .objectLink-sourceLink{position:static;}.logRow-stackTrace{padding-top:0;background:#f8f8f8;}.logRow-stackTrace > .objectBox-stackFrame{position:relative;padding-top:2px;}.objectLink-object{font-family:Lucida Grande,sans-serif;font-weight:bold;color:DarkGreen;white-space:pre-wrap;}.objectProp-object{color:DarkGreen;}.objectProps{color:#000;font-weight:normal;}.objectPropName{color:#777;}.objectProps .objectProp-string{color:#f55;}.objectProps .objectProp-number{color:#55a;}.objectProps .objectProp-object{color:#585;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.selectorHidden > .selectorTag{color:#5F82D9;}.selectorHidden > .selectorId{color:#888888;}.selectorHidden > .selectorClass{color:#D86060;}.selectorValue{font-family:Lucida Grande,sans-serif;font-style:italic;color:#555555;}.panelNode.searching .logRow{display:none;}.logRow.matched{display:block !important;}.logRow.matching{position:absolute;left:-1000px;top:-1000px;max-width:0;max-height:0;overflow:hidden;}.objectLeftBrace,.objectRightBrace,.objectEqual,.objectComma,.arrayLeftBracket,.arrayRightBracket,.arrayComma{font-family:Monaco,monospace;}.objectLeftBrace,.objectRightBrace,.arrayLeftBracket,.arrayRightBracket{font-weight:bold;}.objectLeftBrace,.arrayLeftBracket{margin-right:4px;}.objectRightBrace,.arrayRightBracket{margin-left:4px;}.logRow-dir{padding:0;}.logRow-errorMessage .hasTwisty .errorTitle,.logRow-spy .spyHead .spyTitle,.logGroup .logRow{cursor:pointer;padding-left:18px;background-repeat:no-repeat;background-position:3px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle{background-position:2px 3px;}.logRow-errorMessage > .hasTwisty > .errorTitle:hover,.logRow-spy .spyHead .spyTitle:hover,.logGroup > .logRow:hover{text-decoration:underline;}.logRow-spy{padding:0 !important;}.logRow-spy,.logRow-spy .objectLink-sourceLink{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/group.gif) repeat-x #FFFFFF;padding-right:4px;right:0;}.logRow-spy.opened{padding-bottom:4px;border-bottom:none;}.spyTitle{color:#000000;font-weight:bold;-moz-box-sizing:padding-box;overflow:hidden;z-index:100;padding-left:18px;}.spyCol{padding:0;white-space:nowrap;height:16px;}.spyTitleCol:hover > .objectLink-sourceLink,.spyTitleCol:hover > .spyTime,.spyTitleCol:hover > .spyStatus,.spyTitleCol:hover > .spyTitle{display:none;}.spyFullTitle{display:none;-moz-user-select:none;max-width:100%;background-color:Transparent;}.spyTitleCol:hover > .spyFullTitle{display:block;}.spyStatus{padding-left:10px;color:rgb(128,128,128);}.spyTime{margin-left:4px;margin-right:4px;color:rgb(128,128,128);}.spyIcon{margin-right:4px;margin-left:4px;width:16px;height:16px;vertical-align:middle;background:transparent no-repeat 0 0;display:none;}.loading .spyHead .spyRow .spyIcon{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/loading_16.gif);display:block;}.logRow-spy.loaded:not(.error) .spyHead .spyRow .spyIcon{width:0;margin:0;}.logRow-spy.error .spyHead .spyRow .spyIcon{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/errorIcon-sm.png);display:block;background-position:2px 2px;}.logRow-spy .spyHead .netInfoBody{display:none;}.logRow-spy.opened .spyHead .netInfoBody{margin-top:10px;display:block;}.logRow-spy.error .spyTitle,.logRow-spy.error .spyStatus,.logRow-spy.error .spyTime{color:red;}.logRow-spy.loading .spyResponseText{font-style:italic;color:#888888;}.caption{font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#444444;}.warning{padding:10px;font-family:Lucida Grande,Tahoma,sans-serif;font-weight:bold;color:#888888;}.panelNode-dom{overflow-x:hidden !important;}.domTable{font-size:1em;width:100%;table-layout:fixed;background:#fff;}.domTableIE{width:auto;}.memberLabelCell{padding:2px 0 2px 0;vertical-align:top;}.memberValueCell{padding:1px 0 1px 5px;display:block;overflow:hidden;}.memberLabel{display:block;cursor:default;-moz-user-select:none;overflow:hidden;padding-left:18px;background-color:#FFFFFF;text-decoration:none;}.memberRow.hasChildren .memberLabelCell .memberLabel:hover{cursor:pointer;color:blue;text-decoration:underline;}.userLabel{color:#000000;font-weight:bold;}.userClassLabel{color:#E90000;font-weight:bold;}.userFunctionLabel{color:#025E2A;font-weight:bold;}.domLabel{color:#000000;}.domFunctionLabel{color:#025E2A;}.ordinalLabel{color:SlateBlue;font-weight:bold;}.scopesRow{padding:2px 18px;background-color:LightYellow;border-bottom:5px solid #BEBEBE;color:#666666;}.scopesLabel{background-color:LightYellow;}.watchEditCell{padding:2px 18px;background-color:LightYellow;border-bottom:1px solid #BEBEBE;color:#666666;}.editor-watchNewRow,.editor-memberRow{font-family:Monaco,monospace !important;}.editor-memberRow{padding:1px 0 !important;}.editor-watchRow{padding-bottom:0 !important;}.watchRow > .memberLabelCell{font-family:Monaco,monospace;padding-top:1px;padding-bottom:1px;}.watchRow > .memberLabelCell > .memberLabel{background-color:transparent;}.watchRow > .memberValueCell{padding-top:2px;padding-bottom:2px;}.watchRow > .memberLabelCell,.watchRow > .memberValueCell{background-color:#F5F5F5;border-bottom:1px solid #BEBEBE;}.watchToolbox{z-index:2147483647;position:absolute;right:0;padding:1px 2px;}#fbConsole{overflow-x:hidden !important;}#fbCSS{font:1em Monaco,monospace;padding:0 7px;}#fbstylesheetButtons select,#fbScriptButtons select{font:11px Lucida Grande,Tahoma,sans-serif;margin-top:1px;padding-left:3px;background:#fafafa;border:1px inset #fff;width:220px;outline:none;}.Selector{margin-top:10px}.CSSItem{margin-left:4%}.CSSText{padding-left:20px;}.CSSProperty{color:#005500;}.CSSValue{padding-left:5px; color:#000088;}#fbHTMLStatusBar{display:inline;}.fbToolbarButtons{display:none;}.fbStatusSeparator{display:block;float:left;padding-top:4px;}#fbStatusBarBox{display:none;}#fbToolbarContent{display:block;position:absolute;_position:absolute;top:0;padding-top:4px;height:23px;clip:rect(0,2048px,27px,0);}.fbTabMenuTarget{display:none !important;float:left;width:10px;height:10px;margin-top:6px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuTarget.png);}.fbTabMenuTarget:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuTargetHover.png);}.fbShadow{float:left;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/shadowAlpha.png) no-repeat bottom right !important;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/shadow2.gif) no-repeat bottom right;margin:10px 0 0 10px !important;margin:10px 0 0 5px;}.fbShadowContent{display:block;position:relative;background-color:#fff;border:1px solid #a9a9a9;top:-6px;left:-6px;}.fbMenu{display:none;position:absolute;font-size:11px;line-height:13px;z-index:2147483647;}.fbMenuContent{padding:2px;}.fbMenuSeparator{display:block;position:relative;padding:1px 18px 0;text-decoration:none;color:#000;cursor:default;background:#ACA899;margin:4px 0;}.fbMenuOption{display:block;position:relative;padding:2px 18px;text-decoration:none;color:#000;cursor:default;}.fbMenuOption:hover{color:#fff;background:#316AC5;}.fbMenuGroup{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuPin.png) no-repeat right 0;}.fbMenuGroup:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuPin.png) no-repeat right -17px;}.fbMenuGroupSelected{color:#fff;background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuPin.png) no-repeat right -17px;}.fbMenuChecked{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuCheckbox.png) no-repeat 4px 0;}.fbMenuChecked:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuCheckbox.png) no-repeat 4px -17px;}.fbMenuRadioSelected{background:transparent url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuRadio.png) no-repeat 4px 0;}.fbMenuRadioSelected:hover{background:#316AC5 url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tabMenuRadio.png) no-repeat 4px -17px;}.fbMenuShortcut{padding-right:85px;}.fbMenuShortcutKey{position:absolute;right:0;top:2px;width:77px;}#fbFirebugMenu{top:22px;left:0;}.fbMenuDisabled{color:#ACA899 !important;}#fbFirebugSettingsMenu{left:245px;top:99px;}#fbConsoleMenu{top:42px;left:48px;}.fbIconButton{display:block;}.fbIconButton{display:block;}.fbIconButton{display:block;float:left;height:20px;width:20px;color:#000;margin-right:2px;text-decoration:none;cursor:default;}.fbIconButton:hover{position:relative;top:-1px;left:-1px;margin-right:0;_margin-right:1px;color:#333;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbIconPressed{position:relative;margin-right:0;_margin-right:1px;top:0 !important;left:0 !important;height:19px;color:#333 !important;border:1px solid #bbb !important;border-bottom:1px solid #cfcfcf !important;border-right:1px solid #ddd !important;}#fbErrorPopup{position:absolute;right:0;bottom:0;height:19px;width:75px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) #f1f2ee 0 0;z-index:999;}#fbErrorPopupContent{position:absolute;right:0;top:1px;height:18px;width:75px;_width:74px;border-left:1px solid #aca899;}#fbErrorIndicator{position:absolute;top:2px;right:5px;}.fbBtnInspectActive{background:#aaa;color:#fff !important;}.fbBody{margin:0;padding:0;overflow:hidden;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;background:#fff;}.clear{clear:both;}#fbMiniChrome{display:none;right:0;height:27px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) #f1f2ee 0 0;margin-left:1px;}#fbMiniContent{display:block;position:relative;left:-1px;right:0;top:1px;height:25px;border-left:1px solid #aca899;}#fbToolbarSearch{float:right;border:1px solid #ccc;margin:0 5px 0 0;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/search.png) no-repeat 4px 2px !important;background:#fff url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/search.gif) no-repeat 4px 2px;padding-left:20px;font-size:11px;}#fbToolbarErrors{float:right;margin:1px 4px 0 0;font-size:11px;}#fbLeftToolbarErrors{float:left;margin:7px 0px 0 5px;font-size:11px;}.fbErrors{padding-left:20px;height:14px;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/errorIcon.png) no-repeat !important;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/errorIcon.gif) no-repeat;color:#f00;font-weight:bold;}#fbMiniErrors{display:inline;display:none;float:right;margin:5px 2px 0 5px;}#fbMiniIcon{float:right;margin:3px 4px 0;height:20px;width:20px;float:right;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) 0 -135px;cursor:pointer;}#fbChrome{font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;position:absolute;_position:static;top:0;left:0;height:100%;width:100%;border-collapse:collapse;border-spacing:0;background:#fff;overflow:hidden;}#fbChrome > tbody > tr > td{padding:0;}#fbTop{height:49px;}#fbToolbar{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) #f1f2ee 0 0;height:27px;font-size:11px;line-height:13px;}#fbPanelBarBox{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) #dbd9c9 0 -27px;height:22px;}#fbContent{height:100%;vertical-align:top;}#fbBottom{height:18px;background:#fff;}#fbToolbarIcon{float:left;padding:0 5px 0;}#fbToolbarIcon a{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) 0 -135px;}#fbToolbarButtons{padding:0 2px 0 5px;}#fbToolbarButtons{padding:0 2px 0 5px;}.fbButton{text-decoration:none;display:block;float:left;color:#000;padding:4px 6px 4px 7px;cursor:default;}.fbButton:hover{color:#333;background:#f5f5ef url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/buttonBg.png);padding:3px 5px 3px 6px;border:1px solid #fff;border-bottom:1px solid #bbb;border-right:1px solid #bbb;}.fbBtnPressed{background:#e3e3db url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/buttonBgHover.png) !important;padding:3px 4px 2px 6px !important;margin:1px 0 0 1px !important;border:1px solid #ACA899 !important;border-color:#ACA899 #ECEBE3 #ECEBE3 #ACA899 !important;}#fbStatusBarBox{top:4px;cursor:default;}.fbToolbarSeparator{overflow:hidden;border:1px solid;border-color:transparent #fff transparent #777;_border-color:#eee #fff #eee #777;height:7px;margin:6px 3px;float:left;}.fbBtnSelected{font-weight:bold;}.fbStatusBar{color:#aca899;}.fbStatusBar a{text-decoration:none;color:black;}.fbStatusBar a:hover{color:blue;cursor:pointer;}#fbWindowButtons{position:absolute;white-space:nowrap;right:0;top:0;height:17px;width:48px;padding:5px;z-index:6;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) #f1f2ee 0 0;}#fbPanelBar1{width:1024px; z-index:8;left:0;white-space:nowrap;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) #dbd9c9 0 -27px;position:absolute;left:4px;}#fbPanelBar2Box{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) #dbd9c9 0 -27px;position:absolute;height:22px;width:300px; z-index:9;right:0;}#fbPanelBar2{position:absolute;width:290px; height:22px;padding-left:4px;}.fbPanel{display:none;}#fbPanelBox1,#fbPanelBox2{max-height:inherit;height:100%;font-size:1em;}#fbPanelBox2{background:#fff;}#fbPanelBox2{width:300px;background:#fff;}#fbPanel2{margin-left:6px;background:#fff;}#fbLargeCommandLine{display:none;position:absolute;z-index:9;top:27px;right:0;width:294px;height:201px;border-width:0;margin:0;padding:2px 0 0 2px;resize:none;outline:none;font-size:11px;overflow:auto;border-top:1px solid #B9B7AF;_right:-1px;_border-left:1px solid #fff;}#fbLargeCommandButtons{display:none;background:#ECE9D8;bottom:0;right:0;width:294px;height:21px;padding-top:1px;position:fixed;border-top:1px solid #ACA899;z-index:9;}#fbSmallCommandLineIcon{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/down.png) no-repeat;position:absolute;right:2px;bottom:3px;z-index:99;}#fbSmallCommandLineIcon:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/downHover.png) no-repeat;}.hide{overflow:hidden !important;position:fixed !important;display:none !important;visibility:hidden !important;}#fbCommand{height:18px;}#fbCommandBox{position:fixed;_position:absolute;width:100%;height:18px;bottom:0;overflow:hidden;z-index:9;background:#fff;border:0;border-top:1px solid #ccc;}#fbCommandIcon{position:absolute;color:#00f;top:2px;left:6px;display:inline;font:11px Monaco,monospace;z-index:10;}#fbCommandLine{position:absolute;width:100%;top:0;left:0;border:0;margin:0;padding:2px 0 2px 32px;font:11px Monaco,monospace;z-index:9;outline:none;}#fbLargeCommandLineIcon{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/up.png) no-repeat;position:absolute;right:1px;bottom:1px;z-index:10;}#fbLargeCommandLineIcon:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/upHover.png) no-repeat;}div.fbFitHeight{overflow:auto;position:relative;}.fbSmallButton{overflow:hidden;width:16px;height:16px;display:block;text-decoration:none;cursor:default;}#fbWindowButtons .fbSmallButton{float:right;}#fbWindow_btClose{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/min.png);}#fbWindow_btClose:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/minHover.png);}#fbWindow_btDetach{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/detach.png);}#fbWindow_btDetach:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/detachHover.png);}#fbWindow_btDeactivate{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/off.png);}#fbWindow_btDeactivate:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/offHover.png);}.fbTab{text-decoration:none;display:none;float:left;width:auto;float:left;cursor:default;font-family:Lucida Grande,Tahoma,sans-serif;font-size:11px;line-height:13px;font-weight:bold;height:22px;color:#565656;}.fbPanelBar span{float:left;}.fbPanelBar .fbTabL,.fbPanelBar .fbTabR{height:22px;width:8px;}.fbPanelBar .fbTabText{padding:4px 1px 0;}a.fbTab:hover{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) 0 -73px;}a.fbTab:hover .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) -16px -96px;}a.fbTab:hover .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) -24px -96px;}.fbSelectedTab{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) #f1f2ee 0 -50px !important;color:#000;}.fbSelectedTab .fbTabL{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) 0 -96px !important;}.fbSelectedTab .fbTabR{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/sprite.png) -8px -96px !important;}#fbHSplitter{position:fixed;_position:absolute;left:0;top:0;width:100%;height:5px;overflow:hidden;cursor:n-resize !important;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/pixel_transparent.gif);z-index:9;}#fbHSplitter.fbOnMovingHSplitter{height:100%;z-index:100;}.fbVSplitter{background:#ece9d8;color:#000;border:1px solid #716f64;border-width:0 1px;border-left-color:#aca899;width:4px;cursor:e-resize;overflow:hidden;right:294px;text-decoration:none;z-index:10;position:absolute;height:100%;top:27px;}div.lineNo{font:1em/1.4545em Monaco,monospace;position:relative;float:left;top:0;left:0;margin:0 5px 0 0;padding:0 5px 0 10px;background:#eee;color:#888;border-right:1px solid #ccc;text-align:right;}.sourceBox{position:absolute;}.sourceCode{font:1em Monaco,monospace;overflow:hidden;white-space:pre;display:inline;}.nodeControl{margin-top:3px;margin-left:-14px;float:left;width:9px;height:9px;overflow:hidden;cursor:default;background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tree_open.gif);_float:none;_display:inline;_position:absolute;}div.nodeMaximized{background:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/tree_close.gif);}div.objectBox-element{padding:1px 3px;}.objectBox-selector{cursor:default;}.selectedElement{background:highlight;color:#fff !important;}.selectedElement span{color:#fff !important;}* html .selectedElement{position:relative;}@media screen and (-webkit-min-device-pixel-ratio:0){.selectedElement{background:#316AC5;color:#fff !important;}}.logRow *{font-size:1em;}.logRow{position:relative;border-bottom:1px solid #D7D7D7;padding:2px 4px 1px 6px;zbackground-color:#FFFFFF;}.logRow-command{font-family:Monaco,monospace;color:blue;}.objectBox-string,.objectBox-text,.objectBox-number,.objectBox-function,.objectLink-element,.objectLink-textNode,.objectLink-function,.objectBox-stackTrace,.objectLink-profile{font-family:Monaco,monospace;}.objectBox-null{padding:0 2px;border:1px solid #666666;background-color:#888888;color:#FFFFFF;}.objectBox-string{color:red;}.objectBox-number{color:#000088;}.objectBox-function{color:DarkGreen;}.objectBox-object{color:DarkGreen;font-weight:bold;font-family:Lucida Grande,sans-serif;}.objectBox-array{color:#000;}.logRow-info,.logRow-error,.logRow-warn{background:#fff no-repeat 2px 2px;padding-left:20px;padding-bottom:3px;}.logRow-info{background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/infoIcon.png) !important;background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/infoIcon.gif);}.logRow-warn{background-color:cyan;background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/warningIcon.png) !important;background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/warningIcon.gif);}.logRow-error{background-color:LightYellow;background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/errorIcon.png) !important;background-image:url(http://fbug.googlecode.com/svn/lite/branches/flexBox/skin/flexBox/errorIcon.gif);color:#f00;}.errorMessage{vertical-align:top;color:#f00;}.objectBox-sourceLink{position:absolute;right:4px;top:2px;padding-left:8px;font-family:Lucida Grande,sans-serif;font-weight:bold;color:#0000FF;}.selectorTag,.selectorId,.selectorClass{font-family:Monaco,monospace;font-weight:normal;}.selectorTag{color:#0000FF;}.selectorId{color:DarkBlue;}.selectorClass{color:red;}.objectBox-element{font-family:Monaco,monospace;color:#000088;}.nodeChildren{padding-left:26px;}.nodeTag{color:blue;cursor:pointer;}.nodeValue{color:#FF0000;font-weight:normal;}.nodeText,.nodeComment{margin:0 2px;vertical-align:top;}.nodeText{color:#333333;font-family:Monaco,monospace;}.nodeComment{color:DarkGreen;}.nodeHidden,.nodeHidden *{color:#888888;}.nodeHidden .nodeTag{color:#5F82D9;}.nodeHidden .nodeValue{color:#D86060;}.selectedElement .nodeHidden,.selectedElement .nodeHidden *{color:SkyBlue !important;}.log-object{}.property{position:relative;clear:both;height:15px;}.propertyNameCell{vertical-align:top;float:left;width:28%;position:absolute;left:0;z-index:0;}.propertyValueCell{float:right;width:68%;background:#fff;position:absolute;padding-left:5px;display:table-cell;right:0;z-index:1;}.propertyName{font-weight:bold;}.FirebugPopup{height:100% !important;}.FirebugPopup #fbWindowButtons{display:none !important;}.FirebugPopup #fbHSplitter{display:none !important;}',
     HTML: '<table id="fbChrome" cellpadding="0" cellspacing="0" border="0"><tbody><tr><td id="fbTop" colspan="2"><div id="fbWindowButtons"><a id="fbWindow_btDeactivate" class="fbSmallButton fbHover" title="Deactivate Firebug for this web page">&nbsp;</a><a id="fbWindow_btDetach" class="fbSmallButton fbHover" title="Open Firebug in popup window">&nbsp;</a><a id="fbWindow_btClose" class="fbSmallButton fbHover" title="Minimize Firebug">&nbsp;</a></div><div id="fbToolbar"><div id="fbToolbarContent"><span id="fbToolbarIcon"><a id="fbFirebugButton" class="fbIconButton" class="fbHover" target="_blank">&nbsp;</a></span><span id="fbToolbarButtons"><span id="fbFixedButtons"><a id="fbChrome_btInspect" class="fbButton fbHover" title="Click an element in the page to inspect">Inspect</a></span><span id="fbConsoleButtons" class="fbToolbarButtons"><a id="fbConsole_btClear" class="fbButton fbHover" title="Clear the console">Clear</a></span></span><span id="fbStatusBarBox"><span class="fbToolbarSeparator"></span></span></div></div><div id="fbPanelBarBox"><div id="fbPanelBar1" class="fbPanelBar"><a id="fbConsoleTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Console</span><span class="fbTabMenuTarget"></span><span class="fbTabR"></span></a><a id="fbHTMLTab" class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">HTML</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">CSS</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">Script</span><span class="fbTabR"></span></a><a class="fbTab fbHover"><span class="fbTabL"></span><span class="fbTabText">DOM</span><span class="fbTabR"></span></a></div><div id="fbPanelBar2Box" class="hide"><div id="fbPanelBar2" class="fbPanelBar"></div></div></div><div id="fbHSplitter">&nbsp;</div></td></tr><tr id="fbContent"><td id="fbPanelBox1"><div id="fbPanel1" class="fbFitHeight"><div id="fbConsole" class="fbPanel"></div><div id="fbHTML" class="fbPanel"></div></div></td><td id="fbPanelBox2" class="hide"><div id="fbVSplitter" class="fbVSplitter">&nbsp;</div><div id="fbPanel2" class="fbFitHeight"><div id="fbHTML_Style" class="fbPanel"></div><div id="fbHTML_Layout" class="fbPanel"></div><div id="fbHTML_DOM" class="fbPanel"></div></div><textarea id="fbLargeCommandLine" class="fbFitHeight"></textarea><div id="fbLargeCommandButtons"><a id="fbCommand_btRun" class="fbButton fbHover">Run</a><a id="fbCommand_btClear" class="fbButton fbHover">Clear</a><a id="fbSmallCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr><tr id="fbBottom" class="hide"><td id="fbCommand" colspan="2"><div id="fbCommandBox"><div id="fbCommandIcon">&gt;&gt;&gt;</div><input id="fbCommandLine" name="fbCommandLine" type="text"/><a id="fbLargeCommandLineIcon" class="fbSmallButton fbHover"></a></div></td></tr></tbody></table><span id="fbMiniChrome"><span id="fbMiniContent"><span id="fbMiniIcon" title="Open Firebug Lite"></span><span id="fbMiniErrors" class="fbErrors"></span></span></span>'
 };
 

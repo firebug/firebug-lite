@@ -1,0 +1,639 @@
+/* See license.txt for terms of usage */
+
+/* *************************************************************************************************
+ Global styles 
+************************************************************************************************* */
+
+html, body {
+    font-family: Lucida Grande,Tahoma,sans-serif;
+    font-size: 11px;
+    
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* *************************************************************************************************
+ General classes
+************************************************************************************************* */
+
+.inlineBlockLeft {
+    display: block;
+    float: left;
+}
+
+.inlineBlockRight {
+    display: block;
+    float: right;
+}
+
+/* *************************************************************************************************
+ Main box
+************************************************************************************************* */
+
+#fbContentBox {
+    width: 100%;
+    height: 100%;
+    
+    background: #fff; /* avoids glitch in FF */
+    visibility: hidden; /* avoids FOUC */
+}
+
+/* *************************************************************************************************
+ Top TabBar box
+************************************************************************************************* */
+
+#fbPanelBar1-tabBox {
+    height: 28px;
+    white-space: nowrap;
+    cursor: default;
+    
+    /* TODO: xxxpedro remove border top from image? */
+    background: url("tabBgTop.png") repeat-x scroll 0 -1px #ddd;
+    _background-image: none !important; 
+    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBgTop.png');
+}
+
+/* *************************************************************************************************
+ Top PanelTabs
+************************************************************************************************* */
+
+#fbPanelBar1-panelTabs {
+    padding-top: 2px;
+}
+
+/* *************************************************************************************************
+ Toolbar and SidePanel Tabs Boxes
+************************************************************************************************* */
+
+.fbToolbarBox {
+    height: 27px;
+    position: relative;
+    cursor: default;
+    
+    background: url("tabBg2.png") repeat-x scroll 0 0 #FBFDFF;
+    _background-image: none !important; 
+    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg2.png');
+}
+
+.fbToolbar {
+    white-space: nowrap;
+    padding: 0 2px;
+    /* avoid tabs wrapping to the next line when the space is too small */
+    clip: rect(0pt, 1024px, 25px, 0pt);
+    /* Firefox needs position:absolute so the clip:rect works as expected */
+    position: absolute;
+}
+
+/* *************************************************************************************************
+ Panel Container boxes
+************************************************************************************************* */
+
+#fbPanelPane {
+}
+
+#fbPanelDeck {
+}
+
+#fbSidePanelDeck {
+    width: 300px;
+}
+
+
+/* *************************************************************************************************
+ Panel Content boxes
+************************************************************************************************* */
+
+#fbPanelBar1-content, 
+#fbPanelBar2-content {
+    background: #fff;
+    
+    /*border-top: 1px solid #999;*/
+    /*border-bottom: 1px solid #ccc;*/
+}
+
+#fbPanelBar1-content {
+    /*border-right: 1px solid #ccc;*/
+}
+
+#fbPanelBar2-content {
+    /*border-left: 1px solid #999;*/
+}
+
+
+/* *************************************************************************************************
+ Command Popup box
+************************************************************************************************* */
+
+#fbCommandPopup {
+    background: #fff;
+    /*border-top: 1px solid #999;*/
+    /*border-right: 1px solid #ccc;*/
+}
+
+
+/* *************************************************************************************************
+ Commandline box
+************************************************************************************************* */
+
+#fbCommandBox {
+    border-top: 1px solid #ccc;
+    background: #fff;
+    height: 18px;
+    position: relative;
+}
+
+
+/* *************************************************************************************************
+ Splitters
+************************************************************************************************* */
+
+.fbSplitter {
+    background: #E5E7E9;
+    position: relative;
+    overflow: hidden;
+}
+
+.fbHorizontalSplitter {
+    width: 5px;
+    background: url("horizontalSplitter.gif") repeat-y scroll 0 0 #E5E7E9;/**/
+    /*border: 1px solid #bbb;
+    border-width: 0 1px;/**/
+    cursor: e-resize;
+}
+
+.fbVerticalSplitter {
+    height: 5px;
+    background: url("verticalSplitter.gif") repeat-x scroll 0 0 #E5E7E9;/**/
+    /*border: 1px solid #bbb;
+    border-width: 1px 0;/**/
+    cursor: n-resize;
+}
+
+
+.fbHorizontalSplitterTop {
+    width: 6px;
+    height: 27px;
+    position: absolute;
+    top: 0;
+    left: -1px;
+    
+    background: url("tabBg2.png") repeat-x scroll 0 0 #FBFDFF;
+    _background-image: none !important; 
+    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg.png');
+}
+
+.fbHorizontalSplitterHandler {
+    width: 4px;
+    height: 24px;
+    top: 4px;
+    left: 2px;
+    position: absolute;
+    
+    background: url("splitter.gif") no-repeat;
+}/**/
+
+
+/* *************************************************************************************************
+ Splitters
+************************************************************************************************* */
+/*
+#fbPanelSplitter {
+    background: #E5E7E9;
+    width: 4px;
+    cursor: e-resize;
+}
+
+#fbPanelSplitterContent {
+    height: 28px;
+    position: relative;
+}
+
+#fbPanelSplitterTop {
+    width: 4px;
+    height: 28px;
+    
+    background: url("tabBg.png") repeat-x scroll center 3px #FBFDFF;
+    _background-image: none !important; 
+    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBg.png');
+}
+
+#fbPanelSplitterHandler {
+    width: 4px;
+    height: 24px;
+    top: 4px;
+    left: 1px;
+    position: absolute;
+    
+    background: url("splitter.gif") no-repeat;
+}
+
+#fbChromeSplitter,
+#fbCommandPopupSplitter,
+#fbCommandPopupSplitterContent {
+    background: #E5E7E9;
+    height: 4px;
+    overflow: hidden;
+    cursor: n-resize;
+}
+
+#fbChromeSplitter {
+    border-top: 1px solid #bbb;
+    height: 3px;
+}
+*/
+
+
+/* *************************************************************************************************
+ Window Controls
+************************************************************************************************* */
+
+.fbWindowControls {
+    /* TODO: xxxpedro remove this */
+    /* height + padding top + padding bottom == 28px (#fbPanelBar1-tabBox's height) */
+    /*padding: 2px 7px 0 2px;*/
+    
+    height: 26px;
+    position: absolute;
+    clear: both;
+    white-space: nowrap;
+    
+    /* TODO: xxxpedro remove border top from image? */
+    background: url("tabBgTop.png") repeat-x scroll 0 -1px #ddd;
+    _background-image: none !important; 
+    _filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=scale src='tabBgTop.png');
+}
+
+#fbWindowLeftControls {
+    left: 0;
+    width: 1024px; /* fixed width to avoid inline elements breaking line when there's no space */
+    clear: both;
+}
+
+#fbWindowRightControls {
+    right: 0;
+    /*width: 190px; /* fixed width to avoid inline elements breaking line when there's no space */
+    width: 55px; /* fixed width to avoid inline elements breaking line when there's no space */
+    clear: both;
+}
+
+
+/* *************************************************************************************************
+ Main Buttons 
+************************************************************************************************* */
+
+#fbPanelBar1-innerToolbar {
+    padding: 1px 0 0 3px;
+}
+
+#fbFirebugButton {
+    background: url(firebugX.png) no-repeat;
+    _background: url(firebugX.gif) no-repeat;
+}
+
+#fbInspectButton {
+    background: url(Templarian_inspector.png) no-repeat 2px 2px;
+    _background: url(Templarian_inspector.gif) no-repeat 2px 2px;
+}
+
+
+/* *************************************************************************************************
+ Search 
+************************************************************************************************* */
+
+#fbSearch {
+    padding: 2px 7px 0 0;
+    display: none;
+}
+
+#fbSearch input {
+    -moz-border-radius: 5px;
+    border: 1px solid #999;
+    padding: 2px 4px;
+    font-family: Lucida Grande,Tahoma,sans-serif;
+    font-size: 11px;
+    width: 100px;
+}
+
+
+/* *************************************************************************************************
+ Window butons 
+************************************************************************************************* */
+
+/* TODO xxxpedro change to class used more than once in css */
+#fbWindowButtons {
+    padding: 4px 3px 0 0;
+}
+
+#fbWindow_btClose {
+    background: url(min.png);
+    _background: url(min.gif);
+}
+
+#fbWindow_btClose:hover {
+    background: url(minHover.png);
+    _background: url(minHover.gif);
+}
+
+#fbWindow_btDetach {
+    background: url(detach.png);
+    _background: url(detach.gif);
+}
+
+#fbWindow_btDetach:hover {
+    background: url(detachHover.png);
+    _background: url(detachHover.gif);
+}
+
+#fbWindow_btDeactivate {
+    background: url(off.png);
+    _background: url(off.gif);
+}
+
+#fbWindow_btDeactivate:hover {
+    background: url(offHover.png);
+    _background: url(offHover.gif);
+}
+
+
+/* *************************************************************************************************
+ Tabs
+************************************************************************************************* */
+
+.panelTab {
+    display: block;
+    float: left;
+    padding: 6px 7px 6px;
+    margin: 0;
+    font-weight: bold;
+    color: #888;
+    font-family: Lucida Grande,Tahoma,sans-serif;
+    font-size: 11px;
+    line-height: 14px;
+    -moz-border-radius: 4px 4px 0 0;
+    border-radius: 4px 4px 0 0;
+}
+
+.panelTab:hover {
+    padding: 5px 6px 6px;
+    background: #ddd;
+    border: 1px solid #aaa;
+    border-bottom-width: 0;
+}
+
+.fbSelectedTab {
+    color: #000;
+    padding: 5px 7px 6px !important;
+    background: #FBFDFF !important;
+    border: 1px solid #aaa;
+    border-bottom-width: 0;
+}
+
+.panelOptions {
+    display: none;
+}
+
+.fbSelectedTab .panelOptions {
+    display: inline;
+    font-family: monospace;
+    padding-left: 20px;
+    background: url(panelOptions.png) no-repeat 4px 0;
+    cursor: default;
+    line-height: 11px;
+    position: relative;
+    top: -1px;
+}
+
+
+/* *************************************************************************************************
+ SidePanel Tabs
+************************************************************************************************* */
+
+#fbPanelBar2-panelTabs .panelTab {
+    color: #aaa;
+    margin: 2px 0;
+    padding: 4px 5px 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+#fbPanelBar2-panelTabs .panelTab:hover {
+    background: #eee;
+    padding: 3px 4px 3px;
+    border-width: 1px;
+}
+
+#fbPanelBar2-panelTabs .fbSelectedTab {
+    padding: 3px 4px 3px !important;
+    background: #fff !important;
+    color: #000;
+    border-width: 1px;
+}
+
+
+/* *************************************************************************************************
+ CommandLine
+************************************************************************************************* */
+
+#fbCommandArrow {
+    position: absolute;
+    font: 11px Monaco,monospace;
+    color: #00f;
+    padding: 2px 2px 2px 4px;
+    z-index: 2;
+}
+
+#fbCommandLine {
+    position: absolute;
+    top: 1px;
+    _top: 2px; /* IE6 */
+    left: 0;
+	width: 100%;
+    border: 0;
+    height: 16px;
+    line-height: 16px;
+    padding: 0 0 0 28px;
+    margin: 0;
+    font: 12px Monaco,monospace;
+    z-index: 1;
+    outline: none;
+}
+
+
+/* *************************************************************************************************
+ TO ORGANIZE
+************************************************************************************************* */
+
+/* FIXME remove this? */
+.hideCommandLineREMOVETHIS #fbCommandBox,
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+.hideCommandLineHACK #fbCommandBox,
+.hideLargeCommandLineHACK #fbBottomPaneSplitter,
+.hideLargeCommandLineHACK #fbLargeCommandLinePane,
+.FirebugPopup #fbChromeSplitter,  /* FIXME */ 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+.hideSidePanelBar #fbPanelSplitter,
+.hideSidePanelBar #fbSidePanelDeck,
+.hideCommandPopup #fbCommandPopupSplitter, /* remove this? */
+.hideCommandPopup #fbCommandPopup /* remove this? */ {
+    display: none;
+}
+
+.hideCommandPopup #fbCommandBox {
+    border: none;
+}
+
+
+/* *************************************************************************************************
+ TO ORGANIZE - Status Bar
+************************************************************************************************* */
+.fbToolbarButtons,
+.fbStatusBarBox {
+    display: none;
+}
+
+.fbStatusBar {
+    color: #aca899;
+}
+
+.fbStatusBar a {
+    text-decoration: none;
+    color: black;
+}
+
+.fbStatusBar a:hover {
+    color: blue;
+    cursor: pointer;
+}
+
+.fbStatusSeparator{
+    display: block;
+    float: left;
+    padding-top: 3px;
+}
+
+
+/* *************************************************************************************************
+ TO ORGANIZE - Mini Chrome
+************************************************************************************************* */
+#fbMiniChrome {
+    display: none;
+    right: 0;
+    height: 27px;
+    /* FIXME xxxpedro should remove the sprite.png file dependency */
+    background: url(sprite.png) #f1f2ee 0 0;
+    margin-left: 1px;
+}
+
+#fbMiniContent {
+    display: block;
+    position: relative;
+    left: -1px;
+    right: 0;
+    top: 1px;
+    height: 25px;
+    border-left: 1px solid #aca899;
+}
+
+.fbErrors {
+    padding-left: 20px;
+    height: 14px;
+    background: url(errorIcon.png) no-repeat !important;
+    background: url(errorIcon.gif) no-repeat;
+    color: #f00;
+    font-weight: bold;
+}
+
+#fbMiniErrors {
+    display: inline;
+    display: none;
+    float: right;
+    margin: 5px 2px 0 5px;
+}
+
+#fbMiniIcon {
+    float: right;
+    margin: 3px 4px 0;
+    height: 20px;
+    width: 20px;
+    float: right;
+    /* FIXME xxxpedro should remove the sprite.png file dependency */
+    background: url(sprite.png) 0 -135px;
+    cursor: pointer;
+}
+
+
+
+
+
+/* *************************************************************************************************
+ New bottom panel hack
+************************************************************************************************* */
+
+
+#fbBottomPane {
+  height: 100px;
+}
+
+#fbLargeCommandLinePane {
+  background: #fff;
+  /*border-left: 1px solid #999;*/
+  width: 200px;
+}
+
+#fbLargeCommandLine {
+  margin: 0;
+  outline: none;
+  border: none;
+  padding: 0;
+  overflow-x: hidden;
+  resize: none;
+  
+  /*border-top: 1px solid #999;*/
+  /*border-bottom: 1px solid #ccc;*/
+  
+  /* using border-left instead of padding-left to avoid glitch in Chrome, 
+     with the 100% width of #fbLargeCommandLine  */
+  border-left: 3px solid transparent;
+}
+
+/*
+#fbBottomPaneSplitter {
+  width: 4px;
+  background: #E5E7E9;
+  cursor: e-resize;
+}
+
+#fbCommandPopupSplitter, #fbPanelPane {
+  zzdisplay: none;
+}
+*/
+
+/* TODO: xxxpedro organize the input styling */
+.fbToolbarBox select {
+    margin: 3px 0;
+}
+
+/* *************************************************************************************************
+ webkit hack
+************************************************************************************************* */
+
+/* remove this? */
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+
+    /* The min-height will cause a problem in IE, making the Side Panel PanelTabs 
+    (#fbPanelBar2-panelTabs) disappears when maximizing then mizimixing the 
+    window so we must apply this rule only to wekbit */
+    #fbPanelPane {
+        min-height: 28px; /* avoid problem in webkit with small height */
+    }
+    
+    #fbPanelDeck {
+        min-width: 1px; /* avoid problem in webkit with small width */
+    }
+
+}
