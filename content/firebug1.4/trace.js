@@ -93,9 +93,10 @@ this.logRow = function(message, className)
         this.writeMessage(message, className);
     else
     {
-        if (typeof messageQueue == 'undefined') {
-            this.messageQueue.push([message, className]);
+        if (typeof this.messageQueue == 'undefined') {
+            this.messageQueue = [];
         }
+        this.messageQueue.push([message, className]);
     }
 
     return this.LOG_COMMAND;
