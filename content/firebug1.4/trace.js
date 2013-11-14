@@ -20,9 +20,9 @@ this.initialize = function()
 {
     if (!this.messageQueue)
         this.messageQueue = [];
-    
+
     for (var name in traceOptions)
-        this[name] = traceOptions[name]; 
+        this[name] = traceOptions[name];
 };
 
 // ************************************************************************************************
@@ -46,10 +46,10 @@ this.dumpStack = function()
 this.flush = function(module)
 {
     this.module = module;
-    
+
     var queue = this.messageQueue;
     this.messageQueue = [];
-    
+
     for (var i = 0; i < queue.length; ++i)
         this.writeMessage(queue[i][0], queue[i][1], queue[i][2]);
 };
@@ -65,13 +65,13 @@ this.logFormatted = function(objects, className)
 {
     var html = this.DBG_TIMESTAMP ? [getTimestamp(), " | "] : [];
     var length = objects.length;
-    
+
     for (var i = 0; i < length; ++i)
     {
         appendText(" ", html);
-        
+
         var object = objects[i];
-        
+
         if (i == 0)
         {
             html.push("<b>");
@@ -81,21 +81,23 @@ this.logFormatted = function(objects, className)
         else
             appendText(object, html);
     }
-    
-    return this.logRow(html, className);    
+
+    return this.logRow(html, className);
 };
 
 this.logRow = function(message, className)
 {
     var panel = this.getPanel();
-    
+
     if (panel && panel.panelNode)
         this.writeMessage(message, className);
     else
     {
-        this.messageQueue.push([message, className]);
+        if (typeof messageQueue == 'undefined') {
+            this.messageQueue.push([message, className]);
+        }
     }
-    
+
     return this.LOG_COMMAND;
 };
 
@@ -104,9 +106,9 @@ this.writeMessage = function(message, className)
     var container = this.getPanel().containerNode;
     var isScrolledToBottom =
         container.scrollTop + container.offsetHeight >= container.scrollHeight;
-    
+
     this.writeRow.call(this, message, className);
-    
+
     if (isScrolledToBottom)
         container.scrollTop = container.scrollHeight - container.offsetHeight;
 };
@@ -137,7 +139,7 @@ function getTimestamp()
     var now = new Date();
     var ms = "" + (now.getMilliseconds() / 1000).toFixed(3);
     ms = ms.substr(2);
-    
+
     return now.toLocaleTimeString() + "." + ms;
 };
 
