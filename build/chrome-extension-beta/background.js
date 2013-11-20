@@ -21,7 +21,7 @@ function handleIconClick(tab)
     
     var isContentScriptActive = false;
     
-    chrome.tabs.sendRequest( tab.id, {name: "FB_isActive"}, 
+    chrome.tabs.sendMessage( tab.id, {name: "FB_isActive"}, 
     
         function(response)
         {
@@ -34,7 +34,7 @@ function handleIconClick(tab)
             else
             {
                 setActivationStorage(tab);
-                chrome.tabs.sendRequest(tab.id, {name: "FB_loadFirebug"});
+                chrome.tabs.sendMessage(tab.id, {name: "FB_loadFirebug"});
             }
         }
     );
@@ -67,7 +67,7 @@ function handleTabChange(tabId, selectInfo)
 {
     var isUpdated = false;
     
-    chrome.tabs.sendRequest(tabId, {name: "FB_isActive"}, 
+    chrome.tabs.sendMessage(tabId, {name: "FB_isActive"}, 
     
         function(response)
         {
@@ -120,7 +120,7 @@ function handleUpdateTab(tabId, updateInfo, tab)
 
 // *************************************************************************************************
 
-chrome.extension.onRequest.addListener
+chrome.runtime.onMessage.addListener
 (
     function(request, sender, sendResponse)
     {
@@ -133,10 +133,10 @@ chrome.extension.onRequest.addListener
         else if (request.name == "FB_deactivate")
         {
             disableBrowserActionIcon();
-            chrome.tabs.getSelected(null, function(tab){
-                unsetActivationStorage(tab);
+            chrome.tabs.query({currentWindow: true}, function(tab){
+                unsetActivationStorage(tab[0].id);
                 
-                chrome.tabs.sendRequest(tab.id, {name: "FB_deactivate"});
+                chrome.tabs.sendMessage(tab[0].id, {name: "FB_deactivate"});
             });
         }
 
@@ -150,7 +150,9 @@ chrome.contextMenus.create({
     title: "Inspect with Firebug Lite",
     "contexts": ["all"],
     onclick: function(info, tab) {
-        chrome.tabs.sendRequest(tab.id, {name: "FB_contextMenuClick"});
+	chrome.tabs.query({currentWindow: true}, function(tabs) {
+            chrome.tabs.sendMessage(tabs[0].id, {name: "FB_contextMenuClick"});
+	});
     }
 });
 
