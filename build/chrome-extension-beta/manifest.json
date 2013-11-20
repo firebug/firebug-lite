@@ -27,6 +27,9 @@
       "run_at": "document_start"
     }
   ],
+  "web_accessible_resources": [
+    "firebug-lite-beta.js"
+  ],
   "permissions":
   [
     "contextMenus",
