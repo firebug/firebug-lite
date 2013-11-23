@@ -28,7 +28,10 @@
     }
   ],
   "web_accessible_resources": [
-    "firebug-lite-beta.js"
+    "firebug-lite-beta.js",
+    "googleChrome.js",
+    "skin/xp/firebug.css",
+    "skin/xp/*.png"
   ],
   "permissions":
   [

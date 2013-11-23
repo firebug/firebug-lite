@@ -89,6 +89,7 @@ var injectFirebugScript = function(url)
         script.setAttribute("id", "FirebugLite");
         script.setAttribute("firebugIgnore", "true");
         script.setAttribute("extension", "Chrome");
+	script.setAttribute("url", extensionURL);
         document.documentElement.appendChild(script);
 
         script.onload = function() {
