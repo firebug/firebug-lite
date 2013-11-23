@@ -9359,7 +9359,7 @@ var createChromeWindow = function(options)
         {
             //Firebug.Console.warn("Firebug Lite GUI is working in 'windowless mode'. It may behave slower and receive interferences from the page in which it is installed.");
 
-            var node = chrome.node = createGlobalElement("div"),
+            var node = chrome.node = createGlobalElement("div");
 
             node.className = "fbBody";
             node.style.overflow = "hidden";
