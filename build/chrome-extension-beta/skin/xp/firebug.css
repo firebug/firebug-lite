@@ -63,7 +63,7 @@
 .infoTipLoading {
     width: 16px;
     height: 16px;
-    background: url(chrome://firebug/skin/loading_16.gif) no-repeat;
+    background: url(loading_16.gif) no-repeat;
 }
 
 .infoTipImageBox {
@@ -358,7 +358,7 @@ h1.groupHeader {
 /************************************************************************************************/
 
 .netHeadRow {
-    background: url(chrome://firebug/skin/group.gif) repeat-x #FFFFFF;
+    background: url(group.gif) repeat-x #FFFFFF;
 }
 
 .netHeadCol {
@@ -385,7 +385,7 @@ h1.groupHeader {
     border-bottom: 1px solid #9C9C9C;
     padding: 0 !important;
     font-weight: bold;
-    background: #BBBBBB url(chrome://firebug/skin/tableHeader.gif) repeat-x;
+    background: #BBBBBB url(tableHeader.gif) repeat-x;
     white-space: nowrap;
 }
 
@@ -400,24 +400,24 @@ h1.groupHeader {
 }
 
 .netHeaderCell:hover:active {
-    background: #959595 url(chrome://firebug/skin/tableHeaderActive.gif) repeat-x;
+    background: #959595 url(tableHeaderActive.gif) repeat-x;
 }
 
 .netHeaderSorted {
-    background: #7D93B2 url(chrome://firebug/skin/tableHeaderSorted.gif) repeat-x;
+    background: #7D93B2 url(tableHeaderSorted.gif) repeat-x;
 }
 
 .netHeaderSorted > .netHeaderCellBox {
     border-right-color: #6B7C93;
-    background: url(chrome://firebug/skin/arrowDown.png) no-repeat right;
+    background: url(arrowDown.png) no-repeat right;
 }
 
 .netHeaderSorted.sortedAscending > .netHeaderCellBox {
-    background-image: url(chrome://firebug/skin/arrowUp.png);
+    background-image: url(arrowUp.png);
 }
 
 .netHeaderSorted:hover:active {
-    background: #536B90 url(chrome://firebug/skin/tableHeaderSortedActive.gif) repeat-x;
+    background: #536B90 url(tableHeaderSortedActive.gif) repeat-x;
 }
 
 /************************************************************************************************/
@@ -440,11 +440,11 @@ h1.groupHeader {
 }
 
 .netRow[breakpoint="true"] .netRowHeader {
-    background-image: url(chrome://firebug/skin/breakpoint.png);
+    background-image: url(breakpoint.png);
 }
 
 .netRow[breakpoint="true"][disabledBreakpoint="true"] .netRowHeader {
-    background-image: url(chrome://firebug/skin/breakpointDisabled.png);
+    background-image: url(breakpointDisabled.png);
 }
 
 .netRow.category-xhr:hover .netRowHeader {
@@ -599,7 +599,7 @@ h1.groupHeader {
     width: 16px;
     height: 16px;
     background: transparent no-repeat 0 0;
-    background-image: url(chrome://firebug/skin/loading_16.gif);
+    background-image: url(loading_16.gif);
     display:inline-block;
 }
 
@@ -619,7 +619,7 @@ h1.groupHeader {
     left: 0;
     top: 0;
     bottom: 0;
-    background: #FFFFFF url(chrome://firebug/skin/netBarResolving.gif) repeat-x;
+    background: #FFFFFF url(netBarResolving.gif) repeat-x;
     z-index:60;
 }
 
@@ -628,7 +628,7 @@ h1.groupHeader {
     left: 0;
     top: 0;
     bottom: 0;
-    background: #FFFFFF url(chrome://firebug/skin/netBarConnecting.gif) repeat-x;
+    background: #FFFFFF url(netBarConnecting.gif) repeat-x;
     z-index:50;
 }
 
@@ -637,7 +637,7 @@ h1.groupHeader {
     left: 0;
     top: 0;
     bottom: 0;
-    background: #FFFFFF url(chrome://firebug/skin/netBarWaiting.gif) repeat-x;
+    background: #FFFFFF url(netBarWaiting.gif) repeat-x;
     z-index:40;
 }
 
@@ -646,7 +646,7 @@ h1.groupHeader {
     left: 0;
     top: 0;
     bottom: 0;
-    background: #FFFFFF url(chrome://firebug/skin/netBarSending.gif) repeat-x;
+    background: #FFFFFF url(netBarSending.gif) repeat-x;
     z-index:30;
 }
 
@@ -655,7 +655,7 @@ h1.groupHeader {
     left: 0;
     top: 0;
     bottom: 0;
-    background: #FFFFFF url(chrome://firebug/skin/netBarResponded.gif) repeat-x;
+    background: #FFFFFF url(netBarResponded.gif) repeat-x;
     z-index:20;
     min-width: 1px;
 }
@@ -665,7 +665,7 @@ h1.groupHeader {
     left: 0;
     top: 0;
     bottom: 0;
-    background: #38D63B url(chrome://firebug/skin/netBarLoading.gif) repeat-x;
+    background: #38D63B url(netBarLoading.gif) repeat-x;
     z-index:10;
 }
 
@@ -706,13 +706,13 @@ h1.groupHeader {
  */
 .loaded .netReceivingBar,
 .loaded.netReceivingBar {
-    background: #B6B6B6 url(chrome://firebug/skin/netBarLoaded.gif) repeat-x;
+    background: #B6B6B6 url(netBarLoaded.gif) repeat-x;
     border-color: #B6B6B6;
 }
 
 .fromCache .netReceivingBar,
 .fromCache.netReceivingBar {
-    background: #D6D6D6 url(chrome://firebug/skin/netBarCached.gif) repeat-x;
+    background: #D6D6D6 url(netBarCached.gif) repeat-x;
     border-color: #D6D6D6;
 }
 
@@ -859,7 +859,7 @@ h1.groupHeader {
 
 .netInfoCol {
     border-top: 1px solid #EEEEEE;
-    background: url(chrome://firebug/skin/group.gif) repeat-x #FFFFFF;
+    background: url(group.gif) repeat-x #FFFFFF;
 }
 
 .netInfoBody {
@@ -1021,7 +1021,7 @@ h1.groupHeader {
 }
 
 .netActivationLabel {
-    background: url(chrome://firebug/skin/infoIcon.png) no-repeat 3px 2px;
+    background: url(infoIcon.png) no-repeat 3px 2px;
     padding-left: 22px;
 }
 

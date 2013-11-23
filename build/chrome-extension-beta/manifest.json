@@ -3,7 +3,10 @@
   "version": "1.3.2.9760",
   "description": "Firebug Lite Beta for Google Chrome, supported by the Firebug Working Group.",
   "update_url": "https://getfirebug.com/releases/lite/chrome/beta/updates.xml",
-  "background_page": "background.html",
+  "background": 
+  {
+    "page": "background.html"
+  },
   "browser_action":
   {
     "default_icon": "firebug24_disabled.png",
@@ -24,6 +27,12 @@
       "run_at": "document_start"
     }
   ],
+  "web_accessible_resources": [
+    "firebug-lite-beta.js",
+    "googleChrome.js",
+    "skin/xp/firebug.css",
+    "skin/xp/*.png"
+  ],
   "permissions":
   [
     "contextMenus",
@@ -32,5 +41,7 @@
     "https://*/*",
     "http://127.0.0.1/*",
     "http://localhost/*"
-  ]
+  ],
+  "manifest_version": 2,
+  "content_security_policy": "script-src 'self'; object-src 'self'"
 }

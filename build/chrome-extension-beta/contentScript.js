@@ -48,7 +48,7 @@ var loadFirebugAndWait = function(callback, stateData)
     stateData = stateData || ('1,1,'+extensionURL);
     localStorage.setItem('Firebug', stateData);
     loadStateData();
-    chrome.extension.sendRequest({name: isActive ? "FB_enableIcon" : "FB_disableIcon"});
+    chrome.runtime.sendMessage({name: isActive ? "FB_enableIcon" : "FB_disableIcon"});
 
     document.documentElement.setAttribute("debug", isOpen);
 
@@ -89,6 +89,7 @@ var injectFirebugScript = function(url)
         script.setAttribute("id", "FirebugLite");
         script.setAttribute("firebugIgnore", "true");
         script.setAttribute("extension", "Chrome");
+	script.setAttribute("url", extensionURL);
         document.documentElement.appendChild(script);
 
         script.onload = function() {
@@ -117,7 +118,7 @@ var injectScriptText = function(text)
 // *************************************************************************************************
 
 // communication with the background page
-chrome.extension.onRequest.addListener
+chrome.runtime.onMessage.addListener
 (
     function(request, sender, sendResponse)
     {
@@ -139,7 +140,7 @@ chrome.extension.onRequest.addListener
                 
                     isActive = true;
                     var message = isActive ? "FB_enableIcon" : "FB_disableIcon";
-                    chrome.extension.sendRequest({name: message});
+                    chrome.runtime.sendMessage({name: message});
 
                     loadChannel();
                 });
@@ -182,7 +183,7 @@ var onFirebugChannelEvent = function()
 
     if (channel)
     {
-        chrome.extension.sendRequest({name: channel.innerText});
+        chrome.runtime.sendMessage({name: channel.innerText});
     }
 };
 
@@ -193,8 +194,7 @@ var loadChannel = function()
     if (channel)
     {
         channel.addEventListener("FirebugChannelEvent", onFirebugChannelEvent);
-        channelEvent = document.createEvent("Event");
-        channelEvent.initEvent("FirebugChannelEvent", true, true);
+        channelEvent = new Event("FirebugChannelEvent"); //replaced old fashioned way of creating events
     }
 }
 
@@ -375,4 +375,4 @@ loadListeners();
 // *************************************************************************************************
 
 // adjust the browser icon according Firebug Lite's current state
-chrome.extension.sendRequest({name: isActive ? "FB_enableIcon" : "FB_disableIcon"});
+chrome.runtime.sendMessage({name: isActive ? "FB_enableIcon" : "FB_disableIcon"});
