@@ -1,0 +1,27 @@
+{
+    "name": "firebug-lite",
+    "description": "Firebug Lite: doing the Firebug way, anywhere.",
+    "version": "1.5.1",
+    "private": false,
+    "license": "BSD",
+    "main": [
+        "license.txt",
+        "build/firebug-lite.js",
+        "build/firebug-lite-beta.js",
+        "build/firebug-lite-debug.js",
+        "skin"
+    ],
+    "ignore": [
+        "content",
+        "docs",
+        "plugin",
+        "sandbox",
+        "tests"
+    ],
+    "keywords": [
+        "firebug",
+        "firebug-lite",
+        "javascript",
+        "library"
+    ]
+}
