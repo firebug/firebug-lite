@@ -1,0 +1,8 @@
+{
+  "name": "firebug-lite",
+  "description": "Firebug Lite: doing the Firebug way, anywhere.",
+  "version": "1.5.1",
+  "license": "BSD",
+  "main": "build/firebug-lite.js",
+  "homepage": "https://getfirebug.com"
+}
