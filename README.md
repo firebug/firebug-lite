@@ -2,10 +2,10 @@
 
 ## Local Installation
 
+Please note, `debug` version is well-known to work well on IE6/7.
+
 Install these files:
 
-- `build/firebug-lite.js` -> `/firebug-lite/firebug-lite.js`
-- `build/firebug-lite-beta.js` -> `/firebug-lite/firebug-lite-beta.js`
 - `build/firebug-lite-debug.js` -> `/firebug-lite/firebug-lite-debug.js`
 - `skin/**` -> `/firebug-lite/skin/**`
 
