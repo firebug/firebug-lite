@@ -30,6 +30,7 @@ HTML:
 
 Available options:
 
+- skinDir - (unofficial)
 - debug - enable/disable default firebug developer debug mode (not needed in most cases)
 - saveCookies
 - saveWindowPosition
@@ -42,5 +43,6 @@ Available options:
 - disableWhenFirebugActive
 - enableTrace
 - enablePersistent
+- disableXHRListener
 
 There are other options available... Search for `this.Env =`...
