@@ -3,6 +3,6 @@
   "description": "Firebug Lite: doing the Firebug way, anywhere.",
   "version": "1.5.1",
   "license": "BSD",
-  "main": "build/firebug-lite.js",
+  "main": "build/firebug-lite-debug.js",
   "homepage": "https://getfirebug.com"
 }

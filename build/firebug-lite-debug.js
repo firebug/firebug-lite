@@ -464,6 +464,9 @@
                     {
                         Env.isDebugMode = !!value;
                     }
+                    else if (name == "skinDir") {
+                        Env.Location.skinDir = value;
+                    }
                     else if (name in Env.Options)
                     {
                         Env.Options[name] = value;
@@ -489,6 +492,9 @@
                     {
                         Env.isDebugMode = !!value;
                     }
+                    else if (name == "skinDir") {
+                        Env.Location.skinDir = value;
+                    }
                     else if (name in Env.Options)
                     {
                         Env.Options[name] = value;
@@ -513,7 +519,9 @@
 
             loc.sourceDir = path;
             loc.baseDir = path.substr(0, path.length - m[1].length - 1);
-            loc.skinDir = (isProductionRelease ? path : loc.baseDir) + "skin/" + Env.skin + "/";
+            if (!loc.skinDir) {
+                loc.skinDir = (isProductionRelease ? path : loc.baseDir) + "skin/" + Env.skin + "/";
+            }
             loc.skin = loc.skinDir + "firebug.html";
             loc.app = path + fileName;
         }
@@ -27830,7 +27838,12 @@
                 var object = Firebug.getRepObject(target);
                 if (typeof(object) == "function")
                 {
-                    Firebug.chrome.select(object, "script");
+                    try {
+                        Firebug.chrome.select(object, "script");
+                    } catch (e) {
+                        // TODO: on IE6/7 this code is throwing an exception for functions
+                        // swallowing an exception
+                    }
                     cancelEvent(event);
                 }
                 else if (event.detail == 2 && !object)
