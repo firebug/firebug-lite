@@ -23466,8 +23466,11 @@
                     for (var i = 0; i < node.attributes.length; ++i)
                     {
                         var attr = node.attributes[i];
-                        if (!attr.specified || Firebug.ignoreFirebugElements &&
-                            ignoreHTMLProps.hasOwnProperty(attr.nodeName))
+                        if (!attr.specified 
+                            || Firebug.ignoreFirebugElements && ignoreHTMLProps.hasOwnProperty(attr.nodeName)
+                            || attr.nodeName.substr(0, 1) == "_"
+                            || typeof attr.nodeValue === "function"
+                            || attr.nodeValue && attr.nodeValue.toString() === "[object Object]")
                                 continue;
 
                         var name = attr.nodeName.toLowerCase();
