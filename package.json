@@ -1,8 +1,22 @@
 {
-  "name": "firebug-lite",
-  "description": "Firebug Lite: doing the Firebug way, anywhere.",
-  "version": "1.5.1",
-  "license": "BSD",
+  "name": "firebug-lite-ie",
+  "description": "Firebug Lite for IE: doing the Firebug way on ancient IE.",
+  "version": "1.5.2",
+  "license": "BSD-3-Clause",
   "main": "build/firebug-lite-debug.js",
-  "homepage": "https://getfirebug.com"
+  "homepage": "https://github.com/sormy/firebug-lite-ie",
+  "files": [
+    "license.txt",
+    "build/firebug-lite.js",
+    "build/firebug-lite-beta.js",
+    "build/firebug-lite-debug.js",
+    "skin/**"
+  ],
+  "keywords": [
+    "firebug",
+    "firebug-lite",
+    "firebug-lite-ie",
+    "javascript",
+    "library"
+  ]
 }

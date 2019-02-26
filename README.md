@@ -1,13 +1,15 @@
-# Firebug Lite
+# Firebug Lite for IE
 
 ## Why?
 
 Firebug Lite is sometimes the only option to debug the page, especially on some very old embedded
 devices like hand scanners running Mobile IE6 or Mobile IE7.
 
+Forked from `firebug/firebug-lite`, original package is not maintained anymore.
+
 This is unofficial fork!!!
 
-## Local Installation
+## Installation
 
 NOTE: Only `/build/firebug-lite-debug.js` is supported version in this repo (the most stable).
 
@@ -15,6 +17,7 @@ Install these files:
 
 - `build/firebug-lite-debug.js` -> `/firebug-lite/firebug-lite-debug.js`
 - `skin/**` -> `/firebug-lite/skin/**`
+- `license.txt` -> `/firebug-lite/license.txt` (license requirement)
 
 HTML:
 
@@ -46,3 +49,17 @@ Available options:
 - disableXHRListener
 
 There are other options available... Search for `this.Env =`...
+
+## Versioning
+
+Original firebug-lite is tagged as 1.5.1 however, build files have references
+to 1.4.x and 1.3.x only. I decided to keep 1.5.1 as base and all future versions 
+will have a higher minor version starting from 1.5.2.
+
+## TODO
+
+Ideally we need to revive module-based building system and cleanup unused stuff.
+
+## License
+
+BSD-3-Clause with Parakey Inc Copyright.
