@@ -136,10 +136,10 @@ h1.groupHeader {
     position: relative;
     top: -7px;
     left: -5px;
-    
+
     outline: none;
     resize: none;
-    
+
     /*
     _border: 1px solid #999 !important;
     _padding: 1px !important;
@@ -164,9 +164,9 @@ h1.groupHeader {
 
 .textEditorTop1 {
     background: url(textEditorCorners.png) no-repeat 100% 0;
+    _background: url(textEditorCorners.gif) no-repeat 100% 0;
     margin-left: 11px;
     height: 10px;
-    _background: url(textEditorCorners.gif) no-repeat 100% 0;
     _overflow: hidden;
 }
 
@@ -182,9 +182,9 @@ h1.groupHeader {
 .textEditorBottom1 {
     position: relative;
     background: url(textEditorCorners.png) no-repeat 100% 100%;
+    _background: url(textEditorCorners.gif) no-repeat 100% 100%;
     margin-left: 11px;
     height: 12px;
-    _background: url(textEditorCorners.gif) no-repeat 100% 100%;
 }
 
 .textEditorBottom2 {
@@ -311,17 +311,17 @@ h1.groupHeader {
     outline: none;
     background-color: transparent
  }
- 
- .useA11y .a11yCSSView .focusRow:focus .cssSelector, 
- .useA11y .a11yCSSView .focusRow:focus .cssPropName, 
+
+ .useA11y .a11yCSSView .focusRow:focus .cssSelector,
+ .useA11y .a11yCSSView .focusRow:focus .cssPropName,
  .useA11y .a11yCSSView .focusRow:focus .cssPropValue,
- .useA11y .a11yCSSView .computedStyleRow:focus, 
+ .useA11y .a11yCSSView .computedStyleRow:focus,
  .useA11y .a11yCSSView .groupHeader:focus {
     outline: 2px solid #FF9933;
     outline-offset: -2px;
     background-color: #FFFFD6;
  }
- 
+
  .useA11y .a11yCSSView .groupHeader:focus {
     outline-offset: -2px;
  }
@@ -731,7 +731,7 @@ h1.groupHeader {
 /* Time Info tip */
 
 .timeInfoTip {
-    width: 150px; 
+    width: 150px;
     height: 40px
 }
 
@@ -944,7 +944,7 @@ h1.groupHeader {
     /*overflow-x: auto; HTML is damaged in case of big (2-3MB) responses */
 }
 
-/* replaced by .netInfoTextSelected for IE6 support 
+/* replaced by .netInfoTextSelected for IE6 support
 .netInfoText[selected="true"] {
     display: block;
 }
@@ -963,7 +963,7 @@ h1.groupHeader {
 }
 
 .netInfoPostText .netInfoParamName {
-    width: 1px; /* Google Chrome need this otherwise the first column of 
+    width: 1px; /* Google Chrome need this otherwise the first column of
                    the post variables table will be larger than expected */
 }
 
@@ -1148,7 +1148,7 @@ h1.groupHeader {
 }
 
 * html .opened .spyHead .spyTitle,
-* html .opened .logGroupLabel, 
+* html .opened .logGroupLabel,
 * html .opened .memberLabelCell .memberLabel {
     background-image: url(tree_close.gif);
     background-repeat: no-repeat;
@@ -1677,7 +1677,7 @@ h1.groupHeader {
 /*
 .logRow-errorMessage > .hasTwisty > .errorTitle,
 .logRow-spy .spyHead .spyTitle,
-.logGroup > .logRow 
+.logGroup > .logRow
 */
 .logRow-errorMessage .hasTwisty .errorTitle,
 .logRow-spy .spyHead .spyTitle,
@@ -1782,6 +1782,7 @@ h1.groupHeader {
 
 .logRow-spy.error .spyHead .spyRow .spyIcon {
     background-image: url(errorIcon-sm.png);
+    _background-image: url(errorIcon-sm.gif);
     display: block;
     background-position: 2px 2px;
 }
@@ -2056,17 +2057,19 @@ h1.groupHeader {
     width: 10px;
     height: 10px;
     margin-top: 6px;
-    background: url(tabMenuTarget.png);   
+    background: url(tabMenuTarget.png);
+    _background: url(tabMenuTarget.gif);
 }
 
 .fbTabMenuTarget:hover {
-    background: url(tabMenuTargetHover.png);   
+    background: url(tabMenuTargetHover.png);
+    _background: url(tabMenuTargetHover.gif);
 }
 
 .fbShadow {
     float: left;
-    background: url(shadowAlpha.png) no-repeat bottom right !important;
-    background: url(shadow2.gif) no-repeat bottom right;
+    background: url(shadowAlpha.png) no-repeat bottom right;
+    _background: url(shadow2.gif) no-repeat bottom right;
     margin: 10px 0 0 10px !important;
     margin: 10px 0 0 5px;
 }
@@ -2097,7 +2100,7 @@ h1.groupHeader {
     padding: 1px 18px 0;
     text-decoration: none;
     color: #000;
-    cursor: default;    
+    cursor: default;
     background: #ACA899;
     margin: 4px 0;
 }
@@ -2120,35 +2123,42 @@ h1.groupHeader {
 
 .fbMenuGroup {
     background: transparent url(tabMenuPin.png) no-repeat right 0;
+    _background: transparent url(tabMenuPin.gif) no-repeat right 0;
 }
 
 .fbMenuGroup:hover {
     background: #316AC5 url(tabMenuPin.png) no-repeat right -17px;
+    _background: #316AC5 url(tabMenuPin.gif) no-repeat right -17px;
 }
 
 .fbMenuGroupSelected {
     color: #fff;
     background: #316AC5 url(tabMenuPin.png) no-repeat right -17px;
+    _background: #316AC5 url(tabMenuPin.gif) no-repeat right -17px;
 }
 
 .fbMenuChecked  {
     background: transparent url(tabMenuCheckbox.png) no-repeat 4px 0;
+    _background: transparent url(tabMenuCheckbox.gif) no-repeat 4px 0;
 }
 
 .fbMenuChecked:hover {
     background: #316AC5 url(tabMenuCheckbox.png) no-repeat 4px -17px;
+    _background: #316AC5 url(tabMenuCheckbox.gif) no-repeat 4px -17px;
 }
 
 .fbMenuRadioSelected {
     background: transparent url(tabMenuRadio.png) no-repeat 4px 0;
+    _background: transparent url(tabMenuRadio.gif) no-repeat 4px 0;
 }
 
 .fbMenuRadioSelected:hover {
     background: #316AC5 url(tabMenuRadio.png) no-repeat 4px -17px;
+    _background: #316AC5 url(tabMenuRadio.gif) no-repeat 4px -17px;
 }
 
 .fbMenuShortcut {
-    padding-right: 85px; 
+    padding-right: 85px;
 }
 
 .fbMenuShortcutKey {
@@ -2233,6 +2243,7 @@ h1.groupHeader {
     height: 19px;
     width: 75px;
     background: url(sprite.png) #f1f2ee 0 0;
+    _background: url(sprite.gif) #f1f2ee 0 0;
     z-index: 999;
 }
 
@@ -2273,7 +2284,7 @@ h1.groupHeader {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    
+
     font-family: Lucida Grande, Tahoma, sans-serif;
     font-size: 11px;
     background: #fff;
@@ -2291,6 +2302,7 @@ h1.groupHeader {
     right: 0;
     height: 27px;
     background: url(sprite.png) #f1f2ee 0 0;
+    _background: url(sprite.gif) #f1f2ee 0 0;
     margin-left: 1px;
 }
 
@@ -2308,9 +2320,9 @@ h1.groupHeader {
     float: right;
     border: 1px solid #ccc;
     margin: 0 5px 0 0;
-    background: #fff url(search.png) no-repeat 4px 2px !important;
-    background: #fff url(search.gif) no-repeat 4px 2px;
-    padding-left: 20px;    
+    background: #fff url(search.png) no-repeat 4px 2px;
+    _background: #fff url(search.gif) no-repeat 4px 2px;
+    padding-left: 20px;
     font-size: 11px;
 }
 
@@ -2329,10 +2341,10 @@ h1.groupHeader {
 .fbErrors {
     padding-left: 20px;
     height: 14px;
-    background: url(errorIcon.png) no-repeat !important;
-    background: url(errorIcon.gif) no-repeat;
+    background: url(errorIcon.png) no-repeat;
+    _background: url(errorIcon.gif) no-repeat;
     color: #f00;
-    font-weight: bold;    
+    font-weight: bold;
 }
 
 #fbMiniErrors {
@@ -2347,8 +2359,9 @@ h1.groupHeader {
     margin: 3px 4px 0;
     height: 20px;
     width: 20px;
-    float: right;    
+    float: right;
     background: url(sprite.png) 0 -135px;
+    _background: url(sprite.gif) 0 -135px;
     cursor: pointer;
 }
 
@@ -2381,12 +2394,14 @@ h1.groupHeader {
 
 #fbToolbar {
     background: url(sprite.png) #f1f2ee 0 0;
+    _background: url(sprite.gif) #f1f2ee 0 0;
     height: 27px;
     font-size: 11px;
 }
 
 #fbPanelBarBox {
     background: url(sprite.png) #dbd9c9 0 -27px;
+    _background: url(sprite.gif) #dbd9c9 0 -27px;
     height: 22px;
 }
 
@@ -2401,10 +2416,10 @@ h1.groupHeader {
 }
 
 /************************************************************************************************
- Sub-Layout 
+ Sub-Layout
 *************************************************************************************************/
 
-/* fbToolbar 
+/* fbToolbar
 *************************************************************************************************/
 #fbToolbarIcon {
     float: left;
@@ -2413,6 +2428,7 @@ h1.groupHeader {
 
 #fbToolbarIcon a {
     background: url(sprite.png) 0 -135px;
+    _background: url(sprite.gif) 0 -135px;
 }
 
 #fbToolbarButtons {
@@ -2454,6 +2470,7 @@ h1.groupHeader {
 .fbButton:hover {
     color: #333;
     background: #f5f5ef url(buttonBg.png);
+    _background: #f5f5ef url(buttonBg.gif);
     padding: 3px 5px 3px 6px;
     border: 1px solid #fff;
     border-bottom: 1px solid #bbb;
@@ -2462,6 +2479,7 @@ h1.groupHeader {
 
 .fbBtnPressed {
     background: #e3e3db url(buttonBgHover.png) !important;
+    _background: #e3e3db url(buttonBgHover.gif) !important;
     padding: 3px 4px 2px 6px !important;
     margin: 1px 0 0 1px !important;
     border: 1px solid #ACA899 !important;
@@ -2470,7 +2488,7 @@ h1.groupHeader {
 
 #fbStatusBarBox {
     top: 4px;
-    cursor: default;    
+    cursor: default;
 }
 
 .fbToolbarSeparator {
@@ -2498,7 +2516,7 @@ h1.groupHeader {
 
 .fbStatusBar a:hover {
     color: blue;
-    cursor: pointer;    
+    cursor: pointer;
 }
 
 
@@ -2512,6 +2530,7 @@ h1.groupHeader {
     padding: 5px;
     z-index: 6;
     background: url(sprite.png) #f1f2ee 0 0;
+    _background: url(sprite.gif) #f1f2ee 0 0;
 }
 
 /* fbPanelBarBox
@@ -2523,12 +2542,14 @@ h1.groupHeader {
     left: 0;
     white-space: nowrap;
     background: url(sprite.png) #dbd9c9 0 -27px;
+    _background: url(sprite.gif) #dbd9c9 0 -27px;
     position: absolute;
     left: 4px;
 }
 
 #fbPanelBar2Box {
     background: url(sprite.png) #dbd9c9 0 -27px;
+    _background: url(sprite.gif) #dbd9c9 0 -27px;
     position: absolute;
     height: 22px;
     width: 300px; /* fixed width to avoid tabs breaking line */
@@ -2543,7 +2564,7 @@ h1.groupHeader {
     padding-left: 4px;
 }
 
-/* body 
+/* body
 *************************************************************************************************/
 .fbPanel {
     display: none;
@@ -2604,15 +2625,17 @@ h1.groupHeader {
 
 #fbSmallCommandLineIcon {
     background: url(down.png) no-repeat;
+    _background: url(down.gif) no-repeat;
     position: absolute;
     right: 2px;
     bottom: 3px;
-    
+
     z-index: 99;
 }
 
 #fbSmallCommandLineIcon:hover {
     background: url(downHover.png) no-repeat;
+    _background: url(downHover.gif) no-repeat;
 }
 
 .hide {
@@ -2622,7 +2645,7 @@ h1.groupHeader {
     visibility: hidden !important;
 }
 
-/* fbBottom 
+/* fbBottom
 *************************************************************************************************/
 
 #fbCommand {
@@ -2667,6 +2690,7 @@ h1.groupHeader {
 
 #fbLargeCommandLineIcon {
     background: url(up.png) no-repeat;
+    _background: url(up.gif) no-repeat;
     position: absolute;
     right: 1px;
     bottom: 1px;
@@ -2675,6 +2699,7 @@ h1.groupHeader {
 
 #fbLargeCommandLineIcon:hover {
     background: url(upHover.png) no-repeat;
+    _background: url(upHover.gif) no-repeat;
 }
 
 div.fbFitHeight {
@@ -2687,7 +2712,7 @@ div.fbFitHeight {
  Layout Controls
 *************************************************************************************************/
 
-/* fbToolbar buttons 
+/* fbToolbar buttons
 *************************************************************************************************/
 .fbSmallButton {
     overflow: hidden;
@@ -2704,30 +2729,36 @@ div.fbFitHeight {
 
 #fbWindow_btClose {
     background: url(min.png);
+    _background: url(min.gif);
 }
 
 #fbWindow_btClose:hover {
     background: url(minHover.png);
+    _background: url(minHover.gif);
 }
 
 #fbWindow_btDetach {
     background: url(detach.png);
+    _background: url(detach.gif);
 }
 
 #fbWindow_btDetach:hover {
     background: url(detachHover.png);
+    _background: url(detachHover.gif);
 }
 
 #fbWindow_btDeactivate {
     background: url(off.png);
+    _background: url(off.gif);
 }
 
 #fbWindow_btDeactivate:hover {
     background: url(offHover.png);
+    _background: url(offHover.gif);
 }
 
 
-/* fbPanelBarBox tabs 
+/* fbPanelBarBox tabs
 *************************************************************************************************/
 .fbTab {
     text-decoration: none;
@@ -2759,30 +2790,36 @@ div.fbFitHeight {
 
 a.fbTab:hover {
     background: url(sprite.png) 0 -73px;
+    _background: url(sprite.gif) 0 -73px;
 }
 
 a.fbTab:hover .fbTabL {
     background: url(sprite.png) -16px -96px;
+    _background: url(sprite.gif) -16px -96px;
 }
 
 a.fbTab:hover .fbTabR {
     background: url(sprite.png) -24px -96px;
+    _background: url(sprite.gif) -24px -96px;
 }
 
 .fbSelectedTab {
     background: url(sprite.png) #f1f2ee 0 -50px !important;
+    _background: url(sprite.gif) #f1f2ee 0 -50px !important;
     color: #000;
 }
 
 .fbSelectedTab .fbTabL {
     background: url(sprite.png) 0 -96px !important;
+    _background: url(sprite.gif) 0 -96px !important;
 }
 
 .fbSelectedTab .fbTabR {
     background: url(sprite.png) -8px -96px !important;
+    _background: url(sprite.gif) -8px -96px !important;
 }
 
-/* splitters 
+/* splitters
 *************************************************************************************************/
 #fbHSplitter {
     position: fixed;
@@ -2885,7 +2922,7 @@ div.objectBox-element {
     position: relative;
 }
 
-/* Webkit CSS Hack - bug in "highlight" named color */ 
+/* Webkit CSS Hack - bug in "highlight" named color */
 @media screen and (-webkit-min-device-pixel-ratio:0) {
     .selectedElement{
       background: #316AC5;
@@ -2900,7 +2937,7 @@ div.objectBox-element {
 }
 
 /* TODO: remove this? */
-/* TODO: xxxpedro - IE need this in windowless mode (cnn.com) check if the issue is related to 
+/* TODO: xxxpedro - IE need this in windowless mode (cnn.com) check if the issue is related to
 position. if so, override it at chrome.js initialization when creating the div */
 .logRow {
     position: relative;
@@ -2936,9 +2973,9 @@ position. if so, override it at chrome.js initialization when creating the div *
 
 .objectBox-string {
     color: red;
-    
+
     /* TODO: xxxpedro make long strings break line */
-    /*white-space: pre; */ 
+    /*white-space: pre; */
 }
 
 .objectBox-number {
@@ -2967,20 +3004,20 @@ position. if so, override it at chrome.js initialization when creating the div *
 }
 
 .logRow-info {
-    background-image: url(infoIcon.png) !important;
-    background-image: url(infoIcon.gif);
+    background-image: url(infoIcon.png);
+    _background-image: url(infoIcon.gif);
 }
 
 .logRow-warn {
     background-color: cyan;
-    background-image: url(warningIcon.png) !important;
-    background-image: url(warningIcon.gif);
+    background-image: url(warningIcon.png);
+    _background-image: url(warningIcon.gif);
 }
 
 .logRow-error {
     background-color: LightYellow;
-    background-image: url(errorIcon.png) !important;
-    background-image: url(errorIcon.gif);
+    background-image: url(errorIcon.png);
+    _background-image: url(errorIcon.gif);
     color: #f00;
 }
 

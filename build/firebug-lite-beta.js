@@ -10851,7 +10851,9 @@ var ChromeFrameBase = extend(ChromeBase,
                 node.style.display = "block";
             
             var main = $("fbChrome");
-            main.style.display = "table";
+            // IE6 throws an error when setting this property! why?
+            //main.style.display = "table";
+            main.style.display = "";
             
             var self = this;
                 /// TODO: xxxpedro FOUC

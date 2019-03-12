@@ -2653,7 +2653,7 @@ node.style.visibility="hidden";
 if(Firebug.showIconWhenHidden){if(ChromeMini.isInitialized){ChromeMini.shutdown()
 }}else{node.style.display="block"
 }var main=$("fbChrome");
-main.style.display="table";
+main.style.display="";
 var self=this;
 node.style.visibility="visible";
 setTimeout(function(){self.initialize();
