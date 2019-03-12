@@ -1,7 +1,7 @@
 {
   "name": "firebug-lite-ie",
   "description": "Firebug Lite for IE: doing the Firebug way on ancient IE.",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "license": "BSD-3-Clause",
   "main": "build/firebug-lite-debug.js",
   "homepage": "https://github.com/sormy/firebug-lite-ie",

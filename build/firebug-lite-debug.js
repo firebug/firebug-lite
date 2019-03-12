@@ -313,7 +313,7 @@
 
     var findLocation =  function findLocation()
     {
-        var reFirebugFile = /(firebug-lite(?:-\w+)?(?:\.js|\.jgz))(?:#(.+))?$/;
+        var reFirebugFile = /(firebug-lite(?:-.*)?(?:\.js|\.jgz))(?:#(.+))?$/;
 
         var rePath = /^(.*\/)/;
         var reProtocol = /^\w+:\/\//;
